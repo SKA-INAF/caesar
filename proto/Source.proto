@@ -1,0 +1,248 @@
+//package SourcePB;
+package CaesarPB;
+
+message Timestamp {
+  // Represents seconds of UTC time since Unix epoch
+  // 1970-01-01T00:00:00Z. Must be from from 0001-01-01T00:00:00Z to
+  // 9999-12-31T23:59:59Z inclusive.
+  optional int64 seconds = 1;
+
+  // Non-negative fractions of a second at nanosecond resolution. Negative
+  // second values with fractions must still have non-negative nanos values
+  // that count forward in time. Must be from 0 to 999,999,999
+  // inclusive.
+  optional int32 nanos = 2;
+}
+
+message Pixel {
+	optional int64 id= 1;
+	enum PixelType {
+		eNormal = 1;
+		eSeed= 2;
+		eHalo = 3;
+  }
+	optional PixelType type = 2;
+	optional float S= 3;
+	optional float x= 4;
+	optional float y= 5;
+	optional int64 ix= 6;
+	optional int64 iy= 7;
+	optional bool isOnEdge= 8;
+	optional float distanceToEdge= 9;
+	optional float S_curv= 10;
+	optional float S_edge= 11;
+	optional float bkgLevel= 12;
+	optional float noiseLevel= 13;
+
+}//close Pixel schema
+
+message Point {
+	optional float x= 1;
+	optional float y= 2;
+}
+
+message Contour {
+	optional bool HasParameters= 1;
+	optional float Area= 2;
+	optional float Perymeter= 3;
+	optional bool IsConvexContour= 4;
+	optional float CircularityRatio= 5;
+	optional Point BoundingBoxCenter= 6;
+	optional float BoundingBoxMaj= 7;
+	optional float BoundingBoxMin= 8;
+	optional float BoundingBoxAngle= 9;
+	optional float Elongation= 10;
+	optional float Rectangularity= 11;
+	optional float Roundness= 12;
+	optional float Eccentricity= 13;
+	optional float TiltAngle= 14;
+	optional bool HasEllipseFit= 15;
+	optional Point EllipseCenter= 16;
+	optional float EllipseMajAxis= 17;
+	optional float EllipseMinAxis= 18;
+	optional float EllipseRotAngle= 19;
+	optional float EllipseFitRedChi2= 20;
+	optional float EllipseAreaRatio= 21;
+
+	// spatial moments: m00, m10, m01, m20, m11, m02, m30, m21, m12, m03
+	optional float m00= 22;
+	optional float m10= 23;
+	optional float m01= 24;
+	optional float m20= 25;
+	optional float m11= 26;
+	optional float m02= 27;
+	optional float m30= 28;
+	optional float m21= 29;
+	optional float m12= 30;
+	optional float m03= 31;
+
+	optional float mu20= 32;
+	optional float mu11= 33;
+	optional float mu02= 34;
+	optional float mu30= 35;
+	optional float mu21= 36;
+	optional float mu12= 37;
+	optional float mu03= 38;
+
+ 	optional float nu20= 39;
+	optional float nu11= 40;
+	optional float nu02= 41;
+	optional float nu30= 42;
+	optional float nu21= 43;
+	optional float nu12= 44;
+	optional float nu03= 45;
+	
+	repeated float HuMoments= 46;
+	repeated Point BoundingBoxVertex= 47;
+	optional Point Centroid= 48;
+		
+	repeated float RealFDs= 49;
+	repeated float ImagFDs= 50;
+	repeated float ModFDs= 51;//module of complex Fourier descriptors
+	repeated float BendingEnergies= 52;
+	repeated float CentroidDistanceModFDs= 53;//module of complex Fourier descriptors
+
+	repeated Point m_Points= 54;
+
+	optional bool HasFDPars= 55;	
+	optional bool HasBEPars= 56;
+	optional bool HasCentroidDistanceFDPars= 57;	
+
+}//close Contour schema
+
+message Blob {
+	//Main params
+	optional bool HasPixelsAtEdge= 1;
+	optional int64 Id= 2;//Blob id
+	optional string Name= 3;//Blob name
+
+	//Stats params
+	optional int64 NPix= 4;//Number of pixels in blob
+	optional float Mean= 5;//mean = M1/N
+	optional float RMS= 6;
+	optional float Skewness= 7;
+	optional float Median= 8;
+	optional float MedianRMS= 9;
+	optional float X0= 10;//X position average
+	optional float Y0= 11;//Y position average
+
+	//Curvature moments			
+	optional float Mean_curv= 12;
+	optional float RMS_curv= 13;
+	optional float Median_curv= 14;
+	optional float MedianRMS_curv= 15;
+
+	//2D morphological pars
+	repeated float Moments= 16;
+	repeated float HuMoments= 17;
+	repeated float ZMMoments= 18;
+
+	optional bool m_HasStats= 19;
+	optional bool m_HasParameters = 20;
+	
+	//Pixel intensity moments
+	optional float m_M1= 21;//1st moment
+	optional float m_M2= 22;//2nd moment
+	optional float m_M3= 23;//3rd moment
+	optional float m_M4= 24;//4th moment
+
+	//Pixel curvature moments
+	optional float m_M1_curv= 25;//1st moment
+	optional float m_M2_curv= 26;//2nd moment
+
+	//Moments accumulator
+	optional float m_S= 27;//sum of pixel signals
+	optional float m_Smax= 28;//max of pixel signals
+	optional float m_Smin= 29;//min of pixel signals
+	optional float m_Sxx= 30;
+	optional float m_Syy= 31;
+	optional float m_Sxy= 32;
+	optional float m_Sx= 33;//Signal-weighted X position average
+	optional float m_Sy= 34;//Signal-weighted Y position average
+	optional int64 m_PixIdmax= 35;//id of pixel with max signal
+	optional int64 m_PixIdmin= 36;//id of pixel with min signal		
+	optional float m_S_curv= 37;//sum of pixel curvature
+	optional float m_S_edge= 38;//sum of edge estimator
+
+	//Image ranges
+	optional int64 m_ImageSizeX= 39;
+	optional int64 m_ImageSizeY= 40;
+	optional float m_ImageMinX= 41;
+	optional float m_ImageMaxX= 42;
+	optional float m_ImageMinY= 43;
+	optional float m_ImageMaxY= 44;
+	optional float m_ImageMinS= 45;
+	optional float m_ImageMaxS= 46;
+	optional float m_ImageMinScurv= 47;
+	optional float m_ImageMaxScurv= 48;
+	optional float m_ImageMinSedge= 49;
+	optional float m_ImageMaxSedge= 50;
+	optional float m_ImageRMS= 51;		
+	optional float m_Xmin= 52;
+	optional float m_Xmax= 53;
+	optional float m_Ymin= 54;
+	optional float m_Ymax= 55;
+	optional int64 m_Ix_min= 56;
+	optional int64 m_Ix_max= 57;
+	optional int64 m_Iy_min= 58;
+	optional int64 m_Iy_max= 59;
+
+	//Pixel collection
+	repeated Pixel m_Pixels= 60;
+			
+	//Contour collection
+	repeated Contour m_Contours= 61;
+
+}//close Blob schema
+
+message Dict {
+	optional string key= 1;
+	optional float val= 2; 
+}
+
+message SourceComponentPars {
+	repeated Dict FitPars= 1;
+	repeated Dict FitParsErr= 2;
+}//close SourceComponentPars()
+
+message SourceFitPars {
+	
+	optional int32 nComponents= 1;
+	optional float chi2= 2;
+	optional float ndof= 3;
+	optional float npars_free= 4;	
+	optional float nfit_points= 5;
+	optional int32 status= 6;
+	optional int32 minimizer_status= 7;
+	optional float offset= 8;
+	optional float offset_err= 9;
+	repeated SourceComponentPars pars= 10;
+
+}//close SourceFitPars()
+
+message Source {
+	optional Blob blob= 1;
+	optional int32 Type= 2;
+	optional int32 Flag= 3;
+	optional float m_BeamFluxIntegral= 4;
+	optional bool m_IsGoodSource= 5;
+
+	//Nested source info
+	optional int32 m_DepthLevel= 6;
+	optional bool m_HasNestedSources= 7;
+	repeated Source m_NestedSources= 8;
+
+	//True source info
+	optional bool m_HasTrueInfo= 9;
+	optional float m_S_true= 10;
+	optional float m_X0_true= 11;
+	optional float m_Y0_true= 12;
+
+	//Fit pars
+	optional bool m_HasFitInfo= 13;
+	optional SourceFitPars m_fitPars= 14;
+	
+}//close Source schema
+
+
+

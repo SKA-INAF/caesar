@@ -1,0 +1,35 @@
+package CaesarPB;
+
+import "Source.proto";
+
+message TaskData {
+	optional string filename= 1;
+	optional string jobId= 2;
+	optional int64 workerId= 3;
+	optional int64 taskId= 4;
+	optional int64 ix_min= 5;
+	optional int64 ix_max= 6;
+	optional int64 iy_min= 7;
+	optional int64 iy_max= 8;
+
+	optional float x_min= 9;
+	optional float x_max= 10;
+	optional float y_min= 11;
+	optional float y_max= 12;
+	
+	repeated int64 neighborTaskId= 13;
+	repeated int64 neighborWorkerId= 14;
+
+	repeated Source sources= 15;
+	repeated Source sources_edge= 16;
+	repeated Source ext_sources= 17;
+	repeated Source ext_sources_edge= 18;	
+
+}//close TaskData
+
+
+message TaskDataCollection {
+	repeated TaskData tasks= 1;
+}
+
+

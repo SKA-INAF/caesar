@@ -1,0 +1,86 @@
+## INC & SOURCE DIRS
+set(INC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+message (STATUS "INC_DIR: ${INC_DIR}")
+
+## GET SOURCES and HEADERS
+file(GLOB_RECURSE THIS_SRCS ${SRC_DIR}/*.cc)
+file(GLOB_RECURSE THIS_HEADERS ${INC_DIR}/*.h)
+
+set(THIS_HEADERS_WPATH "")
+foreach (_headerFile ${THIS_HEADERS})
+	get_filename_component(_basefilename ${_headerFile} NAME)
+  list (APPEND THIS_HEADERS_WPATH ${_basefilename})
+endforeach()
+list(REMOVE_DUPLICATES THIS_HEADERS_WPATH)
+
+MESSAGE(STATUS "THIS_SRCS: ${THIS_SRCS}")
+MESSAGE(STATUS "THIS_HEADERS: ${THIS_HEADERS}")
+MESSAGE(STATUS "THIS_HEADERS_WPATH: ${THIS_HEADERS_WPATH}")
+
+## Append srcs and heads to project srcs and heads
+list (APPEND SRCS ${THIS_SRCS})
+list (APPEND HEADERS ${THIS_HEADERS})
+list (APPEND HEADERS_WPATH ${THIS_HEADERS_WPATH})
+
+
+###########################################
+### Generate protobuf files
+###########################################
+## Get all .proto files in this directory
+file(GLOB_RECURSE THIS_PROTOS ${SRC_DIR}/*.proto)
+
+## Generate proto srcs and heads
+#MESSAGE(STATUS "Generating protobuf files ...")
+#EXEC_PROGRAM(${PROTOBUF_PROTOC_EXECUTABLE} ARGS --proto_path ${CMAKE_CURRENT_SOURCE_DIR} --cpp_out ${CMAKE_BINARY_DIR} ${THIS_PROTOS})
+
+## Store proto generated headers and sources
+set(THIS_PROTO_SRCS "")
+set(THIS_PROTO_HEADERS "")
+set(THIS_GEN_PROTO_SRCS "")
+set(THIS_GEN_PROTO_HEADERS "")
+foreach (_protoFile ${THIS_PROTOS})
+	get_filename_component(_basefilename ${_protoFile} NAME_WE)
+  list (APPEND THIS_PROTO_SRCS ${_basefilename}.pb.cc)
+	list (APPEND THIS_PROTO_HEADERS ${_basefilename}.pb.h)
+	list (APPEND THIS_GEN_PROTO_SRCS ${CMAKE_BINARY_DIR}/${_basefilename}.pb.cc)
+	list (APPEND THIS_GEN_PROTO_HEADERS ${CMAKE_BINARY_DIR}/${_basefilename}.pb.h)
+endforeach()
+list(REMOVE_DUPLICATES THIS_PROTO_SRCS)
+list(REMOVE_DUPLICATES THIS_PROTO_HEADERS)
+list(REMOVE_DUPLICATES THIS_GEN_PROTO_SRCS)
+list(REMOVE_DUPLICATES THIS_GEN_PROTO_HEADERS)
+
+## Print vars
+MESSAGE(STATUS "THIS_PROTOS: ${THIS_PROTOS}")
+MESSAGE(STATUS "THIS_PROTO_SRCS: ${THIS_PROTO_SRCS}")
+MESSAGE(STATUS "THIS_PROTO_HEADERS: ${THIS_PROTO_HEADERS}")
+MESSAGE(STATUS "THIS_GEN_PROTO_SRCS: ${THIS_GEN_PROTO_SRCS}")
+MESSAGE(STATUS "THIS_GEN_PROTO_HEADERS: ${THIS_GEN_PROTO_HEADERS}")
+
+## Append vars to global 
+list (APPEND PROTO_FILES ${THIS_PROTOS})
+list (APPEND PROTO_SRCS ${THIS_PROTO_SRCS})
+list (APPEND PROTO_HEADERS ${THIS_PROTO_HEADERS})
+set (PROTO_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)	
+set (PROTO_FILES ${PROTO_FILES} PARENT_SCOPE)
+set (PROTO_SRCS ${PROTO_SRCS} PARENT_SCOPE)
+set (PROTO_HEADERS ${PROTO_HEADERS} PARENT_SCOPE)
+
+## Append headers and sources to project	
+list (APPEND SRCS ${THIS_GEN_PROTO_SRCS})
+list (APPEND HEADERS ${THIS_GEN_PROTO_HEADERS})
+list (APPEND HEADERS_WPATH ${THIS_PROTO_HEADERS})
+	
+## Append binary dir to includes	
+list (APPEND INCLUDE_DIRS ${CMAKE_BINARY_DIR})
+###########################################
+
+set (SRCS ${SRCS} PARENT_SCOPE)
+set (HEADERS ${HEADERS} PARENT_SCOPE)
+set (HEADERS_WPATH ${HEADERS_WPATH} PARENT_SCOPE)
+
+list (APPEND INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
+set (INCLUDE_DIRS ${INCLUDE_DIRS} PARENT_SCOPE)
+
+
