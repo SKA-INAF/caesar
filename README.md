@@ -5,12 +5,16 @@
 Compact And Extended Source Automated Recognition
 
 ## **About**  
-CAESAR is a C++ software tool for automated source finding in astronomical maps. 
-It is distributed under the GNU General Public License v3.0. 
-If you use CAESAR for your research, it would be nice to acknowledge it in your papers by citing the following paper:
+CAESAR is a C++ software tool for automated source finding in astronomical maps. It is distributed for reasearch use only under the GNU General Public License v3.0. 
+
+## **Credit**
+If you use CAESAR for your research, please acknowledge it in your papers by citing the following paper:
 
 * S. Riggi et al., "Automated detection of extended sources in radio maps:
 progress from the SCORPIO survey", MNRAS (2016) doi: 10.1093/mnras/stw982, arXiv:1605.01852
+
+or consider including me (`S. Riggi, INAF - Osservatorio Astrofisico di Catania, Via S. Sofia 78, I-95123, Catania, Italy`)
+as a co-author on your publications.
 
 ## **Status**
 At present CAESAR is still being developed with major functionalities to be integrated in this repository. The API could be therefore subjected to significant changes. 
