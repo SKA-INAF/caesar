@@ -1,5 +1,5 @@
 <p align="left">
-  <img src="share/CaesarLogo_last.png" alt="Caesar source finder logo"/>
+  <img src="share/CaesarLogo.png" alt="Caesar source finder logo"/>
 </p>
 
 [![Build Status](http://jenkins.oact.inaf.it:8080/buildStatus/icon?job=SKA/CAESAR)](http://jenkins.oact.inaf.it:8080/me/my-views/view/All/job/SKA/job/CAESAR/)
