@@ -1,4 +1,4 @@
-<p align="center">
+<p align="left">
   <img src="share/CaesarLogo_last.png" alt="Caesar source finder logo"/>
 </p>
 
