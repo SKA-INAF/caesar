@@ -1,0 +1,25 @@
+lin.c:   n = lin->naxis;
+lin.c:	 lin->naxis_sqr= (lin->naxis)*(lin->naxis);
+lin.c:   lin->piximg = (double*)malloc(mem);
+lin.c:   if (lin->piximg == (double*)0) return 1;
+lin.c:   lin->imgpix = (double*)malloc(mem);
+lin.c:   if (lin->imgpix == (double*)0) {
+lin.c:      free(lin->piximg);
+lin.c:         lin->piximg[ij] = lin->cdelt[i] * lin->pc[ij];
+lin.c:   if (matinv(n, lin->piximg, lin->imgpix)) return 2;
+lin.c:   lin->flag = LINSET;
+lin.c:   n = lin->naxis;
+lin.c:	 lin->naxis_sqr= (lin->naxis)*(lin->naxis);
+lin.c:   if (lin->flag != LINSET) {
+lin.c:         pixcrd[i] += lin->imgpix[ij] * imgcrd[j];
+lin.c:      pixcrd[j] += lin->crpix[j];
+lin.c:   n = lin->naxis;
+lin.c:   lin->naxis_sqr= (lin->naxis)*(lin->naxis);
+lin.c:   if (lin->flag != LINSET) {
+lin.c:      temp = pixcrd[j] - lin->crpix[j];
+lin.c:         imgcrd[i] += lin->piximg[ij] * temp;
+wcslib.c:      if (wcsset(lin->naxis, ctype, wcs)) return 1;
+wcslib.c:   for (j = 0; j < lin->naxis; j++) {
+wcslib.c:      if (wcsset(lin->naxis, ctype, wcs)) return 1;
+wcslib.c:   for (j = 0; j < lin->naxis; j++) {
+wcslib.c:      if (wcsset(lin->naxis, ctype, wcs)) return 1;
