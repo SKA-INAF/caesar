@@ -374,6 +374,8 @@ int ComputeSourceResidual(){
 	int dilateKernelSize;
 	int dilatedSourceType;
 	int dilateSourceModel;
+	double dilateZThr;
+	bool dilateRandomize;
 	if(GET_OPTION_VALUE(dilateNestedSources,dilateNestedSources)<0){
 		ERROR_LOG("Failed to get dilateNestedSources option!");
 		return -1;
@@ -390,9 +392,17 @@ int ComputeSourceResidual(){
 		ERROR_LOG("Failed to get dilateSourceModel option!");
 		return -1;
 	}
+	if(GET_OPTION_VALUE(dilateRandomize,dilateRandomize)<0){
+		ERROR_LOG("Failed to get dilateRandomize option!");
+		return -1;
+	}	
+	if(GET_OPTION_VALUE(dilateZThr,dilateZThr)<0){
+		ERROR_LOG("Failed to get dilateZThr option!");
+		return -1;
+	}	
 
 	//Compute residual
-	residualImg= inputImg->GetSourceResidual(sources,dilateKernelSize,dilateSourceModel,dilatedSourceType,dilateNestedSources,bkgData,useLocalBkg);
+	residualImg= inputImg->GetSourceResidual(sources,dilateKernelSize,dilateSourceModel,dilatedSourceType,dilateNestedSources,bkgData,useLocalBkg,dilateRandomize,dilateZThr);
 	if(!residualImg){
 		ERROR_LOG("Failed to compute residual map!");
 		return -1;
@@ -405,15 +415,20 @@ int ComputeSourceResidual(){
 int FindSources(){
 	
 	//## Get options
-	double seedBrightThr, mergeThr;
+	//double seedBrightThr;
+	double seedThr, mergeThr;
 	int minNPix;
 	bool searchNegativeExcess;
 	bool mergeBelowSeed;
 	bool searchNestedSources;
 	double nestedBlobThrFactor;
 
-	if(GET_OPTION_VALUE(seedBrightThr,seedBrightThr)<0){
-		ERROR_LOG("Failed to get seedBrightThr option!");
+	//if(GET_OPTION_VALUE(seedBrightThr,seedBrightThr)<0){
+	//	ERROR_LOG("Failed to get seedBrightThr option!");
+	//	return -1;
+	//}	
+	if(GET_OPTION_VALUE(seedThr,seedThr)<0){
+		ERROR_LOG("Failed to get seedThr option!");
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(mergeThr,mergeThr)<0){
@@ -446,7 +461,7 @@ int FindSources(){
 	int status= inputImg->FindCompactSource(
 		sources,
 		significanceMap,bkgData,
-		seedBrightThr,mergeThr,minNPix,searchNegativeExcess,mergeBelowSeed,
+		seedThr,mergeThr,minNPix,searchNegativeExcess,mergeBelowSeed,
 		searchNestedSources,nestedBlobThrFactor
 	);
 	if(status<0){
@@ -696,7 +711,8 @@ int ComputeBkg(){
 	bool use2ndPassInLocalBkg;
 	bool skipOutliersInLocalBkg;
 	int minNPix;
-	double seedBrightThr;
+	//double seedBrightThr;
+	double seedThr;
 	double mergeThr;
 
 	if(GET_OPTION_VALUE(useLocalBkg,useLocalBkg)<0){
@@ -719,11 +735,14 @@ int ComputeBkg(){
 		return -1;
 	}
 	
-	if(GET_OPTION_VALUE(seedBrightThr,seedBrightThr)<0){
-		ERROR_LOG("Failed to get seedBrightThr option!");
+	//if(GET_OPTION_VALUE(seedBrightThr,seedBrightThr)<0){
+	//	ERROR_LOG("Failed to get seedBrightThr option!");
+	//	return -1;
+	//}
+	if(GET_OPTION_VALUE(seedThr,seedThr)<0){
+		ERROR_LOG("Failed to get seedThr option!");
 		return -1;
 	}
-	
 	if(GET_OPTION_VALUE(mergeThr,mergeThr)<0){
 		ERROR_LOG("Failed to get mergeThr option!");
 		return -1;
@@ -763,7 +782,7 @@ int ComputeBkg(){
 		bkgEstimator,
 		useLocalBkg,boxSizeX,boxSizeY,gridSizeX,gridSizeY,
 		use2ndPassInLocalBkg,
-		skipOutliersInLocalBkg,seedBrightThr,mergeThr,minNPix
+		skipOutliersInLocalBkg,seedThr,mergeThr,minNPix
 	);
 	if(!bkgData){
 		ERROR_LOG("Failed to compute bkg data!");

@@ -588,7 +588,9 @@ int ComputeBkg(){
 	bool use2ndPassInLocalBkg;
 	bool skipOutliersInLocalBkg;
 	int minNPix;
-	double seedBrightThr;
+	//double seedBrightThr;
+	double seedThr;
+	double dilateZThr;
 	double mergeThr;
 
 	if(GET_OPTION_VALUE(useLocalBkg,useLocalBkg)<0){
@@ -611,8 +613,18 @@ int ComputeBkg(){
 		return -1;
 	}
 	
-	if(GET_OPTION_VALUE(seedBrightThr,seedBrightThr)<0){
-		ERROR_LOG("Failed to get seedBrightThr option!");
+	//if(GET_OPTION_VALUE(seedBrightThr,seedBrightThr)<0){
+	//	ERROR_LOG("Failed to get seedBrightThr option!");
+	//	return -1;
+	//}
+	
+	if(GET_OPTION_VALUE(seedThr,seedThr)<0){
+		ERROR_LOG("Failed to get seedThr option!");
+		return -1;
+	}
+
+	if(GET_OPTION_VALUE(dilateZThr,dilateZThr)<0){
+		ERROR_LOG("Failed to get dilateZThr option!");
 		return -1;
 	}
 	
@@ -655,7 +667,7 @@ int ComputeBkg(){
 		bkgEstimator,
 		useLocalBkg,boxSizeX,boxSizeY,gridSizeX,gridSizeY,
 		use2ndPassInLocalBkg,
-		skipOutliersInLocalBkg,seedBrightThr,mergeThr,minNPix
+		skipOutliersInLocalBkg,seedThr,mergeThr,minNPix
 	);
 	if(!bkgData){
 		ERROR_LOG("Failed to compute bkg data!");

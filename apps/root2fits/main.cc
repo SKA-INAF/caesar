@@ -95,12 +95,12 @@ static const struct option options_tab[] = {
   /* name, has_arg, &flag, val */
   { "help", no_argument, 0, 'h' },
 	{ "input", required_argument, 0, 'i' },
-	{ "xmin", optional_argument, 0, 'x' },
-	{ "xmax", optional_argument, 0, 'X' },
-	{ "ymin", optional_argument, 0, 'y' },
-	{ "ymax", optional_argument, 0, 'Y' },
-	{ "imgname", optional_argument, 0, 'I' },
-	{ "output", optional_argument, 0, 'o' },
+	{ "xmin", required_argument, 0, 'x' },
+	{ "xmax", required_argument, 0, 'X' },
+	{ "ymin", required_argument, 0, 'y' },
+	{ "ymax", required_argument, 0, 'Y' },
+	{ "imgname", required_argument, 0, 'I' },
+	{ "output", required_argument, 0, 'o' },
 	{ "verbosity", required_argument, 0, 'v'},
   {(char*)0, (int)0, (int*)0, (int)0}
 };
@@ -220,9 +220,9 @@ int ReadImage()
 	}
 
 	// Read image from file
-	INFO_LOG("Reading image from file "<<inputFileName<<" ...");
+	INFO_LOG("Reading image "<<imageName<<" from file "<<inputFileName<<" ...");
 	Image* img= (Caesar::Image*)inputFile->Get(imageName.c_str()); 
-	if(!inputImg){
+	if(!img){
 		ERROR_LOG("Failed to read image "<<imageName<<" from input file "<<inputFileName<<"!");
 		return -1;
 	}
@@ -268,7 +268,8 @@ int ParseOptions(int argc, char *argv[])
   int option_index = 0;
 	
 	
-	while((c = getopt_long(argc, argv, "hi:x::X::y::Y::o::I::",options_tab, &option_index)) != -1) {
+	//while((c = getopt_long(argc, argv, "hi:x::X::y::Y::o::I::",options_tab, &option_index)) != -1) {
+  while((c = getopt_long(argc, argv, "hi:x:X:y:Y:o:I:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
