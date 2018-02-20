@@ -176,14 +176,6 @@ int FITSReader::Read(Caesar::Image& img,Caesar::FITSFileInfo& fits_info,std::str
 		}
 	#endif
 	
-	/*
-	//Single-thread reading
-	if(ReadImage(img,fits_info,fp,filename,ix_min,ix_max,iy_min,iy_max)<0){
-		ERROR_LOG("Failed to read image data of FITS file "<<filename<<"!");
-		if (fp) fits_close_file(fp, &status);
-		return -1;
-	}
-	*/
 	
 	//## Close FITS file
 	if (fp) {
@@ -306,7 +298,7 @@ int FITSReader::ReadImageMT(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile*
 		ss<<filename<<"["<<ix_min+1<<":"<<ix_max+1<<","<<iy_min+1<<":"<<iy_max+1<<"]";
 		filename_wfilter= ss.str();
 	}
-	INFO_LOG("Reading image data (Nx x Ny)=("<<ImgSizeX<<","<<ImgSizeY<<")");
+	DEBUG_LOG("Reading image data (Nx x Ny)=("<<ImgSizeX<<","<<ImgSizeY<<")");
 	
 	//Set image size (Allocate memory for image pixels)	
 	if(img.SetSize(ImgSizeX,ImgSizeY,xlow,ylow)<0){
@@ -342,7 +334,7 @@ int FITSReader::ReadImageMT(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile*
 	{
 		int thread_id= omp_get_thread_num();
 		int nthreads= SysUtils::GetOMPThreads();
-		INFO_LOG("Starting multithread image data reading (thread_id="<<thread_id<<", nthreads="<<nthreads<<")");
+		DEBUG_LOG("Starting multithread image data reading (thread_id="<<thread_id<<", nthreads="<<nthreads<<")");
 
 		//Open file (each thread should open its own)
 		DEBUG_LOG("Opening FITS file ptr (thread_id="<<thread_id<<", nthreads="<<nthreads<<")");
@@ -403,7 +395,7 @@ int FITSReader::ReadImageMT(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile*
 	*/
 
 	//Compute moments	
-	INFO_LOG("Computing image moments after pixel read...");
+	DEBUG_LOG("Computing image moments after pixel read...");
 	bool skipNegativePixels= false;
 	if(img.ComputeMoments()<0){
 		ERROR_LOG("Failed to compute image moments!");
@@ -425,12 +417,27 @@ int FITSReader::ReadAndFillImageDataFast(Image& img,long int Nx,long int Ny,fits
 		ERROR_LOG("Null ptr to  FITS file given!");
 		return -1;
 	}
+
+	//Get number of image dimensions	
+	int status= 0;
+	int naxis= 0;
+	fits_get_img_dim(fp, &naxis, &status);
+	if(status){
+		ERROR_LOG("Failed to get FITS image size!");
+		return -1;
+	}
+
+	//Initialize fpixel 
+	long int fpixel[naxis];
+	for(int i=0;i<naxis;i++) fpixel[i]= 1;
 	
 	//Fill image data
 	for(long int j=0;j<Ny;j++){
 		
 		//Init buffer
-		long int fpixel[2] = {1,j+1};//start from column 0th, row j-th 
+		//long int fpixel[2] = {1,j+1};//start from column 0th, row j-th 
+		fpixel[0]= 1;
+		fpixel[1]= j+1;
 		long int bufsize= Nx;
 		long int gBin= 0 + j*Nx;
 		
@@ -479,12 +486,27 @@ int FITSReader::ReadAndFillImageData(Image& img,long int Nx,long int Ny,fitsfile
 		ERROR_LOG("Null ptr to  FITS file given!");
 		return -1;
 	}
+
+	//Get number of image dimensions	
+	int status= 0;
+	int naxis= 0;
+	fits_get_img_dim(fp, &naxis, &status);
+	if(status){
+		ERROR_LOG("Failed to get FITS image size!");
+		return -1;
+	}
+
+	//Initialize fpixel 
+	long int fpixel[naxis];
+	for(int i=0;i<naxis;i++) fpixel[i]= 1;
 	
 	//Fill image data
 	for(long int j=0;j<Ny;j++){
 		
 		//Init buffer
-		long int fpixel[2] = {1,j+1};//start from column 0th, row j-th 
+		//long int fpixel[2] = {1,j+1};//start from column 0th, row j-th 
+		fpixel[0]= 1;
+		fpixel[1]= j+1;
 		long int bufsize= Nx;
 		float* buffer= new float[bufsize];
 		
@@ -528,6 +550,19 @@ int FITSReader::ReadAndFillImageDataMT(Image& img,long int Nx,long int Ny,fitsfi
 		return -1;
 	}
 	
+	//Get number of image dimensions	
+	int status= 0;
+	int naxis= 0;
+	fits_get_img_dim(fp, &naxis, &status);
+	if(status){
+		ERROR_LOG("Failed to get FITS image size!");
+		return -1;
+	}
+
+	//Initialize fpixel 
+	long int fpixel[naxis];
+	for(int i=0;i<naxis;i++) fpixel[i]= 1;
+
 	//Define parallel stat moments list	
 	Caesar::StatMoments<double> moments_t;	
 	int nthreads= SysUtils::GetOMPThreads();
@@ -537,7 +572,10 @@ int FITSReader::ReadAndFillImageDataMT(Image& img,long int Nx,long int Ny,fitsfi
 	for(long int j=0;j<Ny;j++){
 		
 		//Init buffer
-		long int fpixel[2] = {1,j+1};//start from column 0th, row j-th 
+		//long int fpixel[2] = {1,j+1};//start from column 0th, row j-th 
+		fpixel[0]= 1;
+		fpixel[1]= j+1;
+
 		long int bufsize= Nx;
 		float* buffer= new float[bufsize];
 			
@@ -564,7 +602,6 @@ int FITSReader::ReadAndFillImageDataMT(Image& img,long int Nx,long int Ny,fitsfi
 		}//end loop columns (bufsize)
 
 		//Fill moment list 
-		//parallel_moments.push_back(moments_t);
 		parallel_moments[thread_id]= moments_t;
 
 		//Clear allocated buffer
@@ -580,7 +617,6 @@ int FITSReader::ReadAndFillImageDataMT(Image& img,long int Nx,long int Ny,fitsfi
 
 
 #ifdef OPENMP_ENABLED
-//int FITSReader::ReadAndFillImageDataFastMT(Image& img,long int Nx,long int Ny,fitsfile* fp,int& err_flag,std::vector<Caesar::StatMoments<double>>& parallel_moments){
 int FITSReader::ReadAndFillImageDataFastMT(Image& img,long int Nx,long int Ny,fitsfile* fp,int& err_flag){
 
 	//Check pointer
@@ -588,9 +624,21 @@ int FITSReader::ReadAndFillImageDataFastMT(Image& img,long int Nx,long int Ny,fi
 		ERROR_LOG("Null ptr to FITS file given!");
 		return -1;
 	}
+
+	//Get number of image dimensions	
+	int status= 0;
+	int naxis= 0;
+	fits_get_img_dim(fp, &naxis, &status);
+	if(status){
+		ERROR_LOG("Failed to get FITS image size!");
+		return -1;
+	}
+
+	//Initialize fpixel 
+	long int fpixel[naxis];
+	for(int i=0;i<naxis;i++) fpixel[i]= 1;
 	
 	//Define parallel stat moments list	
-	//Caesar::StatMoments<double> moments_t;	
 	int nthreads= SysUtils::GetOMPThreads();
 	int thread_id= omp_get_thread_num();
 	
@@ -599,18 +647,18 @@ int FITSReader::ReadAndFillImageDataFastMT(Image& img,long int Nx,long int Ny,fi
 	for(long int j=0;j<Ny;j++){
 		
 		//Init buffer
-		long int fpixel[2] = {1,j+1};//start from column 0th, row j-th 
+		//long int fpixel[2] = {1,j+1};//start from column 0th, row j-th 
+		fpixel[0]= 1;
+		fpixel[1]= j+1;
 		long int bufsize= Nx;
 		long int gBin= 0 + j*Nx;
-		//float* buffer= new float[bufsize];
-			
+		
 		//Read all columns
 		DEBUG_LOG("Reading row "<<j<<" (nelements="<<bufsize<<")...");
 			
 		float nullval= 0; //don't check for null values in the image
 		int anynull;
 		int read_status= 0;
-		//fits_read_pix(fp,TFLOAT,fpixel,bufsize,(void*)&nullval,(void*)buffer,&anynull, &read_status);
 		fits_read_pix(fp,TFLOAT,fpixel,bufsize,(void*)&nullval,(void*)( (img.m_pixels).data()+gBin ),&anynull, &read_status);
 		if(read_status){
 			ERROR_LOG("Failed to read FITS image data row "<<j<<", skip...");
@@ -707,11 +755,19 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 		return -1;
 	}
 	Nchannels= std::stoi(records["NAXIS"]);
+		
+	if(Nchannels<2){
+		ERROR_LOG("Invalid number of channels ("<<Nchannels<<"), at least 2 channels must be present!");
+		return -1;	
+	}
+
 	
+	/*
 	if(Nchannels!=2){
 		ERROR_LOG("Unsupported number of channels ("<<Nchannels<<"), only 2 channel images are supported!");
 		return -1;	
 	}
+	*/
 
 	//Get dimensions
 	long int Nx= 0;
@@ -723,6 +779,24 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	Nx= std::stol(records["NAXIS1"]);//image size X
 	Ny= std::stol(records["NAXIS2"]);//image size Y
 	
+	//Check for degenerate axis
+	if(Nchannels>2){
+		for(int i=3;i<Nchannels;i++){
+			std::stringstream ss;
+			ss<<"NAXIS"<<i;
+			if( records.find(ss.str().c_str()) == records.end() ){
+				ERROR_LOG("Cannot find keyword "<<ss.str()<<"!");
+				return -1;
+			}
+			long int NpixDegAxis= std::stol(records[ss.str().c_str()]);//pixels in current degenerate axis
+			if(NpixDegAxis>1 || NpixDegAxis<=0){
+				ERROR_LOG("Axis "<<ss.str()<<" is invalid or not degenerate (N="<<NpixDegAxis<<"), cube or hypercube are not supported!");
+				return -1;
+			}
+		}//end loop axis
+	}//close if degenerate axis check
+	
+
 	// Get pixel content unit
 	std::string BUnit= "";
 	if(records.find("BUNIT") == records.end()) {

@@ -889,7 +889,7 @@ class OptionFactory : public TObject {
 		OptionFactory(){};
 		virtual ~OptionFactory(){
 			//Deleting map with options
-			cout<<"~OptionFactory(): INFO: Deleting registered options..."<<endl;
+			//cout<<"Deleting registered options..."<<endl;
 			for (OptionMap::const_iterator it = m_RegisteredOptions.begin(); it!=m_RegisteredOptions.end(); it++){
 				if(it->second) delete it->second;
 			}//end loop map

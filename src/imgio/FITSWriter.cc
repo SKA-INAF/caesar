@@ -28,11 +28,12 @@
 #include <FITSWriter.h>
 #include <Image.h>
 
+//CFITSIO headers
+#include <fitsio.h>
+
 //Python interface
-#include <TPython.h>
-#include <Python.h>
-//#include <numpy/ndarrayobject.h>
-//#include <numpy/ndarraytypes.h>
+//#include <TPython.h>
+//#include <Python.h>
 
 #include <TObject.h>
 
@@ -60,6 +61,7 @@ FITSWriter::~FITSWriter() {
 
 }//close destructor
 
+/*
 int FITSWriter::Init(){
 	
 	try {
@@ -86,8 +88,152 @@ int FITSWriter::Init(){
 	return 0;
 
 }//close Init()
+*/
 
 
+
+int FITSWriter::WriteFITS(Image* img,std::string outfilename,bool recreate)
+{
+	//## Check image
+	if(!img){
+		ERROR_LOG("Null ptr to given image!");
+		return -1;
+	}
+	if(outfilename==""){
+		ERROR_LOG("Empty output filename!");
+		return -1;
+	}
+	if(recreate){
+		outfilename= std::string("!") + outfilename;
+	}
+
+	//## Init vars
+	fitsfile* fp= 0;
+  int status = 0;
+
+	//## Open file with filter
+	INFO_LOG("Creating FITS file "<<outfilename<<" to be written ...");
+  fits_create_file(&fp, outfilename.c_str(), &status);
+  if (status) {
+		ERROR_LOG("Failed to create FITS file "<<outfilename<<" for writing image data!");
+		HandleError(status,fp);
+		return -1;
+	}
+
+	//## Create image
+	INFO_LOG("Making image in FITS file "<<outfilename<<" ot be written ...");
+	long int Nx= img->GetNx();
+	long int Ny= img->GetNy();
+	long naxes[2]= {Nx,Ny};
+	fits_create_img(fp,FLOAT_IMG,2, naxes, &status);
+	if (status) {
+		ERROR_LOG("Failed to create image in FITS file "<<outfilename<<"!");
+		HandleError(status,fp);
+		return -1;
+	}
+	
+	//## Fill image data
+	INFO_LOG("Filling image data in FITS file "<<outfilename<<" ot be written ...");
+	long fpixel[2]= {1,1};
+	long nelements= Nx*Ny;
+	float* imgdata= (float*)((img->GetPixels()).data());
+	fits_write_pix(fp, TFLOAT, fpixel, nelements, imgdata, &status);
+	if (status) {
+		ERROR_LOG("Failed to fill image data in FITS file "<<outfilename<<"!");
+		HandleError(status,fp);
+		return -1;
+	}
+
+	//## Writing additional keywords in header
+	INFO_LOG("Filling HDU keywords in FITS file "<<outfilename<<" ot be written ...");
+	if(WriteFITSKeywords(img,fp)<0){
+		WARN_LOG("Failed to write keywords in FITS file!");
+	}
+
+	//## Close image
+	if (fp) {
+		INFO_LOG("Closing FITS file "<<outfilename<<"...");
+		fits_close_file(fp, &status);
+	}
+
+	return 0;
+
+}//close WriteFITS()
+
+
+int FITSWriter::WriteFITSKeywords(Image* img,fitsfile* fp)
+{
+	//Check if image has metadata
+	if(!img->HasMetaData()){
+		DEBUG_LOG("Input image has no metadata, nothing to be written to FITS keywords...");
+		return 0;
+	}
+	
+	//Fill metadata
+	int status= 0;
+	ImgMetaData* metadata= img->GetMetaData();
+
+	//Reference pixel id
+	double Cx= static_cast<double>(metadata->Cx);
+	double Cy= static_cast<double>(metadata->Cy);
+	fits_write_key(fp,TDOUBLE,"CRPIX1", &Cx,"Pixel reference x image coord",&status);
+	fits_write_key(fp,TDOUBLE,"CRPIX2", &Cy,"Pixel reference y image coord",&status);
+
+	//Reference pixel coords
+	double Xc= static_cast<double>(metadata->Xc);
+	double Yc= static_cast<double>(metadata->Yc);
+	fits_write_key(fp,TDOUBLE,"CRVAL1", &Xc,"Pixel reference x phys coord",&status);
+	fits_write_key(fp,TDOUBLE,"CRVAL2", &Yc,"Pixel reference y phys coord",&status);
+	
+	//Pixel size
+	double dX= static_cast<double>(metadata->dX);
+	double dY= static_cast<double>(metadata->dY);
+	fits_write_key(fp,TDOUBLE,"CDELT1", &dX,"Pixel size x (arcsec)",&status);
+	fits_write_key(fp,TDOUBLE,"CDELT2", &dY,"Pixel size y (arcsec)",&status);
+	
+	//System rotation info
+	double RotX= static_cast<double>(metadata->RotX);
+	double RotY= static_cast<double>(metadata->RotY);
+	fits_write_key(fp,TDOUBLE,"CROTA1", &RotX,"Coord system rotation x angle (deg)",&status);
+	fits_write_key(fp,TDOUBLE,"CROTA2", &RotY,"Coord system rotation y angle (deg)",&status);
+	
+	//Type of astro coords
+	std::string CoordTypeX= metadata->CoordTypeX;
+	std::string CoordTypeY= metadata->CoordTypeY;
+	fits_write_key(fp,TSTRING,"CTYPE1", (char*)(CoordTypeX.c_str()),"Coord system x type",&status);
+	fits_write_key(fp,TSTRING,"CTYPE2", (char*)(CoordTypeY.c_str()),"Coord system y type",&status);
+
+	//Units
+	std::string BUnit= metadata->BUnit;
+	fits_write_key(fp,TSTRING,"CTYPE1", (char*)(BUnit.c_str()),"Physical units of the image data",&status);
+	
+	//Beam info
+	double Bmaj= metadata->Bmaj;
+	double Bmin= metadata->Bmin;
+	double Bpa= metadata->Bpa;
+	fits_write_key(fp,TDOUBLE,"BMAJ", &Bmaj,"Beam ellipse FWHM major axis (deg)",&status);
+	fits_write_key(fp,TDOUBLE,"BMIN", &Bmin,"Beam ellipse FWHM minor axis (deg)",&status);
+	fits_write_key(fp,TDOUBLE,"BPA", &Bpa,"Beam ellipse rotation angle of the major axis measuring from North (up) counterclockwise (deg)",&status);
+	
+	//Obs Epoch (DEPRECATED in FITS STANDARD (use EQUINOX?)
+	//double Epoch;
+
+	return 0;
+
+}//close WriteFITSKeywords()
+
+
+void FITSWriter::HandleError(int& status,fitsfile* fp)
+{
+	char errdescr[FLEN_STATUS+1];
+	fits_get_errstatus(status, errdescr);
+  ERROR_LOG("Error while processing FITS file (reason="<<errdescr<<")");
+  status = 0;
+  if (fp) fits_close_file(fp, &status);
+
+}//close HandleError()
+
+/*
 int FITSWriter::WriteFITS(Image* img,std::string outfilename){
 
 	//## Check image
@@ -205,7 +351,7 @@ int FITSWriter::WriteFITS(Image* img,std::string outfilename){
 	return 0;
 
 }//close WriteFITS()
-
+*/
 
 
 }//close namespace

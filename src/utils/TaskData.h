@@ -142,6 +142,11 @@ class TaskData : public TObject {
 		*/
 		void Copy(TObject &obj) const;
 
+		/**
+		* \brief Clear sources
+		*/
+		void ClearSources();
+
 	public:
 			
 		/**
@@ -218,10 +223,7 @@ class TaskData : public TObject {
 	public: 
 
 		//Task info		
-		//std::string filename; 
-		//std::string jobId;
 		long int workerId;
-		//long int taskId;
 		std::vector<long int> neighborTaskId;
 		std::vector<long int> neighborWorkerId;
 	
@@ -231,11 +233,6 @@ class TaskData : public TObject {
 		long int iy_min;
 		long int iy_max;
 
-		//double x_min;
-		//double x_max;
-		//double y_min;
-		//double y_max;
-			
 		//- Detected sources
 		Source* source;
 		std::vector<Source*> sources;

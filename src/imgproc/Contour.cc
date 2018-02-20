@@ -909,4 +909,20 @@ void Contour::ComputeBendingEnergy(){
 
 }//close ComputeBendingEnergy()
 
+
+TVector2* Contour::FindPoint(double x,double y,double tol)
+{
+	//If empty collection return nullptr
+	if(m_Points.empty()) return nullptr;
+
+	//Find point in collection
+	std::vector<TVector2>::iterator it= std::find_if(m_Points.begin(),m_Points.end(), ContourPointMatcher(x,y,tol) );
+	if(it==m_Points.end()) return nullptr;//not found
+				
+	//Found at position pos
+	size_t pos= it-m_Points.begin();
+	return (&m_Points[pos]);
+
+}//close FindPoint()
+
 }//close namespace

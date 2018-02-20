@@ -37,6 +37,8 @@
 #include <TMatrixD.h>
 #include <TMath.h>
 #include <TEllipse.h>
+#include <TMatrixDEigen.h>
+#include <Math/SpecFuncMathCore.h>
 
 #include <cstdlib>
 #include <iomanip>
@@ -193,6 +195,72 @@ class StatMoments : public TObject {
 
 };//close StatMoments()
 
+template <typename T>  
+class BoxStats : public TObject {
+	
+	public:
+		
+		T median;
+		T Q1;
+		T Q3;
+		T minVal;
+		T maxVal;
+
+	public:
+		/** 
+		\brief Constructor
+ 		*/
+		BoxStats(){
+			Reset();
+		}
+		/** 
+		\brief Destructor
+ 		*/
+		virtual ~BoxStats(){}
+
+		/** 
+		\brief Operator ==
+ 		*/
+		BoxStats& operator=(const BoxStats &m) { 
+  		if (this != &m) ((BoxStats&)m).Copy(*this);
+ 		 	return *this;
+		}
+
+		/** 
+		\brief Copy object
+ 		*/
+		void Copy(TObject& obj) const {
+			((BoxStats&)obj).median= median;
+			((BoxStats&)obj).Q1= Q1;
+			((BoxStats&)obj).Q3= Q3;
+			((BoxStats&)obj).minVal= minVal;
+			((BoxStats&)obj).maxVal= maxVal;
+		}
+
+
+	public:
+		/** 
+		\brief Reset moments
+ 		*/
+		void Reset(){
+			median= T(0);
+			Q1= T(0);
+			Q3= T(0);
+			minVal= std::numeric_limits<T>::max();
+			maxVal= -std::numeric_limits<T>::max();
+		}
+		/** 
+		\brief Print moments
+ 		*/
+		void Print(){
+			cout<<"*** BOX STATS ***"<<endl;
+			cout<<"median="<<median<<", Q1="<<Q1<<", Q3="<<Q3<<" min/max="<<minVal<<"/"<<maxVal<<endl;
+			cout<<"*****************"<<endl;
+		}
+	ClassDef(BoxStats,1)
+
+};//close BoxStats struct
+
 
 class StatsUtils : public TObject {
 
@@ -211,10 +279,162 @@ class StatsUtils : public TObject {
 	public:
 	
 		/**
+		* \brief Compute box plot stats (min/max, median, Q1, Q3)
+		*/
+		template < typename T >
+		static BoxStats<T> ComputeBoxStats(std::vector<T>& vec,bool sorted=false){
+
+			//Check empty vector
+			BoxStats<T> stats;
+			if(vec.size()<=1) {
+				WARN_LOG("Empty or scalar data vector, returning zero!");
+				return stats;
+			}
+
+			//Sort data if not sorted	
+			size_t n= vec.size();	
+			if(!sorted){
+				std::sort(vec.begin(), vec.end());
+			}
+			
+			//Compute quantiles
+			double quantiles[]= {0,0,0};
+			double prob[]= {0.25,0.5,0.75};
+			TMath::Quantiles(n,3,vec.data(),quantiles,prob,true);
+
+			stats.Q1= quantiles[0];
+			stats.median= quantiles[1];
+			stats.Q3= quantiles[2];
+			stats.minVal= vec[0];
+			stats.maxVal= vec[n-1];
+
+			return stats;
+
+		}//close ComputeBoxStats()
+
+		/**
+		* \brief Compute median & 1st & 3rd quantiles
+		*/
+		/*
+		template < typename T >
+		static std::vector<T> GetMedianAndQuantiles(std::vector<T>& vec){
+
+			//Check empty vector
+			std::vector<T> statVec {0,0,0};
+			if(vec.size()<=1) {
+				WARN_LOG("Empty or scalar data vector, returning zero!");
+				return statVec;
+			}
+
+			size_t n= vec.size();
+			double const idx50 = 0.50*(n - 1);
+      double const idx25 = 0.25*(n - 1);
+      double const idx75 = 0.75*(n - 1);
+        
+      // For efficiency:
+      // - partition at 50th, then partition the two half further to get 25th and 75th
+      // - to get the adjacent points (for interpolation), partition between 25/50, 50/75, 75/end
+      //   these should be much smaller partitions
+        
+      int const q50a = static_cast<int>(idx50);
+      int const q50b = q50a + 1;
+      int const q25a = static_cast<int>(idx25);
+      int const q25b = q25a + 1;
+      int const q75a = static_cast<int>(idx75);
+      int const q75b = q75a + 1;
+        
+      typename std::vector<T>::iterator mid50a = vec.begin() + q50a;
+      typename std::vector<T>::iterator mid50b = vec.begin() + q50b;
+      typename std::vector<T>::iterator mid25a = vec.begin() + q25a;
+      typename std::vector<T>::iterator mid25b = vec.begin() + q25b;
+      typename std::vector<T>::iterator mid75a = vec.begin() + q75a;
+      typename std::vector<T>::iterator mid75b = vec.begin() + q75b;
+
+      // get the 50th percentile, then get the 25th and 75th on the smaller partitions
+      std::nth_element(vec.begin(), mid50a, vec.end());
+      std::nth_element(mid50a, mid75a, vec.end());
+      std::nth_element(vec.begin(), mid25a, mid50a);
+
+      // and the adjacent points for each ... use the smallest segments available.
+      std::nth_element(mid50a, mid50b, mid75a);
+      std::nth_element(mid25a, mid25b, mid50a);
+      std::nth_element(mid75a, mid75b, vec.end());
+
+      // interpolate linearly between the adjacent values
+      double val50a = static_cast<double>(*mid50a);
+      double val50b = static_cast<double>(*mid50b);
+      double w50a = (static_cast<double>(q50b) - idx50);
+      double w50b = (idx50 - static_cast<double>(q50a));
+      double median = w50a*val50a + w50b*val50b;
+
+      double val25a = static_cast<double>(*mid25a);
+      double val25b = static_cast<double>(*mid25b);
+      double w25a = (static_cast<double>(q25b) - idx25);
+      double w25b = (idx25 - static_cast<double>(q25a));
+      double q1 = w25a*val25a + w25b*val25b;
+        
+      double val75a = static_cast<double>(*mid75a);
+      double val75b = static_cast<double>(*mid75b);
+      double w75a = (static_cast<double>(q75b) - idx75);
+      double w75b = (idx75 - static_cast<double>(q75a));
+      double q3 = w75a*val75a + w75b*val75b;
+
+			statVec[0]= q1;
+			statVec[1]= median;
+			statVec[2]= q3;
+
+  		return statVec;
+
+		}//close GetQuantiles()
+		*/
+
+		/**
+		* \brief Compute median using nth_element (should run in O(n))
+		*/
+		/*
+		template < typename T >
+		static T GetMedianInRange(std::vector<T>& vec, int start, int end, bool useParallelVersion=false, bool sorted=false){
+
+			//Check empty vector
+			if(vec.empty()) {
+				WARN_LOG("Empty data vector, returning zero!");
+				return 0;
+			}
+			size_t N= vec.size();
+			if(start<0 || start>=N-1 || end<=0 || end>N-1 || start<=end){
+				WARN_LOG("Invalid range ("<<start<<","<<end<<") given, returning zero!");
+				return 0;
+			}
+	
+			size_t Nrange= end-start+1;
+			size_t nhalf = Nrange/2;
+  		
+			//Partially sort vector if not sorted
+			if(!sorted){
+				#ifdef OPENMP_ENABLED
+					if(useParallelVersion) __gnu_parallel::__parallel_nth_element(vec.begin()+start,vec.begin()+start+nhalf, vec.begin()+end, std::less<T>());
+					else nth_element(vec.begin()+start,vec.begin()+start+nhalf, vec.begin()+end);
+				#else 
+					nth_element(vec.begin()+start,vec.begin()+start+nhalf, vec.begin()+end);
+				#endif
+			}
+
+			double median= vec[nhalf];//Odd number of elements
+    	if(nhalf%2==0){//Even numbers
+				double a= *std::max_element(vec.begin()+start,vec.begin()+start+nhalf);
+				double median_even= (median+a)/2.;
+				median= median_even;
+			}
+
+  		return median;
+		}//close GetMedianInRange()
+		*/
+
+		/**
 		* \brief Compute median using nth_element (should run in O(n))
 		*/
 		template < typename T >
-		static T GetMedianFast(std::vector<T>& vec, bool useParallelVersion=false){
+		static T GetMedianFast(std::vector<T>& vec, bool useParallelVersion=false, bool alreadySorted=false){
 
 			//Check empty vector
 			if(vec.size()<=0) {
@@ -223,13 +443,16 @@ class StatsUtils : public TObject {
 			}
 			std::size_t n = vec.size()/2;
   		
-			#ifdef OPENMP_ENABLED
-				if(useParallelVersion) __gnu_parallel::__parallel_nth_element(vec.begin(),vec.begin()+n, vec.end(), std::less<T>());
-				else nth_element(vec.begin(),vec.begin()+n, vec.end());
-			#else 
-				nth_element(vec.begin(),vec.begin()+n, vec.end());
-			#endif
-			
+			//Partially sort vector if not sorted
+			if(!alreadySorted){
+				#ifdef OPENMP_ENABLED
+					if(useParallelVersion) __gnu_parallel::__parallel_nth_element(vec.begin(),vec.begin()+n, vec.end(), std::less<T>());
+					else nth_element(vec.begin(),vec.begin()+n, vec.end());
+				#else 
+					nth_element(vec.begin(),vec.begin()+n, vec.end());
+				#endif
+			}
+
 			double median= vec[n];//Odd number of elements
     	if(n%2==0){//Even numbers
 				double a= *std::max_element(vec.begin(),vec.begin()+n);
@@ -287,6 +510,31 @@ class StatsUtils : public TObject {
   		if(n%2==0) median = (vec[n/2-1] + vec[n/2])/2;	
 			else median = vec[n/2];
   		return median;
+		}//close GetMedian()
+
+		/**
+		* \brief Compute median using vector sorting (should run in O(nlog n))
+		*/
+		template < typename T >
+		static T GetRangeMedian( std::vector<T>&vec, int start, int end, bool isSorted=false){//this should run in O(nlog(n))
+			size_t n = vec.size();
+			if(n<=0) {
+				WARN_LOG("Empty data vector, returning zero!");
+				return 0;
+			}
+			if(start<0 || start>=n-1 || end<=0 || end>n-1 || start<=end){
+				WARN_LOG("Invalid range ("<<start<<","<<end<<") given, returning zero!");
+				return 0;
+			}
+	
+			size_t Nrange= end-start+1;
+	
+  		if(!isSorted) std::sort(vec.begin()+start, vec.begin()+end);
+			double median= 0;		
+  		if(Nrange%2==0) median = (vec[start + Nrange/2-1] + vec[start + Nrange/2])/2;	
+			else median = vec[start + Nrange/2];
+  		return median;
+
 		}//close GetMedian()
 
 		/**
@@ -366,7 +614,7 @@ class StatsUtils : public TObject {
 
 			//Check if there are still data
 			if(vec_clipped.empty()){
-				INFO_LOG("Clipped data is empty, return.");
+				DEBUG_LOG("Clipped data is empty, return.");
 				return -1;
 			}
 
@@ -939,13 +1187,105 @@ class StatsUtils : public TObject {
 		}
 
 		/** 
-		\brief Get gaus CL ellipse
+		\brief Multiply gaussian 2D ellipse axis by this factor to get the nsigma ellipse contour 
  		*/
+		static double GetEllipseAxisSigmaContourScaleFactor(double nsigma){
+			double scaleFactor= sqrt(-2*log(ROOT::Math::erfc(nsigma/sqrt(2))));	
+			return scaleFactor;
+		}
+
+		/** 
+		\brief Multiply gaussian 2D ellipse axis by this factor to get the CL ellipse contour 
+ 		*/
+		static double GetEllipseAxisCLContourScaleFactor(double CL){
+			double scaleFactor= sqrt(-2. * log(1 - CL));
+			return scaleFactor;
+		}
+
+		/** 
+		\brief Get 2D gaussian confidence ellipse
+ 		*/
+		static TEllipse* GetFitCLEllipse(double x0,double y0,double sigmaX,double sigmaY,double covXY,double CL){
+			
+			/*
+			//Compute eigenvectors of covariance matrix
+			TMatrixD C(2,2);
+			C(0,0)= sigmaX*sigmaX;
+			C(1,1)= sigmaY*sigmaY;
+			C(0,1)= covXY;
+			C(1,0)= C(0,1);
+			TMatrixDEigen E(C);
+			TMatrixD eigenvect= E.GetEigenVectors();
+			TMatrixD eigenvals= E.GetEigenValues();
+			double lambda1= eigenvals(0,0);
+			double lambda2= eigenvals(1,1);
+			double a= sqrt(lambda1);	
+			double b= sqrt(lambda2);
+			double theta= atan2(eigenvect(1,0),eigenvect(0,0))*TMath::RadToDeg();
+
+			TEllipse* ellipse= new TEllipse(x0,y0,a,b,0.,360.,theta);
+			ellipse->SetLineWidth(2);
+			ellipse->SetFillColor(0);
+			ellipse->SetFillStyle(0);
+			*/
+			
+			//Compute ellipse
+			TEllipse* ellipse= GetFitEllipse(x0,y0,sigmaX,sigmaY,covXY,false);	
+			if(!ellipse) return nullptr;		
+
+			//Rescale ellipse axis to get CL contours
+			double scaleFactor= GetEllipseAxisCLContourScaleFactor(CL);
+			double a=	ellipse->GetR1()*scaleFactor;
+			double b=	ellipse->GetR2()*scaleFactor;
+			ellipse->SetR1(a);
+			ellipse->SetR2(b);
+	
+			return ellipse;
+
+		}//close GetFitCLEllipse()
+		
+
+		/** 
+		\brief Get ellipse corresponding to 2D gaussian
+ 		*/
+		static TEllipse* GetFitEllipse(double x0,double y0,double sigmaX,double sigmaY,double covXY,bool useFWHM=false){
+			
+			//Compute ellipse axis & orientation
+			double sx2= sigmaX*sigmaX;
+			double sy2= sigmaY*sigmaY;
+			//double cxy2= covXY*covXY;
+			double rho= covXY/(sigmaX*sigmaY);
+			double t= 0.5*atan2(2*covXY, sx2 - sy2);//in rad
+			double theta= t*TMath::DegToRad();//in deg
+			double a= sqrt(sx2*sy2*(1-rho*rho)/(pow(sigmaY*cos(t),2)-2*covXY*cos(t)*sin(t)+pow(sigmaX*sin(t),2)));
+			double b= sqrt(sx2*sy2*(1-rho*rho)/(pow(sigmaY*sin(t),2)+2*covXY*cos(t)*sin(t)+pow(sigmaX*cos(t),2)));
+			
+			//Scale axis to get ellipse at FWHM
+			if(useFWHM){
+				double scaleFactor= GetEllipseAxisSigmaContourScaleFactor(GausSigma2FWHM);
+				a*= scaleFactor; 
+				b*= scaleFactor;
+			}
+			INFO_LOG("sigmaX="<<sigmaX<<", sigmaY="<<sigmaY<<", covXY="<<covXY<<", theta="<<theta<<", a="<<a<<", b="<<b);
+
+			//Compute ellipse
+			TEllipse* ellipse= new TEllipse(x0,y0,a,b,0.,360.,theta);
+			ellipse->SetLineWidth(2);
+			ellipse->SetFillColor(0);
+			ellipse->SetFillStyle(0);
+
+			return ellipse;
+
+		}//close GetFitEllipse()
+
+		/*
 		static TEllipse* GetFitEllipse(double x0,double y0,double sigmaX,double sigmaY,double theta,bool useFWHM=false){
 
 			//Convert sigmas to FWHM
-			sigmaX*= GausSigma2FWHM; 
-			sigmaY*= GausSigma2FWHM;
+			if(useFWHM){
+				sigmaX*= GausSigma2FWHM; 
+				sigmaY*= GausSigma2FWHM;
+			}
 
 			//Convert to radians
 			double t= theta*TMath::DegToRad();
@@ -969,7 +1309,7 @@ class StatsUtils : public TObject {
 			return ellipse;
 
 		}//close GetFitEllipse()
-		
+		*/
 
 	private:
 	
@@ -988,6 +1328,11 @@ class StatsUtils : public TObject {
 #pragma link C++ class Caesar::StatMoments<long int>+;
 #pragma link C++ class Caesar::StatMoments<float>+;
 #pragma link C++ class Caesar::StatMoments<double>+;
+
+#pragma link C++ class Caesar::BoxStats<int>+;
+#pragma link C++ class Caesar::BoxStats<long int>+;
+#pragma link C++ class Caesar::BoxStats<float>+;
+#pragma link C++ class Caesar::BoxStats<double>+;
 
 #pragma link C++ function StatsUtils::GetMedianFast<float>;
 #pragma link C++ function StatsUtils::GetMedianFast<double>;

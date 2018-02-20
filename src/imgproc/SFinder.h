@@ -232,6 +232,10 @@ class SFinder : public TObject {
 		* \brief Fit sources
 		*/
 		int FitSources(std::vector<Source*>& sources);
+		/**
+		* \brief Is fittable source
+		*/
+		bool IsFittableSource(Source* aSource);
 
 		/**
 		* \brief Print performance stats
@@ -265,6 +269,11 @@ class SFinder : public TObject {
 		*/
 		int MergeSourcesAtEdge();
 
+		/**
+		* \brief Merge task sources
+		*/
+		int MergeTaskSources(TaskData* taskData);
+
 	public:
 		
 		
@@ -285,7 +294,8 @@ class SFinder : public TObject {
 		bool m_saveConfig;
 		bool m_saveDS9Region;
 		std::string m_DS9CatalogFileName;
-		int m_DS9RegionFormat;		
+		int m_DS9RegionFormat;
+		std::string m_DS9FitCatalogFileName;			
 		TTree* m_SourceTree;
 		bool m_saveSources;
 		bool m_saveResidualMap;
@@ -331,6 +341,8 @@ class SFinder : public TObject {
 		double m_pixSizeX;
 		double m_pixSizeY;
 		double m_beamFWHM;
+		double m_beamFWHMMin;
+		double m_beamFWHMMax;
 		double m_pixSize;
 		double m_beamTheta;
 		double m_fluxCorrectionFactor;
@@ -343,6 +355,9 @@ class SFinder : public TObject {
 		double m_TileStepSizeX;
 		double m_TileStepSizeY;
 		bool m_mergeSourcesAtEdge;
+		bool m_mergeSources;
+		bool m_mergeExtendedSources;
+		bool m_mergeCompactSources;	
 
 		//Bkg computation
 		ImgBkgData* m_BkgData;
@@ -361,6 +376,8 @@ class SFinder : public TObject {
 		//Residual map
 		Image* m_ResidualImg;
 		ImgBkgData* m_ResidualBkgData;
+		double m_DilateZBrightThr;
+		double m_DilateZThr;
 		bool m_DilateNestedSources;
 		int m_DilateKernelSize;
 		int m_DilatedSourceType;
@@ -379,7 +396,6 @@ class SFinder : public TObject {
 		//Compact source search
 		bool m_SearchCompactSources;
 		int m_NMinPix;
-		double m_SeedBrightThr;
 		double m_SeedThr;
 		double m_MergeThr;
 		bool m_MergeBelowSeed;
@@ -389,6 +405,7 @@ class SFinder : public TObject {
 
 		//Nested source search
 		bool m_SearchNestedSources;
+		double m_SourceToBeamAreaThrToSearchNested;
 		double m_NestedBlobThrFactor;
 		double m_minNestedMotherDist;
 		double m_maxMatchingPixFraction;
@@ -406,13 +423,36 @@ class SFinder : public TObject {
 		double m_psEllipseAreaRatioMaxThr;
 		bool m_useMaxNPixCut;
 		double m_psMaxNPix;
+		bool m_useNBeamsCut;
+		double m_psNBeamsThr;
 
 		//Source fitting
 		bool m_fitSources;
+		double m_nBeamsMaxToFit;
 		int m_fitMaxNComponents;
-		//double m_deblendCurvThr;
-		//double m_deblendComponentMinNPix;
+		bool m_fitWithCentroidLimits;
+		bool m_fitWithFixedBkg;
+		bool m_fitWithBkgLimits;
+		double m_fitBkgLevel;	
+		bool m_fitUseEstimatedBkgLevel;
+		bool m_fitWithAmplLimits;
+		double m_fitAmplLimit;
+		bool m_fixSigmaInPreFit;
+		bool m_fitWithSigmaLimits;
+		double m_fitSigmaLimit;
+		bool m_fitWithFixedSigma;
+		bool m_fitWithFixedTheta;
+		bool m_fitWithThetaLimits;
+		double m_fitThetaLimit;
+		bool m_useFluxZCutInFit;
+		double m_fitZCutMin;
+		int m_peakMinKernelSize;
+		int m_peakMaxKernelSize;
+		int m_peakKernelMultiplicityThr;
+		int m_peakShiftTolerance;
+		double m_peakZThrMin;
 		
+
 		//Saliency computation
 		Image* m_SaliencyImg;
 		double m_SaliencyThrFactor;
@@ -435,7 +475,10 @@ class SFinder : public TObject {
 		bool m_SearchExtendedSources;
 		int m_ExtendedSearchMethod;
 		int m_wtScaleExtended;
+		int m_wtScaleSearchMin;
+		int m_wtScaleSearchMax;
 		int m_activeContourMethod;
+		
 
 		//Superpixel options
 		int m_spSize;
@@ -452,12 +495,14 @@ class SFinder : public TObject {
 		double m_cvMuPar;
 		double m_cvNuPar;
 		double m_cvPPar;
+		bool m_cvInitContourToSaliencyMap;
 
 		//LRAC options
 		int m_lracNIters;
 		double m_lracLambdaPar;
 		double m_lracRadiusPar;
 		double m_lracEpsPar;
+		bool m_lracInitContourToSaliencyMap;
 
 		//Hierachical clustering data
 		Image* m_LaplImg;

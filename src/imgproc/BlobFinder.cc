@@ -218,13 +218,12 @@ int BlobFinder::FindBlobs(Image* inputImg,std::vector<T*>& blobs,Image* floodImg
 			aPixel->id= clusterPixelId;
 			aPixel->SetPhysCoords(x,y);
 			aPixel->SetCoords(ix,iy);
+				
+			//Check if this pixel is at edge, if so mark blob as at edge
+			if( inputImg->IsEdgeBin(ix,iy) ) {
+				aBlob->SetEdgeFlag(true);
+			}
 			
-			
-			//if( inputImg->IsEdgeBin(clusterPixelIdX,clusterPixelIdY) ) {
-			//	aBlob->SetEdgeFlag(true);
-			//}
-			
-
 			//Set bkg data if available
 			if(hasBkgData){
 				double bkgLevel= bkgData->gBkg;
@@ -265,7 +264,7 @@ int BlobFinder::FindBlobs(Image* inputImg,std::vector<T*>& blobs,Image* floodImg
 		
 	}//end loop seeds
 
-	INFO_LOG("#"<<blobs.size()<<" blobs found!");
+	DEBUG_LOG("#"<<blobs.size()<<" blobs found!");
 
 	return 0;
 

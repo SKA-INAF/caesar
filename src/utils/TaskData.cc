@@ -57,18 +57,11 @@ namespace Caesar {
 TaskData::TaskData() : TObject() {	
 	
 	//Init task info
-	//filename= "";
-	//jobId= "";
 	workerId= -1;
 	ix_min= -1;
 	ix_max= -1;
 	iy_min= -1;
 	iy_max= -1;
-
-	//x_min= -1;
-	//x_max= -1;
-	//y_min= -1;
-	//y_max= -1;
 
 	//Init sources
 	source= 0;
@@ -89,38 +82,8 @@ TaskData::TaskData(const TaskData& info) : TObject() {
 //Destructor
 TaskData::~TaskData(){
 	
-	//Clear
-	for(unsigned int i=0;i<sources.size();i++){
-		if(sources[i]){
-			delete sources[i];
-			sources[i]= 0;
-		}
-	}	
-	sources.clear();
-
-	for(unsigned int i=0;i<ext_sources.size();i++){
-		if(ext_sources[i]){
-			delete ext_sources[i];
-			ext_sources[i]= 0;
-		}
-	}	
-	ext_sources.clear();
-
-	for(unsigned int i=0;i<sources_edge.size();i++){
-		if(sources_edge[i]){
-			delete sources_edge[i];
-			sources_edge[i]= 0;
-		}
-	}	
-	sources_edge.clear();
-
-	for(unsigned int i=0;i<ext_sources_edge.size();i++){
-		if(ext_sources_edge[i]){
-			delete ext_sources_edge[i];
-			ext_sources_edge[i]= 0;
-		}
-	}	
-	ext_sources_edge.clear();
+	//Clear sources
+	ClearSources();
 
 }//close destructor
 
@@ -134,18 +97,11 @@ TaskData& TaskData::operator=(const TaskData& data) {
 void TaskData::Copy(TObject &obj) const {
 			
 	TObject::Copy((TaskData&)obj);
-	//((TaskData&)obj).filename = filename;
-	//((TaskData&)obj).jobId = jobId;
 	((TaskData&)obj).workerId = workerId;
 	((TaskData&)obj).ix_min = ix_min;	
 	((TaskData&)obj).ix_max = ix_max;		
 	((TaskData&)obj).iy_min = iy_min;	
 	((TaskData&)obj).iy_max = iy_max;
-
-	//((TaskData&)obj).x_min = x_min;	
-	//((TaskData&)obj).x_max = x_max;		
-	//((TaskData&)obj).y_min = y_min;	
-	//((TaskData&)obj).y_max = y_max;
 
 	//Delete first a previously existing vector
 	for(unsigned int i=0;i<(((TaskData&)obj).sources).size();i++){
@@ -228,6 +184,44 @@ void TaskData::Copy(TObject &obj) const {
 	}
 
 }//close Copy()
+
+void TaskData::ClearSources(){
+
+	//Clear
+	for(size_t i=0;i<sources.size();i++){
+		if(sources[i]){
+			delete sources[i];
+			sources[i]= 0;
+		}
+	}	
+	sources.clear();
+
+	for(size_t i=0;i<ext_sources.size();i++){
+		if(ext_sources[i]){
+			delete ext_sources[i];
+			ext_sources[i]= 0;
+		}
+	}	
+	ext_sources.clear();
+
+	for(size_t i=0;i<sources_edge.size();i++){
+		if(sources_edge[i]){
+			delete sources_edge[i];
+			sources_edge[i]= 0;
+		}
+	}	
+	sources_edge.clear();
+
+	for(size_t i=0;i<ext_sources_edge.size();i++){
+		if(ext_sources_edge[i]){
+			delete ext_sources_edge[i];
+			ext_sources_edge[i]= 0;
+		}
+	}	
+	ext_sources_edge.clear();
+
+}//close ClearSources()
+
 
 
 }//close namespace 

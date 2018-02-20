@@ -58,6 +58,11 @@ ClassImp(Caesar::StatMoments<long int>)
 ClassImp(Caesar::StatMoments<double>)
 ClassImp(Caesar::StatMoments<float>)
 
+ClassImp(Caesar::BoxStats<int>)
+ClassImp(Caesar::BoxStats<long int>)
+ClassImp(Caesar::BoxStats<double>)
+ClassImp(Caesar::BoxStats<float>)
+
 namespace Caesar {
 
 StatsUtils::StatsUtils(){

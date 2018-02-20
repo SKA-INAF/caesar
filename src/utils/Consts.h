@@ -123,6 +123,22 @@ enum DS9RegionFormat {
 	ePolygonRegion= 2
 };
 
+enum MorphStructElement {
+	eMORPH_RECT= 0,
+	eMORPH_ELLIPSE= 1,
+	eMORPH_CROSS= 2
+};
+
+enum MorphOperation {
+	eMORPH_OPENING= 0,
+	eMORPH_CLOSING= 1,
+	eMORPH_GRADIENT= 2,
+	eMORPH_TOPHAT= 3,
+	eMORPH_BLACKHAT= 4,
+	eMORPH_EROSION= 5,
+	eMORPH_DILATION= 6
+};
+
 #ifdef __MAKECINT__
 #pragma link C++ enum WCSType+;
 #pragma link C++ enum ImgFilters+;

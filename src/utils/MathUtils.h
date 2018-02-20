@@ -167,6 +167,22 @@ class MathUtils : public TObject {
   		return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
 		}
 
+		/**
+		* \brief Compute 2d gaussian integral
+		*/
+		static double Compute2DGausIntegral(double A,double sigmaX,double sigmaY){
+			double fluxDensity= 2*TMath::Pi()*A*sigmaX*sigmaY;
+			return fluxDensity;
+		}
+
+		/**
+		* \brief Compute 2d gaussian ellipse integral
+		*/
+		static double Compute2DGausEllipseIntegral(double A,double Bmaj,double Bmin){
+			double fluxDensity= TMath::Pi()*A*Bmaj*Bmin/(4.*log(2));
+			return fluxDensity;
+		}
+
 	private:
 	
 		ClassDef(MathUtils,1)

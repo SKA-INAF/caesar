@@ -60,6 +60,7 @@
 #include <GradientFilter.h>
 #include <MorphFilter.h>
 #include <SaliencyFilter.h>
+#include <GausFilter.h>
 
 #include <Logger.h>
 
@@ -288,6 +289,40 @@ Image::Image(long int nbinsx,long int nbinsy,float w,float xlow,float ylow,std::
 	}
 
 }//close constructor
+
+
+Image::Image(const TH2& histo,std::string name)
+{
+	//Get histo size/offset/name
+	long int nbinsx= histo.GetNbinsX();
+	long int nbinsy= histo.GetNbinsY();
+	float xlow= histo.GetXaxis()->GetBinCenter(1);
+	float ylow= histo.GetYaxis()->GetBinCenter(1);
+	std::string histoName= std::string(histo.GetName());
+	
+	if(nbinsx<=0 || nbinsy<=0){
+		std::stringstream ss;
+		ss<<"Invalid histo size (<=0) given (hint: histo shall have dimensions)!";
+		ERROR_LOG(ss.str());
+		throw std::out_of_range(ss.str().c_str());
+	}
+		
+	//Init pars
+  Init();
+
+	//Set image name
+	if(name=="") m_name= histoName;
+	else m_name= name;
+
+	//Set image size
+	SetSize(nbinsx,nbinsy,xlow,ylow);
+
+	//Fill from TH2
+	bool useNegativePixInStats= true;
+	FillFromTH2(histo,useNegativePixInStats);	
+
+}//close constructor from TH2
+
 
 Image::Image(const Image &img)
 {
@@ -832,6 +867,80 @@ int Image::FillFromTMatrix(TMatrixD& mat,bool useNegativePixInStats){
 
 }//close FillFromTMatrix()
 
+
+int Image::FillFromTH2(const TH2& histo,bool useNegativePixInStats){
+
+	//Get image size
+	long int nBinsX = histo.GetNbinsX();
+  long int nBinsY = histo.GetNbinsY();
+	long int Ny= this->GetNy();
+	long int Nx= this->GetNx();
+	if(nBinsX<=0 || nBinsY<=0){
+		ERROR_LOG("Histo has zero bins in one/both dimensions!");
+		return -1;
+	}
+	if(nBinsX!=Nx || nBinsY!=Ny){
+		ERROR_LOG("Invalid bins given (hint: should be equal to image size "<<Nx<<" x "<<Ny<<")!");
+		return -1;
+	}
+
+	//Reset this image
+	Reset();
+
+	//Fill image from TMatrixD
+	#ifdef OPENMP_ENABLED
+		Caesar::StatMoments<double> moments_t;		
+		std::vector<Caesar::StatMoments<double>> parallel_moments;
+
+		#pragma omp parallel private(moments_t)
+		{
+			int thread_id= omp_get_thread_num();
+			int nthreads= SysUtils::GetOMPThreads();
+
+			#pragma omp single
+   		{
+     		parallel_moments.assign(nthreads,Caesar::StatMoments<double>());
+   		}
+
+			#pragma omp for
+			for(long int i=0;i<nBinsX;i++) {
+				long int ix= i;
+    		for (long int j=0;j<nBinsY;j++){
+					long int iy= j;
+					double w= histo.GetBinContent(i+1,j+1);
+					this->FillPixelMT(moments_t,ix,iy,w,useNegativePixInStats);
+    		}//end loop cols
+  		}//end loop rows
+		
+			//Fill parallel moments per thread
+			parallel_moments[thread_id]= moments_t;
+			
+		}//close parallel section
+
+		//Update moments from parallel estimates
+		Caesar::StatMoments<double> moments;
+		if(Caesar::StatsUtils::ComputeMomentsFromParallel(moments,parallel_moments)<0){
+			ERROR_LOG("Failed to compute cumulative moments from parallel estimates (NB: image will have wrong moments!)");
+			return -1;
+		}	
+		this->SetMoments(moments);
+		
+	#else
+		for(long int i=0;i<nBinsX;i++) {
+			long int ix= i;
+    	for (long int j=0;j<nBinsY;j++){
+				long int iy= j;
+				double w= histo.GetBinContent(i+1,j+1);
+				this->FillPixel(ix,iy,w,useNegativePixInStats);
+    	}//end loop cols
+  	}//end loop rows
+	#endif
+
+	return 0;
+
+}//close FillFromTH2()
+
+
 #ifdef VTK_ENABLED
 int Image::FillFromVtkImage(vtkSmartPointer<vtkImageData> imageData,bool useNegativePixInStats)
 {
@@ -935,6 +1044,10 @@ void Image::ResetImgStats(bool resetMoments,bool clearStats){
 
 int Image::ComputeMoments(bool skipNegativePixels){
 
+	//#### DEBUG ####
+	DEBUG_LOG("m_StatMoments min/max (before): "<<m_StatMoments.minVal<<"/"<<m_StatMoments.maxVal);
+	//###############
+
 	//## Recompute stat moments
 	//## NB: If OMP is enabled this is done in parallel and moments are aggregated to return the correct cumulative estimate 
 	bool maskNanInfValues= true;
@@ -942,6 +1055,11 @@ int Image::ComputeMoments(bool skipNegativePixels){
 	if(status<0){
 		ERROR_LOG("Failed to compute stat moments!");
 	}
+
+	//#### DEBUG ####
+	DEBUG_LOG("m_StatMoments min/max (after): "<<m_StatMoments.minVal<<"/"<<m_StatMoments.maxVal);
+	//###############
+
 
 	return status;
 
@@ -992,7 +1110,7 @@ void Image::ComputeStatsParams(bool computeRobustStats,bool skipNegativePixels,b
 	
 	auto end_stats = chrono::steady_clock::now();
 	double dt_stats= chrono::duration <double, milli> (end_stats-start_stats).count();
-	INFO_LOG("Image standard stats computed in "<<dt_stats<<" ms");
+	DEBUG_LOG("Image standard stats computed in "<<dt_stats<<" ms");
   
 	//## End if no robust stats are to be computed
 	if(!computeRobustStats) return;
@@ -1024,7 +1142,7 @@ void Image::ComputeStatsParams(bool computeRobustStats,bool skipNegativePixels,b
 	m_Stats->medianRMS= medianRMS;
 	auto end_median = chrono::steady_clock::now();
 	double dt_median= chrono::duration <double, milli> (end_median-start_median).count();
-	INFO_LOG("Image median pars computed in "<<dt_median<<" ms");
+	DEBUG_LOG("Image median pars computed in "<<dt_median<<" ms");
   
 	//## Compute biweight robust estimators	
 	/*
@@ -1053,11 +1171,11 @@ void Image::ComputeStatsParams(bool computeRobustStats,bool skipNegativePixels,b
 	m_Stats->clippedRMS= clipped_stats.stddev;
 	auto end_clipped = chrono::steady_clock::now();
 	double dt_clipped= chrono::duration <double, milli> (end_clipped-start_clipped).count();
-	INFO_LOG("Image clipped stats pars computed in "<<dt_clipped<<" ms");
+	DEBUG_LOG("Image clipped stats pars computed in "<<dt_clipped<<" ms");
 
 	auto end_robuststats = chrono::steady_clock::now();
 	double dt_robuststats= chrono::duration <double, milli> (end_robuststats-start_robuststats).count();
-	INFO_LOG("Image robust stats computed in "<<dt_robuststats<<" ms");	
+	DEBUG_LOG("Image robust stats computed in "<<dt_robuststats<<" ms");	
 	
 }//close ComputeStatsParams()
 
@@ -1085,7 +1203,7 @@ int Image::ComputeStats(bool computeRobustStats,bool skipNegativePixels,bool for
 		
 		auto stop = chrono::steady_clock::now();
 		double elapsed_time= chrono::duration <double, milli> (stop-start).count();
-		INFO_LOG("Image stats computed in "<<elapsed_time<<" ms");
+		DEBUG_LOG("Image stats computed in "<<elapsed_time<<" ms");
 		return 0;
 	}
 
@@ -1448,7 +1566,7 @@ int Image::FindCompactSource(std::vector<Source*>& sources,double thr,int minPix
 }//close FindCompactSource()
 
 
-int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBkgData* bkgData,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,bool findNestedSources,double nestedBlobThreshold,double minNestedMotherDist,double maxMatchingPixFraction,Image* curvMap)
+int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBkgData* bkgData,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,bool findNestedSources,double nestedBlobThreshold,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested,Image* curvMap)
 {
 
 	//Find sources
@@ -1467,7 +1585,7 @@ int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBk
 
 	//Find nested sources?
 	if(findNestedSources && sources.size()>0){
-		int status= FindNestedSource(sources,bkgData,minPixels,nestedBlobThreshold,minNestedMotherDist,maxMatchingPixFraction);
+		int status= FindNestedSource(sources,bkgData,minPixels,nestedBlobThreshold,minNestedMotherDist,maxMatchingPixFraction,nPixThrToSearchNested);
 		if(status<0){
 			WARN_LOG("Nested source search failed!");
 		}
@@ -1478,7 +1596,7 @@ int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBk
 }//close FindCompactSource()
 
 
-int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,int minPixels,double nestedBlobThreshold,double minNestedMotherDist,double maxMatchingPixFraction){
+int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,int minPixels,double nestedBlobThreshold,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested){
 
 	//Check if given mother source list is empty
 	int nSources= static_cast<int>(sources.size());
@@ -1608,14 +1726,19 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 		int nSelNestedSources= 0;
 		for(size_t i=0;i<MotherNestedAssociationList.size();i++){
 			long int NPix= sources[i]->GetNPixels(); 
+			double beamArea= sources[i]->GetBeamFluxIntegral();
+			bool isMotherSourceSplittableInNestedComponents= (NPix>nPixThrToSearchNested);
 			int nComponents= static_cast<int>(MotherNestedAssociationList[i].size());
-			if(nComponents<=0) continue;
+			if(nComponents<=0 || !isMotherSourceSplittableInNestedComponents) continue;
 
 			//If only one component is present select it if:
 			//  1) mother and nested distance is > thr (e.g. 
 			//  2) mother and nested pix superposition is <thr (e.g. 50%)
 			for(int j=0;j<nComponents;j++){
 				int nestedIndex= MotherNestedAssociationList[i][j];
+
+				//Set pars
+				NestedSources[nestedIndex]->SetBeamFluxIntegral(beamArea);
 
 				//Compute nested source stats & pars
 				NestedSources[nestedIndex]->ComputeStats();
@@ -1633,9 +1756,10 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 					//Select nested?
 					bool areOffset= (centroidDistX>minNestedMotherDist || centroidDistY>minNestedMotherDist);
 					bool isNestedSmaller= (matchingPixFraction<maxMatchingPixFraction);
-					INFO_LOG("areOffset? "<<areOffset<<" (dist_x="<<centroidDistX<<", dist_y="<<centroidDistY<<"), isNestedSmaller?"<<isNestedSmaller<<" (matchingPixFraction="<<matchingPixFraction<<", maxMatchingPixFraction="<<maxMatchingPixFraction<<")");					
-
+					
 					if( areOffset || isNestedSmaller){//Add nested to mother source
+						INFO_LOG("Adding nested source to mother source (name="<<sources[i]->GetName()<<", id="<<sources[i]->Id<<", nPix="<<NPix<<"): areOffset? "<<areOffset<<" (dist_x="<<centroidDistX<<", dist_y="<<centroidDistY<<"), isNestedSmaller?"<<isNestedSmaller<<" (matchingPixFraction="<<matchingPixFraction<<", maxMatchingPixFraction="<<maxMatchingPixFraction<<", nPixThrToSearchNested="<<nPixThrToSearchNested<<")");					
+
 						sources[i]->AddNestedSource(NestedSources[nestedIndex]);
 						nSelNestedSources++;
 					}
@@ -1846,8 +1970,9 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 	long int Ny= this->GetNy();
 	bool copyMetaData= true;
 	bool resetStats= true;
-	TString imgName= Form("%s_SourceMask",m_name.c_str());	
-	Image* maskedImage= this->GetCloned(std::string(imgName),copyMetaData,resetStats);
+	TString imgName= Form("%s_SourceMask",m_name.c_str());
+	//Image* maskedImage= this->GetCloned(std::string(imgName),copyMetaData,resetStats);
+	Image* maskedImage= this->GetCloned("",copyMetaData,resetStats);
 	
 	//## Check source list
 	int nSources= static_cast<int>(sources.size());
@@ -1934,7 +2059,13 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 
 }//close GetSourceMask()
 
-Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int KernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr){
+Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int KernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr){
+
+	//Check thresholds
+	if(zBrightThr<zThr){
+		ERROR_LOG("Invalid z threshold given (hint: zBrightThr shall be >= than zThr)!");
+		return nullptr;
+	}
 
 	//Clone input image	
 	TString imgName= Form("%s_Residual",m_name.c_str());	
@@ -1945,7 +2076,7 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int KernSize,
 	}
 
 	//Dilate source pixels
-	int status= MorphFilter::DilateAroundSources(residualImg,sources,KernSize,dilateModel,dilateSourceType,skipToNested,bkgData,useLocalBkg,randomize,zThr);
+	int status= MorphFilter::DilateAroundSources(residualImg,sources,KernSize,dilateModel,dilateSourceType,skipToNested,bkgData,useLocalBkg,randomize,zThr,zBrightThr);
 
 	if(status<0){
 		ERROR_LOG("Failed to dilate sources!");
@@ -2074,6 +2205,14 @@ Image* Image::GetNormLoGImage(int size,double scale,bool invert)
 
 }//close GetNormLoGImage()
 
+Image* Image::GetBeamConvolvedImage(double bmaj,double bmin,double bpa,int nsigmas,double scale)
+{
+	//Compute image convolved with an elliptical gaussian beam
+	Image* convImg= GausFilter::GetGausFilter(this,bmaj,bmin,bpa,nsigmas,scale);
+	return convImg;
+
+}//close GetBeamConvolvedImage()
+
 Image* Image::GetLaplacianImage(bool invert)
 {
 
@@ -2183,17 +2322,17 @@ Image* Image::GetMultiResoSaliencyMap(int resoMin,int resoMax,int resoStep,doubl
 }//close GetMultiResoSaliencyMap()
 
 
-int Image::FindPeaks(std::vector<TVector2>& peakPoints,int peakShiftTolerance,bool skipBorders)
+int Image::FindPeaks(std::vector<TVector2>& peakPoints,std::vector<int> kernelSizes, int peakShiftTolerance,bool skipBorders,int multiplicityThr)
 {
-	return MorphFilter::FindPeaks(peakPoints,this,peakShiftTolerance,skipBorders);
+	return MorphFilter::FindPeaks(peakPoints,this,kernelSizes,peakShiftTolerance,skipBorders,multiplicityThr);
 
 }//close FindPeaks()
 
-TGraph* Image::ComputePeakGraph(int peakShiftTolerance,bool skipBorders)
+TGraph* Image::ComputePeakGraph(std::vector<int> kernelSizes,int peakShiftTolerance,bool skipBorders)
 {
 	//Find peaks in image
 	std::vector<TVector2> peakPoints;
-	if(this->FindPeaks(peakPoints,skipBorders)<0){
+	if(this->FindPeaks(peakPoints,kernelSizes,peakShiftTolerance,skipBorders)<0){
 		ERROR_LOG("Failed to find peaks in image!");
 		return nullptr;
 	}
@@ -2558,6 +2697,33 @@ double Image::FindValleyThreshold(int nbins,bool smooth){
 	return valleyThr;
 
 }//close FindValleyThreshold()
+
+
+double Image::FindCumulativeSumThr(double threshold,bool skipNegativePixels)
+{
+	//Check if image has pixels
+	if(m_pixels.empty()){
+		WARN_LOG("Image has no pixels stored, returning 0!");
+		return 0;
+	}
+
+	//Copy pixel list
+	//NB: This is required because of sorting
+	std::vector<float> pixels;
+	for(size_t i=0;i<m_pixels.size();i++){
+		float w= m_pixels[i];
+		if( w==0 || (skipNegativePixels && w<0) ) continue;
+		pixels.push_back(w);
+	}
+
+	//Find pixel value at which cumulative threshold is below desired threshold
+	bool sorted= false;
+	double thr= CodeUtils::FindCumulativeSumFractionThr(pixels,threshold,sorted);
+
+	return thr;
+
+}//close FindCumulativeSumThr()
+
 
 Image* Image::GetBinarizedImage(double threshold,double fgValue,bool isLowerThreshold){
 

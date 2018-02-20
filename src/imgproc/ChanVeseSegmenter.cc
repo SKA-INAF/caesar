@@ -50,6 +50,46 @@ ChanVeseSegmenter::~ChanVeseSegmenter() {
 
 }//close destructor
 
+void ChanVeseSegmenter::SetCircleLevelSet(TMatrixD* M)
+{
+	int nRows= M->GetNrows();
+	int nCols= M->GetNcols();
+	M->Zero();
+
+	int rowCenter= nRows/2;
+	int colCenter= nCols/2;
+	//double R= std::min(nRows,nCols) * 3.0 / 8.0;
+	double R= std::min(nRows,nCols) * 0.1;
+
+	for (int i=0; i<nRows; ++i) {
+    for (int j=0; j<nCols; ++j) {
+			double x= i - rowCenter;
+			double y= j - colCenter;
+			double w = R - sqrt(x*x + y*y) ;
+			M->operator()(i,j)= w;
+    }//end loop cols
+  }//end loop rows
+
+}//close SetCircleLevelSet()
+
+void ChanVeseSegmenter::SetCheckerBoardLevelSet(TMatrixD* M, double square_size)
+{
+	//Init level set
+	int nRows= M->GetNrows();
+	int nCols= M->GetNcols();
+	M->Zero();
+
+	//Fill level set
+	for (int i=0; i<nRows; ++i) {
+    for (int j=0; j<nCols; ++j) {
+			double xx= sin(TMath::Pi()/square_size*i);
+			double yy= sin(TMath::Pi()/square_size*j);
+			double w= xx*yy;
+			M->operator()(i,j)= w;
+    }//end loop cols
+  }//end loop rows
+
+}//close SetCheckerBoardLevelSet()
 
 
 ChanVeseSegmenter::CVdata* ChanVeseSegmenter::Init(Image* img,Image* initSegmImg){
@@ -104,6 +144,13 @@ ChanVeseSegmenter::CVdata* ChanVeseSegmenter::Init(Image* img,Image* initSegmImg
   	}//end loop rows
 	}//close if
 	else{
+
+		//## Set level set to checkerboard
+		INFO_LOG("Initializing level set to circle model...");
+		//SetCheckerBoardLevelSet(pCVdata->phi0);
+		//SetCircleLevelSet(pCVdata->phi0);
+
+		
 		//## Set up initial circular contour for a 256x256 image
 		double rowCenter= nRows/2.0;
 		double colCenter= nCols/2.0;
@@ -118,6 +165,8 @@ ChanVeseSegmenter::CVdata* ChanVeseSegmenter::Init(Image* img,Image* initSegmImg
 				(pCVdata->phi0)->operator()(i,j)= w;
     	}//end loop cols
   	}//end loop rows
+		
+
 	}//close else
 
 	return pCVdata;

@@ -88,6 +88,16 @@ class LRACSegmenter : public TObject {
 
 	private:
 
+		/**
+		* \brief Set level set to checker board model
+		*/
+		static Image* GetCheckerBoardLevelSet(Image* inputImg,double square_size=10);
+
+		/**
+		* \brief Set level set to circle model
+		*/
+		static Image* GetCircleLevelSet(Image* inputImg,double radius_to_image_ratio=0.2);
+
 		//Check convergence	
 		
 

@@ -96,6 +96,15 @@ class Pixel : public TObject {
   	}
 
 		/**
+		* \brief Sum pixel
+		*/
+		int AddPixelFlux(Pixel* aPixel){
+			if(!aPixel) return -1;	
+			S+= aPixel->S;
+			return 0;
+		}
+
+		/**
 		* \brief Copy method
 		*/
 		void Copy(TObject& pixel) const;
@@ -219,6 +228,12 @@ struct PixelMatcher {
   	return areAdjacent;
 	}
 };//close PixelMatcher()
+
+struct PixelCompareByFlux {
+	bool operator()(const Pixel* lhs, const Pixel* rhs) const { 
+		return lhs->S < rhs->S;
+	}
+};//close PixelCompareByFlux()
 
 
 

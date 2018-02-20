@@ -107,6 +107,15 @@ class ChanVeseSegmenter : public TObject {
 		*/
 		static CVdata* Init(Image* img,Image* initSegmImg=0);
 
+		/**
+		* \brief Set level set to checker board model
+		*/
+		static void SetCheckerBoardLevelSet(TMatrixD* M, double square_size=10);
+
+		/**
+		* \brief Set level set to circle model
+		*/
+		static void SetCircleLevelSet(TMatrixD* M);
 
 		//===============================================
 		//==          CHAN-VESE INTERNAL METHODS

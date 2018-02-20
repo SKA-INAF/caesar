@@ -690,7 +690,8 @@ Image* Blob::GetImage(ImgType mode,int pixMargin){
 	//## Fill image and binarized image
 	TString imgName= Form("SourceImg_%s_mode%d",this->GetName(),mode);
 	//Image* blobImg= new Image(nBoxX,boundingBoxX[0]-0.5,boundingBoxX[1]+0.5,nBoxY,boundingBoxY[0]-0.5,boundingBoxY[1]+0.5,imgName);
-	Image* blobImg= new Image(nBoxX,nBoxY,boundingBoxX[0]-0.5,boundingBoxY[0]-0.5,std::string(imgName));
+	//Image* blobImg= new Image(nBoxX,nBoxY,boundingBoxX[0]-0.5,boundingBoxY[0]-0.5,std::string(imgName));
+	Image* blobImg= new Image(nBoxX,nBoxY,boundingBoxX[0],boundingBoxY[0],std::string(imgName));
 	
 	if(mode==eBinaryMap){
 		for(size_t k=0;k<m_Pixels.size();k++){
@@ -800,6 +801,25 @@ int Blob::ComputeZernikeMoments(int order){
 	return 0;
 
 }//close ComputeZernikeMoments()
+
+
+bool Blob::IsPointOnContour(double x,double y,double tol)
+{
+	//If no contours are present return false
+	if(m_Contours.empty()) return false;
+
+	//Check if point is lying on any stored contours
+	bool isOnContour= false;
+	for(size_t i=0;i<m_Contours.size();i++){
+		if(m_Contours[i]->FindPoint(x,y,tol)){//found on i-th contour
+			isOnContour= true;
+			break;
+		}
+	}//end loop contours
+
+	return isOnContour;
+
+}//close IsPointOnContour()
 
 
 }//close namespace

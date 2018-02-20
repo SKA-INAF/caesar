@@ -562,7 +562,7 @@ int BkgFinder::ComputeLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,
 					double thisBkgValue= interpolatedBkg[gBin];
 	  			double thisRMSValue= interpolatedRMS[gBin];
 					if(thisBkgValue==0 || thisRMSValue<=0 ){
-						WARN_LOG("Interpolated value is zero (bkg="<<thisBkgValue<<", rms="<<thisRMSValue<<")");
+						DEBUG_LOG("Interpolated value is zero (bkg="<<thisBkgValue<<", rms="<<thisRMSValue<<")");
 					}
 	
 					(bkgData->BkgMap)->FillPixelMT(bkg_moments_t,(long int)i,(long int)j,thisBkgValue);
@@ -613,7 +613,7 @@ int BkgFinder::ComputeLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,
 				double thisBkgValue= interpolatedBkg[gBin];
 	  		double thisRMSValue= interpolatedRMS[gBin];
 				if(thisBkgValue==0 || thisRMSValue<=0 ){
-					WARN_LOG("Interpolated value is zero (bkg="<<thisBkgValue<<", rms="<<thisRMSValue<<")");
+					DEBUG_LOG("Interpolated value is zero (bkg="<<thisBkgValue<<", rms="<<thisRMSValue<<")");
 				}
 	
 				(bkgData->BkgMap)->FillPixel(i,j,thisBkgValue);
@@ -732,19 +732,18 @@ int BkgFinder::ComputeSampleBkg(BkgSampleData& bkgSampleData,Image* img,int esti
 		return -1;
 	}
 
-	//## Integrity checks
-	
+	//## Integrity checks	
 	if(bkgSampleData.npix<10){
-		WARN_LOG("Too few pixels available (n="<<bkgSampleData.npix<<") for bkg estimation, unreliable sampled bkg!");	
+		DEBUG_LOG("Too few pixels available (n="<<bkgSampleData.npix<<") for bkg estimation, unreliable sampled bkg!");	
 		bkgSampleData.isReliable= false;
 	}
 
 	if( bkgSampleData.bkgLevel==0 || TMath::IsNaN(bkgSampleData.bkgLevel) || fabs(bkgSampleData.bkgLevel)==TMath::Infinity() ){
-		WARN_LOG("Invalid bkg level estimated (bkgLevel="<<bkgSampleData.bkgLevel<<"), unreliable sampled bkg!");
+		DEBUG_LOG("Invalid bkg level estimated (bkgLevel="<<bkgSampleData.bkgLevel<<"), unreliable sampled bkg!");
 		bkgSampleData.isReliable= false;
 	}
 	if( bkgSampleData.bkgRMS==0 || TMath::IsNaN(bkgSampleData.bkgRMS) || fabs(bkgSampleData.bkgRMS)==TMath::Infinity() ){
-		WARN_LOG("Invalid noise level estimated (bkgRMS="<<bkgSampleData.bkgRMS<<"), unreliable sampled bkg!");
+		DEBUG_LOG("Invalid noise level estimated (bkgRMS="<<bkgSampleData.bkgRMS<<"), unreliable sampled bkg!");
 		bkgSampleData.isReliable= false;
 	}
 

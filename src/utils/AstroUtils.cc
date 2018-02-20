@@ -58,6 +58,21 @@ AstroUtils::~AstroUtils()
 
 }
 
+int AstroUtils::PixelToWCSCoords(double& xpos, double& ypos,WorldCoor* wcs,double ix,double iy) {
+
+	//Check WCS
+	if(!wcs){
+		ERROR_LOG("Null ptr to given WCS!");
+		return -1;
+	}
+
+	//Convert coords
+	pix2wcs (wcs,ix,iy,&xpos, &ypos);
+	
+	return 0;
+
+}//close PixelToWCSCoords()
+
 
 int AstroUtils::PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,double& xpos, double& ypos) {
 
@@ -86,10 +101,11 @@ int AstroUtils::PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,d
 
 	//Convert coords
 	pix2wcs (wcs,ix,iy,&xpos, &ypos);
-
+	
 	return 0;
 
 }//close PixelToWCSCoords()
+
 
 
 int AstroUtils::PixelToWCSCoords(Caesar::Image* image,double ix,double iy,double& xpos, double& ypos,int coordSystem) {
@@ -127,7 +143,7 @@ int AstroUtils::PixelToWCSCoords(Caesar::Image* image,double ix,double iy,double
 
 	//Convert coords
 	pix2wcs (wcs,ix,iy,&xpos, &ypos);
-
+	
 	//Clear up
 	delete wcs;
 	wcs= 0;
@@ -135,6 +151,7 @@ int AstroUtils::PixelToWCSCoords(Caesar::Image* image,double ix,double iy,double
 	return 0;
 		
 }//close PixelToWCSCoords()
+
 
 
 

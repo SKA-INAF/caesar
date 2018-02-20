@@ -181,9 +181,3 @@ double LoGFilter::NormLoGKernel(double x,double y,double sigma){
 }//close namespace 
 
 
-
-
-
-
-
-

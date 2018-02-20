@@ -145,6 +145,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(ds9RegionFile,std::string,"DS9SourceRegion.reg","","");
 		REGISTER_OPTION(saveDS9Region,bool,true,false,true);
 		REGISTER_OPTION(DS9RegionFormat,int,2,0,3);
+		REGISTER_OPTION(ds9FitRegionFile,std::string,"DS9SourceFitRegion.reg","","");
 		REGISTER_OPTION(saveToFile,bool,true,false,true);
 		REGISTER_OPTION(saveConfig,bool,true,false,true);
 		REGISTER_OPTION(saveResidualMap,bool,true,false,true);
@@ -177,6 +178,8 @@ int ConfigParser::RegisterPredefinedOptions(){
 		//==  Image beam options               ==
 		//=======================================
 		REGISTER_OPTION(beamFWHM,double,6.5,0,3600);//circular beam FWHM in arcsec
+		REGISTER_OPTION(beamBmaj,double,10,0,3600);//elliptical beam maj FWHM in arcsec
+		REGISTER_OPTION(beamBmin,double,5,0,3600);//elliptical beam min FWHM in arcsec
 		REGISTER_OPTION(beamTheta,double,0,-0.0001,180);//circular beam rot in degrees
 		REGISTER_OPTION(pixSize,double,1,0,3600);//pixel area in arcsec
 
@@ -191,7 +194,9 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(tileStepSizeX,double,1,0.001,1);
 		REGISTER_OPTION(tileStepSizeY,double,1,0.001,1);
 		REGISTER_OPTION(mergeSourcesAtEdge,bool,true,false,true);
-		
+		REGISTER_OPTION(mergeSources,bool,false,false,true);
+		REGISTER_OPTION(mergeCompactSources,bool,false,false,true);
+		REGISTER_OPTION(mergeExtendedSources,bool,false,false,true);
 
 		//======================
 		//==  Logger options  ==
@@ -214,7 +219,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(use2ndPassInLocalBkg,bool,true,false,true);
 		REGISTER_OPTION(skipOutliersInLocalBkg,bool,false,false,true);
 		REGISTER_OPTION(localBkgMethod,int,1,1,2);
-		REGISTER_OPTION(bkgEstimator,int,2,1,4);
+		REGISTER_OPTION(bkgEstimator,int,2,0,5);
 		REGISTER_OPTION(useBeamInfoInBkg,bool,true,false,true);
 		REGISTER_OPTION(boxSizeX,double,20,0.01,1000);
 		REGISTER_OPTION(boxSizeY,double,20,0.01,1000);
@@ -231,27 +236,23 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(guidedFilterRadius,double,12,0,1000);
 		REGISTER_OPTION(guidedFilterColorEps,double,0.04,0,1000);
 		
-
 		//==============================
 		//==  Source finding options  ==
 		//==============================
 		REGISTER_OPTION(searchCompactSources,bool,true,false,true);
-		//REGISTER_OPTION(searchBrightSources,bool,false,false,true);
-		//REGISTER_OPTION(searchFaintSources,bool,false,false,true);
-		REGISTER_OPTION(searchNestedSources,bool,true,false,true);
 		REGISTER_OPTION(minNPix,int,10,0,10000);
-		REGISTER_OPTION(seedBrightThr,double,10,0,10000);	
 		REGISTER_OPTION(seedThr,double,5,0,10000);
 		REGISTER_OPTION(mergeThr,double,2.6,0,10000);
 		REGISTER_OPTION(mergeBelowSeed,bool,false,false,true);
 		REGISTER_OPTION(searchNegativeExcess,bool,false,false,true);
 		REGISTER_OPTION(compactSourceSearchNIters,int,10,0,100);
 		REGISTER_OPTION(seedThrStep,double,1,0,10);
-		//REGISTER_OPTION(wtScaleFaint,int,1,1,10);
-
+		
 		//=====================================
 		//==  Nested Source finding options  ==
 		//=====================================
+		REGISTER_OPTION(searchNestedSources,bool,true,false,true);
+		REGISTER_OPTION(sourceToBeamAreaThrToSearchNested,double,0,-0.001,100);
 		REGISTER_OPTION(nestedBlobThrFactor,double,1,0,100);
 		REGISTER_OPTION(minNestedMotherDist,double,2,0,100);
 		REGISTER_OPTION(maxMatchingPixFraction,double,0.5,0,1);
@@ -263,6 +264,8 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(extendedSearchMethod,int,2,0,10);		
 		REGISTER_OPTION(useResidualInExtendedSearch,bool,true,false,true);
 		REGISTER_OPTION(wtScaleExtended,int,6,1,10);
+		REGISTER_OPTION(wtScaleSearchMin,int,3,1,10);
+		REGISTER_OPTION(wtScaleSearchMax,int,6,1,10);
 		REGISTER_OPTION(activeContourMethod,int,2,0,3);		
 		
 		//================================
@@ -280,10 +283,14 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(psEllipseAreaRatioMaxThr,double,1.4,0,10);
 		REGISTER_OPTION(useMaxNPixCut,bool,false,false,true);
 		REGISTER_OPTION(psMaxNPix,double,1000,0,1.e+7);
+		REGISTER_OPTION(useNBeamsCut,bool,false,false,true);
+		REGISTER_OPTION(psNBeamsThr,double,5,-0.0001,1000);
 				
 		//================================
 		//==  Source residual options   ==
 		//================================
+		REGISTER_OPTION(dilateZBrightThr,double,10,0,10000);
+		REGISTER_OPTION(dilateZThr,double,5,0,10000);
 		REGISTER_OPTION(dilateNestedSources,bool,true,false,true);		
 		REGISTER_OPTION(dilateKernelSize,int,9,1,1001);		
 		REGISTER_OPTION(dilatedSourceType,int,2,-1,3);
@@ -291,10 +298,32 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(dilateRandomize,bool,false,false,true);
 
 		//==================================
-		//==  Source deblending options   ==
+		//==  Source fitting options   ==
 		//==================================
 		REGISTER_OPTION(fitSources,bool,false,false,true);
-		REGISTER_OPTION(fitMaxNComponents,int,3,0,100);			
+		REGISTER_OPTION(nBeamsMaxToFit,double,20,0,100000);
+		REGISTER_OPTION(fitMaxNComponents,int,3,0,100);		
+		REGISTER_OPTION(fitWithCentroidLimits,bool,true,false,true);
+		REGISTER_OPTION(fitWithFixedBkg,bool,true,false,true);
+		REGISTER_OPTION(fitWithBkgLimits,bool,true,false,true);
+		REGISTER_OPTION(fitUseEstimatedBkgLevel,bool,true,false,true);
+		REGISTER_OPTION(fitBkgLevel,double,0.,-1.e+6,1.e+6);
+		REGISTER_OPTION(fitWithAmplLimits,bool,true,false,true);
+		REGISTER_OPTION(fitAmplLimit,double,0.3,0,2);
+		REGISTER_OPTION(fitWithSigmaLimits,bool,true,false,true);
+		REGISTER_OPTION(fixSigmaInPreFit,bool,true,false,true);
+		REGISTER_OPTION(fitSigmaLimit,double,0.3,0,2);
+		REGISTER_OPTION(fitWithFixedSigma,bool,false,false,true);
+		REGISTER_OPTION(fitWithThetaLimits,bool,true,false,true);
+		REGISTER_OPTION(fitWithFixedTheta,bool,false,false,true);
+		REGISTER_OPTION(fitThetaLimit,double,5,0,360);
+		REGISTER_OPTION(useFluxZCutInFit,bool,false,false,true);
+		REGISTER_OPTION(fitZCutMin,double,2.5,0,1000);
+		REGISTER_OPTION(peakMinKernelSize,int,3,0,101);
+		REGISTER_OPTION(peakMaxKernelSize,int,7,0,101);
+		REGISTER_OPTION(peakKernelMultiplicityThr,int,1,0,100);
+		REGISTER_OPTION(peakShiftTolerance,int,1,0,20);
+		REGISTER_OPTION(peakZThrMin,double,1,0,1000);
 		//REGISTER_OPTION(deblendCurvThr,double,0,-0.0001,1.00001);	
 		//REGISTER_OPTION(deblendComponentMinNPix,double,5,0,100000);			
 			
@@ -310,6 +339,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(cvMuPar,double,0.5,0,100);
 		REGISTER_OPTION(cvNuPar,double,0,0,100);
 		REGISTER_OPTION(cvPPar,double,1,0,100);
+		REGISTER_OPTION(cvInitContourToSaliencyMap,bool,true,false,true);
 
 		//===================================================================
 		//==  Linear Region-based Active Contour (LRAC) algorithm options  ==
@@ -318,6 +348,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(lracLambdaPar,double,0.1,0,1000);
 		REGISTER_OPTION(lracRadiusPar,double,10,0,1000);
 		REGISTER_OPTION(lracEpsPar,double,0.01,0,1000);//Convergence par
+		REGISTER_OPTION(lracInitContourToSaliencyMap,bool,true,false,true);
 
 		//===================================
 		//==  Saliency filtering options   ==

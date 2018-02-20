@@ -307,8 +307,10 @@ std::vector<double> ZernikeMoments::mb_Znl(double *X, double *Y, double *P, int 
 	static char init_lut=0;
 
 	double x, y, p ;   //individual values of X, Y, P
-	int i, m, theZ, theLUT, numZ=0;
-	int n=0,l=0;
+	int i, theZ, theLUT, numZ=0;
+	int n= 0;
+	int m= 0;
+	int l= 0;
 	
 	std::complex<double> sum [MAX_Z];
 	std::complex<double> Vnl;

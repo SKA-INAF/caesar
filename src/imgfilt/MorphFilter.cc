@@ -33,6 +33,7 @@
 #include <Pixel.h>
 #include <BkgData.h>
 #include <Logger.h>
+#include <Graph.h>
 
 #include <rtnorm.h>
 
@@ -67,21 +68,37 @@ MorphFilter::~MorphFilter(){
 }//close destructor
 
 
-int MorphFilter::FindPeaks(std::vector<TVector2>& peakPoints,Image* img,int peakShiftTolerance,bool skipBorders){
-
+int MorphFilter::FindPeaks(std::vector<TVector2>& peakPoints,Image* img,std::vector<int> kernelSizes,int peakShiftTolerance,bool skipBorders,int peakKernelMultiplicityThr)
+{
 	//Check input image
 	if(!img){
 		ERROR_LOG("Null ptr to input image given!");
 		return -1;
 	}
 
+	//Check multiplicity thr
+	int nKernels= static_cast<int>(kernelSizes.size());
+	if(peakKernelMultiplicityThr==-1){
+		peakKernelMultiplicityThr= nKernels;
+	}
+	if(peakKernelMultiplicityThr>nKernels){
+		WARN_LOG("Multiplicy thr ("<<peakKernelMultiplicityThr<<") larger than nkernels ("<<nKernels<<"), set it to "<<nKernels<<"...");
+		peakKernelMultiplicityThr= nKernels;
+	}
+	if(peakKernelMultiplicityThr==0 || (peakKernelMultiplicityThr<0 && peakKernelMultiplicityThr!=-1)){
+		ERROR_LOG("Invalid multiplicity thr ("<<peakKernelMultiplicityThr<<") given!");
+		return -1;
+	}
+
 	//Init data
 	peakPoints.clear();
-	int nKernels= 3;
-	//int kernelSizes[]= {3,5,7};
-	int kernelSizes[]= {5,7,9};
-	std::vector< std::vector<TVector2> > points;  
-	for(int k=0;k<nKernels;k++) points.push_back( std::vector<TVector2>() );
+	struct PeakData{
+		float x;
+		float y;
+		int id;
+		PeakData(float _x,float _y,float _id): x(_x), y(_y), id(_id) {}
+	};
+	std::vector<PeakData> peaks;
 
 	//## Find peaks with different kernel sizes
 	bool hasPeaks= true;
@@ -111,7 +128,8 @@ int MorphFilter::FindPeaks(std::vector<TVector2>& peakPoints,Image* img,int peak
 			long int binY= img->GetBinY(gBin); 
 			double x= img->GetX(binX);
 			double y= img->GetY(binY);
-			points[k].push_back(TVector2(x,y));
+			//points[k].push_back(TVector2(x,y));
+			peaks.push_back(PeakData(x,y,k));
 		}//end loop peak points
 
 	}//end loop kernels
@@ -121,38 +139,55 @@ int MorphFilter::FindPeaks(std::vector<TVector2>& peakPoints,Image* img,int peak
 		return 0;
 	}
 
-	//## Match peaks found with different kernels (given a tolerance)
-	//TGraph* peaks= new TGraph;
-	int npeaks= 0;
-	for (size_t i=0;i<points[0].size();i++) {
-  	for (size_t j=0; j<points[1].size(); j++) {
-    	for (size_t k=0; k<points[2].size(); k++) {
-				TVector2 P1= points[0][i];				
-				TVector2 P2= points[1][j];     		
-				TVector2 P3= points[2][k];
-				double dist12_x= fabs(P1.X()-P2.X());
-				double dist12_y= fabs(P1.Y()-P2.Y());
-				double dist13_x= fabs(P1.X()-P3.X());
-				double dist13_y= fabs(P1.Y()-P3.Y());
-				double dist23_x= fabs(P2.X()-P3.X());
-				double dist23_y= fabs(P2.Y()-P3.Y());
+	//## Create graph with "matching/adjacent" peaks
+	Graph linkGraph(peaks.size());
+	for(size_t i=0;i<peaks.size()-1;i++) {
+		for(size_t j=i+1;j<peaks.size();j++) {	
+			float distX= peaks[i].x - peaks[j].x;
+			float distY= peaks[i].y - peaks[j].y;
+			bool areAdjacent= (fabs(distX)<=peakShiftTolerance && fabs(distY)<=peakShiftTolerance);
+			if(!areAdjacent) continue;
+			linkGraph.AddEdge(i,j);
+		}
+	}
+	
+	//Find connected peaks
+	std::vector<std::vector<int>> connected_indexes;
+	linkGraph.GetConnectedComponents(connected_indexes);
 
-				if( dist12_x<=peakShiftTolerance && dist13_x<=peakShiftTolerance && dist23_x<=peakShiftTolerance &&
-						dist12_y<=peakShiftTolerance && dist13_y<=peakShiftTolerance && dist23_y<=peakShiftTolerance
-				){
-					TVector2 PMean= (P1+P2+P3)*1/3.;
-					peakPoints.push_back(PMean);
-					//peaks->SetPoint(npeaks,PMean.X(),PMean.Y());
-					INFO_LOG("Peak no. "<<npeaks+1<<" C("<<PMean.X()<<","<<PMean.Y()<<")");
-					npeaks++;			
-				}   	
-      }//end loop k
-    }//end loop j
-  }//end loop i
+	
+	//Match peaks found with different kernels (given a tolerance)
+	int npeaks= 0;
+	for(size_t i=0;i<connected_indexes.size();i++){
+		std::set<int> id_list;
+
+		for(size_t j=0;j<connected_indexes[i].size();j++){
+			int index= connected_indexes[i][j];
+			id_list.insert(peaks[index].id);
+		}//end loop items in cluster
+		
+		//Check multiplicity
+		int multiplicity= static_cast<int>(id_list.size());
+		if( multiplicity<peakKernelMultiplicityThr ) {
+			DEBUG_LOG("Skip peak group no. "<<i+1<<" as below multiplicity thr ("<<multiplicity<<"<"<<peakKernelMultiplicityThr<<")");
+			continue;
+		}
+
+		//Compute peak mean and fill final peaks list
+		TVector2 peakMean(0,0);
+		for(size_t j=0;j<connected_indexes[i].size();j++){
+			int index= connected_indexes[i][j];
+			peakMean+= TVector2(peaks[index].x,peaks[index].y);
+		}
+		peakMean*= 1./(float)(connected_indexes[i].size());
+		peakPoints.push_back(peakMean);
+		INFO_LOG("Peak no. "<<npeaks+1<<" C("<<peakMean.X()<<","<<peakMean.Y()<<")");
+		npeaks++;	
+
+	}//end loop clusters
 
 	if(npeaks<=0){
 		WARN_LOG("No matching peaks across the three dilate kernels detected!");
-		//if(peaks) peaks->Delete();
 		return 0;
 	}
 	INFO_LOG("#"<<npeaks<<" peaks detected!");
@@ -245,6 +280,107 @@ Image* MorphFilter::Dilate(std::vector<long int>& peakPixelIds,Image* img,int Ke
 }//close Dilate()
 
 
+
+Image* MorphFilter::GetFiltered(std::vector<long int>& peakPixelIds,Image* img,int KernSize,int morphOp,int structElementType,int niters,bool skipBorders) 
+{
+	//## Check input image		
+	if(!img){
+		ERROR_LOG("Null ptr to given image!");
+		return nullptr;
+	}
+	long int Nx= img->GetNx();
+	long int Ny= img->GetNy();
+
+	//## Convert image to OpenCV format
+	cv::Mat mat= img->GetOpenCVMat("64");
+
+	//## Init struct element
+	int ptSize= -1;//(KernSize-1)/2;
+	cv::Size kernel_size(KernSize,KernSize);
+	cv::Mat element;
+	if(structElementType==eMORPH_RECT) element= cv::getStructuringElement(cv::MORPH_RECT, kernel_size, cv::Point(ptSize,ptSize));
+	else if(structElementType==eMORPH_ELLIPSE) element= cv::getStructuringElement(cv::MORPH_ELLIPSE, kernel_size, cv::Point(ptSize,ptSize));
+	else if(structElementType==eMORPH_CROSS) element= cv::getStructuringElement(cv::MORPH_CROSS, kernel_size, cv::Point(ptSize,ptSize));	
+	else element= cv::getStructuringElement(cv::MORPH_RECT, kernel_size, cv::Point(ptSize,ptSize));
+
+	//## Morphology operation
+	//MORPH_OPEN - an opening operation
+	//MORPH_CLOSE - a closing operation
+	//MORPH_GRADIENT - a morphological gradient
+	//MORPH_TOPHAT - “top hat”
+	//MORPH_BLACKHAT - “black hat”
+	cv::Mat mat_morph;
+	if(morphOp==eMORPH_OPENING) cv::morphologyEx(mat, mat_morph, cv::MORPH_OPEN, element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);	
+	else if(morphOp==eMORPH_CLOSING) cv::morphologyEx(mat, mat_morph, cv::MORPH_CLOSE, element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);	
+	else if(morphOp==eMORPH_GRADIENT) cv::morphologyEx(mat, mat_morph, cv::MORPH_GRADIENT, element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);	
+	else if(morphOp==eMORPH_TOPHAT) cv::morphologyEx(mat, mat_morph, cv::MORPH_TOPHAT, element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);	
+	else if(morphOp==eMORPH_BLACKHAT) cv::morphologyEx(mat, mat_morph, cv::MORPH_BLACKHAT, element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);	
+	else if(morphOp==eMORPH_EROSION) cv::erode(mat,mat_morph,element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);
+	else if(morphOp==eMORPH_DILATION) cv::dilate(mat,mat_morph,element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);
+	else{
+		ERROR_LOG("Invalid morph operation given ("<<morphOp<<")!");
+		return nullptr;
+	}
+
+	//## Compare original and filtered image
+	cv::Mat mat_cmp = cv::Mat::zeros(Ny,Nx,CV_8UC1);
+	cv::compare(mat, mat_morph, mat_cmp, cv::CMP_EQ);
+
+	//## Fill morhological filtered image
+	Image* MorphImg= img->GetCloned("",true,true);
+	MorphImg->Reset();
+	
+	int npeaks= 0;
+	
+	for(long int j=0;j<Ny;j++){
+		int rowId= Ny-1-j;
+		
+		for(long int i=0;i<Nx;i++){
+			int colId= i;
+			double binContent= img->GetPixelValue(i,j);
+			double matrixElement= mat_morph.at<double>(rowId,colId);
+			//MorphImg->FillPixel(i,j,matrixElement);
+				
+			float mat_comparison= (float)mat_cmp.at<unsigned char>(rowId,colId);
+			MorphImg->FillPixel(i,j,mat_comparison);//DEBUG
+
+			bool borderCheck= (!skipBorders || (skipBorders && i>0 && j>0 && i<Nx-1 && j<Ny-1) );
+
+			if( mat_comparison==255 && borderCheck && std::isnormal(binContent) ){
+				INFO_LOG("Found local maximum pixel ("<<i<<","<<j<<"), check surrounding pixel to confirm...");
+
+				//## Check surrounding pixels (do not tag as peak if the surrounding 3x3 is flat)
+				bool isFlatArea= true;
+				for(int ix=i-1;ix<i+1;ix++){
+					for(int iy=j-1;iy<j+1;iy++){
+						if(ix!=i && iy!=j && ix>=0 && ix<Nx && iy>=0 && iy<Ny){
+							double w= img->GetPixelValue(ix,iy);
+							if(w!=binContent) {
+								isFlatArea= false;
+								break;
+							}
+						}
+					}//end loop kernel y
+				}//end loop kernel x
+
+				if(!isFlatArea){
+					INFO_LOG("Peaks #"<<npeaks<<" detected @ ("<<i<<","<<j<<")");
+					long int gBin= img->GetBin(i,j);
+					peakPixelIds.push_back(gBin);
+					npeaks++;			
+				}
+				else{
+					INFO_LOG("Local maximum pixel found ("<<i<<","<<j<<") not confirmed (flat surrounding)...");
+				}
+			}//close if check local maximum
+		}//end loop x
+	}//end loop y
+	
+	return MorphImg;
+
+}//close GetFiltered()
+
+
 int MorphFilter::FindDilatedSourcePixels(Image* img,Source* source,int KernSize,std::vector<long int>& pixelsToBeDilated){
 
 	//## Check input source
@@ -307,7 +443,7 @@ int MorphFilter::FindDilatedSourcePixels(Image* img,Source* source,int KernSize,
 }//close FindDilatedSourcePixels()
 
 
-int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr){
+int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr){
 
 	//## Check input source
 	if(!source) {
@@ -326,7 +462,7 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 	
 	//## Skip faint sources
 	//Get pixel seeds
-	bool isFaintSource= false;
+	bool isBrightSource= false;
 	std::vector<int> seedPixelIndexes= source->GetSeedPixelIndexes();
 	DEBUG_LOG("#"<<seedPixelIndexes.size()<<" seed pixels...");
 
@@ -352,6 +488,7 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 		DEBUG_LOG("Source is below significance threshold for dilation (Z="<<Zmax<<"<"<<zThr<<"), skip it!");
 		return 0;	
 	}
+	isBrightSource= (Zmax>=zBrightThr);
 	
 	//## Check R interface
 	double sigmaTrunc= 1;//trunc random gaussian to +-sigmaTrunc	
@@ -382,13 +519,43 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 
 
 	//## Find pixels to be dilated
+	//## NB: If Z>Zthr_bright ==> dilate mother source always no matter what source type, ignore all nested
+	//##     If Zth<Z<Zthr_bright ==> dilate mother source is there are no nested and type match, otherwise dilate nested
+
+	std::vector<long int> pixelsToBeDilated;
+	if(isBrightSource){//MOTHER SOURCE
+		DEBUG_LOG("Selecting entire mother source for dilation (bright source) ...");
+		FindDilatedSourcePixels(img,source,KernSize,pixelsToBeDilated);
+	}
+	else{
+		if(hasNestedSources && skipToNested){//NESTED SOURCES
+			DEBUG_LOG("Dilating nested sources...");
+			std::vector<Source*> nestedSources= source->GetNestedSources();
+			for(size_t k=0;k<nestedSources.size();k++){
+				int nestedSourceType= nestedSources[k]->Type;
+				if(dilateSourceType==-1 || nestedSourceType==sourceType){
+					FindDilatedSourcePixels(img,nestedSources[k],KernSize,pixelsToBeDilated);
+				}
+			}//end loop nested sources
+		}//close if
+		else{//MOTHER SOURCE
+			if(dilateSourceType==-1 || sourceType==dilateSourceType){
+				DEBUG_LOG("Dilating entire mother source (no nested sources present + match source type) ...");
+				FindDilatedSourcePixels(img,source,KernSize,pixelsToBeDilated);
+			}
+		}
+	}//close else
+
+
+
+	/*
 	//== MOTHER SOURCE
 	std::vector<long int> pixelsToBeDilated;
-	DEBUG_LOG("hasNestedSources="<<hasNestedSources);
 	if(!hasNestedSources && (dilateSourceType==-1 || sourceType==dilateSourceType) ){
 		DEBUG_LOG("Dilating mother sources...");
 		FindDilatedSourcePixels(img,source,KernSize,pixelsToBeDilated);	
 	}
+
 	//== NESTED SOURCES
 	if(skipToNested && hasNestedSources){
 		DEBUG_LOG("Dilating nested sources...");
@@ -400,6 +567,9 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 			}
 		}//end loop nested sources
 	}//close if dilate nested
+	*/
+
+
 
 	//## Replace dilated pixels with model		
 	if(dilateModel==eDilateWithSourceMedian){
@@ -505,7 +675,7 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 }//close DilateAroundSource()
 
 
-int MorphFilter::DilateAroundSources(Image* img,std::vector<Source*>const& sources,int KernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr){
+int MorphFilter::DilateAroundSources(Image* img,std::vector<Source*>const& sources,int KernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr){
 	
 	//## Check input image
 	if(!img){
@@ -532,8 +702,8 @@ int MorphFilter::DilateAroundSources(Image* img,std::vector<Source*>const& sourc
 	}
 
 	//## Start dilating sources
-	for(unsigned int k=0;k<sources.size();k++){	
-		int status= DilateAroundSource(img,sources[k],KernSize,dilateModel,dilateSourceType,skipToNested,bkgData,useLocalBkg,randomize,zThr);
+	for(size_t k=0;k<sources.size();k++){	
+		int status= DilateAroundSource(img,sources[k],KernSize,dilateModel,dilateSourceType,skipToNested,bkgData,useLocalBkg,randomize,zThr,zBrightThr);
 		if(status<0){
 			WARN_LOG("Source dilation failed for source no. "<<k<<" ...");
 		}

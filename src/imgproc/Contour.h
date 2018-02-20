@@ -63,6 +63,25 @@ using namespace std;
 
 namespace Caesar {
 
+//Create matcher
+struct ContourPointMatcher {	
+	double m_x;
+	double m_y;
+	double m_tol;
+	ContourPointMatcher(const double& x,const double& y,const double& tol) 
+		: m_x(x), m_y(y), m_tol(tol) 
+	{}
+
+	bool operator()(const TVector2& obj) const {
+		double distX= obj.X() - m_x;
+		double distY= obj.Y() - m_y;
+		bool areAdjacent= (fabs(distX)<=m_tol && fabs(distY)<=m_tol);
+  	return areAdjacent;
+	}
+};
+
+
+
 class Contour : public TObject {
 
   public:
@@ -116,6 +135,12 @@ class Contour : public TObject {
 			if(GetN()<=0 || i<0 || i>=GetN()) return 0;
 			return (&m_Points[i]);
 		}
+
+		/**
+		* \brief Find point (with tolerance)
+		*/
+		TVector2* FindPoint(double x,double y,double tol=0);
+
 		/**
 		* \brief Get contour point x & y
 		*/
@@ -414,6 +439,7 @@ class Contour : public TObject {
 #pragma link C++ class Contour+;
 #pragma link C++ class vector<Contour>+;
 #pragma link C++ class vector<Contour*>+;
+#pragma link C++ struct ContourPointMatcher+;
 #endif
 
 }//close namespace 

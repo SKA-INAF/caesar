@@ -55,6 +55,74 @@ namespace Caesar {
 
 class Contour;
 
+
+//======================================
+//==      STRUCT: SourceOverlapMatchPars
+//======================================
+struct SourceOverlapMatchPars {
+
+	//Standard constructor
+	SourceOverlapMatchPars(){
+		ResetPars();
+	}
+
+	//Param constructor
+	SourceOverlapMatchPars(long int _index,float _fraction, float _fraction_rec):
+		index(_index), overlapFraction(_fraction), overlapFraction_rec(_fraction_rec)
+	{}
+	
+	//Reset pars
+	void ResetPars(){
+		index=-1; 
+		overlapFraction=0; 
+		overlapFraction_rec=0; 
+		overlappingSourceIndexes.clear();
+		Sratio= 0;
+		Sratio_rec= 0;
+		dX= 0;
+		dY= 0;
+	}
+
+	//Pars
+	long int index;//index of match source in collection
+	float overlapFraction;//overlap fraction with respect to true source (>0)
+	float overlapFraction_rec;//overlap fraction with respect to rec source (>0)
+	float Sratio;//ratio of integrated flux of overlap pixels over total flux of true source
+	float Sratio_rec;//ratio of integrated flux of overlap pixels over total flux of rec source
+	float dX;//difference (in pixels) between signal-weighted centroids of true and rec sources in x coordinate (rec-true)
+	float dY;//difference (in pixels) between signal-weighted centroids of true and rec sources in y coordinate (rec-true)
+	std::vector<long int> overlappingSourceIndexes;//list of source index in collection overlapping with this source
+
+};//close SourceOverlapMatchPars struct
+
+
+//======================================
+//==      STRUCT: SourcePosMatchPars
+//======================================
+struct SourcePosMatchPars {
+
+	//Standard constructor
+	SourcePosMatchPars(){
+		ResetPars();
+	}
+	//Param constructor
+	SourcePosMatchPars(long int _index,float _posDiff,long int _fitComponentIndex=-1):
+		index(_index), posDiff(_posDiff), fitComponentIndex(_fitComponentIndex)
+	{}
+	
+	//Reset pars
+	void ResetPars(){index=-1; fitComponentIndex=-1; posDiff=0;}
+
+	//Pars
+	long int index;//index of match source in collection
+	float posDiff;//posDiff (>0)
+	long int fitComponentIndex;
+	
+};//close SourcePosMatchPars struct
+
+//======================================
+//==      CLASS: SOURCE
+//======================================
 class Source : public Blob {
 
 	public:
@@ -117,6 +185,10 @@ class Source : public Blob {
 		* \brief Set source sim type
 		*/
 		void SetSimType(SimSourceType choice){SimType=choice;}
+		/**
+		* \brief Set source sim max scale
+		*/
+		void SetSimMaxScale(float val){SimMaxScale=val;}
 		/**
 		* \brief Set beam flux integral
 		*/
@@ -197,7 +269,10 @@ class Source : public Blob {
 		* \brief Get DS9 ellipse info
 		*/
 		const std::string GetDS9EllipseRegion(bool dumpNestedSourceInfo=false);
-
+		/**
+		* \brief Get DS9 fitted ellipse info
+		*/
+		const std::string GetDS9FittedEllipseRegion(bool useFWHM=true);
 		
 		//================================================
 		//==         UTILS
@@ -249,13 +324,32 @@ class Source : public Blob {
 		/**
 		* \brief Merge this source with given source
 		*/
-		int MergeSource(Source* aSource,bool copyPixels=false,bool checkIfAdjacent=true,bool computeStatPars=true,bool computeMorphPars=true);
+		int MergeSource(Source* aSource,bool copyPixels=false,bool checkIfAdjacent=true,bool computeStatPars=true,bool computeMorphPars=true,bool sumMatchingPixels=false);
+
+		/**
+		* \brief Get collection of matching pixels between this and another source
+		*/
+		long int GetNMatchingPixels(std::vector<Pixel*>& matching_pixels,Source* aSource,bool sorted=false);
 
 		/**
 		* \brief Get number of matching pixels between this and another source
 		*/
-		long int GetNMatchingPixels(Source* aSource);
+		long int GetNMatchingPixels(Source* aSource,bool sorted=false){
+			std::vector<Pixel*> matching_pixels;
+			return GetNMatchingPixels(matching_pixels,aSource,sorted);
+		}
 
+		/**
+		* \brief Find source match in a collection by overlapping area
+		*/
+		bool FindSourceMatchByOverlapArea(SourceOverlapMatchPars& pars, const std::vector<Source*>& sources, float overlapThr);
+
+		/**
+		* \brief Find source match in a collection by position
+		*/
+		bool FindSourceMatchByPos(SourcePosMatchPars& pars, const std::vector<Source*>& sources, float posThr);
+
+		
 		/**
 		* \brief Get distance in pixels between source centroids
 		*/
@@ -264,7 +358,8 @@ class Source : public Blob {
 		/**
 		* \brief Fit source with a multi-component gaussian model
 		*/
-		int Fit(BlobPars blobPars,int nMaxComponents=3);
+		int Fit(SourceFitOptions& fitOptions);
+
 		/**
 		* \brief Set true source info
 		*/
@@ -319,6 +414,7 @@ class Source : public Blob {
 		int Type;
 		int Flag;
 		int SimType;
+		float SimMaxScale;//in arcsec
 
 	private:
 		double m_BeamFluxIntegral;

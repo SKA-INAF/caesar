@@ -14,6 +14,7 @@ set(
 	GradientFilter.h 	
 	MorphFilter.h 
 	SaliencyFilter.h
+	GausFilter.h 
 )
 set(
 	THIS_DICT_SRCS 
@@ -24,6 +25,7 @@ set(
 	${SRC_DIR}/GradientFilter.cc 
 	${SRC_DIR}/MorphFilter.cc
 	${SRC_DIR}/SaliencyFilter.cc
+	${SRC_DIR}/GausFilter.cc
 )
 
 set(THIS_HEADERS_WPATH "")

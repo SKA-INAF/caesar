@@ -16,95 +16,76 @@
 // * Caesar. If not, see http://www.gnu.org/licenses/.                   *
 // ***********************************************************************
 /**
-* @file FITSWriter.h
-* @class FITSWriter
-* @brief FITSWriter
+* @file GausFilter.h
+* @class GausFilter
+* @brief Class implementing elliptical gaussian filtering
 *
-* Image writer class for FITS files
+* Elliptical gaussian Filter
 * @author S. Riggi
 * @date 20/01/2015
 */
 
-#ifndef _FITS_WRITER_h
-#define _FITS_WRITER_h 1
+#ifndef _GAUS_FILTER_h
+#define _GAUS_FILTER_h 1
 
+//ROOT
 #include <TObject.h>
 
-//CFITSIO headers
-#include <fitsio.h>
-
-#include <cstdlib>
-#include <iomanip>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <stdio.h>
-#include <string>
-#include <stdexcept>
-
 #include <vector>
-#include <algorithm>
-#include <map>
-#include <string>
 
-using namespace std;
 
-namespace Caesar {
+namespace cv {
+	class Mat;
+}
 
+namespace Caesar{
 
 class Image;
-class ImgMetaData;
 
-class FITSWriter : public TObject {
+class GausFilter : public TObject {
 
   public:
 		
 		/** 
 		\brief Class constructor: initialize structures.
  		*/
-    FITSWriter();
+    GausFilter();
 		
 		/**
 		* \brief Class destructor: free allocated memory
 		*/
-    virtual ~FITSWriter();
-
+    virtual ~GausFilter();
 
 	public:
+	
+
 		/**
-		* \brief Write image to FITS file
+		* \brief Return gaussian-filtered image
 		*/
-		static int WriteFITS(Image* img,std::string outfilename,bool recreate=true);
+		static Image* GetGausFilter(Image* image,double bmaj,double bmin,double bpa,int nSigmas=5,double scale=1);
 		
+
+	private:
+		
+		/**
+		* \brief Build filter kernel
+		*/
+		static cv::Mat BuildKernel(int kernSize,double sigmaX,double sigmaY,double theta,double scale);
+		/**
+		* \brief Normalized LoG kernel definition
+		*/
+		static double Gaus2DFcn(double A,double x,double y,double sigmaX,double sigmaY,double theta);
+
 	private:
 
-		/**
-		* \brief Initialize python interface
-		*/
-		//static int Init();
-
-		/**
-		* \brief Writing metadata keywords
-		*/
-		static int WriteFITSKeywords(Image* img,fitsfile* fp);
-
-		/**
-		* \brief Handle error in FITS operations
-		*/
-		static void HandleError(int& status,fitsfile* fp);
-		
-	private:
-
-		ClassDef(FITSWriter,1)
+	ClassDef(GausFilter,1)
 
 };
 
 #ifdef __MAKECINT__
-#pragma link C++ class FITSWriter+; 
+#pragma link C++ class GausFilter+;
 #endif
 
-
 }//close namespace
-
 
 #endif

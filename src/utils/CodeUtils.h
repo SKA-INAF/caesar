@@ -248,16 +248,12 @@ class CodeUtils : public TObject {
 				else{
 					tempBuffer.push_back(data[i]);
 				}
-				/*
-      	if (!markedElements[i]) {
-					tempBuffer.push_back(data[i]);
-				}
-				*/
     	}
     	data = tempBuffer;
 		}//close DeleteItems()
 
 
+		
 		/**
 		* \brief Order vectors and get ordering index
 		*/
@@ -280,6 +276,10 @@ class CodeUtils : public TObject {
   		const T arr;
 		};
 
+		
+		/**
+		* \brief Reorder vector
+		*/
 		template< class T >
 			static void reorder(std::vector<T> & unordered,std::vector<size_t> const & index_map,std::vector<T> & ordered){
   			// copy for the reorder according to index_map, because unsorted may also be
@@ -290,31 +290,123 @@ class CodeUtils : public TObject {
 					ordered[i] = copy[index_map[i]];
 			}
 
+		/**
+		* \brief Sort vector
+		*/
 		template <class T>
-			static void sort(std::vector<T> & unsorted,std::vector<T> & sorted,std::vector<size_t> & index_map){
-  			// Original unsorted index map
-  			index_map.resize(unsorted.size());
- 				for(size_t i=0;i<unsorted.size();i++)
-					index_map[i] = i;
+		static void sort(std::vector<T> & unsorted,std::vector<T> & sorted,std::vector<size_t> & index_map){
+  		// Original unsorted index map
+  		index_map.resize(unsorted.size());
+ 			for(size_t i=0;i<unsorted.size();i++)
+				index_map[i] = i;
   
-  			// Sort the index map, using unsorted for comparison
-  			std::sort(index_map.begin(),index_map.end(),index_cmp<std::vector<T>& >(unsorted));
-  			sorted.resize(unsorted.size());
-  			reorder(unsorted,index_map,sorted);
-			}
+  		// Sort the index map, using unsorted for comparison
+  		std::sort(index_map.begin(),index_map.end(),index_cmp<std::vector<T>& >(unsorted));
+  		sorted.resize(unsorted.size());
+  		reorder(unsorted,index_map,sorted);
+		}
 	
+		/**
+		* \brief Sort vector in descending order
+		*/
 		template <class T>
-			static void sort_descending(std::vector<T> & unsorted,std::vector<T> & sorted,std::vector<size_t> & index_map){
-  			// Original unsorted index map
-  			index_map.resize(unsorted.size());
- 				for(size_t i=0;i<unsorted.size();i++)
-					index_map[i] = i;
+		static void sort_descending(std::vector<T> & unsorted,std::vector<T> & sorted,std::vector<size_t> & index_map){
+  		// Original unsorted index map
+  		index_map.resize(unsorted.size());
+ 			for(size_t i=0;i<unsorted.size();i++)
+				index_map[i] = i;
   
-  			// Sort the index map, using unsorted for comparison
-  			std::sort(index_map.begin(),index_map.end(),descending_index_cmp<std::vector<T>& >(unsorted));
-  			sorted.resize(unsorted.size());
-  			reorder(unsorted,index_map,sorted);
+  		// Sort the index map, using unsorted for comparison
+  		std::sort(index_map.begin(),index_map.end(),descending_index_cmp<std::vector<T>& >(unsorted));
+  		sorted.resize(unsorted.size());
+  		reorder(unsorted,index_map,sorted);
+		}
+
+		typedef std::vector< std::pair<long int,long int> > IndexPairs;
+
+		/**
+		* \brief Find index of equal elements in two vectors. 
+		*/
+		template <class Iterator,class Comparator>
+		static IndexPairs FindIntersectionIndexes(Iterator first1,Iterator last1,Iterator first2,Iterator last2,Comparator comp,bool sorted=false)
+		{			
+			//Sort vectors if not sorted
+			if(!sorted){
+				std::sort( first1, last1, comp );
+				std::sort( first2, last2, comp );
 			}
+
+			//Find intersection indexes
+			IndexPairs indexes;
+			Iterator begin1= first1;
+			Iterator begin2= first2;
+	
+			while (first1 != last1 && first2 != last2) {
+  			if (comp(*first1, *first2)) {
+    			++first1;
+    		} 
+				else if(comp(*first2, *first1)){
+					++first2;
+				}
+				else {
+					long int index1= std::distance(begin1,first1);
+					long int index2= std::distance(begin2,first2);
+					indexes.push_back( std::make_pair(index1,index2) );
+					++first1;
+					++first2;
+   			}
+ 			}//end while loop
+
+			return indexes;
+
+		}//close FindIntersectionIndexes()
+		
+		/**
+		* \brief Find vector index at which the cumulative sum is smaller then given value (comparator version)
+		*/
+		template <class T,class Comparator>
+		static T FindCumulativeSumFractionThr(std::vector<T>& data,Comparator comp,double thr, bool sorted=false)
+		{			
+			//Sort vector if not sorted
+			if(!sorted){
+				std::sort( data.begin(), data.end(), comp );
+			}
+
+			//Fill vector of cumulative sum
+			std::vector<T> cdf;
+			std::partial_sum(data.begin(),data.end(),std::back_inserter(cdf));
+			double sum= cdf[cdf.size()-1];
+	
+			//Find element at which the cumulative sum is smaller than the given thr 
+			size_t pos= std::lower_bound (cdf.begin(), cdf.end(),thr*sum, comp ) - cdf.begin();
+
+			return data[pos];
+
+		}//close FindCumulativeSumFractionThr()
+		
+		/**
+		* \brief Find vector index at which the cumulative sum is smaller then given value 
+		*/
+		template <class T>
+		static T FindCumulativeSumFractionThr(std::vector<T>& data,double thr, bool sorted=false)
+		{			
+			//Sort vector if not sorted
+			if(!sorted){
+				std::sort( data.begin(), data.end() );
+			}
+
+			//Fill vector of cumulative sum
+			std::vector<T> cdf;
+			std::partial_sum(data.begin(),data.end(),std::back_inserter(cdf));
+			double sum= cdf[cdf.size()-1];
+	
+			//Find element at which the cumulative sum is smaller than the given thr 
+			size_t pos= std::lower_bound (cdf.begin(), cdf.end(),thr*sum ) - cdf.begin();
+
+			return data[pos];
+
+		}//close FindCumulativeSumFractionThr()
+		
 
 		/**
 		* \brief String find and replace
@@ -335,6 +427,23 @@ class CodeUtils : public TObject {
 			if(pos==std::string::npos) return s;
 			if(extractleft) return s.substr(0,pos);
 			else return s.substr(pos+1,s.length()-pos);
+		}
+
+		/**
+		* \brief Extract filename from path
+		*/
+		static std::string ExtractFileNameFromPath(const std::string& s,bool strip_extension=false){
+			char sep = '/';
+   		size_t pos = s.rfind(sep, s.length());
+			std::string filename= "";
+   		if (pos != string::npos) {
+      	filename= s.substr(pos+1, s.length() - pos);
+				if(strip_extension) {
+					std::string filename_noext= ExtractSubString(filename,".");
+					filename= filename_noext;
+				}
+   		}
+   		return filename;
 		}
 
 		// return an evenly spaced 1-d grid of doubles.

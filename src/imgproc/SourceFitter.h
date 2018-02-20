@@ -62,11 +62,88 @@ namespace Caesar {
 class Image;
 class Source;
 
-struct BlobPars {
+
+struct SourceFitOptions {
+	//- Blob start fit pars
 	double bmaj;//in pixels
 	double bmin;//in pixels
-	double bpa;//in deg
-};
+	double bpa;//in degrees
+
+	//- Max number of components to be fitted
+	int nMaxComponents;
+
+	//- Number of matching peaks across kernels (-1=peak detected in all kernels, ...) and distance tolerance
+	int peakKernelMultiplicityThr;
+	int peakShiftTolerance;
+
+	//- Dilation kernels to be used when finding peaks
+	int peakMinKernelSize;
+	int peakMaxKernelSize;
+
+	//- Peak flux significance min threshold (in nsigmas wrt to avg bkg & rms)
+	double peakZThrMin;	
+
+	//- Centroid options
+	bool limitCentroidInFit;
+
+	//- Bkg options
+	bool fixBkg;
+	bool limitBkgInFit;
+	bool useEstimatedBkgLevel;
+	double fixedBkgLevel;
+		
+	//- Amplitude fit par range (example +-20% around source peak)
+	bool limitAmplInFit;
+	double amplLimit;
+
+	//- Sigma fit par range (example +-20% around source peak)
+	bool fixSigmaInPreFit;
+	bool fixSigma;	
+	bool limitSigmaInFit;
+	double sigmaLimit;
+
+	//- Theta 
+	bool fixTheta;
+	bool limitThetaInFit;
+	double thetaLimit;//in deg
+
+	//- Flux significance min threshold (in nsigmas above the bkg)
+	bool useFluxZCut;
+	double fluxZThrMin;
+
+	
+
+	//Default constructor
+	SourceFitOptions() 
+	{
+    bmaj= 5;//pix
+    bmin= 5;//pix
+		bpa= 0;
+		nMaxComponents= 3;
+		limitCentroidInFit= true;
+		fixBkg= true;
+		limitBkgInFit= true;
+		useEstimatedBkgLevel= true;
+		fixedBkgLevel= 0;
+		limitAmplInFit= true;
+		amplLimit= 0.2;
+		limitSigmaInFit= true;
+		sigmaLimit= 0.2;
+		fixSigmaInPreFit= false;
+		fixSigma= false;
+		fixTheta= false;
+		limitThetaInFit= true;
+		thetaLimit= 5;//deg
+		useFluxZCut= false;
+		fluxZThrMin= 2.5;//in nsigmas
+		peakZThrMin= 0;//in nsigmas
+		peakMinKernelSize= 3;
+		peakMaxKernelSize= 7;
+		peakKernelMultiplicityThr= 1;
+		peakShiftTolerance= 2;
+	}//close constructor
+};//close SourceFitOptions
+
 
 //========================================
 //==         SOURCE COMPONENT PARS
@@ -133,9 +210,47 @@ class SourceComponentPars : public TObject {
  		*/
 		std::map<std::string,double>const& GetFitParErrors() const {return FitParsErr;}		
 
+		/** 
+		\brief Get fit ellipse
+ 		*/
+		TEllipse* GetFitEllipse(bool useFWHM=true)
+		{	
+			//Check if has fit pars
+			if(FitPars.empty()) {
+				WARN_LOG("No fitted pars stored, returning nullptr ellipse!");
+				return nullptr;
+			}
+		
+			//Compute fit ellipse from pars
+			double x0= FitPars["x0"];
+			double y0= FitPars["y0"];
+			double sigmaX= FitPars["sigmaX"];
+			double sigmaY= FitPars["sigmaY"];
+			double theta= FitPars["theta"];			
+			//return StatsUtils::GetFitEllipse(x0,y0,sigmaX,sigmaY,theta,useFWHM);
+
+			TEllipse* ellipse= new TEllipse(x0,y0,sigmaX,sigmaY,0.,360.,theta);
+			ellipse->SetLineWidth(2);
+			ellipse->SetFillColor(0);
+			ellipse->SetFillStyle(0);
+
+			return ellipse;
+		}//close GetFitEllipse()
+
+		/**
+		* \brief Get flux density
+		*/
+		double GetFluxDensity(){
+			//Gaussian Area= pi*bmaj*bmin/(4*log(2)) or Area=2*pi*sigmaX*sigmaY
+			double ampl= FitPars["A"];
+			double sigmaX= FitPars["sigmaX"];
+			double sigmaY= FitPars["sigmaY"];
+			double fluxDensity= 2*TMath::Pi()*ampl*sigmaX*sigmaY;
+			return fluxDensity;
+		}
+
 	private:
 		
-
 	private:
 		std::map<std::string,double> FitPars;
 		std::map<std::string,double> FitParsErr;
@@ -190,6 +305,17 @@ class SourceFitPars : public TObject {
 		*/
 		double GetOffsetParErr(){return offset_err;}
 
+		/**
+		* \brief Get fitted ellipses
+		*/
+		std::vector<TEllipse*> GetFittedEllipses(bool useFWHM=true){
+			std::vector<TEllipse*> ellipses;
+			for(size_t i=0;i<pars.size();i++){
+				TEllipse* ellipse= pars[i].GetFitEllipse(useFWHM);
+				ellipses.push_back(ellipse);
+			}
+			return ellipses;
+		}
 
 		/**
 		* \brief Get pars
@@ -245,6 +371,14 @@ class SourceFitPars : public TObject {
 		* \brief Get number of components
 		*/
 		int GetNComponents(){return nComponents;}
+
+		/**
+		* \brief Get component flux density
+		*/
+		double GetComponentFluxDensity(int componentId){
+			if(componentId<0 || componentId>=nComponents) return -999;
+			return pars[componentId].GetFluxDensity();
+		}
 
 		/**
 		* \brief Set chi2 
@@ -305,8 +439,55 @@ class SourceFitPars : public TObject {
 		*/
 		int GetNFitPoints(){return nfit_points;}
 
-		
-		
+		/**
+		* \brief Get residual mean
+		*/
+		double GetResidualMean(){return residualMean;}
+		/**
+		* \brief Set residual mean
+		*/
+		void SetResidualMean(double value){residualMean=value;}
+		/**
+		* \brief Get residual rms
+		*/
+		double GetResidualRMS(){return residualRMS;}
+		/**
+		* \brief Set residual rms
+		*/
+		void SetResidualRMS(double value){residualRMS=value;}
+		/**
+		* \brief Get residual median
+		*/
+		double GetResidualMedian(){return residualMedian;}
+		/**
+		* \brief Set residual median
+		*/
+		void SetResidualMedian(double value){residualMedian=value;}
+		/**
+		* \brief Get residual mad
+		*/
+		double GetResidualMAD(){return residualMAD;}
+		/**
+		* \brief Set residual mad
+		*/
+		void SetResidualMAD(double value){residualMAD=value;}
+		/**
+		* \brief Get residual min
+		*/
+		double GetResidualMin(){return residualMin;}
+		/**
+		* \brief Set residual min
+		*/
+		void SetResidualMin(double value){residualMin=value;}		
+		/**
+		* \brief Get residual max
+		*/
+		double GetResidualMax(){return residualMax;}
+		/**
+		* \brief Set residual max
+		*/
+		void SetResidualMax(double value){residualMax=value;}
+
 		/**
 		* \brief Print
 		*/
@@ -339,8 +520,13 @@ class SourceFitPars : public TObject {
 			minimizer_status= -1;
 			offset= 0;
 			offset_err= 0;
+			residualMean= 0;
+			residualRMS= 0;
+			residualMedian= 0;
+			residualMAD= 0;
+			residualMin= 0;
+			residualMax= 0;
 			pars.clear();
-			//for(int i=0;i<nComponents;i++) pars.push_back(SourceComponentPars());
 		}
 
 	private:
@@ -353,6 +539,12 @@ class SourceFitPars : public TObject {
 		int minimizer_status;
 		double offset;
 		double offset_err;
+		double residualMean;
+		double residualRMS;	
+		double residualMedian;
+		double residualMAD;
+		double residualMin;	
+		double residualMax;
 		std::vector<SourceComponentPars> pars;
 
 	ClassDef(SourceFitPars,1)
@@ -392,7 +584,7 @@ class SourceFitter : public TObject {
 		/**
 		* \brief Fit source
 		*/
-		int FitSource(Source* source,BlobPars blobPars,int nMaxComponents=3);
+		int FitSource(Source* source,SourceFitOptions& fitOptions);
 		
 		/**
 		* \brief Get fit pars
@@ -413,12 +605,11 @@ class SourceFitter : public TObject {
 		* \brief 2D Gaussian model used for the fit
 		*/
 		static double Gaus2DFcn(double* x, double* p);
-		
+
 	protected:
 		/**
 		* \brief Check if fit has parameters converged at bounds
 		*/
-		//bool HasFitParsAtLimit(TFitResultPtr fitRes);
 		bool HasFitParsAtLimit(const ROOT::Fit::FitResult& fitRes);
 
 	private:
@@ -426,8 +617,7 @@ class SourceFitter : public TObject {
 		static int m_NFitComponents;
 		static int m_fitStatus;
 		static SourceFitPars m_sourceFitPars;
-		//static std::vector<TEllipse> m_fitEllipses;
-
+		
 	ClassDef(SourceFitter,1)
 
 };//close SourceFitter class
@@ -437,6 +627,7 @@ class SourceFitter : public TObject {
 #pragma link C++ class SourceFitPars+;
 #pragma link C++ class SourceFitter+;
 #pragma link C++ enum FitStatusFlag;
+#pragma link C++ struct SourceFitOptions+;
 #endif
 
 }//close namespace

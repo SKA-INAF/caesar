@@ -200,13 +200,14 @@ class Image : public TNamed {
 		\brief Class constructor: initialize structures.
  		*/
 		Image();
-    Image(const Image& img);		
+    Image(const Image& img);	
 		Image(long int nbinsx,long int nbinsy,std::string name="");	
 		Image(long int nbinsx,long int nbinsy,float xlow,float ylow,std::string name="");	
 		Image(long int nbinsx,long int nbinsy,std::vector<float>const& pixels,std::string name="");
 		Image(long int nbinsx,long int nbinsy,std::vector<float>const& pixels,float xlow,float ylow,std::string name="");
 		Image(long int nbinsx,long int nbinsy,float w,std::string name="");
 		Image(long int nbinsx,long int nbinsy,float w,float xlow,float ylow,std::string name="");
+		Image(const TH2& histo,std::string name="");
 		Image& operator=(const Image &img);
 		virtual void Copy(TObject &hnew) const;
 
@@ -608,6 +609,11 @@ class Image : public TNamed {
 		*/
 		int FillFromTMatrix(TMatrixD&,bool useNegativePixInStats=true);
 
+		/**
+		* \brief Fill image from ROOT TH2 object 
+		*/
+		int FillFromTH2(const TH2&,bool useNegativePixInStats=true);
+
 		
 		#ifdef VTK_ENABLED
 		/**
@@ -781,6 +787,10 @@ class Image : public TNamed {
 		*/
 		Image* GetBinarizedImage(double threshold,double fgValue=1,bool isLowerThreshold=false);
 
+		/**
+		* \brief Find image threshold at which the cumulative pixel sum (scaled to image sum) is lower than desired threshold 
+		*/
+		double FindCumulativeSumThr(double threshold,bool skipNegativePixels=false);
 
 		//=========================================
 		//==    SOURCE FINDING METHODS           ==
@@ -792,11 +802,11 @@ class Image : public TNamed {
 		/**
 		* \brief Find compact sources
 		*/
-		int FindCompactSource(std::vector<Source*>&,Image* floodImg=0,ImgBkgData* bkgData=0,double seedThr=5,double mergeThr=2.6,int minPixels=10,bool findNegativeExcess=false,bool mergeBelowSeed=false,bool findNestedSources=false,double nestedBlobThrFactor=1,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5,Image* curvMap=0);
+		int FindCompactSource(std::vector<Source*>&,Image* floodImg=0,ImgBkgData* bkgData=0,double seedThr=5,double mergeThr=2.6,int minPixels=10,bool findNegativeExcess=false,bool mergeBelowSeed=false,bool findNestedSources=false,double nestedBlobThrFactor=1,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5,long int nPixThrToSearchNested=0,Image* curvMap=0);
 		/**
 		* \brief Find nested sources
 		*/
-		int	FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData=0,int minPixels=5,double nestedBlobThreshold=1,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5);
+		int	FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData=0,int minPixels=5,double nestedBlobThreshold=1,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5,long int nPixThrToSearchNested=0);
 
 		/**
 		* \brief Find extended sources with ChanVese method
@@ -830,17 +840,17 @@ class Image : public TNamed {
 		/**
 		* \brief Returns a residual image obtained by dilating given sources with a random background
 		*/
-		Image* GetSourceResidual(std::vector<Source*>const& sources,int KernSize=5,int dilateModel=MorphFilter::eDilateWithBkg,int dilateSourceType=-1,bool skipToNested=false,ImgBkgData* bkgData=0,bool useLocalBkg=false,bool randomize=false,double zThr=20);
+		Image* GetSourceResidual(std::vector<Source*>const& sources,int KernSize=5,int dilateModel=MorphFilter::eDilateWithBkg,int dilateSourceType=-1,bool skipToNested=false,ImgBkgData* bkgData=0,bool useLocalBkg=false,bool randomize=false,double zThr=5,double zBrightThr=20);
 
 		/**
 		* \brief Find image peaks
 		*/
-		int FindPeaks(std::vector<TVector2>& peakPoints,int peakShiftTolerance=1,bool skipBorders=true);
+		int FindPeaks(std::vector<TVector2>& peakPoints,std::vector<int> kernelSizes={3,5,7},int peakShiftTolerance=1,bool skipBorders=true,int multiplicityThr=-1);
 
 		/**
 		* \brief Find graph with image peaks
 		*/
-		TGraph* ComputePeakGraph(int peakShiftTolerance=1,bool skipBorders=true);
+		TGraph* ComputePeakGraph(std::vector<int> kernelSizes={3,5,7},int peakShiftTolerance=1,bool skipBorders=true);
 
 
 		/**
@@ -907,7 +917,10 @@ class Image : public TNamed {
 		*/
 		Image* GetNormLoGImage(int size=3,double scale=1,bool invert=false);
 		
-		
+		/**
+		* \brief Get image convolved with an elliptical gaussian beam
+		*/
+		Image* GetBeamConvolvedImage(double bmaj,double bmin,double bpa,int nsigmas=5,double scale=1);	
 
 		//=========================================
 		//==   CONVERT METHODS
