@@ -38,6 +38,12 @@
 #pragma link C++ class Caesar::StatMoments<float>+;
 #pragma link C++ class Caesar::StatMoments<double>+;
 
+#pragma link C++ class Caesar::BoxStats<int>+;
+#pragma link C++ class Caesar::BoxStats<long int>+;
+#pragma link C++ class Caesar::BoxStats<float>+;
+#pragma link C++ class Caesar::BoxStats<double>+;
+
+
 #pragma link C++ function Caesar::StatsUtils::GetMedianFast<float>;
 #pragma link C++ function Caesar::StatsUtils::GetMedianFast<double>;
 #pragma link C++ function Caesar::StatsUtils::GetMedianFast<int>;
@@ -46,6 +52,17 @@
 #pragma link C++ function Caesar::StatsUtils::GetMedian<double>;
 #pragma link C++ function Caesar::StatsUtils::GetMedian<int>;
 #pragma link C++ function Caesar::StatsUtils::GetMedian<long int>;
+
+#pragma link C++ function Caesar::StatsUtils::GetRangeMedian<float>;
+#pragma link C++ function Caesar::StatsUtils::GetRangeMedian<double>;
+#pragma link C++ function Caesar::StatsUtils::GetRangeMedian<int>;
+#pragma link C++ function Caesar::StatsUtils::GetRangeMedian<long int>;
+
+#pragma link C++ function Caesar::StatsUtils::ComputeBoxStats<float>;
+#pragma link C++ function Caesar::StatsUtils::ComputeBoxStats<double>;
+#pragma link C++ function Caesar::StatsUtils::ComputeBoxStats<int>;
+#pragma link C++ function Caesar::StatsUtils::ComputeBoxStats<long int>;
+
 #pragma link C++ function Caesar::StatsUtils::GetMAD<float>;
 #pragma link C++ function Caesar::StatsUtils::GetMAD<double>;
 #pragma link C++ function Caesar::StatsUtils::GetMAD<int>;
@@ -179,6 +196,7 @@
 #pragma link C++ class Caesar::GradientFilter+;
 #pragma link C++ class Caesar::MorphFilter+;
 #pragma link C++ class Caesar::SaliencyFilter+;
+#pragma link C++ class Caesar::GausFilter+;
 //====================
 
 //== IMG PROC CLASSES ==
@@ -213,6 +231,9 @@
 #pragma link C++ enum Caesar::Source::SourceFlag+;
 #pragma link C++ enum Caesar::Source::SimSourceType+;
 #pragma link C++ class Caesar::Contour+;
+#pragma link C++ class vector<Caesar::Contour>+;
+#pragma link C++ class vector<Caesar::Contour*>+;
+#pragma link C++ struct ContourPointMatcher+;
 
 //slic generator
 #pragma link C++ class Caesar::SLICData+;
@@ -239,6 +260,7 @@
 #pragma link C++ class Caesar::SourceFitPars+;
 #pragma link C++ class Caesar::SourceFitter+;
 #pragma link C++ enum Caesar::FitStatusFlag;
+#pragma link C++ struct SourceFitOptions+;
 //======================
 
 

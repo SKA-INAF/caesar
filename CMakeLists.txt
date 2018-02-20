@@ -37,6 +37,7 @@ set(SHARE_SRC_DIR ${CMAKE_SOURCE_DIR}/share)
 set(SHARE_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/share)
 set(CONFIG_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/config)
 set(SCRIPT_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/scripts)
+set(MACRO_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/macros)
 set(DATA_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/data)
 
 message (STATUS "CMAKE_LIBRARY_OUTPUT_DIRECTORY: ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
@@ -123,6 +124,7 @@ if(BUILD_APPS)
 endif()
 add_subdirectory(config)
 add_subdirectory(scripts)
+add_subdirectory(macros)
 add_subdirectory(data)
 
 ##if(ENABLE_SERVER)
@@ -195,9 +197,9 @@ include_directories(${INCLUDE_DIRS})
 # -- debug --
 message (STATUS "INCLUDE_DIRS: ${INCLUDE_DIRS}")
 get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
-foreach(dir ${dirs})
-  message(STATUS "dir='${dir}'")
-endforeach()
+#foreach(dir ${dirs})
+#  message(STATUS "dir='${dir}'")
+#endforeach()
 # -----------
 
 # Append external libs found 
@@ -241,7 +243,7 @@ message (STATUS "LINKED_LIBS: ${LINKED_LIBS}")
 #==============================================================================================
 #===          BUILD EXTERNALS
 #==============================================================================================
-message (STATUS "CMAKE_CURRENT_BINARY_DIR: ${CMAKE_CURRENT_BINARY_DIR}")
+#message (STATUS "CMAKE_CURRENT_BINARY_DIR: ${CMAKE_CURRENT_BINARY_DIR}")
 
 include(ExternalProject)
 ExternalProject_Add(WCSTools
@@ -264,19 +266,19 @@ ExternalProject_Add(LINTERP
 	##INSTALL_COMMAND ""
 	INSTALL_COMMAND mkdir --parents ${CMAKE_INSTALL_INCLUDEDIR} COMMAND cp ${LINTERP_HEADERS} ${CMAKE_INSTALL_INCLUDEDIR}
 )
-message (STATUS "LINTERP_DOWNLOAD_DIR: ${LINTERP_DOWNLOAD_DIR}")
-message (STATUS "LINTERP_DOWNLOAD_DEST_DIR: ${LINTERP_DOWNLOAD_DEST_DIR}")
-message (STATUS "LINTERP_BUILD_DIR: ${LINTERP_BUILD_DIR}")
-message (STATUS "LINTERP_HEADERS: ${LINTERP_HEADERS}")
+#MESSAGE (STATUS "LINTERP_DOWNLOAD_DIR: ${LINTERP_DOWNLOAD_DIR}")
+#MESSAGE (STATUS "LINTERP_DOWNLOAD_DEST_DIR: ${LINTERP_DOWNLOAD_DEST_DIR}")
+#MESSAGE (STATUS "LINTERP_BUILD_DIR: ${LINTERP_BUILD_DIR}")
+#MESSAGE (STATUS "LINTERP_HEADERS: ${LINTERP_HEADERS}")
 
 
 #==============================================================================================
 #===             GENERATE PROTOBUF SOURCES
 #==============================================================================================
 #if(ENABLE_SERVER)
-	MESSAGE(STATUS PROTO_FILES: ${PROTO_FILES})
-	MESSAGE(STATUS PROTO_SRCS: ${PROTO_SRCS})
-	MESSAGE(STATUS PROTO_HEADERS: ${PROTO_HEADERS})
+	#MESSAGE(STATUS PROTO_FILES: ${PROTO_FILES})
+	#MESSAGE(STATUS PROTO_SRCS: ${PROTO_SRCS})
+	#MESSAGE(STATUS PROTO_HEADERS: ${PROTO_HEADERS})
 		
 	set(GEN_PROTO_SRCS "")
 	set(GEN_PROTO_HEADERS "")
@@ -288,16 +290,16 @@ message (STATUS "LINTERP_HEADERS: ${LINTERP_HEADERS}")
 	endforeach()
 	list(REMOVE_DUPLICATES GEN_PROTO_SRCS)
 	list(REMOVE_DUPLICATES GEN_PROTO_HEADERS)
-	MESSAGE(STATUS GEN_PROTO_SRCS: ${GEN_PROTO_SRCS})
-	MESSAGE(STATUS GEN_PROTO_HEADERS: ${GEN_PROTO_HEADERS})
+	#MESSAGE(STATUS GEN_PROTO_SRCS: ${GEN_PROTO_SRCS})
+	#MESSAGE(STATUS GEN_PROTO_HEADERS: ${GEN_PROTO_HEADERS})
 
 	SET(proto_args 
   	PROTOFILES ${PROTO_FILES}
 		OUTPATH ${CMAKE_BINARY_DIR}
 	)
 	PROTOBUF_GENERATE_CPP(PROTO_GEN_SRCS PROTO_GEN_HEADERS ${proto_args})	
-	MESSAGE(STATUS PROTO_GEN_SRCS: ${PROTO_GEN_SRCS})
-	MESSAGE(STATUS PROTO_GEN_HEADERS: ${PROTO_GEN_HEADERS})
+	#MESSAGE(STATUS PROTO_GEN_SRCS: ${PROTO_GEN_SRCS})
+	#MESSAGE(STATUS PROTO_GEN_HEADERS: ${PROTO_GEN_HEADERS})
 	
 	SET_SOURCE_FILES_PROPERTIES(${GEN_PROTO_SRCS} ${GEN_PROTO_HEADERS} PROPERTIES GENERATED TRUE)
 	
@@ -311,13 +313,13 @@ message (STATUS "LINTERP_HEADERS: ${LINTERP_HEADERS}")
 	add_custom_command(
   	OUTPUT proto_generation
     COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} --proto_path=${PROTO_DIR} --cpp_out=${CMAKE_BINARY_DIR} ${PROTO_FILES}
-    DEPENDS always_rebuild  ### Decomment this to always generate protobuf files
-		#DEPENDS ${PROTO_FILES}
+    #DEPENDS always_rebuild  ### Decomment this to always generate protobuf files
+		DEPENDS ${PROTO_FILES}
   )
 
 	add_custom_target(ProtobufSchema ALL 
-		DEPENDS proto_generation
-		##DEPENDS ${PROTO_FILES}  ## Will generate source files only when proto files are changed
+		#DEPENDS proto_generation
+		DEPENDS ${PROTO_FILES}  ## Will generate source files only when proto files are changed
   )
 
 	
@@ -347,7 +349,7 @@ message (STATUS "LINTERP_HEADERS: ${LINTERP_HEADERS}")
 #===                    BUILD PROJECT SHARED LIB
 #===============================================================================================
 #--- Generate classes dictionary
-MESSAGE (STATUS "DICT_HEADERS: ${DICT_HEADERS}, $DICT_SRCS: ${DICT_SRCS}")
+##MESSAGE (STATUS "DICT_HEADERS: ${DICT_HEADERS}, $DICT_SRCS: ${DICT_SRCS}")
 ##ROOT_GENERATE_DICTIONARY(CaesarDict ${DICT_HEADERS} MODULE Caesar LINKDEF LinkDef.h)
 ROOT_GENERATE_DICTIONARY(CaesarDict ${DICT_HEADERS} LINKDEF LinkDef.h OPTIONS -DBOOST_LOG_USE_NATIVE_SYSLOG -DBOOST_LOG_DYN_LINK )
 
@@ -396,6 +398,10 @@ if(BUILD_APPS)
 	add_executable(CorrelateSourceCatalogsExe ${Task_CorrelateSourceCatalogs_SRCS})
 	target_link_libraries(CorrelateSourceCatalogsExe Caesar ${LINKED_LIBS})
 	set_target_properties(CorrelateSourceCatalogsExe PROPERTIES OUTPUT_NAME CorrelateSourceCatalogs)
+	
+	add_executable(SkyModelConvolverExe ${Task_SkyModelConvolver_SRCS})
+	target_link_libraries(SkyModelConvolverExe Caesar ${LINKED_LIBS})
+	set_target_properties(SkyModelConvolverExe PROPERTIES OUTPUT_NAME SkyModelConvolver)
 	
 	include_directories(${MPI_CXX_INCLUDE_PATH})
 	add_executable(FindSourceMPIExe ${Task_FindSourceMPI_SRCS})
@@ -452,7 +458,7 @@ if (ENABLE_TEST)
 
 	# Append external libs found 
 	list (APPEND LINKED_LIBS ${GTEST_BOTH_LIBRARIES})
-	message (STATUS "LINKED_LIBS: ${LINKED_LIBS}")
+	##MESSAGE (STATUS "LINKED_LIBS: ${LINKED_LIBS}")
 	
   ##############
   # Unit Tests
@@ -479,7 +485,7 @@ endif()
 #==============================================================================================
 if(BUILD_DOC)
 	if(NOT DOXYGEN_FOUND)
-  	message(FATAL_ERROR "Doxygen is needed to build the documentation.")
+  	MESSAGE(FATAL_ERROR "Doxygen is needed to build the documentation.")
   endif()
 
 	# -- Generate doxygen doc files
@@ -516,6 +522,7 @@ if(BUILD_APPS)
 		ROOT2FITS
 		FindSourceMPI
 		CorrelateSourceCatalogs
+		SkyModelConvolver
 	)
 	foreach (_exeFile ${EXE_FILES})
 		install(TARGETS ${_exeFile}Exe DESTINATION ${BINARY_INSTALL_DIR})
@@ -547,22 +554,28 @@ install(FILES ${LINTERP_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # -- Install share files
 file(GLOB_RECURSE SHARE_FILES ${SHARE_SRC_DIR}/*)
-MESSAGE(STATUS SHARE_FILES: ${SHARE_FILES})
+##MESSAGE(STATUS SHARE_FILES: ${SHARE_FILES})
 install(FILES ${SHARE_FILES} DESTINATION ${SHARE_INSTALL_DIR})
 
 # -- Install config files
-MESSAGE(STATUS CONFIG_FILES: ${CONFIG_FILES})
+##MESSAGE(STATUS CONFIG_FILES: ${CONFIG_FILES})
 install(FILES ${CONFIG_FILES} DESTINATION ${CONFIG_INSTALL_DIR})
 
 # -- Install script files
-MESSAGE(STATUS SCRIPT_FILES: ${SCRIPT_FILES})
+##MESSAGE(STATUS SCRIPT_FILES: ${SCRIPT_FILES})
 install(FILES ${SCRIPT_FILES} 
 	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE OWNER_EXECUTE GROUP_READ GROUP_WRITE GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
 	DESTINATION ${SCRIPT_INSTALL_DIR}
 )
 
+# -- Install macro files
+install(FILES ${MACRO_FILES} 
+	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE OWNER_EXECUTE GROUP_READ GROUP_WRITE GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+	DESTINATION ${MACRO_INSTALL_DIR}
+)
+
 # -- Install data files
-MESSAGE(STATUS DATA_FILES: ${DATA_FILES})
+##MESSAGE(STATUS DATA_FILES: ${DATA_FILES})
 install(FILES ${DATA_FILES} DESTINATION ${DATA_INSTALL_DIR})
 
 # -- Install documentation files
@@ -621,7 +634,7 @@ list(REMOVE_DUPLICATES CLEANED_EXE)
 list(APPEND ADDITIONAL_CLEAN_TARGETS ${CLEANED_HEADERS})
 list(APPEND ADDITIONAL_CLEAN_TARGETS ${CLEANED_LIBS})
 list(APPEND ADDITIONAL_CLEAN_TARGETS ${CLEANED_EXE})
-MESSAGE(STATUS "ADDITIONAL_CLEAN_TARGETS: ${ADDITIONAL_CLEAN_TARGETS}")
+##MESSAGE(STATUS "ADDITIONAL_CLEAN_TARGETS: ${ADDITIONAL_CLEAN_TARGETS}")
 set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${ADDITIONAL_CLEAN_TARGETS}") ## do not forget to put "" in final vars otherwise you'll get a parsing error
 #=================================================================================================
 
