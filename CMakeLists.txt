@@ -102,7 +102,6 @@ endif()
 #==   INCLUDE MPI FLAGS?
 #===================================================
 if(ENABLE_MPI AND MPI_FOUND)
-	
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MPI_C_COMPILE_FLAGS}")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MPI_CXX_COMPILE_FLAGS}")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${MPI_CXX_LINK_FLAGS}")
@@ -175,7 +174,7 @@ if (ENABLE_TEST)
 	list (APPEND INCLUDE_DIRS ${GTEST_INCLUDE_DIRS})
 endif()
 
-if (ENABLE_MPI)
+if (ENABLE_MPI AND MPI_FOUND)
 	list (APPEND INCLUDE_DIRS ${MPI_CXX_INCLUDE_PATH})
 endif()
 
@@ -220,7 +219,7 @@ if (ENABLE_TEST)
   list (APPEND LINKED_LIBS ${GTEST_BOTH_LIBRARIES})
 endif()
 
-if (ENABLE_MPI)
+if (ENABLE_MPI AND MPI_FOUND)
 	list (APPEND LINKED_LIBS ${MPI_CXX_LIBRARIES})
 endif()
 
@@ -403,16 +402,18 @@ if(BUILD_APPS)
 	target_link_libraries(SkyModelConvolverExe Caesar ${LINKED_LIBS})
 	set_target_properties(SkyModelConvolverExe PROPERTIES OUTPUT_NAME SkyModelConvolver)
 	
-	include_directories(${MPI_CXX_INCLUDE_PATH})
-	add_executable(FindSourceMPIExe ${Task_FindSourceMPI_SRCS})
-	target_link_libraries(FindSourceMPIExe Caesar ${LINKED_LIBS} ${MPI_CXX_LIBRARIES})
-	if(MPI_COMPILE_FLAGS)
-  	set_target_properties(FindSourceMPIExe PROPERTIES COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+	if(ENABLE_MPI AND MPI_FOUND)
+		include_directories(${MPI_CXX_INCLUDE_PATH})
+		add_executable(FindSourceMPIExe ${Task_FindSourceMPI_SRCS})
+		target_link_libraries(FindSourceMPIExe Caesar ${LINKED_LIBS} ${MPI_CXX_LIBRARIES})
+		if(MPI_COMPILE_FLAGS)
+  		set_target_properties(FindSourceMPIExe PROPERTIES COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+		endif()
+		if(MPI_LINK_FLAGS)
+  		set_target_properties(FindSourceMPIExe PROPERTIES LINK_FLAGS "${MPI_LINK_FLAGS}")
+		endif()
+		set_target_properties(FindSourceMPIExe PROPERTIES OUTPUT_NAME FindSourceMPI)
 	endif()
-	if(MPI_LINK_FLAGS)
-  	set_target_properties(FindSourceMPIExe PROPERTIES LINK_FLAGS "${MPI_LINK_FLAGS}")
-	endif()
-	set_target_properties(FindSourceMPIExe PROPERTIES OUTPUT_NAME FindSourceMPI)
 
 endif()
 #==============================================================================================
@@ -520,10 +521,13 @@ if(BUILD_APPS)
 		ReadImg
 		FITS2ROOT
 		ROOT2FITS
-		FindSourceMPI
 		CorrelateSourceCatalogs
 		SkyModelConvolver
 	)
+	if(ENABLE_MPI)
+		list(APPEND EXE_FILES FindSourceMPI)
+	endif()
+
 	foreach (_exeFile ${EXE_FILES})
 		install(TARGETS ${_exeFile}Exe DESTINATION ${BINARY_INSTALL_DIR})
 	endforeach()
