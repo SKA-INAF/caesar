@@ -2,30 +2,6 @@
 #include(ExternalProject)
 #include(FindPackageHandleStandardArgs)
 
-#==================================
-#==    Check for ROOT           ===
-#==================================
-message(STATUS "Looking for ROOT")
-
-if(NOT DEFINED ENV{ROOTSYS})
-	message(SEND_ERROR "ROOTSYS variable not defined!")
-endif()
-
-list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
-list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/etc/cmake)
-list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/cmake)
-list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/cmake/modules)
-
-#---Locate the ROOT package and defines a number of variables (e.g. ROOT_INCLUDE_DIRS)
-find_package(ROOT REQUIRED MODULE COMPONENTS MathCore RIO Hist Tree Net FITSIO PyROOT RInterface)
-#find_package(ROOT REQUIRED)
-#---Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY)
-include(${ROOT_USE_FILE}) ### NOT WORKING!!
-#include(ROOTUseFile) 
-#include_directories(${ROOT_INCLUDE_DIR})
-
-message (STATUS "ROOT HEADERS: ${ROOT_INCLUDE_DIRS}, LIBS: ${ROOT_LIBRARIES}")
-#--------------------------------
 
 #===============================
 #==    Check for BOOST       ===
@@ -70,12 +46,46 @@ endif()
 #message (STATUS "R_LIBRARIES: ${R_LIBRARIES}")
 #-------------------------
 
+
+#==================================
+#==    Check for ROOT           ===
+#==================================
+message(STATUS "Looking for ROOT")
+
+if(NOT DEFINED ENV{ROOTSYS})
+	message(SEND_ERROR "ROOTSYS variable not defined!")
+endif()
+
+list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
+list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/etc/cmake)
+list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/cmake)
+list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/cmake/modules)
+
+#---Locate the ROOT package and defines a number of variables (e.g. ROOT_INCLUDE_DIRS)
+SET (ROOT_REQUIRED_MODULES MathCore RIO Hist Tree Net PyROOT)
+if(ENABLE_R)
+	list(APPEND ROOT_REQUIRED_MODULES RInterface)
+endif()
+
+find_package(ROOT REQUIRED MODULE COMPONENTS ${ROOT_REQUIRED_MODULES})
+
+#find_package(ROOT REQUIRED MODULE COMPONENTS MathCore RIO Hist Tree Net FITSIO PyROOT RInterface)
+#find_package(ROOT REQUIRED)
+#---Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY)
+include(${ROOT_USE_FILE}) ### NOT WORKING!!
+#include(ROOTUseFile) 
+#include_directories(${ROOT_INCLUDE_DIR})
+
+message (STATUS "ROOT HEADERS: ${ROOT_INCLUDE_DIRS}, LIBS: ${ROOT_LIBRARIES}, REQUIRED_MODULES: ${ROOT_REQUIRED_MODULES}")
+#--------------------------------
+
+
 #==================================
 #==    Check for GSL library    ===
 #==================================
 message (STATUS "Looking for GSL library...")
-include(FindGSL REQUIRED)
-#find_package (GLS REQUIRED)
+#include(FindGSL REQUIRED)
+find_package (GSL REQUIRED)
 message (STATUS "GSL_INCLUDE_DIRS: ${GSL_INCLUDE_DIRS}")
 message (STATUS "GSL_LIBRARIES: ${GSL_LIBRARIES}")
 
@@ -105,7 +115,6 @@ MESSAGE(STATUS "Looking for Log4Cxx")
 FIND_PACKAGE(Log4Cxx REQUIRED)
 MESSAGE(STATUS "LOG4CXX_INCLUDE_DIR: ${LOG4CXX_INCLUDE_DIRS}")
 MESSAGE(STATUS "LOG4CXX_LIBRARIES: ${LOG4CXX_LIBRARIES}")
-
 
 
 #==================================

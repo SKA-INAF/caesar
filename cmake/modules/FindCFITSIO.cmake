@@ -16,9 +16,13 @@
 # Redistribution and use is allowed according to the terms of the BSD license.
 # For details see the accompanying COPYING-CMAKE-SCRIPTS file.
 
+INCLUDE(FindPkgConfig)
+PKG_CHECK_MODULES(PC_CFITSIO libcfitsio)
 
 find_path(CFITSIO_INCLUDE_DIR fitsio.h
   PATH_SUFFIXES libcfitsio3 libcfitsio0 cfitsio
+	HINTS $ENV{CFITSIO_DIR}/include
+        ${PC_CFITSIO_INCLUDE_DIRS}
   PATHS
   $ENV{CFITSIO}
   $ENV{CFITSIO_DIR}/include
@@ -26,6 +30,8 @@ find_path(CFITSIO_INCLUDE_DIR fitsio.h
 )
 
 find_library(CFITSIO_LIBRARY NAMES cfitsio
+	HINTS $ENV{CFITSIO_DIR}/lib
+        ${PC_CFITSIO_LIBRARIES}
   PATHS
   $ENV{CFITSIO_DIR}/lib
 	$ENV{CFITSIO}
