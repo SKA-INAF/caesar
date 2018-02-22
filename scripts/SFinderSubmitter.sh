@@ -1240,7 +1240,7 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		else
 			EXE="$CAESAR_DIR/bin/FindSourceMPI"
 		fi
-		EXE_ARGS="--config=$CONFIGFILE"
+		EXE_ARGS="--config=$configfile"
 		## DEBUG ###
 	
 
@@ -1312,7 +1312,7 @@ else
 	else
 		EXE="$CAESAR_DIR/bin/FindSourceMPI"
 	fi
-	EXE_ARGS="--config=$CONFIGFILE"
+	EXE_ARGS="--config=$configfile"
 
 
 	echo "INFO: Creating script file $shfile for input file: $inputfile ..."
