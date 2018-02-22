@@ -162,6 +162,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "=== SFINDER RUN OPTIONS ==="	
 	echo "--loglevel=[LOG_LEVEL] - Logging level string {INFO, DEBUG, WARN, ERROR, OFF} (default=INFO)"
 	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"
+	echo "--addrunindex - Append a run index to submission script (in case of list execution) (default=no)"
 	echo "--outdir=[OUTPUT_DIR] - Output directory where to put run output file (default=pwd)"
 	echo "--nproc=[NPROC] - Number of processors to be used in MPI run (default=1)"
 	echo "--nthreads=[NTHREADS] - Number of threads to be used in OpenMP (default=-1=all available)"
@@ -190,6 +191,7 @@ RUN_IN_CONTAINER=false
 FILELIST_GIVEN=false
 INPUTFILE=""
 INPUTFILE_GIVEN=false
+APPEND_RUN_INDEX=false
 NPROC=1
 HOSTFILE=""
 HOSTFILE_GIVEN=false
@@ -343,6 +345,10 @@ do
 		--maxfiles=*)
     	NMAX_PROCESSED_FILES=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
+		--addrunindex*)
+			APPEND_RUN_INDEX=true
+		;;
+
 		--outdir=*)
     	OUTPUT_DIR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
@@ -1213,15 +1219,23 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		## Define output log filename
 		logfile="output_$filename_base_noext"'.log'
 
-		## Define and generate config file
-		configfile="config_$filename_base_noext"'_'"$index.cfg"
+		## Define config & run script file names 
+		if [ "$APPEND_RUN_INDEX" = true ]; then
+			configfile="config_$filename_base_noext"'_'"$index.cfg"
+			shfile="SFinderRun_$filename_base_noext"'_'"$index.sh"
+		else
+			configfile="config_$filename_base_noext"'.cfg'
+			shfile="SFinderRun_$filename_base_noext"'.sh'
+		fi
+
+		
+		## Generate config file
   	echo "INFO: Creating config file $configfile for input file: $inputfile ..."
 		generate_config $configfile
 
 
-		## Define executable & args variables and generate script
-		shfile="Run_$filename_base_noext"'_'"$index.sh"
-		
+		## Generate script
+		echo "INFO: Creating script file $shfile for input file: $inputfile ..."
 
 		##EXE="$CAESAR_DIR/scripts/RunSFinderMPI.sh"
 		##EXE_ARGS="--nproc=$NPROC --config=$configfile $RUN_IN_CONTAINER_FLAG $CONTAINER_IMG_FLAG"
@@ -1229,8 +1243,6 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		##	EXE_ARGS="$EXE_ARGS --hostfile=$HOSTFILE"
 		##fi
 
-
-		## DEBUG ###
 		CMD="mpirun -np $NPROC "
 		if [ "$HOSTFILE_GIVEN" = true ] ; then
 			CMD="$CMD -f $HOSTFILE "
@@ -1241,11 +1253,7 @@ if [ "$FILELIST_GIVEN" = true ]; then
 			EXE="$CAESAR_DIR/bin/FindSourceMPI"
 		fi
 		EXE_ARGS="--config=$configfile"
-		## DEBUG ###
-	
 
-		
-		echo "INFO: Creating script file $shfile for input file: $inputfile ..."
 		generate_exec_script "$shfile" "$index" "$EXE" "$EXE_ARGS" "$logfile"
 
 
