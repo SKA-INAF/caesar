@@ -39,7 +39,8 @@ if [ "$NARGS" -lt 2 ]; then
 
 	echo "=== RUN OPTIONS ==="
 	echo "--startid=[START_ID] - Run start id (default: 1)"		
-	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"		
+	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"	
+	echo "--addrunindex - Append a run index to submission script (in case of list execution) (default=no)"	
 	echo "--containerrun - Run inside Caesar container"
 	echo "--containerimg=[CONTAINER_IMG] - Singularity container image file (.simg) with CAESAR installed software"
 	echo ""
@@ -85,7 +86,7 @@ POS_THRESHOLD="2.5"
 FLUX_OVERLAP_THRESHOLD="0.3"
 FILTERED_SOURCE_TYPE="-1"
 FILTERED_SOURCE_SIM_TYPE="-1"
-
+APPEND_RUN_INDEX=false
 
 for item in "$@"
 do
@@ -163,7 +164,10 @@ do
 		--maxfiles=*)
     	NMAX_PROCESSED_FILES=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;	
-		
+		--addrunindex*)
+			APPEND_RUN_INDEX=true
+		;;
+
 		--queue=*)
     	BATCH_QUEUE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
@@ -345,15 +349,18 @@ if [ "$FILELIST_GIVEN" = true ]; then
 
 		## Create job top directory
 		JOB_DIR="$BASEDIR"
+		INPUTFILE_REC_OPTION="--input-rec=$filename_rec"
 
 		## Define args
-		INPUTFILE_REC_OPTION="--input-rec=$filename_rec"
-		##outputfile="CorrOut_$filename_base_noext"'-'"RUN$index"'.root'
-		outputfile="CorrOut_$filename_base_noext"'.root'
-			
+		if [ "$APPEND_RUN_INDEX" = true ]; then
+			outputfile="CorrOut_$filename_base_noext"'-'"RUN$index"'.root'
+			shfile="RunSourceCorrelator_$filename_base_noext"'-RUN'"$index.sh"
+		else
+			outputfile="CorrOut_$filename_base_noext"'.root'
+			shfile="RunSourceCorrelator_$filename_base_noext.sh"
+		fi
+
 		## Define executable & args variables and generate script
-		#shfile="RunSourceCorrelator_$filename_base_noext"'-RUN'"$index.sh"
-		shfile="RunSourceCorrelator_$filename_base_noext.sh"
 		if [ "$RUN_IN_CONTAINER" = true ] ; then
 			EXE="singularity run --app catalogcorr $CONTAINER_IMG"
 		else
