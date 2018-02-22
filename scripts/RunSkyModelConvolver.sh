@@ -39,7 +39,8 @@ if [ "$NARGS" -lt 2 ]; then
 
 	echo "=== RUN OPTIONS ==="
 	echo "--startid=[START_ID] - Run start id (default: 1)"	
-	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"		
+	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"
+	echo "--addrunindex - Append a run index to submission script (in case of list execution) (default=no)"	
 	echo "--containerrun - Run inside Caesar container"
 	echo "--containerimg=[CONTAINER_IMG] - Singularity container image file (.simg) with CAESAR installed software"
 	echo ""
@@ -92,6 +93,7 @@ MERGE_SOURCES_OPTION=""
 MERGE_COMPACT_SOURCES_OPTION=""
 MERGE_EXTENDED_SOURCES_OPTION=""
 NSIGMAS=10
+APPEND_RUN_INDEX=false
 
 for item in "$@"
 do
@@ -194,6 +196,9 @@ do
 		--containerrun*)
     	RUN_IN_CONTAINER=true
     ;;
+		--addrunindex*)
+			APPEND_RUN_INDEX=true
+		;;
 
     *)
     # Unknown option
@@ -362,13 +367,23 @@ if [ "$FILELIST_GIVEN" = true ]; then
 			## Define args
 			INPUTFILE_REC_OPTION="--input-rec=$filename_rec"
 			BEAM_OPTIONS=""
-			outputfile="$filename_base_noext"'_conv-'"RUN$index"'.root'
-			outputfile_ds9="ds9regions_$filename_base_noext"'_conv-'"RUN$index"'.reg'
-			outputfile_map="$filename_base_noext"'_conv-'"RUN$index"'.fits'
+
+
+			## Define output filenames and script name
+			if [ "$APPEND_RUN_INDEX" = true ]; then
+				outputfile="$filename_base_noext"'_conv-'"RUN$index"'.root'
+				outputfile_ds9="ds9regions_$filename_base_noext"'_conv-'"RUN$index"'.reg'
+				outputfile_map="$filename_base_noext"'_conv-'"RUN$index"'.fits'
+				shfile="RunConvolver_$filename_base_noext"'-RUN'"$index.sh"
+			else
+				outputfile="$filename_base_noext"'_conv.root'
+				outputfile_ds9="ds9regions_$filename_base_noext"'_conv.reg'
+				outputfile_map="$filename_base_noext"'_conv.fits'
+				shfile="RunConvolver_$filename_base_noext"'.sh'
+			fi
+
 		
-		
-			## Define executable & args variables and generate script
-			shfile="RunConvolver_$filename_base_noext"'-RUN'"$index.sh"
+			## Define executable & args variables and generate script			
 			if [ "$RUN_IN_CONTAINER" = true ] ; then
 				EXE="singularity run --app convolver $CONTAINER_IMG"
 			else
@@ -424,13 +439,21 @@ if [ "$FILELIST_GIVEN" = true ]; then
   			BEAM_OPTIONS="--bmaj=$BMAJ --bmin=$BMIN --bpa=$BPA"
 			fi
 
-			outputfile="$filename_base_noext"'_conv-'"RUN$index"'.root'
-			outputfile_ds9="ds9regions_$filename_base_noext"'_conv-'"RUN$index"'.reg'
-			outputfile_map="$filename_base_noext"'_conv-'"RUN$index"'.fits'
-		
+
+			## Define output filenames and script name
+			if [ "$APPEND_RUN_INDEX" = true ]; then
+				outputfile="$filename_base_noext"'_conv-'"RUN$index"'.root'
+				outputfile_ds9="ds9regions_$filename_base_noext"'_conv-'"RUN$index"'.reg'
+				outputfile_map="$filename_base_noext"'_conv-'"RUN$index"'.fits'
+				shfile="RunConvolver_$filename_base_noext"'-RUN'"$index.sh"
+			else
+				outputfile="$filename_base_noext"'_conv.root'
+				outputfile_ds9="ds9regions_$filename_base_noext"'_conv.reg'
+				outputfile_map="$filename_base_noext"'_conv.fits'
+				shfile="RunConvolver_$filename_base_noext"'.sh'
+			fi
 		
 			## Define executable & args variables and generate script
-			shfile="RunConvolver_$filename_base_noext"'-RUN'"$index.sh"
 			if [ "$RUN_IN_CONTAINER" = true ] ; then
 				EXE="singularity run --app convolver $CONTAINER_IMG"
 			else
