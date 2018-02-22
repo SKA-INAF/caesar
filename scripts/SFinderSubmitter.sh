@@ -144,7 +144,8 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "=== SFINDER SALIENCY FILTER OPTIONS ==="
   echo "--spsize - Superpixel size (in pixels) used in hierarchical clustering (default=20)"	
 	echo "--spbeta - Superpixel regularization par (beta) used in hierarchical clustering (default=1)"	
-	echo "--spminarea - Superpixel min area (in pixels) used in hierarchical clustering (default=10)"	
+	echo "--spminarea - Superpixel min area (in pixels) used in hierarchical clustering (default=10)"
+	echo "--saliency-nooptimalthr - Do not use optimal threshold in multiscale saliency estimation (e.g. use median thr) (default=use optimal)"	
 	echo "--saliencythr - Saliency map threshold factor wrt optimal/median threshold (default=2.8)"
 	echo "--saliencyminreso - Superpixel size (in pixels) used in multi-reso saliency map smallest scale (default=20 pixels)"
 	echo "--saliencymaxreso - Superpixel size (in pixels) used in multi-reso saliency map highest scale (default=60 pixels)"
@@ -270,6 +271,7 @@ SALIENCY_RESO_STEP="10"
 SALIENCY_NN_PAR="1"
 USE_BKG_MAP_IN_SALIENCY="false"
 USE_RMS_MAP_IN_SALIENCY="false"
+USE_OPTIMAL_THR_IN_SALIENCY="true"
 
 SEARCH_EXTENDED_SOURCES="true"
 
@@ -654,6 +656,10 @@ do
     ;;
 	
 		## SALIENCY FILTER OPTIONS
+		--saliency-nooptimalthr*)
+			USE_OPTIMAL_THR_IN_SALIENCY="false"
+		;;
+
 		--saliencythr=*)
     	SALIENCY_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
@@ -1050,21 +1056,22 @@ generate_config(){
 		echo '//==============================='
 		echo '//==  SALIENCY FILTER OPTIONS  =='
 		echo '//==============================='
-		echo "saliencyThrFactor = $SALIENCY_THR										| Saliency threshold factor for tagging signal regions (thr=<saliency>*factor)"
-		echo 'saliencyBkgThrFactor = 1														| Saliency threshold factor for tagging bkg regions (thr=<saliency>*factor)'
-		echo 'saliencyImgThrFactor = 1														| Threshold factor to consider a region as significant (thr=<img>*factor)'
-		echo "saliencyResoMin = $SALIENCY_MIN_RESO								| Saliency min reso par"
-		echo "saliencyResoMax = $SALIENCY_MAX_RESO								| Saliency max reso par"
-		echo "saliencyResoStep = $SALIENCY_RESO_STEP							| Saliency reso step par"
-		echo 'saliencyUseCurvInDiss = false 											| Use curvature parameter in dissimilarity estimation (T/F)'
-		echo 'saliencyUseRobustPars = false												| Use robust pars in saliency map computation (T/F)'
-		echo "saliencyUseBkgMap = $USE_BKG_MAP_IN_SALIENCY    		| Use bkg map in saliency map computation (T/F)"
-		echo "saliencyUseNoiseMap = $USE_RMS_MAP_IN_SALIENCY					 								| Use noise map in saliency map computation (T/F)"
-		echo "saliencyNNFactor = $SALIENCY_NN_PAR   							| Fraction of most similar neighbors used in saliency map computation"
-		echo 'saliencySpatialRegFactor = 6												| Spatial regularization factor (ruling exp decay in saliency spatial weighting)'
-		echo 'saliencyMultiResoCombThrFactor = 0.7								| Fraction of combined salient multi-resolution maps to consider global saliency'
-		echo 'saliencyDissExpFalloffPar = 100                     | Dissimilarity exponential cutoff parameter (value)'
-		echo 'saliencySpatialDistRegPar = 1                       | Spatial-color distance regularization par (value, 1=equal weights)'
+		echo "saliencyUseOptimalThr = $USE_OPTIMAL_THR_IN_SALIENCY     | Use optimal threshold in multiscale saliency thresholding (T/F)"
+		echo "saliencyThrFactor = $SALIENCY_THR										     | Saliency threshold factor for tagging signal regions (thr=<saliency>*factor)"
+		echo 'saliencyBkgThrFactor = 1														     | Saliency threshold factor for tagging bkg regions (thr=<saliency>*factor)'
+		echo 'saliencyImgThrFactor = 1														     | Threshold factor to consider a region as significant (thr=<img>*factor)'
+		echo "saliencyResoMin = $SALIENCY_MIN_RESO								     | Saliency min reso par"
+		echo "saliencyResoMax = $SALIENCY_MAX_RESO								     | Saliency max reso par"
+		echo "saliencyResoStep = $SALIENCY_RESO_STEP							     | Saliency reso step par"
+		echo 'saliencyUseCurvInDiss = false 											     | Use curvature parameter in dissimilarity estimation (T/F)'
+		echo 'saliencyUseRobustPars = false												     | Use robust pars in saliency map computation (T/F)'
+		echo "saliencyUseBkgMap = $USE_BKG_MAP_IN_SALIENCY    		     | Use bkg map in saliency map computation (T/F)"
+		echo "saliencyUseNoiseMap = $USE_RMS_MAP_IN_SALIENCY					 | Use noise map in saliency map computation (T/F)"
+		echo "saliencyNNFactor = $SALIENCY_NN_PAR   							     | Fraction of most similar neighbors used in saliency map computation"
+		echo 'saliencySpatialRegFactor = 6												     | Spatial regularization factor (ruling exp decay in saliency spatial weighting)'
+		echo 'saliencyMultiResoCombThrFactor = 0.7								     | Fraction of combined salient multi-resolution maps to consider global saliency'
+		echo 'saliencyDissExpFalloffPar = 100                          | Dissimilarity exponential cutoff parameter (value)'
+		echo 'saliencySpatialDistRegPar = 1                            | Spatial-color distance regularization par (value, 1=equal weights)'
 		echo '###'
 		echo '###'
 		echo '//=================================='

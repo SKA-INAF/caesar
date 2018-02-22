@@ -325,7 +325,7 @@ Image* SaliencyFilter::ComputeSaliencyMap(Image* img,std::vector<Region*>const& 
 }//close ComputeSaliencyMap()
 
 
-Image* SaliencyFilter::ComputeMultiResoSaliencyMap(Image* img,int resoMin,int resoMax,int resoStep,double beta,int minRegionSize,double knnFactor,bool useRobustPars,double expFalloffPar,double distanceRegPar,double salientMultiplicityThrFactor,bool addBkgMap,bool addNoiseMap,ImgBkgData* bkgData,double saliencyThrFactor,double imgThrFactor)
+Image* SaliencyFilter::ComputeMultiResoSaliencyMap(Image* img,int resoMin,int resoMax,int resoStep,double beta,int minRegionSize,double knnFactor,bool useRobustPars,double expFalloffPar,double distanceRegPar,double salientMultiplicityThrFactor,bool addBkgMap,bool addNoiseMap,ImgBkgData* bkgData,double saliencyThrFactor,double imgThrFactor,bool useOptimalThr)
 {	
 	//## Check input img
 	if(!img){
@@ -387,11 +387,14 @@ Image* SaliencyFilter::ComputeMultiResoSaliencyMap(Image* img,int resoMin,int re
 		INFO_LOG("Computing stats for normalized saliency map @ reso "<<reso<<" (step="<<resoStep<<")");
 		salMap_norm->ComputeStats(true,false,false);
 		ImgStats* stats= salMap_norm->GetPixelStats();
-		double salMedian= stats->median;	
+		double salMedian= stats->median;
 		double salMin= salMap_norm->GetMinimum();
 		double salMax= salMap_norm->GetMaximum();
 		double medianThr= saliencyThrFactor*salMedian;
 		double salThr= medianThr;
+		if(useOptimalThr){
+			salThr= salMap_norm->FindMedianThreshold(saliencyThrFactor);
+		}
 		salMapsThresholds.push_back(salThr);
 
 		INFO_LOG("Saliency map norm stats @ reso "<<reso<<" (median="<<salMedian<<", min/max="<<salMin<<"/"<<salMax<<", salThr="<<salThr<<")");

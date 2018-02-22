@@ -455,6 +455,7 @@ class SFinder : public TObject {
 
 		//Saliency computation
 		Image* m_SaliencyImg;
+		bool m_SaliencyUseOptimalThr;
 		double m_SaliencyThrFactor;
 		double m_SaliencyBkgThrFactor;
 		double m_SaliencyImgThrFactor;

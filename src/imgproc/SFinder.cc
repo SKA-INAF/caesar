@@ -549,6 +549,7 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(guidedFilterColorEps,m_GuidedFilterColorEps);
 	
 	//Get saliency options
+	GET_OPTION_VALUE(saliencyUseOptimalThr,m_SaliencyUseOptimalThr);
 	GET_OPTION_VALUE(saliencyThrFactor,m_SaliencyThrFactor);
 	GET_OPTION_VALUE(saliencyBkgThrFactor,m_SaliencyBkgThrFactor);
 	GET_OPTION_VALUE(saliencyImgThrFactor,m_SaliencyImgThrFactor);
@@ -1521,7 +1522,7 @@ Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,T
 		m_spBeta,m_spMinArea,m_SaliencyNNFactor,m_SaliencyUseRobustPars,m_SaliencyDissExpFalloffPar,m_SaliencySpatialDistRegPar,
 		m_SaliencyMultiResoCombThrFactor,
 		m_SaliencyUseBkgMap,m_SaliencyUseNoiseMap,bkgData,
-		m_SaliencyThrFactor,m_SaliencyImgThrFactor
+		m_SaliencyThrFactor,m_SaliencyImgThrFactor,m_SaliencyUseOptimalThr
 	);
 	if(saliencyImg){
 		if(storeData) m_SaliencyImg= saliencyImg;	
@@ -1531,11 +1532,14 @@ Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,T
 		return nullptr;
 	}
 
-	//## Get saliency map optimal threshold
-	bool smoothPixelHisto= true;
-	int pixelHistoNBins= 100;
-	double signalThr= saliencyImg->FindOptimalGlobalThreshold(m_SaliencyThrFactor,pixelHistoNBins,smoothPixelHisto);
-	
+	//## Get saliency map optimal threshold	
+	double signalThr= saliencyImg->FindMedianThreshold(m_SaliencyThrFactor);
+	if(m_SaliencyUseOptimalThr){
+		bool smoothPixelHisto= true;
+		int pixelHistoNBins= 100;
+		signalThr= saliencyImg->FindOptimalGlobalThreshold(m_SaliencyThrFactor,pixelHistoNBins,smoothPixelHisto);
+	}
+
 	//==========================================
 	//==    FIND SOURCES
 	//==========================================

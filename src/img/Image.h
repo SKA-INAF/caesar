@@ -890,7 +890,7 @@ class Image : public TNamed {
 		/**
 		* \brief Get multi-reso saliency map
 		*/
-		Image* GetMultiResoSaliencyMap(int resoMin=20,int resoMax=60,int resoStep=10,double beta=1,int minRegionSize=10,double knnFactor=0.2,bool useRobustPars=false,double expFalloffPar=100,double distanceRegPar=1,double salientMultiplicityThrFactor=0.7,bool addBkgMap=true,bool addNoiseMap=true,ImgBkgData* bkgData=0,double saliencyThrFactor=2,double imgThrFactor=1);
+		Image* GetMultiResoSaliencyMap(int resoMin=20,int resoMax=60,int resoStep=10,double beta=1,int minRegionSize=10,double knnFactor=0.2,bool useRobustPars=false,double expFalloffPar=100,double distanceRegPar=1,double salientMultiplicityThrFactor=0.7,bool addBkgMap=true,bool addNoiseMap=true,ImgBkgData* bkgData=0,double saliencyThrFactor=2,double imgThrFactor=1,bool useOptimalThr=false);
 
 		/**
 		* \brief Get image wavelength decomposition

@@ -82,7 +82,7 @@ class SaliencyFilter : public TObject {
 		/**
 		* \brief Compute multi resolution saliency map 
 		*/
-		static Image* ComputeMultiResoSaliencyMap(Image* img,int resoMin=20,int resoMax=60,int resoStep=10,double beta=1,int minRegionSize=10,double knnFactor=1,bool useRobustPars=false,double expFalloffPar=100,double distanceRegPar=1,double salientMultiplicityThrFactor=0.7,bool addBkgMap=true,bool addNoiseMap=true,ImgBkgData* bkgData=0,double saliencyThrFactor=2,double imgThrFactor=1);
+		static Image* ComputeMultiResoSaliencyMap(Image* img,int resoMin=20,int resoMax=60,int resoStep=10,double beta=1,int minRegionSize=10,double knnFactor=1,bool useRobustPars=false,double expFalloffPar=100,double distanceRegPar=1,double salientMultiplicityThrFactor=0.7,bool addBkgMap=true,bool addNoiseMap=true,ImgBkgData* bkgData=0,double saliencyThrFactor=2,double imgThrFactor=1,bool useOptimalThr=false);
 
 
 	private:
