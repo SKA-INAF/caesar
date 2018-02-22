@@ -52,24 +52,30 @@ std::vector<double> LgFluxBins= {
 TH1D* NTrueSourceHisto_compact= 0;
 TH1D* NRecSourceHisto_compact= 0;
 TH1D* NFitSourceHisto_compact= 0;
+TH1D* NTrueSourceVSSignificanceHisto_compact= 0;
+TH1D* NRecSourceVSSignificanceHisto_compact= 0;
+TH1D* NFitSourceVSSignificanceHisto_compact= 0;
 TH1D* NTrueSourceHisto_reliability_compact= 0;
 TH1D* NRecSourceHisto_reliability_compact= 0;
+TH1D* NTrueSourceVSSignificanceHisto_reliability_compact= 0;
+TH1D* NRecSourceVSSignificanceHisto_reliability_compact= 0;
 TEfficiency* Efficiency_compact= 0;
 TEfficiency* Efficiency_compact_fit= 0;
 TEfficiency* Reliability_compact= 0;
+TEfficiency* EfficiencyVSSignificance_compact= 0;
+TEfficiency* EfficiencyVSSignificance_compact_fit= 0;
+TEfficiency* ReliabilityVSSignificance_compact= 0;
+
 TGraphAsymmErrors* xPosAccuracyGraph_compact= 0;
 TGraphAsymmErrors* yPosAccuracyGraph_compact= 0;
 TGraphAsymmErrors* SpeakAccuracyGraph_compact= 0;
 TGraphAsymmErrors* FluxDensityAccuracyGraph_compact= 0;
-//TGraphAsymmErrors* BkgAccuracyGraph_compact= 0;
 
 std::vector< std::vector<double> > FluxList_compact;
 std::vector< std::vector<double> > xPosPullList_compact;
 std::vector< std::vector<double> > yPosPullList_compact;
 std::vector< std::vector<double> > SpeakPullList_compact;
 std::vector< std::vector<double> > FluxDensityPullList_compact;
-//std::vector< std::vector<double> > OffsetPullList_compact;
-
 
 //- Extended source histos/graphs
 TH1D* NTrueSourceHisto_ext= 0;
@@ -188,8 +194,7 @@ void Init(){
 		yPosPullList_compact.push_back( std::vector<double>() );
 		SpeakPullList_compact.push_back( std::vector<double>() );
 		FluxDensityPullList_compact.push_back( std::vector<double>() );
-		//OffsetPullList_compact.push_back( std::vector<double>() );
-
+		
 		FluxList_ext.push_back( std::vector<double>() );
 		xPosPullList_ext.push_back( std::vector<double>() );
 		yPosPullList_ext.push_back( std::vector<double>() );
@@ -209,6 +214,18 @@ void Init(){
 	histoName= "NFitSourceHisto_compact";
 	NFitSourceHisto_compact= new TH1D(histoName,"Fitted compact source distribution",nBins,LgFluxBins.data());
 	NFitSourceHisto_compact->Sumw2();
+
+	histoName= "NTrueSourceVSSignificanceHisto_compact";
+	NTrueSourceVSSignificanceHisto_compact= new TH1D(histoName,"True compact source distribution",nBins,LgFluxBins.data());
+	NTrueSourceVSSignificanceHisto_compact->Sumw2();
+	
+	histoName= "NRecSourceVSSignificanceHisto_compact";
+	NRecSourceVSSignificanceHisto_compact= new TH1D(histoName,"Rec compact source distribution",nBins,LgFluxBins.data());
+	NRecSourceVSSignificanceHisto_compact->Sumw2();
+	
+	histoName= "NFitSourceVSSignificanceHisto_compact";
+	NFitSourceVSSignificanceHisto_compact= new TH1D(histoName,"Fitted compact source distribution",nBins,LgFluxBins.data());
+	NFitSourceVSSignificanceHisto_compact->Sumw2();
 
 	histoName= "NTrueSourceHisto_ext";
 	NTrueSourceHisto_ext= new TH1D(histoName,"True extended source distribution",nBins,LgFluxBins.data());
@@ -321,6 +338,14 @@ void ComputeAnalysisHistos(){
 	Efficiency_compact_fit = new TEfficiency(*NFitSourceHisto_compact,*NTrueSourceHisto_compact); 
 	Efficiency_compact_fit->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
 	Efficiency_compact_fit->SetConfidenceLevel(0.68);
+
+	EfficiencyVSSignificance_compact = new TEfficiency(*NRecSourceVSSignificanceHisto_compact,*NTrueSourceVSSignificanceHisto_compact); 
+	EfficiencyVSSignificance_compact->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	EfficiencyVSSignificance_compact->SetConfidenceLevel(0.68);
+	
+	EfficiencyVSSignificance_compact_fit = new TEfficiency(*NFitSourceVSSignificanceHisto_compact,*NTrueSourceVSSignificanceHisto_compact); 
+	EfficiencyVSSignificance_compact_fit->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	EfficiencyVSSignificance_compact_fit->SetConfidenceLevel(0.68);
 	
 	Efficiency_ext = new TEfficiency(*NRecSourceHisto_ext,*NTrueSourceHisto_ext); 
 	Efficiency_ext->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
@@ -513,6 +538,19 @@ void Draw(){
 	
 	detectionThrLine->Draw("l");
 
+	TCanvas* EffVSSignificancePlot= new TCanvas("EffVSSignificancePlot","EffVSSignificancePlot");
+	EffVSSignificancePlot->cd();
+
+	TH2D* EffVSSignificancePlotBkg= new TH2D("EffVSSignificancePlotBkg","",100,ZMin_draw,ZMax_draw,100,0,1.2);
+	EffVSSignificancePlotBkg->GetXaxis()->SetTitle("S/N");
+	EffVSSignificancePlotBkg->GetYaxis()->SetTitle("Completeness");
+	EffVSSignificancePlotBkg->Draw();
+
+	EfficiencyVSSignificance->SetMarkerStyle(8);
+	EfficiencyVSSignificance->SetMarkerColor(kBlack);
+	EfficiencyVSSignificance->SetLineColor(kBlack);
+	EfficiencyVSSignificance->Draw("p same");
+
 	//- Efficiency plot compact source (fitted data)
 	TCanvas* EffPlot_fit= new TCanvas("EffPlot_fit","EffPlot_fit");
 	EffPlot_fit->cd();
@@ -528,6 +566,19 @@ void Draw(){
 	Efficiency_compact_fit->Draw("p same");
 	
 	detectionThrLine->Draw("l");
+
+	TCanvas* EffVSSignificancePlot_fit= new TCanvas("EffVSSignificancePlot_fit","EffVSSignificancePlot_fit");
+	EffVSSignificancePlot_fit->cd();
+
+	TH2D* EffVSSignificancePlotBkg_fit= new TH2D("EffVSSignificancePlotBkg_fit","",100,ZMin_draw,ZMax_draw,100,0,1.2);
+	EffVSSignificancePlotBkg_fit->GetXaxis()->SetTitle("S/N");
+	EffVSSignificancePlotBkg_fit->GetYaxis()->SetTitle("Completeness");
+	EffVSSignificancePlotBkg_fit->Draw();
+
+	EfficiencyVSSignificance_fit->SetMarkerStyle(8);
+	EfficiencyVSSignificance_fit->SetMarkerColor(kBlack);
+	EfficiencyVSSignificance_fit->SetLineColor(kBlack);
+	EfficiencyVSSignificance_fit->Draw("p same");
 
 	//- Efficiency plot extended source
 	TCanvas* EffPlot_ext= new TCanvas("EffPlot_ext","EffPlot_ext");
@@ -579,6 +630,19 @@ void Draw(){
 	
 	detectionThrLine->Draw("l");
 
+	TCanvas* ReliabilityVSSignificancePlot= new TCanvas("ReliabilityVSSignificancePlot","ReliabilityVSSignificancePlot");
+	ReliabilityVSSignificancePlot->cd();
+
+	TH2D* ReliabilityVSSignificancePlotBkg= new TH2D("ReliabilityPlotBkg","",100,ZMin_draw,ZMax_draw,100,0,1.2);
+	ReliabilityVSSignificancePlotBkg->GetXaxis()->SetTitle("S/N");
+	ReliabilityVSSignificancePlotBkg->GetYaxis()->SetTitle("Reliability");
+	ReliabilityVSSignificancePlotBkg->Draw();
+
+	ReliabilityVSSignificance_compact->SetMarkerStyle(8);
+	ReliabilityVSSignificance_compact->SetMarkerColor(kBlack);
+	ReliabilityVSSignificance_compact->SetLineColor(kBlack);
+	ReliabilityVSSignificance_compact->Draw("p same");
+	
 
 	//Extended
 	TCanvas* ReliabilityPlot_ext= new TCanvas("ReliabilityPlot_ext","ReliabilityPlot_ext");
@@ -595,6 +659,19 @@ void Draw(){
 	Reliability_ext->Draw("p same");
 	
 	detectionThrLine->Draw("l");
+
+	TCanvas* ReliabilityVSSignificancePlot_ext= new TCanvas("ReliabilityVSSignificancePlot_ext","ReliabilityVSSignificancePlot_ext");
+	ReliabilityVSSignificancePlot_ext->cd();
+
+	TH2D* ReliabilityVSSignificancePlotBkg_ext= new TH2D("ReliabilityVSSignificancePlotBkg_ext","",100,ZMin_draw,ZMax_draw,100,0,1.2);
+	ReliabilityVSSignificancePlotBkg_ext->GetXaxis()->SetTitle("S/N");
+	ReliabilityVSSignificancePlotBkg_ext->GetYaxis()->SetTitle("Reliability");
+	ReliabilityVSSignificancePlotBkg_ext->Draw();
+
+	ReliabilityVSSignificance_ext->SetMarkerStyle(8);
+	ReliabilityVSSignificance_ext->SetMarkerColor(kBlack);
+	ReliabilityVSSignificance_ext->SetLineColor(kBlack);
+	ReliabilityVSSignificance_ext->Draw("p same");
 
 	//===============================================
 	//==          DRAW POSITIONAL ACCURACY
@@ -813,7 +890,9 @@ int AnalyzeData(std::string filename){
 	double beamArea_rec;
 	double X0_sweighted_rec;
 	double Y0_sweighted_rec;
-
+	double S_bkg;
+	double AvgBkg;
+	double AvgRMS;
 
 	int HasFitInfo;
 	double X0_fit;//fitted pos x
@@ -856,6 +935,9 @@ int AnalyzeData(std::string filename){
  	SourceMatchInfo->SetBranchAddress("X0_rec",&X0_rec);
  	SourceMatchInfo->SetBranchAddress("Y0_rec",&Y0_rec);
 	SourceMatchInfo->SetBranchAddress("beamArea_rec",&beamArea_rec);
+	SourceMatchInfo->SetBranchAddress("S_bkg",&S_bkg);
+	SourceMatchInfo->SetBranchAddress("AvgBkg",&AvgBkg);
+	SourceMatchInfo->SetBranchAddress("AvgRMS",&AvgRMS);
   SourceMatchInfo->SetBranchAddress("HasFitInfo",&HasFitInfo);
  	SourceMatchInfo->SetBranchAddress("X0_fit",&X0_fit);
  	SourceMatchInfo->SetBranchAddress("Y0_fit",&Y0_fit);
@@ -912,6 +994,9 @@ int AnalyzeData(std::string filename){
 	ExtSourceMatchInfo->SetBranchAddress("beamArea_rec",&beamArea_rec);
 	ExtSourceMatchInfo->SetBranchAddress("X0_sweighted_rec",&X0_sweighted_rec);
  	ExtSourceMatchInfo->SetBranchAddress("Y0_sweighted_rec",&Y0_sweighted_rec);
+	ExtSourceMatchInfo->SetBranchAddress("S_bkg",&S_bkg);
+	ExtSourceMatchInfo->SetBranchAddress("AvgBkg",&AvgBkg);
+	ExtSourceMatchInfo->SetBranchAddress("AvgRMS",&AvgRMS);
 
 	//Get point/compact source reliability tree
 	TTree* RecExtSourceInfo= (TTree*)inputFile->Get("RecExtSourceInfo");
@@ -974,17 +1059,22 @@ int AnalyzeData(std::string filename){
 		double fluxDensity_true= S_true;
 		//double fluxDensity_true= S/beamArea_true;
 		double lgFlux_true= log10(fluxDensity_true);
-		INFO_LOG("S="<<S<<" fluxDensity_true="<<fluxDensity_true<<", lgFlux_true="<<lgFlux_true);
+		double Z_true= fluxDensity_true/noiseLevel_true;
+		//double Z_true= fluxDensity_true/AvgRMS;
+
+		INFO_LOG("S="<<S<<" fluxDensity_true="<<fluxDensity_true<<", lgFlux_true="<<lgFlux_true<<", AvgBkg="<<AvgBkg<<", AvgRMS="<<AvgRMS<<", Z_true="<<Z_true);
 		
 		int gBin= NTrueSourceHisto_compact->FindBin(lgFlux_true);
 		if(NTrueSourceHisto_compact->IsBinUnderflow(gBin) || NTrueSourceHisto_compact->IsBinOverflow(gBin)) continue;
 		NTrueSourceHisto_compact->Fill(lgFlux_true,1);
+		NTrueSourceVSSignificanceHisto->Fill(Z_true,1);
 		nTrueSources++;
 
 			
 		//Fill rec info
 		if(found==1) {	
 			NRecSourceHisto_compact->Fill(lgFlux_true,1);
+			NRecSourceVSSignificanceHisto->Fill(Z_true,1);
 
 			double xOffset= fabs(X0_rec-X0_true);
 			double yOffset= fabs(Y0_rec-Y0_true);
@@ -1029,11 +1119,14 @@ int AnalyzeData(std::string filename){
 		
 		//Fill rec info
 		double lgFlux_rec= log10(fluxDensity_rec/beamArea_rec);
+		double Z_rec= fluxDensity_rec/noiseLevel_true;
 		NRecSourceHisto_reliability_compact->Fill(lgFlux_rec,1);
+		NRecSourceVSSignificanceHisto_reliability_compact->Fill(Z_rec,1);
 
 		//Fill true info
 		if(nTrueMatchedSources>0){
-			NTrueSourceHisto_reliability_compact->Fill(lgFlux_rec);
+			NTrueSourceHisto_reliability_compact->Fill(lgFlux_rec);	
+			NTrueSourceVSSignificanceHisto_reliability_compact->Fill(Z_rec,1);
 		}
 
 	}//end loop rec sources
@@ -1053,7 +1146,8 @@ int AnalyzeData(std::string filename){
 
 		double nBeams_true= (double)(NPix)/beamArea_true;
 		double Z_true= fluxDensity_true/(noiseLevel_true*sqrt(nBeams_true));
-		INFO_LOG("nBeams_true="<<nBeams_true<<", NPix="<<NPix<<", Z_true="<<Z_true);
+		//double Z_true= fluxDensity_true/(AvgRMS*sqrt(nBeams_true));
+		INFO_LOG("nBeams_true="<<nBeams_true<<", NPix="<<NPix<<", AvgBkg="<<AvgBkg<<", AvgRMS="<<AvgRMS<<", Z_true="<<Z_true);
 
 		int gBin= NTrueSourceHisto_ext->FindBin(lgFlux_true);
 		if(NTrueSourceHisto_ext->IsBinUnderflow(gBin) || NTrueSourceHisto_ext->IsBinOverflow(gBin)) continue;	
@@ -1095,11 +1189,15 @@ int AnalyzeData(std::string filename){
 		
 		//Fill rec info
 		double lgFlux_rec= log10(fluxDensity_rec/beamArea_rec);
+		double Z_rec= fluxDensity_rec/(noiseLevel_true*sqrt(nBeams_rec));
 		NRecSourceHisto_reliability_ext->Fill(lgFlux_rec,1);
+		NRecSourceVSSignificanceHisto_reliability_ext->Fill(Z_rec,1);
+		
 
 		//Fill true info
 		if(nTrueMatchedSources>0){
 			NTrueSourceHisto_reliability_ext->Fill(lgFlux_rec);
+			NTrueSourceVSSignificanceHisto_reliability_ext->Fill(Z_rec,1);
 		}
 
 	}//end loop rec sources
