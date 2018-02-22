@@ -168,10 +168,14 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--hostfile=[HOSTFILE] - Ascii file with list of hosts used by MPI (default=no hostfile used)"
 	echo "--containerrun - Run inside Caesar container"
 	echo "--containerimg=[CONTAINER_IMG] - Singularity container image file (.simg) with CAESAR installed software"
+	echo ""
+
+	echo "=== SFINDER SUBMISSION OPTIONS ==="
 	echo "--submit - Submit the script to the batch system using queue specified"
 	echo "--queue=[BATCH_QUEUE] - Name of queue in batch system" 
 	echo "--jobwalltime=[JOB_WALLTIME] - Job wall time in batch system (default=96:00:00)"
 	echo "--jobmemory=[JOB_MEMORY] - Memory in GB required for the job (default=4)"
+	echo "--jobusergroup=[JOB_USER_GROUP] - Name of job user group batch system (default=empty)" 	
 	echo "=========================="
   exit 1
 fi
@@ -198,6 +202,8 @@ NMAX_PROCESSED_FILES=-1
 BATCH_QUEUE=""
 JOB_WALLTIME="96:00:00"
 JOB_MEMORY="4"
+JOB_USER_GROUP=""
+JOB_USER_GROUP_OPTION=""
 LOG_LEVEL="INFO"
 OUTPUT_DIR=$PWD
 NTHREADS=1
@@ -325,18 +331,6 @@ do
     ;;
 	
 		## OPTIONAL ##	
-		--submit*)
-    	SUBMIT="true"
-    ;;
-		--queue=*)
-    	BATCH_QUEUE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
-    ;;
-		--jobwalltime=*)
-			JOB_WALLTIME=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
-		;;	
-		--jobmemory=*)
-			JOB_MEMORY=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
-		;;
 		--containerimg=*)
     	CONTAINER_IMG=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
@@ -694,6 +688,25 @@ do
     	WTSCALE_MAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
+		## SUBMISSION OPTIONS
+		--submit*)
+    	SUBMIT="true"
+    ;;
+		--queue=*)
+    	BATCH_QUEUE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--jobwalltime=*)
+			JOB_WALLTIME=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+		;;	
+		--jobmemory=*)
+			JOB_MEMORY=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+		;;
+		--jobusergroup=*)
+			JOB_USER_GROUP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+			JOB_USER_GROUP_OPTION="#PBS -A $JOB_USER_GROUP"
+		;;
+
+
     *)
     # Unknown option
     echo "ERROR: Unknown option ($item)...exit!"
@@ -704,7 +717,7 @@ done
 
 echo ""
 echo "*****  PARSED ARGUMENTS ****"
-echo "SUBMIT? $SUBMIT, QUEUE=$BATCH_QUEUE, JOB_WALLTIME: $JOB_WALLTIME, JOB_MEMORY: $JOB_MEMORY"
+echo "SUBMIT? $SUBMIT, QUEUE=$BATCH_QUEUE, JOB_WALLTIME: $JOB_WALLTIME, JOB_MEMORY: $JOB_MEMORY, JOB_USER_GROUP: $JOB_USER_GROUP"
 echo "RUN_IN_CONTAINER? $RUN_IN_CONTAINER, CONTAINER_IMG=$CONTAINER_IMG"
 echo "ENV_FILE: $ENV_FILE"
 echo "INPUTFILE: $INPUTFILE"
@@ -1109,6 +1122,7 @@ generate_exec_script(){
     	echo '#PBS -r n'
       echo '#PBS -S /bin/bash' 
       echo '#PBS -p 1'
+			echo "$JOB_USER_GROUP_OPTION"
 
       echo " "
       echo " "

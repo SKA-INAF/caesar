@@ -22,8 +22,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo ""
 	echo ""
 	echo "*** OPTIONAL ARGS ***"
-	echo "--startid=[START_ID] - Run start id (default: 1)"	
-	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"
+	echo "=== IMAGING OPTIONS ==="	
 	echo "--outproject=[OUTPUT_PROJECT] - Name of CASA output project (default=rec)"
 	echo "--no-mosaic - Disable mosaic generation (default=enabled)"
 	echo "--mosaicimgname=[MOSAIC_IMAGE_NAME] - Name of CASA output mosaic image (default=mosaic)"
@@ -41,11 +40,21 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--usemask - Use a mask in cleaning (default=no)"
 	echo "--mask=[MASK] - Name of mask file (default=search for mask file in simulation dir))"
 	echo "--scales=[SCALES] - List of scales (in pixels) for multiscale cleaning (default: [0])"
+	echo ""
+
+	echo "=== RUN OPTIONS ==="
+	echo "--startid=[START_ID] - Run start id (default: 1)"	
+	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"
+	echo ""
+
+	echo "=== SUBMISSION OPTIONS ==="
 	echo "--submit - Submit the script to the batch system using queue specified"
 	echo "--containerrun - Run inside Caesar container"
 	echo "--containerimg=[CONTAINER_IMG] - Singularity container image file (.simg) with CAESAR installed software"
 	echo "--queue=[BATCH_QUEUE] - Name of queue in batch system"
 	echo "--jobwalltime=[JOB_WALLTIME] - Job wall time in batch system (default=96:00:00)"
+	echo "--jobmemory=[JOB_MEMORY] - Memory in GB required for the job (default=4)"
+	echo "--jobusergroup=[JOB_USER_GROUP] - Name of job user group batch system (default=empty)"
 	echo "=========================="
 	exit 1
 fi
@@ -86,6 +95,9 @@ MASK_GIVEN=false
 ##SCALES="['0']"
 SCALES="'0'"
 JOB_WALLTIME="96:00:00"
+JOB_MEMORY="4"
+JOB_USER_GROUP=""
+JOB_USER_GROUP_OPTION=""
 
 for item in "$@"
 do
@@ -181,6 +193,14 @@ do
 		--jobwalltime=*)
 			JOB_WALLTIME=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
 		;;
+		--jobmemory=*)
+			JOB_MEMORY=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+		;;
+		--jobusergroup=*)
+			JOB_USER_GROUP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+			JOB_USER_GROUP_OPTION="#PBS -A $JOB_USER_GROUP"
+		;;
+
 		--submit*)
     	SUBMIT=true
     ;;
@@ -210,7 +230,7 @@ echo "WEIGHTING: $WEIGHTING"
 echo "DECONVOLVER: $DECONVOLVER"
 echo "GRIDDER: $GRIDDER"
 echo "SCALES: $SCALES"
-echo "SUBMIT? $SUBMIT, QUEUE=$BATCH_QUEUE, JOB_WALLTIME: $JOB_WALLTIME"
+echo "SUBMIT? $SUBMIT, QUEUE=$BATCH_QUEUE, JOB_WALLTIME: $JOB_WALLTIME, JOB_MEMORY: $JOB_MEMORY, JOB_USER_GROUP: $JOB_USER_GROUP"
 echo "ENV_FILE: $ENV_FILE"
 echo "RUN_IN_CONTAINER? $RUN_IN_CONTAINER, CONTAINER_IMG=$CONTAINER_IMG"
 echo "MAP_SIZE: $MAP_SIZE (pixels), PIX_SIZE=$PIX_SIZE (arcsec)"
@@ -282,11 +302,12 @@ generate_exec_script(){
 			echo "#PBS -N RecJob$jobindex"			
 			echo "#PBS -j oe"
   		echo "#PBS -o $BASEDIR"
-			echo "#PBS -l select=1:ncpus=1"
+			echo "#PBS -l select=1:ncpus=1:mem=$JOB_MEMORY"'GB'
 			echo "#PBS -l walltime=$JOB_WALLTIME"
     	echo '#PBS -r n'
       echo '#PBS -S /bin/bash'
-      echo '#PBS -p 1'
+      echo '#PBS -p 1'	
+			echo "$JOB_USER_GROUP_OPTION"
 
       echo " "
       echo " "

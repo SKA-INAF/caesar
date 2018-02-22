@@ -23,6 +23,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo ""
 	echo ""
 	echo "*** OPTIONAL ARGS ***"
+	echo "=== CORRELATOR OPTIONS ==="
 	echo "--overlapthr=[OVERLAP_THRESHOLD] - Fraction of matching pixels to consider source matching (default=0.1) "
 	echo "--posthr=[POS_THRESHOLD] - Pixel distance below which two sources are matched (default=2.5) "
 	echo "--applyfluxoverlapthr - Apply flux overlap threshold (default: not applied)"
@@ -34,13 +35,21 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--no-compactsourcecorr - Disable correlation search for compact sources (default=enabled)"
 	echo "--no-extendedsourcecorr - Disable correlation search for extended sources (default=enabled)"
 	echo "--correctflux - Correct rec integrated flux by beam area (default=no correction)"
-	echo "--startid=[START_ID] - Run start id (default: 1)"	
+	echo ""
+
+	echo "=== RUN OPTIONS ==="
+	echo "--startid=[START_ID] - Run start id (default: 1)"		
 	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"		
-	echo "--submit - Submit the script to the batch system using queue specified"
 	echo "--containerrun - Run inside Caesar container"
 	echo "--containerimg=[CONTAINER_IMG] - Singularity container image file (.simg) with CAESAR installed software"
+	echo ""
+
+	echo "=== SUBMISSION OPTIONS ==="
+	echo "--submit - Submit the script to the batch system using queue specified"
 	echo "--queue=[BATCH_QUEUE] - Name of queue in batch system"
-	echo "--jobwalltime=[JOB_WALLTIME] - Job wall time in batch system (default=96:00:00)"
+	echo "--jobwalltime=[JOB_WALLTIME] - Job wall time in batch system (default=96:00:00)"	
+	echo "--jobmemory=[JOB_MEMORY] - Memory in GB required for the job (default=4)"
+	echo "--jobusergroup=[JOB_USER_GROUP] - Name of job user group batch system (default=empty)" 
 	echo "=========================="
 	exit 1
 fi
@@ -53,6 +62,9 @@ START_ID=1
 SUBMIT=false
 BATCH_QUEUE=""
 JOB_WALLTIME="96:00:00"
+JOB_MEMORY="4"
+JOB_USER_GROUP=""
+JOB_USER_GROUP_OPTION=""
 ENV_FILE=""
 FILELIST=""
 FILELIST_GIVEN=false
@@ -158,6 +170,13 @@ do
 		--jobwalltime=*)
 			JOB_WALLTIME=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
 		;;
+		--jobmemory=*)
+			JOB_MEMORY=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+		;;
+		--jobusergroup=*)
+			JOB_USER_GROUP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+			JOB_USER_GROUP_OPTION="#PBS -A $JOB_USER_GROUP"
+		;;
 		--submit*)
     	SUBMIT=true
     ;;
@@ -205,7 +224,7 @@ echo "FLUX_OVERLAP_THRESHOLD: $FLUX_OVERLAP_THRESHOLD"
 echo "FILTERED_SOURCE_TYPE: $FILTERED_SOURCE_TYPE"
 echo "FILTERED_SOURCE_SIM_TYPE: $FILTERED_SOURCE_SIM_TYPE"
 echo "ENV_FILE: $ENV_FILE"
-echo "SUBMIT? $SUBMIT, QUEUE=$BATCH_QUEUE, JOB_WALLTIME: $JOB_WALLTIME"
+echo "SUBMIT? $SUBMIT, QUEUE=$BATCH_QUEUE, JOB_WALLTIME: $JOB_WALLTIME, JOB_MEMORY: $JOB_MEMORY, JOB_USER_GROUP: $JOB_USER_GROUP"
 echo "RUN_IN_CONTAINER? $RUN_IN_CONTAINER, CONTAINER_IMG=$CONTAINER_IMG"
 echo "****************************"
 echo ""
@@ -239,11 +258,12 @@ generate_exec_script(){
 			echo "#PBS -N CorrJob$jobindex"			
 			echo "#PBS -j oe"
   		echo "#PBS -o $BASEDIR"
-			echo "#PBS -l select=1:ncpus=1"
+			echo "#PBS -l select=1:ncpus=1:mem=$JOB_MEMORY"'GB'
 			echo "#PBS -l walltime=$JOB_WALLTIME"
     	echo '#PBS -r n'
       echo '#PBS -S /bin/bash'
       echo '#PBS -p 1'
+			echo "$JOB_USER_GROUP_OPTION"
 
       echo " "
       echo " "

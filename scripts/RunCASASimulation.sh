@@ -22,7 +22,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo ""
 	echo ""
 	echo "*** OPTIONAL ARGS ***"	
-	echo "--startid=[START_ID] - Run start id (default: 1)"
+	echo "=== SIMULATION OPTIONS ==="	
 	echo "--sourcegenmargin=[SOURCE_GEN_MARGIN_SIZE] - Left/right margin in skymodel map for source generation (default: 0)"
 	echo "--bmaj=[BMAJ] - Beam Bmaj of sky model map in arcsec (default: 9.8 arcsec)"
 	echo "--bmin=[BMIN] - Beam Bmin of sky model map in arcsec (default: 5.8 arcsec)"
@@ -53,12 +53,21 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--maptype=[MAP_TYPE] - Simulated map type (square|hexagonal) (default=square)"
 	echo "--frequency=[FREQUENCY_CENTER] - Frequency centroid of simulated data with units (default=2.1GHz)"
 	echo "--frequencybw=[FREQUENCY_BANDWIDTH] - Frequency bandwidth of simulated data with units (default=10MHz)"
-	echo "--submit - Submit the script to the batch system using queue specified"
+	echo ""
+
+	echo "=== RUN OPTIONS ==="	
+	echo "--startid=[START_ID] - Run start id (default: 1)"
 	echo "--containerrun - Run inside Caesar container"
 	echo "--containerimg=[CONTAINER_IMG] - Singularity container image file (.simg) with CAESAR installed software"
+	echo "--with-graphics - Enable graphics in simobserve. NB: Container run crashes with CASA graphics enabled (default=disabled)" 
+	echo ""
+
+	echo "=== SUBMISSION OPTIONS ==="
+	echo "--submit - Submit the script to the batch system using queue specified"
 	echo "--queue=[BATCH_QUEUE] - Name of queue in batch system" 
-	echo "--jobwalltime=[JOB_WALLTIME] - Job wall time in batch system (default=96:00:00)" 
-	echo "--with-graphics - Enable graphics in simobserve. NB: Container run crashes with CASA graphics enabled (default=disabled)" 	
+	echo "--jobwalltime=[JOB_WALLTIME] - Job wall time in batch system (default=96:00:00)"
+	echo "--jobmemory=[JOB_MEMORY] - Memory in GB required for the job (default=4)"
+	echo "--jobusergroup=[JOB_USER_GROUP] - Name of job user group batch system (default=empty)" 
 	echo "=========================="
 	exit 1
 fi
@@ -113,6 +122,9 @@ FREQUENCY="2.1GHz"
 FREQUENCYBW="10MHz"
 GRAPHICS_FLAG="--no-graphics"
 JOB_WALLTIME="96:00:00"
+JOB_MEMORY="4"
+JOB_USER_GROUP=""
+JOB_USER_GROUP_OPTION=""
 
 ##for item in $*
 for item in "$@"
@@ -143,9 +155,7 @@ do
 		
 
 		## OPTIONAL ##	
-		--startid=*)
-    	START_ID=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
-    ;;	
+		
 		--sourcegenmargin=*)
     	SOURCE_GEN_MARGIN_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
@@ -214,23 +224,6 @@ do
 		--ring-wmax=*)
     	RING_WIDTH_MAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
-		
-		## SUBMISSION OPTIONS
-		--queue=*)
-    	BATCH_QUEUE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
-    ;;
-		--jobwalltime=*)
-			JOB_WALLTIME=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
-		;;
-		--submit*)
-    	SUBMIT=true
-    ;;
-		--containerimg=*)
-    	CONTAINER_IMG=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
-    ;;
-		--containerrun*)
-    	RUN_IN_CONTAINER=true
-    ;;
 		--simproject=*)
     	SIM_PROJECT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
 			SIM_PROJECT_GIVEN=true
@@ -257,6 +250,36 @@ do
 		--frequencybw=*)
     	FREQUENCYBW=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
+
+		## SUBMISSION OPTIONS	
+		--submit*)
+    	SUBMIT=true
+    ;;
+		--queue=*)
+    	BATCH_QUEUE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    ;;
+		--jobwalltime=*)
+			JOB_WALLTIME=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+		;;
+		--jobmemory=*)
+			JOB_MEMORY=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+		;;
+		--jobusergroup=*)
+			JOB_USER_GROUP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+			JOB_USER_GROUP_OPTION="#PBS -A $JOB_USER_GROUP"
+		;;
+		
+		## RUN OPTIONS
+		--startid=*)
+    	START_ID=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    ;;	
+		--containerimg=*)
+    	CONTAINER_IMG=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--containerrun*)
+    	RUN_IN_CONTAINER=true
+    ;;
+		
 		--with-graphics*)
     	GRAPHICS_FLAG="--graphics"
     ;;
@@ -274,7 +297,7 @@ CRPIX=`expr $MAP_SIZE / 2`
 
 echo ""
 echo "*****  PARSED ARGUMENTS ****"
-echo "SUBMIT? $SUBMIT, QUEUE=$BATCH_QUEUE, JOB_WALLTIME: $JOB_WALLTIME"
+echo "SUBMIT? $SUBMIT, QUEUE=$BATCH_QUEUE, JOB_WALLTIME: $JOB_WALLTIME, JOB_MEMORY: $JOB_MEMORY, JOB_USER_GROUP: $JOB_USER_GROUP"
 echo "NRUNS: $NRUNS (START_ID=$START_ID)"
 echo "ENV_FILE: $ENV_FILE"
 echo "RUN_IN_CONTAINER? $RUN_IN_CONTAINER, CONTAINER_IMG=$CONTAINER_IMG"
@@ -404,11 +427,12 @@ for ((index=1; index<=$NRUNS; index=$index+1))
 		echo "#PBS -N SimJob$RUN_ID"
 		echo "#PBS -j oe"
 		echo "#PBS -o $BASEDIR"
-    echo "#PBS -l select=1:ncpus=1"
+    echo "#PBS -l select=1:ncpus=1:mem=$JOB_MEMORY"'GB'
 		echo "#PBS -l walltime=$JOB_WALLTIME"
     echo '#PBS -r n'
     echo '#PBS -S /bin/bash'    
     echo '#PBS -p 1'
+		echo "$JOB_USER_GROUP_OPTION"
 
     echo " "
     echo " "
@@ -462,7 +486,6 @@ for ((index=1; index<=$NRUNS; index=$index+1))
 		if [ "$RUN_IN_CONTAINER" = true ] ; then
 			echo 'EXE="'"singularity run --app simulation $CONTAINER_IMG"'"'
 		else
-			##echo 'EXE="$CASAPATH/bin/casa --nologger --log2term --nogui -c $CAESAR_SCRIPTS_DIR/simulate_observation.py"'
 			echo 'EXE="'"$CASAPATH/bin/casa --nologger --log2term --nogui -c $CAESAR_SCRIPTS_DIR/simulate_observation.py"'"'
 		fi
 

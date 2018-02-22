@@ -23,6 +23,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo ""
 	echo ""
 	echo "*** OPTIONAL ARGS ***"
+	echo "=== CONVOLVER OPTIONS ==="	
 	echo "--bmaj=[BMAJ] - Convolution beam bmaj in arcsec. NB: Ineffective if filelist-rec or inputfile-rec are given."
 	echo "--bmin=[BMIN] - Convolution beam bmin in arcsec. NB: Ineffective if filelist-rec or inputfile-rec are given."
 	echo "--bpa=[BMIN] - Convolution beam position angle in degrees. NB: Ineffective if filelist-rec or inputfile-rec are given."
@@ -34,13 +35,21 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--mergecompactsources - Merge compact to compact sources (default=no)"
 	echo "--mergeextsources - Merge extended to extended or compact sources (default=no)"
 	echo "--nsigmas=[NSIGMAS] - Number of gaussian sgmas used in convolution kernel (default=10)"
+	echo ""
+
+	echo "=== RUN OPTIONS ==="
 	echo "--startid=[START_ID] - Run start id (default: 1)"	
 	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"		
-	echo "--submit - Submit the script to the batch system using queue specified"
 	echo "--containerrun - Run inside Caesar container"
 	echo "--containerimg=[CONTAINER_IMG] - Singularity container image file (.simg) with CAESAR installed software"
+	echo ""
+
+	echo "=== SUBMISSION OPTIONS ==="
+	echo "--submit - Submit the script to the batch system using queue specified"
 	echo "--queue=[BATCH_QUEUE] - Name of queue in batch system"
 	echo "--jobwalltime=[JOB_WALLTIME] - Job wall time in batch system (default=96:00:00)"
+	echo "--jobmemory=[JOB_MEMORY] - Memory in GB required for the job (default=4)"
+	echo "--jobusergroup=[JOB_USER_GROUP] - Name of job user group batch system (default=empty)"
 	echo "=========================="
 	exit 1
 fi
@@ -55,6 +64,9 @@ START_ID=1
 SUBMIT=false
 BATCH_QUEUE=""
 JOB_WALLTIME="96:00:00"
+JOB_MEMORY="4"
+JOB_USER_GROUP=""
+JOB_USER_GROUP_OPTION=""
 ENV_FILE=""
 FILELIST=""
 FILELIST_GIVEN=false
@@ -166,6 +178,13 @@ do
 		--jobwalltime=*)
 			JOB_WALLTIME=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
 		;;
+		--jobmemory=*)
+			JOB_MEMORY=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+		;;
+		--jobusergroup=*)
+			JOB_USER_GROUP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+			JOB_USER_GROUP_OPTION="#PBS -A $JOB_USER_GROUP"
+		;;
 		--submit*)
     	SUBMIT=true
     ;;
@@ -213,7 +232,7 @@ echo "USER_THRESHOLD_OPTION: $USER_THRESHOLD_OPTION, THRESHOLD: $THRESHOLD, THRE
 echo "TRUNC_THRESHOLD: $TRUNC_THRESHOLD"
 echo "MERGE_SOURCES? $MERGE_SOURCES, MERGE_COMPACT_SOURCES? $MERGE_COMPACT_SOURCES, MERGE_EXTENDED_SOURCES? $MERGE_EXTENDED_SOURCES"
 echo "ENV_FILE: $ENV_FILE"
-echo "SUBMIT? $SUBMIT, QUEUE=$BATCH_QUEUE, JOB_WALLTIME: $JOB_WALLTIME"
+echo "SUBMIT? $SUBMIT, QUEUE=$BATCH_QUEUE, JOB_WALLTIME: $JOB_WALLTIME, JOB_MEMORY: $JOB_MEMORY, JOB_USER_GROUP: $JOB_USER_GROUP"
 echo "RUN_IN_CONTAINER? $RUN_IN_CONTAINER, CONTAINER_IMG=$CONTAINER_IMG"
 echo "****************************"
 echo ""
@@ -248,11 +267,12 @@ generate_exec_script(){
 			echo "#PBS -N ConvJob$jobindex"			
 			echo "#PBS -j oe"
   		echo "#PBS -o $BASEDIR"
-			echo "#PBS -l select=1:ncpus=1"
+			echo "#PBS -l select=1:ncpus=1:mem=$JOB_MEMORY"'GB'
 			echo "#PBS -l walltime=$JOB_WALLTIME"
     	echo '#PBS -r n'
       echo '#PBS -S /bin/bash'
       echo '#PBS -p 1'
+			echo "$JOB_USER_GROUP_OPTION"
 
       echo " "
       echo " "
