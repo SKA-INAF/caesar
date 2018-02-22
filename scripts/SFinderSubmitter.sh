@@ -1221,11 +1221,29 @@ if [ "$FILELIST_GIVEN" = true ]; then
 
 		## Define executable & args variables and generate script
 		shfile="Run_$filename_base_noext"'_'"$index.sh"
-		EXE="$CAESAR_DIR/scripts/RunSFinderMPI.sh"
-		EXE_ARGS="--nproc=$NPROC --config=$configfile $RUN_IN_CONTAINER_FLAG $CONTAINER_IMG_FLAG"
+		
+
+		##EXE="$CAESAR_DIR/scripts/RunSFinderMPI.sh"
+		##EXE_ARGS="--nproc=$NPROC --config=$configfile $RUN_IN_CONTAINER_FLAG $CONTAINER_IMG_FLAG"
+		##if [ "$HOSTFILE_GIVEN" = true ] ; then
+		##	EXE_ARGS="$EXE_ARGS --hostfile=$HOSTFILE"
+		##fi
+
+
+		## DEBUG ###
+		CMD="mpirun -np $NPROC "
 		if [ "$HOSTFILE_GIVEN" = true ] ; then
-			EXE_ARGS="$EXE_ARGS --hostfile=$HOSTFILE"
+			CMD="$CMD -f $HOSTFILE "
 		fi
+		if [ "$RUN_IN_CONTAINER" = true ] ; then
+			EXE="singularity run --app sfinder $CONTAINER_IMG"		
+		else
+			EXE="$CAESAR_DIR/bin/FindSourceMPI"
+		fi
+		EXE_ARGS="--config=$CONFIGFILE"
+		## DEBUG ###
+	
+
 		
 		echo "INFO: Creating script file $shfile for input file: $inputfile ..."
 		generate_exec_script "$shfile" "$index" "$EXE" "$EXE_ARGS" "$logfile"
@@ -1278,11 +1296,24 @@ else
 
 	## Define executable & args variables and generate script
 	shfile="Run_$filename_base_noext"'.sh'
-	EXE="$CAESAR_DIR/scripts/RunSFinderMPI.sh"
-	EXE_ARGS="--nproc=$NPROC --config=$configfile $RUN_IN_CONTAINER_FLAG $CONTAINER_IMG_FLAG"
+	
+	##EXE="$CAESAR_DIR/scripts/RunSFinderMPI.sh"
+	##EXE_ARGS="--nproc=$NPROC --config=$configfile $RUN_IN_CONTAINER_FLAG $CONTAINER_IMG_FLAG"
+	##if [ "$HOSTFILE_GIVEN" = true ] ; then
+	##	EXE_ARGS="$EXE_ARGS --hostfile=$HOSTFILE"
+	##fi
+
+	CMD="mpirun -np $NPROC "
 	if [ "$HOSTFILE_GIVEN" = true ] ; then
-		EXE_ARGS="$EXE_ARGS --hostfile=$HOSTFILE"
+		CMD="$CMD -f $HOSTFILE "
 	fi
+	if [ "$RUN_IN_CONTAINER" = true ] ; then
+		EXE="singularity run --app sfinder $CONTAINER_IMG"		
+	else
+		EXE="$CAESAR_DIR/bin/FindSourceMPI"
+	fi
+	EXE_ARGS="--config=$CONFIGFILE"
+
 
 	echo "INFO: Creating script file $shfile for input file: $inputfile ..."
 	jobId=" "
