@@ -353,6 +353,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		//===================================
 		//==  Saliency filtering options   ==
 		//===================================
+		REGISTER_OPTION(saliencyUseOptimalThr,bool,true,false,true);
 		REGISTER_OPTION(saliencyThrFactor,double,2.8,0,10);
 		REGISTER_OPTION(saliencyBkgThrFactor,double,1,0.01,10);
 		REGISTER_OPTION(saliencyImgThrFactor,double,1,0.01,10);
