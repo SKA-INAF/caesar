@@ -10,6 +10,7 @@
 #include <TF1.h>
 #include <TMath.h>
 #include <TEfficiency.h>
+#include <TLegend.h>
 #include <Math/QuantFuncMathCore.h>
 
 #include <Image.h>
