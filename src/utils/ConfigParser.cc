@@ -252,7 +252,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		//==  Nested Source finding options  ==
 		//=====================================
 		REGISTER_OPTION(searchNestedSources,bool,true,false,true);
-		REGISTER_OPTION(sourceToBeamAreaThrToSearchNested,double,0,-0.001,100);
+		REGISTER_OPTION(sourceToBeamAreaThrToSearchNested,double,0,-0.001,1000000);
 		REGISTER_OPTION(nestedBlobThrFactor,double,1,0,100);
 		REGISTER_OPTION(minNestedMotherDist,double,2,0,100);
 		REGISTER_OPTION(maxMatchingPixFraction,double,0.5,0,1);
