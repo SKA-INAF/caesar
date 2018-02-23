@@ -1566,7 +1566,7 @@ int Image::FindCompactSource(std::vector<Source*>& sources,double thr,int minPix
 }//close FindCompactSource()
 
 
-int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBkgData* bkgData,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,bool findNestedSources,double nestedBlobThreshold,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested,Image* curvMap)
+int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBkgData* bkgData,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,bool findNestedSources,double nestedBlobThreshold,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested,double nestedBlobPeakZThr,Image* curvMap)
 {
 
 	//Find sources
@@ -1585,7 +1585,7 @@ int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBk
 
 	//Find nested sources?
 	if(findNestedSources && sources.size()>0){
-		int status= FindNestedSource(sources,bkgData,minPixels,nestedBlobThreshold,minNestedMotherDist,maxMatchingPixFraction,nPixThrToSearchNested);
+		int status= FindNestedSource(sources,bkgData,minPixels,nestedBlobThreshold,minNestedMotherDist,maxMatchingPixFraction,nPixThrToSearchNested,nestedBlobPeakZThr);
 		if(status<0){
 			WARN_LOG("Nested source search failed!");
 		}
@@ -1596,7 +1596,7 @@ int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBk
 }//close FindCompactSource()
 
 
-int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,int minPixels,double nestedBlobThreshold,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested){
+int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,int minPixels,double nestedBlobThreshold,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested,double nestedBlobPeakZThr){
 
 	//Check if given mother source list is empty
 	int nSources= static_cast<int>(sources.size());
@@ -1622,7 +1622,10 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 	}
 
 	//Compute curvature map stats
-	if(curvMap->ComputeStats(true,false,false)<0){
+	bool computeRobustStats= true;
+	bool skipNegativePixels= true;
+	bool forceRecompute= false;
+	if(curvMap->ComputeStats(computeRobustStats,skipNegativePixels,forceRecompute)<0){
 		ERROR_LOG("Failed to compute curvature map stats!");
 		delete sourceMask;
 		sourceMask= 0;
@@ -1632,8 +1635,10 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 	}
 
 	//Thresholding the curvature map
-	double curvMapRMS= curvMap->GetPixelStats()->medianRMS;
-	double curvMapThr= curvMapRMS*nestedBlobThreshold;
+	//double curvMapRMS= curvMap->GetPixelStats()->medianRMS;
+	//double curvMapThr= curvMapRMS*nestedBlobThreshold;
+	double curvMapMedian= curvMap->GetPixelStats()->median;
+	double curvMapThr= nestedBlobThreshold*curvMapMedian;
 	Image* blobMask= curvMap->GetBinarizedImage(curvMapThr);
 	if(!blobMask){
 		ERROR_LOG("Failed to compute curvature blob mask!");
@@ -1731,6 +1736,15 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 			int nComponents= static_cast<int>(MotherNestedAssociationList[i].size());
 			if(nComponents<=0 || !isMotherSourceSplittableInNestedComponents) continue;
 
+			//Get mother source stats
+			if(!sources[i]->HasStats()){
+				sources[i]->ComputeStats();
+			}
+			double Smax_mother= sources[i]->GetSmax();
+			double Smedian_mother= sources[i]->Median;
+			double Srms_mother= sources[i]->MedianRMS;
+			
+
 			//If only one component is present select it if:
 			//  1) mother and nested distance is > thr (e.g. 
 			//  2) mother and nested pix superposition is <thr (e.g. 50%)
@@ -1743,6 +1757,34 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 				//Compute nested source stats & pars
 				NestedSources[nestedIndex]->ComputeStats();
 				NestedSources[nestedIndex]->ComputeMorphologyParams();
+
+				//Check significance of blob peak	
+				double Smax= NestedSources[nestedIndex]->GetSmax();
+				double Z= (Smax-Smedian_mother)/Srms_mother;
+				double peakRatio= Smax/Smax_mother;
+				if(Z<nestedBlobPeakZThr){
+					INFO_LOG("Skip nested source no. "<<j<<" as blob peak significance below desired threshold (Smax="<<Smax<<", peakRatio="<<peakRatio<<", Z="<<Z<<", ZThr="<<nestedBlobPeakZThr<<") ...");
+					continue;
+				}
+				else{
+					INFO_LOG("Nested source no. "<<j<<" blob peak significance above desired threshold (Smax="<<Smax<<", peakRatio="<<peakRatio<<", Z="<<Z<<", ZThr="<<nestedBlobPeakZThr<<") ...");
+				}
+				/*
+				if(bkgData && bkgData->BkgMap && bkgData->NoiseMap){
+					long int blobPeakId= NestedSources[nestedIndex]->GetSmaxPixId();	
+					
+					double bkg= (bkgData->BkgMap)->GetPixelValue(blobPeakId);
+					double rms= (bkgData->NoiseMap)->GetPixelValue(blobPeakId);
+					double Z= (Smax-bkg)/rms;
+					if(Z<nestedBlobPeakZThr){
+						INFO_LOG("Skip nested source no. "<<j<<" as blob peak significance below desired threshold (Smax="<<Smax<<", Z="<<Z<<", ZThr="<<nestedBlobPeakZThr<<") ...");
+						continue;
+					}
+					else{
+						INFO_LOG("Nested source no. "<<j<<" blob peak significance above desired threshold (Smax="<<Smax<<", Z="<<Z<<", ZThr="<<nestedBlobPeakZThr<<") ...");
+					}
+				}//close if
+				*/
 		
 				if(nComponents==1){
 					//Compute centroid distances
@@ -1974,6 +2016,8 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 	//Image* maskedImage= this->GetCloned(std::string(imgName),copyMetaData,resetStats);
 	Image* maskedImage= this->GetCloned("",copyMetaData,resetStats);
 	
+	INFO_LOG("pixel size="<<maskedImage->GetPixelDataSize()<<" (original size="<<this->GetPixelDataSize()<<")");
+
 	//## Check source list
 	int nSources= static_cast<int>(sources.size());
 	if(nSources<=0) {
@@ -2054,6 +2098,9 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 		maskedImage->ComputeStats(true,false,true);
 
 	}//close else
+
+	INFO_LOG("(after) pixel size="<<maskedImage->GetPixelDataSize()<<" (original size="<<this->GetPixelDataSize()<<")");
+
 
 	return maskedImage;
 
@@ -2328,11 +2375,11 @@ int Image::FindPeaks(std::vector<TVector2>& peakPoints,std::vector<int> kernelSi
 
 }//close FindPeaks()
 
-TGraph* Image::ComputePeakGraph(std::vector<int> kernelSizes,int peakShiftTolerance,bool skipBorders)
+TGraph* Image::ComputePeakGraph(std::vector<int> kernelSizes,int peakShiftTolerance,bool skipBorders,int multiplicityThr)
 {
 	//Find peaks in image
 	std::vector<TVector2> peakPoints;
-	if(this->FindPeaks(peakPoints,kernelSizes,peakShiftTolerance,skipBorders)<0){
+	if(this->FindPeaks(peakPoints,kernelSizes,peakShiftTolerance,skipBorders,multiplicityThr)<0){
 		ERROR_LOG("Failed to find peaks in image!");
 		return nullptr;
 	}

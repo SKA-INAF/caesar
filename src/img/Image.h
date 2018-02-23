@@ -802,11 +802,11 @@ class Image : public TNamed {
 		/**
 		* \brief Find compact sources
 		*/
-		int FindCompactSource(std::vector<Source*>&,Image* floodImg=0,ImgBkgData* bkgData=0,double seedThr=5,double mergeThr=2.6,int minPixels=10,bool findNegativeExcess=false,bool mergeBelowSeed=false,bool findNestedSources=false,double nestedBlobThrFactor=1,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5,long int nPixThrToSearchNested=0,Image* curvMap=0);
+		int FindCompactSource(std::vector<Source*>&,Image* floodImg=0,ImgBkgData* bkgData=0,double seedThr=5,double mergeThr=2.6,int minPixels=10,bool findNegativeExcess=false,bool mergeBelowSeed=false,bool findNestedSources=false,double nestedBlobThrFactor=1,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5,long int nPixThrToSearchNested=0,double nestedBlobPeakZThr=5,Image* curvMap=0);
 		/**
 		* \brief Find nested sources
 		*/
-		int	FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData=0,int minPixels=5,double nestedBlobThreshold=1,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5,long int nPixThrToSearchNested=0);
+		int	FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData=0,int minPixels=5,double nestedBlobThreshold=1,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5,long int nPixThrToSearchNested=0,double nestedBlobPeakZThr=5);
 
 		/**
 		* \brief Find extended sources with ChanVese method
@@ -850,7 +850,7 @@ class Image : public TNamed {
 		/**
 		* \brief Find graph with image peaks
 		*/
-		TGraph* ComputePeakGraph(std::vector<int> kernelSizes={3,5,7},int peakShiftTolerance=1,bool skipBorders=true);
+		TGraph* ComputePeakGraph(std::vector<int> kernelSizes={3,5,7},int peakShiftTolerance=1,bool skipBorders=true,int multiplicityThr=-1);
 
 
 		/**

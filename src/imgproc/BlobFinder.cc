@@ -375,11 +375,92 @@ int BlobFinder::FloodFill(Image* img,std::vector<long int>& clusterPixelIds,long
 
 }//close BlobFinder::FloodFill()
 
+Image* BlobFinder::ComputeMultiScaleBlobMap(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double thrFactor,int kernelFactor,double multiplicityThrFactor)
+{
+	//## Check image
+	if(!img){
+		ERROR_LOG("Null ptr to given image!");
+		return 0;
+	}
+
+	//## Init scales
+	int nScales= (sigmaMax-sigmaMin)/sigmaStep + 1;	
+	int multiplicityThr= static_cast<int>(std::round(multiplicityThrFactor*nScales));
+	double NormMin= 1;
+	double NormMax= 256;
+	int nbins= 100;
+	std::vector<Image*> filterMaps;
+	std::vector<double> thresholdLevels;
+	
+	for(int i=0;i<nScales;i++){
+		double sigma= sigmaMin + i*sigmaStep;
+		int kernelSize= kernelFactor*sigma;	
+		if(kernelSize%2==0) kernelSize++;
+		INFO_LOG("Computing LoG map @ scale "<<sigma<<" (step="<<sigmaStep<<", kernsize="<<kernelSize<<")");
+
+		//Compute LoG filter
+		bool invert= true;
+		Image* filterMap= img->GetNormLoGImage(kernelSize,sigma,invert);
+
+		//Compute stats
+		//NB: Skip negative pixels
+		bool skipNegativePixels= true;
+		bool computeRobustStats= true;
+		bool forceRecomputing= true;
+		filterMap->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
+		filterMaps.push_back(filterMap);
+
+		//Compute threshold levels
+		ImgStats* imgStats= filterMap->GetPixelStats();	
+		double median= imgStats->median;
+		double medianThr= thrFactor*median;
+		double thrLevel= medianThr;
+		thresholdLevels.push_back(thrLevel);	
+	}//end loop reso
+
+	//Find blobs across scales
+	Image* blobMask= img->GetCloned("",true,true);
+	blobMask->Reset();
+
+	for(long int i=0;i<blobMask->GetNx();i++){
+		for(long int j=0;j<blobMask->GetNy();j++){
+			double imgBinContent= img->GetBinContent(i,j);	
+			if(imgBinContent==0) continue;
+			double wmin= TMath::Infinity();
+			double wmax= -TMath::Infinity();
+			int multiplicity= 0;
+			
+			for(size_t k=0;k<filterMaps.size();k++){
+				double w= filterMaps[k]->GetPixelValue(i,j);
+				if(w>thresholdLevels[k]) multiplicity++;
+				if(w<wmin) wmin= w;
+				if(w>=wmax) wmax= w;
+			}//end loop scales
+
+			if(multiplicity>=multiplicityThr){
+				blobMask->FillPixel(i,j,wmax);
+			}
+			else {
+				blobMask->FillPixel(i,j,wmin);
+			}
+
+		}//end loop y
+	}//end loop x
+
+	//Clear 
+	for(unsigned int k=0;k<filterMaps.size();k++){
+		if(filterMaps[k]) filterMaps[k]->Delete();		
+	}
+	filterMaps.clear();
+
+	return blobMask;
+
+}//close ComputeMultiScaleBlobMap()
 
 
 Image* BlobFinder::GetMultiScaleBlobMask(Image* img,int kernelFactor,double sigmaMin,double sigmaMax,double sigmaStep,int thrModel,double thrFactor){
 
-	//## Check imge
+	//## Check image
 	if(!img){
 		ERROR_LOG("Null ptr to given image!");
 		return 0;
@@ -403,8 +484,15 @@ Image* BlobFinder::GetMultiScaleBlobMask(Image* img,int kernelFactor,double sigm
 		INFO_LOG("Computing LoG map @ scale "<<sigma<<" (step="<<sigmaStep<<", kernsize="<<kernelSize<<")");
 
 		//Compute LoG filter
-		Image* filterMap= img->GetNormLoGImage(kernelSize,sigma,true);
-		filterMap->ComputeStats(true,false,true);
+		bool invert= true;
+		Image* filterMap= img->GetNormLoGImage(kernelSize,sigma,invert);
+
+		//Compute stats
+		//NB: Skip negative pixels
+		bool skipNegativePixels= true;
+		bool computeRobustStats= true;
+		bool forceRecomputing= true;
+		filterMap->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
 		filterMaps.push_back(filterMap);
 
 		//Compute threshold levels
@@ -418,8 +506,10 @@ Image* BlobFinder::GetMultiScaleBlobMask(Image* img,int kernelFactor,double sigm
 		double optimalThr= std::max(std::min(otsuThr,valleyThr),medianThr);
 		double thrLevel= medianRMSThr;
 		if(thrModel==1) thrLevel= optimalThr;
-		else if(thrModel==2) thrLevel= medianRMSThr;
-		else thrLevel= medianRMSThr;
+		//else if(thrModel==2) thrLevel= medianRMSThr;
+		//else thrLevel= medianRMSThr;
+		else if(thrModel==2) thrLevel= medianThr;
+		else thrLevel= medianThr;
 		thresholdLevels.push_back(thrLevel);	
 	}//end loop reso
 	

@@ -478,7 +478,7 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(nestedBlobThrFactor,m_NestedBlobThrFactor);
 	GET_OPTION_VALUE(minNestedMotherDist,m_minNestedMotherDist);
 	GET_OPTION_VALUE(maxMatchingPixFraction,m_maxMatchingPixFraction);
-	
+	GET_OPTION_VALUE(nestedBlobPeakZThr,m_nestedBlobPeakZThr);
 
 	//Get source selection options
 	GET_OPTION_VALUE(applySourceSelection,m_ApplySourceSelection);
@@ -961,7 +961,7 @@ int SFinder::FindSources(std::vector<Source*>& sources,Image* inputImg,double se
 		sources,
 		significanceMap,bkgData,
 		seedThr,mergeThr,m_NMinPix,m_SearchNegativeExcess,m_MergeBelowSeed,
-		m_SearchNestedSources,m_NestedBlobThrFactor, m_minNestedMotherDist, m_maxMatchingPixFraction, nPixThrToSearchNested
+		m_SearchNestedSources,m_NestedBlobThrFactor, m_minNestedMotherDist, m_maxMatchingPixFraction, nPixThrToSearchNested, m_nestedBlobPeakZThr
 	);
 
 	//## Clear data
@@ -1086,6 +1086,15 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		//## Find compact sources
 		INFO_LOG("[PROC "<<m_procId<<"] - Finding compact sources at iter no. "<<k+1<<" ...");
 		std::vector<Source*> sources_iter;
+		bool searchNested= false;
+		int status= img->FindCompactSource(
+			sources_iter,
+			significanceMap_iter,bkgData_iter,
+			seedThr,m_MergeThr,m_NMinPix,m_SearchNegativeExcess,m_MergeBelowSeed,
+			searchNested,m_NestedBlobThrFactor, m_minNestedMotherDist, m_maxMatchingPixFraction,nPixThrToSearchNested,m_nestedBlobPeakZThr,
+			curvMap
+		);
+		/*
 		int status= img->FindCompactSource(
 			sources_iter,
 			significanceMap_iter,bkgData_iter,
@@ -1093,6 +1102,7 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 			m_SearchNestedSources,m_NestedBlobThrFactor, m_minNestedMotherDist, m_maxMatchingPixFraction,nPixThrToSearchNested,
 			curvMap
 		);
+		*/
 
 		if(status<0) {
 			ERROR_LOG("[PROC "<<m_procId<<"] - Compact source finding failed!");
@@ -1161,48 +1171,77 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 
 	}//end loop iterations
 
-	//Clearup data
-	if(img){
-		delete img;
-		img= 0;
-	}
-	if(curvMap){
-		delete curvMap;
-		curvMap= 0;
+	
+
+	//Merge sources found at each iterations
+	//NB: First compute the mask and then use it in flood-fill for final source collection
+	INFO_LOG("[PROC "<<m_procId<<"] - Merging compact sources found at each iteration cycle (#"<<sources.size()<<" sources in list after #"<<iterations_done<<" iterations) ...");
+	bool isBinary= true;
+	bool invert= false;
+	Image* segmMap= inputImg->GetSourceMask(sources,isBinary,invert);
+	if(!segmMap){
+		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute segmented map from all compact sources found!");
+		CodeUtils::DeletePtrCollection<Image>({img,curvMap});
+		CodeUtils::DeletePtrCollection(sources);
+		return nullptr;
 	}
 
+	std::vector<Source*> sources_merged;
+	double seedThr_binary= 0.5;//dummy values (>0)
+	double mergeThr_binary= 0.4;//dummy values (>0)
+	int merge_status= inputImg->FindCompactSource(
+		sources_merged,
+		segmMap,bkgData,
+		seedThr_binary,mergeThr_binary,m_NMinPix,m_SearchNegativeExcess,m_MergeBelowSeed,
+		m_SearchNestedSources,m_NestedBlobThrFactor, m_minNestedMotherDist, m_maxMatchingPixFraction,nPixThrToSearchNested,m_nestedBlobPeakZThr,
+		curvMap
+	);
+
+	//Clearup data
+	CodeUtils::DeletePtrCollection<Image>({img,curvMap});
+	CodeUtils::DeletePtrCollection(sources);
+
+	if(merge_status<0) {
+		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute merged compact sources!");
+		delete significanceMap;
+		significanceMap= 0;
+		return nullptr;				
+	}
+
+	
 	//## Tag found sources as compact 
-	int nSources= static_cast<int>( sources.size() );
+	int nSources= static_cast<int>( sources_merged.size() );
 	INFO_LOG("[PROC "<<m_procId<<"] - #"<<nSources<<" compact sources detected in input image after #"<<iterations_done<<" iterations ...");
-	for(size_t k=0;k<sources.size();k++) {	
-		sources[k]->SetId(k+1);
-		sources[k]->SetName(Form("S%d",(signed)(k+1)));
-		sources[k]->SetBeamFluxIntegral(beamArea);
-		sources[k]->SetType(Source::eCompact);
+	for(size_t k=0;k<sources_merged.size();k++) {	
+		sources_merged[k]->SetId(k+1);
+		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
+		sources_merged[k]->SetBeamFluxIntegral(beamArea);
+		sources_merged[k]->SetType(Source::eCompact);
 	}
 	
 	//## Apply source selection?
 	if(m_ApplySourceSelection && nSources>0){
-		if(SelectSources(sources)<0){
+		if(SelectSources(sources_merged)<0){
 			ERROR_LOG("[PROC "<<m_procId<<"] - Failed to select sources!");
 			delete significanceMap;
 			significanceMap= 0;
+			CodeUtils::DeletePtrCollection(sources_merged);
 			return nullptr;
 		}
-		nSources= static_cast<int>(sources.size());
+		nSources= static_cast<int>(sources_merged.size());
 	}//close if source selection
 
 
 	//## Set source pars
-	for(size_t k=0;k<sources.size();k++) {
-		sources[k]->SetId(k+1);
-		sources[k]->SetName(Form("S%d",(signed)(k+1)));
-		sources[k]->SetBeamFluxIntegral(beamArea);
-		sources[k]->Print();
+	for(size_t k=0;k<sources_merged.size();k++) {
+		sources_merged[k]->SetId(k+1);
+		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
+		sources_merged[k]->SetBeamFluxIntegral(beamArea);
+		//sources_merged[k]->Print();
 	}//end loop sources
 			
 	//## Add sources to task data sources
-	(taskData->sources).insert( (taskData->sources).end(),sources.begin(),sources.end());			
+	(taskData->sources).insert( (taskData->sources).end(),sources_merged.begin(),sources_merged.end());			
 	INFO_LOG("[PROC "<<m_procId<<"] - #"<<nSources<<" compact sources added to task data ...");
 
 	return significanceMap;
@@ -1250,7 +1289,7 @@ Image* SFinder::FindCompactSources(Image* inputImg, ImgBkgData* bkgData, TaskDat
 		sources,
 		significanceMap,bkgData,
 		m_SeedThr,m_MergeThr,m_NMinPix,m_SearchNegativeExcess,m_MergeBelowSeed,
-		m_SearchNestedSources,m_NestedBlobThrFactor,m_minNestedMotherDist,m_maxMatchingPixFraction,nPixThrToSearchNested
+		m_SearchNestedSources,m_NestedBlobThrFactor,m_minNestedMotherDist,m_maxMatchingPixFraction,nPixThrToSearchNested,m_nestedBlobPeakZThr
 	);
 
 	if(status<0) {
@@ -2502,8 +2541,9 @@ int SFinder::FitSources(std::vector<Source*>& sources){
 		}//close if fittable
 		else{
 			//Fit nested sources
-			INFO_LOG("Source "<<sources[i]->GetName()<<" not fittable as a whole (extended or large compact), fitting nested components individually (if any) ...");
 			std::vector<Source*> nestedSources= sources[i]->GetNestedSources();	
+			INFO_LOG("Source "<<sources[i]->GetName()<<" not fittable as a whole (extended or large compact), fitting nested components individually (#"<<nestedSources.size()<<" components present) ...");
+			
 			for(size_t j=0;j<nestedSources.size();j++){
 				if(nestedSources[j] && nestedSources[j]->Fit(fitOptions)<0){
 					WARN_LOG("Failed to fit nested source no. "<<j<<" of source no. "<<i<<" (name="<<sources[i]->GetName()<<"), skip to next nested...");

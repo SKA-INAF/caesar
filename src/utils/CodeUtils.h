@@ -252,6 +252,33 @@ class CodeUtils : public TObject {
     	data = tempBuffer;
 		}//close DeleteItems()
 
+		/**
+		* \brief Delete object pointer collection
+		*/
+		template <class T>
+		static void DeletePtrCollection(std::vector<T*>& data){
+			for(size_t i=0;i<data.size();i++){
+				if(data[i]){
+					delete data[i];
+					data[i]= 0;
+				}
+			}
+			data.clear();	
+		}//close DeletePtrCollection()
+
+		/**
+		* \brief Delete object pointer collection
+		*/
+		template <class T>
+		static void DeletePtrCollection(std::initializer_list<T*> data){
+			for (auto it : data){
+				T* item= it;
+				if(item){
+					delete item;
+					item= 0;
+				}
+			}
+		}//close DeletePtrCollection()
 
 		
 		/**

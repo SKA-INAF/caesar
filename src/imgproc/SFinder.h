@@ -409,6 +409,7 @@ class SFinder : public TObject {
 		double m_NestedBlobThrFactor;
 		double m_minNestedMotherDist;
 		double m_maxMatchingPixFraction;
+		double m_nestedBlobPeakZThr;
 		
 		//Source selection
 		bool m_ApplySourceSelection;

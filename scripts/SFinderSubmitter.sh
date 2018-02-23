@@ -97,9 +97,10 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "=== SFINDER COMPACT NESTED SOURCE OPTIONS ==="
 	echo "--no-nestedsearch - Do not search nested sources (default=search)"		
 	echo "--nested-sourcetobeamthr=[NESTED_SOURCE_TO_BEAM_THR] - Source area/beam thr to add nested sources (e.g. npix>thr*beamArea). NB: thr=0 means always if searchNestedSources is enabled (default=5)"
-	echo "--nested-blobthr=[NESTED_BLOB_THR] - Threshold (multiple of curvature rms) used for nested blob finding (default=0)"
+	echo "--nested-blobthr=[NESTED_BLOB_THR] - Threshold (multiple of curvature median) used for nested blob finding (default=0)"
 	echo "--nested-minmotherdist=[NESTED_MIN_MOTHER_DIST] - Minimum distance in pixels (in x or y) between nested and parent blob below which nested is skipped (default=2)"
 	echo "--nested-maxmotherpixmatch=[NESTED_MAX_MOTHER_PIX_MATCH] - Maximum fraction of matching pixels between nested and parent blob above which nested is skipped (default=0.5)"
+	echo "--nested-blobpeakzthr=[NESTED_BLOB_PEAK_ZTHR] - Nested blob peak significance threshold (wrt to mother source) (default=5)"
 	echo ""
 	
 	echo "=== SFINDER SOURCE RESIDUAL OPTIONS ==="
@@ -260,6 +261,7 @@ NESTED_SOURCE_TO_BEAM_THR="5"
 NESTED_BLOB_THR="0"
 NESTED_MIN_MOTHER_DIST="2"
 NESTED_MAX_MOTHER_PIX_MATCH="0.5"
+NESTED_BLOB_PEAK_ZTHR="5"
 
 SP_SIZE="20"
 SP_BETA="1"
@@ -544,6 +546,9 @@ do
 		--nested-maxmotherpixmatch=*)
     	NESTED_MAX_MOTHER_PIX_MATCH=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
+		--nested-blobpeakzthr=*)
+			NESTED_BLOB_PEAK_ZTHR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
 
 		## RESIDUAL OPTIONS
 		--dilatethr=*)
@@ -749,7 +754,7 @@ echo "GUIDED_FILTER PARS: ($GUIDED_FILTER_RADIUS, $GUIDED_FILTER_EPS)"
 echo "EXT_SFINDER_METHOD: $EXT_SFINDER_METHOD"
 echo "AC_METHOD: $AC_METHOD"
 echo "SEARCH_NESTED_SOURCES: $SEARCH_NESTED_SOURCES"
-echo "NESTED_SOURCE_TO_BEAM_THR: $NESTED_SOURCE_TO_BEAM_THR, NESTED_BLOB_THR: $NESTED_BLOB_THR, NESTED_MIN_MOTHER_DIST: $NESTED_MIN_MOTHER_DIST, NESTED_MAX_MOTHER_PIX_MATCH: $NESTED_MAX_MOTHER_PIX_MATCH"
+echo "NESTED_SOURCE_TO_BEAM_THR: $NESTED_SOURCE_TO_BEAM_THR, NESTED_BLOB_THR: $NESTED_BLOB_THR, NESTED_MIN_MOTHER_DIST: $NESTED_MIN_MOTHER_DIST, NESTED_MAX_MOTHER_PIX_MATCH: $NESTED_MAX_MOTHER_PIX_MATCH, NESTED_BLOB_PEAK_ZTHR: $NESTED_BLOB_PEAK_ZTHR"
 echo "SELECT_SOURCES: $SELECT_SOURCES"
 echo "MERGE_EDGE_SOURCES: $MERGE_EDGE_SOURCES"
 echo "FIT_SOURCES: $FIT_SOURCES"
@@ -949,11 +954,12 @@ generate_config(){
 		echo '//==========================================='
 		echo '//==  NESTED SOURCE FINDING OPTIONS        =='
 		echo '//==========================================='
-		echo "searchNestedSources = $SEARCH_NESTED_SOURCES 			                 | Search for nested sources inside candidate sources (T/F)"
-		echo "sourceToBeamAreaThrToSearchNested = $NESTED_SOURCE_TO_BEAM_THR     | Source area/beam thr to add nested sources (e.g. npix>thr*beamArea). NB: thr=0 means always if searchNestedSources is enabled (default=0)"
-		echo "nestedBlobThrFactor = $NESTED_BLOB_THR                             | Threshold (multiple of curvature rms) used for nested blob finding"
-		echo "minNestedMotherDist = $NESTED_MIN_MOTHER_DIST                      | Minimum distance in pixels (in x or y) between nested and parent blob below which nested is skipped"
-		echo "maxMatchingPixFraction = $NESTED_MAX_MOTHER_PIX_MATCH              | Maximum fraction of matching pixels between nested and parent blob above which nested is skipped"
+		echo "searchNestedSources = $SEARCH_NESTED_SOURCES 			               | Search for nested sources inside candidate sources (T/F)"
+		echo "sourceToBeamAreaThrToSearchNested = $NESTED_SOURCE_TO_BEAM_THR   | Source area/beam thr to add nested sources (e.g. npix>thr*beamArea). NB: thr=0 means always if searchNestedSources is enabled (default=0)"
+		echo "nestedBlobThrFactor = $NESTED_BLOB_THR                           | Threshold (multiple of curvature rms) used for nested blob finding"
+		echo "minNestedMotherDist = $NESTED_MIN_MOTHER_DIST                    | Minimum distance in pixels (in x or y) between nested and parent blob below which nested is skipped"
+		echo "maxMatchingPixFraction = $NESTED_MAX_MOTHER_PIX_MATCH            | Maximum fraction of matching pixels between nested and parent blob above which nested is skipped"
+		echo "nestedBlobPeakZThr = $NESTED_BLOB_PEAK_ZTHR											 | Nested blob peak significance threshold wrt mother source (below thr nested blob is skipped) (default=5 sigmas) "
 		echo '###'
 		echo '###'
 

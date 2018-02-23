@@ -85,6 +85,11 @@ class BlobFinder : public TObject {
 		*/
 		static Image* GetMultiScaleBlobMask(Image* img,int kernelFactor,double sigmaMin,double sigmaMax,double sigmaStep,int thrModel=2,double thrFactor=1);
 
+		/**
+		* \brief Compute multiscale blob filtered map
+		*/
+		static Image* ComputeMultiScaleBlobMap(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double thrFactor,int kernelFactor=1,double multiplicityThrFactor=0.7);
+
 	public:
 		
 		ClassDef(BlobFinder,1)

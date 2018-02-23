@@ -256,6 +256,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(nestedBlobThrFactor,double,1,0,100);
 		REGISTER_OPTION(minNestedMotherDist,double,2,0,100);
 		REGISTER_OPTION(maxMatchingPixFraction,double,0.5,0,1);
+		REGISTER_OPTION(nestedBlobPeakZThr,double,5,-10,10000);
 		
 		//=======================================
 		//==  Extended Source finding options  ==
