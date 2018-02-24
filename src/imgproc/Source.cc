@@ -265,35 +265,42 @@ const std::string Source::GetDS9Region(bool dumpNestedSourceInfo){
 
 }//close GetDS9Region()
 
-const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM)
+const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNestedSourceInfo)
 {
 	//Check if source has fit info
-	const std::string dsregions= "";
-	if(!m_HasFitInfo) return dsregions;
-
-	//Loop over fitted components and get their ellipses
-	std::vector<TEllipse*> ellipses= m_fitPars.GetFittedEllipses();
-
-	//ellipse x y radius radius angle
 	std::stringstream sstream;
 	
-	for(size_t i=0;i<ellipses.size();i++){
-		if(!ellipses[i]) continue;
-
-		//Get ellipse pars
-		double x0= ellipses[i]->GetX1();
-		double y0= ellipses[i]->GetY1();
-		double R1= ellipses[i]->GetR1();
-		double R2= ellipses[i]->GetR2();
-		double theta= ellipses[i]->GetTheta();
-		//theta-= 90;//DS9 format
-		//sstream<<"ellipse "<<x0+1<<" "<<y0+1<<" "<<R1<<" "<<R2<<" "<<theta<<" # text={S"<<Id<<"_"<<i+1<<"}";
-		sstream<<"ellipse "<<x0+1<<" "<<y0+1<<" "<<R1<<" "<<R2<<" "<<theta<<" # text={"<<this->GetName()<<"_"<<i+1<<"}";
-		if(i!=ellipses.size()-1) sstream<<endl;
-	}//end loop ellipses
+	if(m_HasFitInfo){
+		//Loop over fitted components and get their ellipses
+		std::vector<TEllipse*> ellipses= m_fitPars.GetFittedEllipses();
 	
-	return sstream.str();
+		for(size_t i=0;i<ellipses.size();i++){
+			if(!ellipses[i]) continue;
 
+			//Get ellipse pars
+			double x0= ellipses[i]->GetX1();
+			double y0= ellipses[i]->GetY1();
+			double R1= ellipses[i]->GetR1();
+			double R2= ellipses[i]->GetR2();
+			double theta= ellipses[i]->GetTheta();
+			//theta-= 90;//DS9 format
+			//sstream<<"ellipse "<<x0+1<<" "<<y0+1<<" "<<R1<<" "<<R2<<" "<<theta<<" # text={S"<<Id<<"_"<<i+1<<"}";
+			sstream<<"ellipse "<<x0+1<<" "<<y0+1<<" "<<R1<<" "<<R2<<" "<<theta<<" # text={"<<this->GetName()<<"_"<<i+1<<"}";
+			if(i!=ellipses.size()-1) sstream<<endl;
+		}//end loop ellipses
+
+	}//close if has fit info
+
+	//Loop over nested components and get fit ellipse regions
+	if(dumpNestedSourceInfo && m_HasNestedSources){			
+		for(size_t k=0;k<m_NestedSources.size();k++){	
+			std::string nestedRegionStr= m_NestedSources[k]->GetDS9FittedEllipseRegion(useFWHM,false);
+			if(nestedRegionStr!="") sstream<<nestedRegionStr<<endl;
+		}//end loop nested sources
+	}//close if
+
+	return sstream.str();
+	
 }//close GetDS9FittedEllipseRegion()
 
 
@@ -569,6 +576,85 @@ bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, const std::vector<So
 		return false;
 	}	
 
+
+	//Loop over all reconstructed sources and match them in position
+	std::vector<SourcePosMatchPars> tmpMatchPars;	
+	
+	for(size_t j=0;j<sources.size();j++){
+	
+		//Find match for mother source
+		SourcePosMatchPars matchInfo(j,0,-1,-1);
+		bool foundMatch= FindSourceMatchByPos(matchInfo,sources[j],matchPosThr);
+		if(foundMatch){
+			tmpMatchPars.push_back(matchInfo);
+		}
+
+		//Find match for nested source (if any present)
+		std::vector<Source*> nestedSources= sources[j]->GetNestedSources();
+		for(size_t k=0;k<nestedSources.size();k++){
+			SourcePosMatchPars matchInfo_nested(j,0,-1,k);
+			bool foundMatch_nested= FindSourceMatchByPos(matchInfo_nested,nestedSources[k],matchPosThr);
+			if(foundMatch_nested){
+				tmpMatchPars.push_back(matchInfo_nested);
+			}
+		}//end loop nested sources
+
+	}//end loop sources
+
+	//Check if match is found
+	if(tmpMatchPars.empty()) return false;
+
+	//Search for best overlap in case of multiple matches
+	if(tmpMatchPars.size()>1) {
+		INFO_LOG("#"<<tmpMatchPars.size()<<" source matches found, searching for the best one ...");
+		
+		double dist_best= 1.e+99;
+		int best_index= -1;
+
+		for(size_t j=0;j<tmpMatchPars.size();j++){
+			double dist= tmpMatchPars[j].posDiff;	
+			if(dist<=dist_best){
+				best_index= j;
+				dist_best= dist;
+			}
+		}//end loop matched sources
+
+		pars= tmpMatchPars[best_index];
+
+	}//close if
+	else{
+		pars= tmpMatchPars[0];
+	}
+
+	return true;
+
+}//close FindSourceMatchByPos()
+
+
+/*
+bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, const std::vector<Source*>& sources, float matchPosThr)
+{
+	//Reset pars
+	pars.ResetPars();
+
+	//Check given threshold
+	if(matchPosThr<=0){
+		WARN_LOG("Invalid threshold ("<<matchPosThr<<") given (hint: should be >0)!");
+		return false;
+	}
+ 
+	//Return if given source collection to be searched is empty
+	if(sources.empty()) {
+		WARN_LOG("Given source collection is empty, no match can be searched!");
+		return false;
+	}
+
+	//Return if this source has no pixels
+	if(m_Pixels.empty() || NPix<=0){
+		WARN_LOG("This source has no pixels stored, cannot search for a match with a source catalog!");
+		return false;
+	}	
+
 	//Set reference position to be compared with collection
 	double X0_ref= X0;
 	double Y0_ref= Y0;
@@ -641,6 +727,63 @@ bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, const std::vector<So
 	}
 
 	return true;
+
+}//close FindSourceMatchByPos()
+
+*/
+
+
+
+
+bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, Source* source, float matchPosThr)
+{
+	//Set reference position to be compared with collection
+	double X0_ref= X0;
+	double Y0_ref= Y0;
+	if(m_HasTrueInfo){
+		X0_ref= m_X0_true;
+		Y0_ref= m_Y0_true;
+	}	
+
+	//If source has fit info loop over fitted components to find best match
+	bool hasFitInfo= source->HasFitInfo();
+	bool foundMatch= false;
+	if(hasFitInfo){
+		SourceFitPars fitPars= source->GetFitPars();
+		double dist_best= 1.e+99;
+		long int best_component= -1;
+		for(int k=0;k<fitPars.GetNComponents();k++){
+			double X0_fitcomp= fitPars.GetParValue(k,"x0");	
+			double Y0_fitcomp= fitPars.GetParValue(k,"y0");
+			double dx= fabs(X0_fitcomp-X0_ref);
+			double dy= fabs(Y0_fitcomp-Y0_ref);
+			double dist= sqrt(dx*dx+dy*dy);
+			if(dx<=matchPosThr && dy<=matchPosThr && dist<dist_best){//match found
+				best_component= k;
+				dist_best= dist;
+			}
+		}//end loop fitted components	
+			
+		if(best_component!=-1){
+			foundMatch= true;
+			pars.posDiff= dist_best;
+			pars.fitComponentIndex= best_component;
+		}
+	
+	}//close if has fit info
+	else{
+		//No fit info available so compute offset using source barycenter 
+		double dx= fabs(source->X0 - X0_ref);
+		double dy= fabs(source->Y0 - Y0_ref);
+		double dist= sqrt(dx*dx+dy*dy);
+		if(dx<=matchPosThr && dy<=matchPosThr){//match found
+			foundMatch= true;
+			pars.posDiff= dist;
+			pars.fitComponentIndex= -1;
+		}
+	}//close else !has fit info
+
+	return foundMatch;
 
 }//close FindSourceMatchByPos()
 
@@ -840,7 +983,6 @@ int Source::Fit(SourceFitOptions& fitOptions)
 {
 	//Create source fitter
 	SourceFitter fitter;
-	//if(fitter.FitSource(this,blobPars,nMaxComponents)<0){
 	if(fitter.FitSource(this,fitOptions)<0){	
 		WARN_LOG("Failed to fit source "<<this->GetName()<<" ...");
 		return -1;

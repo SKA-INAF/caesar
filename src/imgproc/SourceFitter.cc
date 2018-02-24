@@ -431,7 +431,7 @@ int SourceFitter::FitSource(Source* aSource,SourceFitOptions& fitOptions)
 		if(fitOptions.limitSigmaInFit){
 			sourceFitFcn->SetParLimits(par_counter+3,sigmaX_min,sigmaX_max);
 			sourceFitFcn->SetParLimits(par_counter+4,sigmaY_min,sigmaY_max);
-			INFO_LOG("(sigmaX,sigmaY)=("<<sigmaX<<","<<sigmaY<<")"<<" bounds sigmaX("<<sigmaX_min<<","<<sigmaX_max<<") y("<<sigmaY_min<<","<<sigmaY_max<<")");
+			INFO_LOG("(sigmaX,sigmaY)=("<<sigmaX<<","<<sigmaY<<")"<<" bounds sigmaX("<<sigmaX_min<<","<<sigmaX_max<<") y("<<sigmaY_min<<","<<sigmaY_max<<"), bmaj="<<fitOptions.bmaj<<", bmin="<<fitOptions.bmin);
 		}
 
 		//- Theta		

@@ -1217,6 +1217,13 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
 		sources_merged[k]->SetBeamFluxIntegral(beamArea);
 		sources_merged[k]->SetType(Source::eCompact);
+		std::vector<Source*> nestedSources= sources_merged[k]->GetNestedSources();
+		for(size_t l=0;l<nestedSources.size();l++){
+			nestedSources[l]->SetId(l+1);
+			nestedSources[l]->SetName(Form("S%d_N%d",(signed)(k+1),(signed)(l+1)));
+			nestedSources[l]->SetBeamFluxIntegral(beamArea);
+			nestedSources[l]->SetType(Source::eCompact);
+		}
 	}
 	
 	//## Apply source selection?
@@ -1238,6 +1245,12 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
 		sources_merged[k]->SetBeamFluxIntegral(beamArea);
 		//sources_merged[k]->Print();
+		std::vector<Source*> nestedSources= sources_merged[k]->GetNestedSources();
+		for(size_t l=0;l<nestedSources.size();l++){
+			nestedSources[l]->SetId(l+1);
+			nestedSources[l]->SetName(Form("S%d_N%d",(signed)(k+1),(signed)(l+1)));
+			nestedSources[l]->SetBeamFluxIntegral(beamArea);
+		}
 	}//end loop sources
 			
 	//## Add sources to task data sources
@@ -2335,23 +2348,38 @@ int SFinder::SelectSources(std::vector<Source*>& sources){
 
 		//Tag nested sources
 		std::vector<Source*> nestedSources= sources[i]->GetNestedSources();
+		std::vector<Source*> nestedSources_sel;
 		for(size_t j=0;j<nestedSources.size();j++){
 			std::string nestedSourceName= nestedSources[j]->GetName();
 			int nestedSourceId= nestedSources[j]->Id;
 			long int nestedNPix= nestedSources[j]->NPix;
 			double nestedX0= nestedSources[j]->X0;
 			double nestedY0= nestedSources[j]->Y0;
+			bool isGoodSource_nested= IsGoodSource(nestedSources[j]);
+			bool isPointSource_nested= IsPointLikeSource(nestedSources[j]);
 
-			if(!IsGoodSource(nestedSources[j])) {
+			//Check if good source
+			if(!isGoodSource_nested) {
 				INFO_LOG("[PROC "<<m_procId<<"] - Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as bad source, skipped!");
 				nestedSources[j]->SetGoodSourceFlag(false);
+				continue;
 			}
-			if( IsPointLikeSource(nestedSources[j]) ){
+
+			//Check if point-source
+			if(isPointSource_nested){
 				INFO_LOG("[PROC "<<m_procId<<"] - Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as a point-like source ...");
 				nestedSources[j]->SetType(Source::ePointLike);
 			}
+			
+			//Add to selected nested list
+			Source* aNestedSource= new Source;
+			*aNestedSource= *(nestedSources[j]);
+			nestedSources_sel.push_back(aNestedSource);
 		}//end loop nested sources
 			
+		//Add selected nested collection
+		sources[i]->SetNestedSources(nestedSources_sel,true);	
+
 		//Add source to the list	
 		sources_sel.push_back(sources[i]);
 		nSelSources++;
@@ -2502,8 +2530,8 @@ int SFinder::FitSources(std::vector<Source*>& sources){
 		
 	//Set fit options
 	SourceFitOptions fitOptions;	
-	fitOptions.bmaj= m_beamBmaj/m_pixSizeX;//converted in pixels
-	fitOptions.bmin= m_beamBmin/m_pixSizeY;//converted in pixels
+	fitOptions.bmaj= fabs(m_beamBmaj/m_pixSizeX);//converted in pixels
+	fitOptions.bmin= fabs(m_beamBmin/m_pixSizeY);//converted in pixels
 	fitOptions.bpa= m_beamBpa;
 	fitOptions.nMaxComponents= m_fitMaxNComponents;
 	fitOptions.limitCentroidInFit= m_fitWithCentroidLimits;
@@ -2545,6 +2573,7 @@ int SFinder::FitSources(std::vector<Source*>& sources){
 			INFO_LOG("Source "<<sources[i]->GetName()<<" not fittable as a whole (extended or large compact), fitting nested components individually (#"<<nestedSources.size()<<" components present) ...");
 			
 			for(size_t j=0;j<nestedSources.size();j++){
+				INFO_LOG("Fitting nested source no. "<<j+1<<" (name="<<nestedSources[j]->GetName()<<") of source no. "<<i+1<<" (name="<<sources[i]->GetName()<<")");
 				if(nestedSources[j] && nestedSources[j]->Fit(fitOptions)<0){
 					WARN_LOG("Failed to fit nested source no. "<<j<<" of source no. "<<i<<" (name="<<sources[i]->GetName()<<"), skip to next nested...");
 					continue;
@@ -2847,7 +2876,7 @@ int SFinder::SaveDS9RegionFile(){
 
 		for(unsigned int k=0;k<m_SourceCollection.size();k++){
 			DEBUG_LOG("[PROC "<<m_procId<<"] - Dumping DS9 region fitting info for source no. "<<k<<" ...");
-			std::string regionInfo= m_SourceCollection[k]->GetDS9FittedEllipseRegion(useFWHM);
+			std::string regionInfo= m_SourceCollection[k]->GetDS9FittedEllipseRegion(useFWHM,true);
 			fprintf(fout_fit,"%s\n",regionInfo.c_str());
 	  	
 		}//end loop sources

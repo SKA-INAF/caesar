@@ -106,17 +106,23 @@ struct SourcePosMatchPars {
 		ResetPars();
 	}
 	//Param constructor
-	SourcePosMatchPars(long int _index,float _posDiff,long int _fitComponentIndex=-1):
-		index(_index), posDiff(_posDiff), fitComponentIndex(_fitComponentIndex)
+	SourcePosMatchPars(long int _index,float _posDiff,long int _fitComponentIndex=-1,int _nestedIndex=-1):
+		index(_index), posDiff(_posDiff), fitComponentIndex(_fitComponentIndex), nestedIndex(_nestedIndex)
 	{}
 	
 	//Reset pars
-	void ResetPars(){index=-1; fitComponentIndex=-1; posDiff=0;}
+	void ResetPars(){
+		index= -1; 
+		fitComponentIndex= -1; 
+		posDiff= 0;
+		nestedIndex= -1;
+	}
 
 	//Pars
 	long int index;//index of match source in collection
 	float posDiff;//posDiff (>0)
 	long int fitComponentIndex;
+	long int nestedIndex;
 	
 };//close SourcePosMatchPars struct
 
@@ -226,6 +232,7 @@ class Source : public Blob {
 			TString nestedName= Form("%s_N%d",this->GetName(),nestedId);
 			aNestedSource->Id= nestedId;
 			aNestedSource->Type= aNestedSource->Type;
+			aNestedSource->SetName(std::string(nestedName));
 			aNestedSource->m_DepthLevel= this->m_DepthLevel+1;
 			m_NestedSources.push_back(aNestedSource);
 			m_HasNestedSources= true;
@@ -243,6 +250,36 @@ class Source : public Blob {
 		* \brief Get nested sources
 		*/
 		std::vector<Source*>& GetNestedSources(){return m_NestedSources;}
+
+		/**
+		* \brief Set nested sources
+		*/
+		int SetNestedSources(std::vector<Source*>& sources,bool clear_existing=true){
+
+			//Check input list
+			if(sources.empty()){
+				WARN_LOG("Given nested collection to be set is empty, nothing to be done!");
+				return -1;
+			}
+	
+			//Release memory of existing collection?
+			if(clear_existing){
+				for(size_t i=0;i<m_NestedSources.size();i++){
+					if(m_NestedSources[i]){
+						delete m_NestedSources[i];	
+						m_NestedSources[i]= 0;
+					}
+				}
+			}//close if
+			m_NestedSources.clear();
+
+			//Add new collection
+			m_NestedSources.insert(m_NestedSources.end(),sources.begin(),sources.end());
+			m_HasNestedSources= true;
+
+			return 0;
+
+		}//close SetNestedSources()
 
 		/**
 		* \brief Get nested source number
@@ -272,7 +309,7 @@ class Source : public Blob {
 		/**
 		* \brief Get DS9 fitted ellipse info
 		*/
-		const std::string GetDS9FittedEllipseRegion(bool useFWHM=true);
+		const std::string GetDS9FittedEllipseRegion(bool useFWHM=true,bool dumpNestedSourceInfo=false);
 		
 		//================================================
 		//==         UTILS
@@ -400,6 +437,13 @@ class Source : public Blob {
 			if(!m_HasFitInfo) return 0;
 			return m_fitPars.GetNComponents();
 		}
+
+	protected:
+		/**
+		* \brief Find source match by position
+		*/
+		bool FindSourceMatchByPos(SourcePosMatchPars& pars, Source* source, float matchPosThr);
+		
 
 	private:
 	
