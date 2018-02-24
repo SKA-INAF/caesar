@@ -142,6 +142,9 @@ double Sratio;
 double Sratio_rec;
 double dX;
 double dY;
+double S_bkg;
+double AvgBkg;
+double AvgRMS;
 int HasFitInfo;
 int FitStatus;
 double S_fit;
@@ -172,17 +175,19 @@ struct MatchingSourceInfo {
 	//Define struct fields		
 	size_t sourceIndex;
 	int fitComponentIndex;
+	int nestedSourceIndex;
 
 	MatchingSourceInfo(){
 		sourceIndex= -1;
 		fitComponentIndex= -1;
+		nestedSourceIndex= -1;
 	}
-	MatchingSourceInfo(size_t index,int comp_index=-1)
-		: sourceIndex(index), fitComponentIndex(comp_index)
+	MatchingSourceInfo(size_t index,int comp_index=-1,int nested_index=-1)
+		: sourceIndex(index), fitComponentIndex(comp_index), nestedSourceIndex(nested_index)
 	{}	
 
 	bool operator < (const MatchingSourceInfo& obj) const {
-    return std::tie(sourceIndex,fitComponentIndex) < std::tie(obj.sourceIndex,obj.fitComponentIndex);
+    return std::tie(sourceIndex,fitComponentIndex,nestedSourceIndex) < std::tie(obj.sourceIndex,obj.fitComponentIndex,obj.nestedSourceIndex);
 	}
 };//close struct MatchingSourceInfo
 
@@ -580,6 +585,8 @@ bool FindPointSourceMatch(int source_true_index)
 	S_true= S;
 	X0_true= X0;
 	Y0_true= Y0;
+	X0_sweighted= source_true->GetSx();
+	Y0_sweighted= source_true->GetSy();
 	beamArea_true= source_true->GetBeamFluxIntegral();
 	bool hasTrueInfo= source_true->HasTrueInfo();
 	if(hasTrueInfo){
@@ -596,9 +603,14 @@ bool FindPointSourceMatch(int source_true_index)
 	Smax_rec= -1;
 	X0_rec= -1;
 	Y0_rec= -1;
+	X0_sweighted_rec= -1;
+	Y0_sweighted_rec= -1;
 	SourceType_rec= -1;
 	MatchFraction= 0.;
 	MatchFraction_rec= 0.;
+	S_bkg= 0;
+	AvgBkg= 0;
+	AvgRMS= 0;
 	HasFitInfo= 0;
 	FitStatus= SourceFitter::eFitUnknownStatus;
 	S_fit= -1;
@@ -618,6 +630,7 @@ bool FindPointSourceMatch(int source_true_index)
 	ndf_fit= -1;
 	ncomponents_fit= -1;
 
+
 	//## Search for extended source associations by matching pixels
 	SourcePosMatchPars match_info;
 	bool foundSource= source_true->FindSourceMatchByPos(match_info,sources_rec,matchPosThr);
@@ -628,17 +641,23 @@ bool FindPointSourceMatch(int source_true_index)
 
 		long int match_source_index= match_info.index;
 		int componentIndex= match_info.fitComponentIndex;
+		int nestedIndex= match_info.nestedIndex;
 		float posDiff= match_info.posDiff;
-		NPix_rec= sources_rec[match_source_index]->GetNPixels();
-		
-		SourceName_rec= std::string(sources_rec[match_source_index]->GetName());
-		SourceType_rec= sources_rec[match_source_index]->Type;
-		X0_rec= sources_rec[match_source_index]->X0;
-		Y0_rec= sources_rec[match_source_index]->Y0;
-		beamArea_rec= sources_rec[match_source_index]->GetBeamFluxIntegral();
-		S_rec= sources_rec[match_source_index]->GetS();
-		Smax_rec= sources_rec[match_source_index]->GetSmax();
-		long int NMatchingPixels= source_true->GetNMatchingPixels(sources_rec[match_source_index]);
+
+		Source* match_source= sources_rec[match_source_index];
+		if(nestedIndex!=-1) match_source= sources_rec[match_source_index]->GetNestedSource(nestedIndex);
+
+		NPix_rec= match_source->GetNPixels();
+		SourceName_rec= std::string(match_source->GetName());
+		SourceType_rec= match_source->Type;
+		X0_rec= match_source->X0;
+		Y0_rec= match_source->Y0;
+		X0_sweighted_rec= match_source->GetSx();
+		Y0_sweighted_rec= match_source->GetSy();
+		beamArea_rec= match_source->GetBeamFluxIntegral();
+		S_rec= match_source->GetS();
+		Smax_rec= match_source->GetSmax();
+		long int NMatchingPixels= source_true->GetNMatchingPixels(match_source);
 		MatchFraction= (double)(NMatchingPixels)/(double)(NPix);
 		MatchFraction_rec= (double)(NMatchingPixels)/(double)(NPix_rec);
 			
@@ -648,10 +667,25 @@ bool FindPointSourceMatch(int source_true_index)
 			//Smax_rec/= beamArea_rec;
 		}
 
+		//Compute average bkg/rms
+		std::vector<Pixel*> pixels= match_source->GetPixels();
+		std::vector<double> bkgValues;
+		std::vector<double> rmsValues;
+		S_bkg= 0;
+		for(size_t k=0;k<pixels.size();k++){	
+			double bkgLevel= pixels[k]->GetBkg().first;
+			double bkgRMS= pixels[k]->GetBkg().second;
+			S_bkg+= bkgLevel;
+			bkgValues.push_back(bkgLevel);
+			rmsValues.push_back(bkgRMS);
+		}
+		AvgBkg= StatsUtils::GetMedianFast(bkgValues);
+		AvgRMS= StatsUtils::GetMedianFast(rmsValues);
+
 		//Store fit info
 		if(componentIndex!=-1){
 			HasFitInfo= 1;
-			SourceFitPars fitPars= sources_rec[match_source_index]->GetFitPars();
+			SourceFitPars fitPars= match_source->GetFitPars();
 			FitStatus= fitPars.GetStatus();
 			X0_fit= fitPars.GetParValue(componentIndex,"x0");	
 			Y0_fit= fitPars.GetParValue(componentIndex,"y0");	
@@ -683,7 +717,7 @@ bool FindPointSourceMatch(int source_true_index)
 		
 		//## Store rec-true association map
 		//## NB: Find if this rec source was already associated to other true sources
-		MatchingSourceInfo info(match_source_index,componentIndex);
+		MatchingSourceInfo info(match_source_index,componentIndex,nestedIndex);
 		std::map<MatchingSourceInfo,std::vector<int>>::iterator it= RecSourceAssociationMap.find(info);
 		if(RecSourceAssociationMap.empty() || it==RecSourceAssociationMap.end()){//item not found
 			RecSourceAssociationMap[info].push_back(source_true_index);
@@ -752,6 +786,9 @@ bool FindExtendedSourceMatch(int source_true_index)
 	Sratio_rec= 0.;
 	dX= 0;
 	dY= 0;
+	S_bkg= 0;
+	AvgBkg= 0;
+	AvgRMS= 0;
 
 	//## Search for extended source associations by matching pixels
 	SourceOverlapMatchPars match_info;
@@ -797,6 +834,21 @@ bool FindExtendedSourceMatch(int source_true_index)
 			S_rec/= beamArea_rec;
 			//Smax_rec/= beamArea_rec;
 		}
+
+		//Compute average bkg/rms
+		std::vector<Pixel*> pixels= sources_rec[match_source_index]->GetPixels();
+		std::vector<double> bkgValues;
+		std::vector<double> rmsValues;
+		S_bkg= 0;
+		for(size_t k=0;k<pixels.size();k++){	
+			double bkgLevel= pixels[k]->GetBkg().first;
+			double bkgRMS= pixels[k]->GetBkg().second;
+			S_bkg+= bkgLevel;
+			bkgValues.push_back(bkgLevel);
+			rmsValues.push_back(bkgRMS);
+		}
+		AvgBkg= StatsUtils::GetMedianFast(bkgValues);
+		AvgRMS= StatsUtils::GetMedianFast(rmsValues);
 
 		INFO_LOG("True source "<<SourceName<<" (index="<<source_true_index<<", X0="<<X0<<", Y0="<<Y0<<", N="<<NPix<<") reconstructed by source "<<SourceName_rec<<" (index="<<match_source_index<<", X0="<<X0_rec<<", Y0="<<Y0_rec<<", N="<<NPix_rec<<"), NMatchingPixels="<<MatchFraction*NPix<<" f="<<MatchFraction<<" f_rec="<<MatchFraction_rec<<" (t="<<matchOverlapThr<<")");
 
@@ -993,6 +1045,8 @@ void Init(){
 	matchedSourceInfo->Branch("S_true",&S_true,"S_true/D");
 	matchedSourceInfo->Branch("X0_true",&X0_true,"X0_true/D");
 	matchedSourceInfo->Branch("Y0_true",&Y0_true,"Y0_true/D");
+	matchedSourceInfo->Branch("X0_sweighted",&X0_sweighted,"X0_sweighted/D");
+	matchedSourceInfo->Branch("Y0_sweighted",&Y0_sweighted,"Y0_sweighted/D");
 	matchedSourceInfo->Branch("fluxDensity_true",&fluxDensity_true,"fluxDensity_true/D");
 	matchedSourceInfo->Branch("beamArea_true",&beamArea_true,"beamArea_true/D");
 	matchedSourceInfo->Branch("name_rec",&SourceName_rec);	
@@ -1002,9 +1056,14 @@ void Init(){
 	matchedSourceInfo->Branch("Smax_rec",&Smax_rec,"Smax_rec/D");
 	matchedSourceInfo->Branch("X0_rec",&X0_rec,"X0_rec/D");
 	matchedSourceInfo->Branch("Y0_rec",&Y0_rec,"Y0_rec/D");
+	matchedSourceInfo->Branch("X0_sweighted_rec",&X0_sweighted_rec,"X0_sweighted_rec/D");
+	matchedSourceInfo->Branch("Y0_sweighted_rec",&Y0_sweighted_rec,"Y0_sweighted_rec/D");
 	matchedSourceInfo->Branch("beamArea_rec",&beamArea_rec,"beamArea_rec/D");
 	matchedSourceInfo->Branch("MatchFraction",&MatchFraction,"MatchFraction/D");
 	matchedSourceInfo->Branch("MatchFraction_rec",&MatchFraction_rec,"MatchFraction_rec/D");
+	matchedSourceInfo->Branch("S_bkg",&S_bkg,"S_bkg/D");	
+	matchedSourceInfo->Branch("AvgBkg",&AvgBkg,"AvgBkg/D");	
+	matchedSourceInfo->Branch("AvgRMS",&AvgRMS,"AvgRMS/D");	
 	matchedSourceInfo->Branch("HasFitInfo",&HasFitInfo,"HasFitInfo/I");
 	matchedSourceInfo->Branch("FitStatus",&FitStatus,"FitStatus/I");
 	matchedSourceInfo->Branch("S_fit",&S_fit,"S_fit/D");
@@ -1058,6 +1117,9 @@ void Init(){
 	matchedExtSourceInfo->Branch("Sratio_rec",&Sratio_rec,"Sratio_rec/D");
 	matchedExtSourceInfo->Branch("dX",&dX,"dX/D");
 	matchedExtSourceInfo->Branch("dY",&dY,"dY/D");
+	matchedExtSourceInfo->Branch("S_bkg",&S_bkg,"S_bkg/D");	
+	matchedExtSourceInfo->Branch("AvgBkg",&AvgBkg,"AvgBkg/D");	
+	matchedExtSourceInfo->Branch("AvgRMS",&AvgRMS,"AvgRMS/D");
 	
 	//Create rec source info (useful for reliability estimation)
 	if(!recSourceInfo) recSourceInfo= new TTree("RecSourceInfo","RecSourceInfo");
