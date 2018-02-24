@@ -217,15 +217,15 @@ void Init(){
 	NFitSourceHisto_compact->Sumw2();
 
 	histoName= "NTrueSourceVSSignificanceHisto_compact";
-	NTrueSourceVSSignificanceHisto_compact= new TH1D(histoName,"True compact source distribution",nBins,LgFluxBins.data());
+	NTrueSourceVSSignificanceHisto_compact= new TH1D(histoName,"True compact source distribution",nBins,Zbins.data());
 	NTrueSourceVSSignificanceHisto_compact->Sumw2();
 	
 	histoName= "NRecSourceVSSignificanceHisto_compact";
-	NRecSourceVSSignificanceHisto_compact= new TH1D(histoName,"Rec compact source distribution",nBins,LgFluxBins.data());
+	NRecSourceVSSignificanceHisto_compact= new TH1D(histoName,"Rec compact source distribution",nBins,Zbins.data());
 	NRecSourceVSSignificanceHisto_compact->Sumw2();
 	
 	histoName= "NFitSourceVSSignificanceHisto_compact";
-	NFitSourceVSSignificanceHisto_compact= new TH1D(histoName,"Fitted compact source distribution",nBins,LgFluxBins.data());
+	NFitSourceVSSignificanceHisto_compact= new TH1D(histoName,"Fitted compact source distribution",nBins,Zbins.data());
 	NFitSourceVSSignificanceHisto_compact->Sumw2();
 
 	histoName= "NTrueSourceHisto_ext";
@@ -951,6 +951,8 @@ int AnalyzeData(std::string filename){
 	SourceMatchInfo->SetBranchAddress("type",&Type_true);
 	SourceMatchInfo->SetBranchAddress("X0_true",&X0_true);
  	SourceMatchInfo->SetBranchAddress("Y0_true",&Y0_true);
+	SourceMatchInfo->SetBranchAddress("X0_sweighted",&X0_sweighted);
+ 	SourceMatchInfo->SetBranchAddress("Y0_sweighted",&Y0_sweighted);
  	SourceMatchInfo->SetBranchAddress("S_true",&S_true);
 	SourceMatchInfo->SetBranchAddress("S",&S);	
 	SourceMatchInfo->SetBranchAddress("beamArea_true",&beamArea_true);
@@ -961,6 +963,8 @@ int AnalyzeData(std::string filename){
  	SourceMatchInfo->SetBranchAddress("Smax_rec",&Smax_rec);
  	SourceMatchInfo->SetBranchAddress("X0_rec",&X0_rec);
  	SourceMatchInfo->SetBranchAddress("Y0_rec",&Y0_rec);
+	SourceMatchInfo->SetBranchAddress("X0_sweighted_rec",&X0_sweighted_rec);
+ 	SourceMatchInfo->SetBranchAddress("Y0_sweighted_rec",&Y0_sweighted_rec);
 	SourceMatchInfo->SetBranchAddress("beamArea_rec",&beamArea_rec);
 	SourceMatchInfo->SetBranchAddress("S_bkg",&S_bkg);
 	SourceMatchInfo->SetBranchAddress("AvgBkg",&AvgBkg);
@@ -1106,21 +1110,23 @@ int AnalyzeData(std::string filename){
 			NRecSourceHisto_compact->Fill(lgFlux_true,1);
 			NRecSourceVSSignificanceHisto_compact->Fill(Z_true,1);
 
-			double xOffset= fabs(X0_rec-X0_true);
-			double yOffset= fabs(Y0_rec-Y0_true);
+			//double xOffset= fabs(X0_rec-X0_true);
+			//double yOffset= fabs(Y0_rec-Y0_true);
+			double xOffset= X0_sweighted_rec-X0_true;
+			double yOffset= Y0_sweighted_rec-Y0_true;
 			double Speak= Smax_rec;
 			double fluxDensity= S_rec/beamArea_rec;
 			double SpeakPull= Speak/S_true-1;
 			double FluxPull= fluxDensity/fluxDensity_true-1;
-	
 			
 			if(HasFitInfo){
 
 				//Get fit info
-				xOffset= fabs(X0_fit-X0_true);
-				yOffset= fabs(Y0_fit-Y0_true);
+				xOffset= X0_fit-X0_true;
+				yOffset= Y0_fit-Y0_true;
 				Speak= S_fit;
-				fluxDensity= fluxDensity_fit/beamArea_rec;	
+				//fluxDensity= fluxDensity_fit/beamArea_rec;	
+				fluxDensity= fluxDensity_fit;	
 				SpeakPull= Speak/S_true-1;
 				FluxPull= fluxDensity/fluxDensity_true-1;
 						
