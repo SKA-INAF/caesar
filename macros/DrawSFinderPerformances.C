@@ -43,7 +43,7 @@ int maxFitComponentsThr= 1;
 
 //Draw info
 //std::vector<double> Zbins= {0,1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100,200,300,400,500,600,700,800,900,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000};
-std::vector<double> Zbins= {0.1,1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100};
+std::vector<double> Zbins= {0.1,1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100,200,300,400,500,600,700,800,900,1000,2000,3000,4000,5000,10000};
 
 std::vector<double> LgFluxBins= {
 	-4.5,-4,-3.5,-3,-2.75,-2.5,-2.25,-2,-1.75,-1.5,-1.25,-1,-0.5,0,1,2
@@ -52,10 +52,10 @@ std::vector<double> LgFluxBins= {
 //- Compact source histos/graphs
 TH1D* NTrueSourceHisto_compact= 0;
 TH1D* NRecSourceHisto_compact= 0;
-TH1D* NFitSourceHisto_compact= 0;
+TH1D* NRecSourceHisto_compact_fit= 0;
 TH1D* NTrueSourceVSSignificanceHisto_compact= 0;
 TH1D* NRecSourceVSSignificanceHisto_compact= 0;
-TH1D* NFitSourceVSSignificanceHisto_compact= 0;
+TH1D* NRecSourceVSSignificanceHisto_compact_fit= 0;
 TH1D* NTrueSourceHisto_reliability_compact= 0;
 TH1D* NRecSourceHisto_reliability_compact= 0;
 TH1D* NTrueSourceVSSignificanceHisto_reliability_compact= 0;
@@ -67,16 +67,36 @@ TEfficiency* EfficiencyVSSignificance_compact= 0;
 TEfficiency* EfficiencyVSSignificance_compact_fit= 0;
 TEfficiency* ReliabilityVSSignificance_compact= 0;
 
+TGraphAsymmErrors* xPosAccuracyGraph_compact_centroid= 0;
+TGraphAsymmErrors* yPosAccuracyGraph_compact_centroid= 0;
+TGraphAsymmErrors* xPosAccuracyGraph_compact_fit= 0;
+TGraphAsymmErrors* yPosAccuracyGraph_compact_fit= 0;
 TGraphAsymmErrors* xPosAccuracyGraph_compact= 0;
 TGraphAsymmErrors* yPosAccuracyGraph_compact= 0;
-TGraphAsymmErrors* SpeakAccuracyGraph_compact= 0;
+TGraphAsymmErrors* xPosTrueAccuracyGraph_compact= 0;
+TGraphAsymmErrors* yPosTrueAccuracyGraph_compact= 0;
+TGraphAsymmErrors* xPosTrueAccuracyGraph_compact_fit= 0;
+TGraphAsymmErrors* yPosTrueAccuracyGraph_compact_fit= 0;
 TGraphAsymmErrors* FluxDensityAccuracyGraph_compact= 0;
+TGraphAsymmErrors* FluxDensityAccuracyGraph_compact_fit= 0;
+TGraphAsymmErrors* FluxDensityAccuracyGraph_compact_peak= 0;
 
 std::vector< std::vector<double> > FluxList_compact;
+std::vector< std::vector<double> > FluxList_compact_fit;
+std::vector< std::vector<double> > xPosPullList_compact_centroid;
+std::vector< std::vector<double> > yPosPullList_compact_centroid;
+std::vector< std::vector<double> > xPosPullList_compact_fit;
+std::vector< std::vector<double> > yPosPullList_compact_fit;
 std::vector< std::vector<double> > xPosPullList_compact;
 std::vector< std::vector<double> > yPosPullList_compact;
-std::vector< std::vector<double> > SpeakPullList_compact;
+std::vector< std::vector<double> > xPosTruePullList_compact;
+std::vector< std::vector<double> > yPosTruePullList_compact;
+std::vector< std::vector<double> > xPosTruePullList_compact_fit;
+std::vector< std::vector<double> > yPosTruePullList_compact_fit;
 std::vector< std::vector<double> > FluxDensityPullList_compact;
+std::vector< std::vector<double> > FluxDensityPullList_compact_peak;
+std::vector< std::vector<double> > FluxDensityPullList_compact_fit;
+std::vector< std::vector<double> > FluxDensityTruePullList_compact;
 
 //- Extended source histos/graphs
 TH1D* NTrueSourceHisto_ext= 0;
@@ -191,11 +211,22 @@ void Init(){
 	//## Init data vector
 	for(int i=0;i<nBins;i++){
 		FluxList_compact.push_back( std::vector<double>() );
+		FluxList_compact_fit.push_back( std::vector<double>() );
 		xPosPullList_compact.push_back( std::vector<double>() );
 		yPosPullList_compact.push_back( std::vector<double>() );
-		SpeakPullList_compact.push_back( std::vector<double>() );
+		xPosPullList_compact_fit.push_back( std::vector<double>() );
+		yPosPullList_compact_fit.push_back( std::vector<double>() );
+		xPosPullList_compact_centroid.push_back( std::vector<double>() );
+		yPosPullList_compact_centroid.push_back( std::vector<double>() );
+		xPosTruePullList_compact.push_back( std::vector<double>() );
+		yPosTruePullList_compact.push_back( std::vector<double>() );
+		xPosTruePullList_compact_fit.push_back( std::vector<double>() );
+		yPosTruePullList_compact_fit.push_back( std::vector<double>() );
 		FluxDensityPullList_compact.push_back( std::vector<double>() );
-		
+		FluxDensityPullList_compact_fit.push_back( std::vector<double>() );
+		FluxDensityPullList_compact_peak.push_back( std::vector<double>() );
+		FluxDensityTruePullList_compact.push_back( std::vector<double>() );
+	
 		FluxList_ext.push_back( std::vector<double>() );
 		xPosPullList_ext.push_back( std::vector<double>() );
 		yPosPullList_ext.push_back( std::vector<double>() );
@@ -212,9 +243,9 @@ void Init(){
 	NRecSourceHisto_compact= new TH1D(histoName,"Rec compact source distribution",nBins,LgFluxBins.data());
 	NRecSourceHisto_compact->Sumw2();
 	
-	histoName= "NFitSourceHisto_compact";
-	NFitSourceHisto_compact= new TH1D(histoName,"Fitted compact source distribution",nBins,LgFluxBins.data());
-	NFitSourceHisto_compact->Sumw2();
+	histoName= "NRecSourceHisto_compact_fit";
+	NRecSourceHisto_compact_fit= new TH1D(histoName,"Fitted compact source distribution",nBins,LgFluxBins.data());
+	NRecSourceHisto_compact_fit->Sumw2();
 
 	histoName= "NTrueSourceVSSignificanceHisto_compact";
 	NTrueSourceVSSignificanceHisto_compact= new TH1D(histoName,"True compact source distribution",nBins,Zbins.data());
@@ -224,9 +255,9 @@ void Init(){
 	NRecSourceVSSignificanceHisto_compact= new TH1D(histoName,"Rec compact source distribution",nBins,Zbins.data());
 	NRecSourceVSSignificanceHisto_compact->Sumw2();
 	
-	histoName= "NFitSourceVSSignificanceHisto_compact";
-	NFitSourceVSSignificanceHisto_compact= new TH1D(histoName,"Fitted compact source distribution",nBins,Zbins.data());
-	NFitSourceVSSignificanceHisto_compact->Sumw2();
+	histoName= "NRecSourceVSSignificanceHisto_compact_fit";
+	NRecSourceVSSignificanceHisto_compact_fit= new TH1D(histoName,"Fitted compact source distribution",nBins,Zbins.data());
+	NRecSourceVSSignificanceHisto_compact_fit->Sumw2();
 
 	histoName= "NTrueSourceHisto_ext";
 	NTrueSourceHisto_ext= new TH1D(histoName,"True extended source distribution",nBins,LgFluxBins.data());
@@ -277,35 +308,6 @@ void Init(){
 	NRecSourceVSSignificanceHisto_reliability_ext= new TH1D(histoName,"Rec extended source distribution",nBins,Zbins.data());
 	NRecSourceVSSignificanceHisto_reliability_ext->Sumw2();
 
-	/*
-	//- Positional accuracy histos
-	histoName= "xPosAccuracyHisto_compact";
-	xPosAccuracyHisto_compact= new TProfile(histoName,"x position accuracy",nBins,LgFluxBins.data(),"");
-	xPosAccuracyHisto_compact->Sumw2();
-	
-	histoName= "yPosAccuracyHisto_compact";
-	yPosAccuracyHisto_compact= new TProfile(histoName,"y position accuracy",nBins,LgFluxBins.data(),"");
-	yPosAccuracyHisto_compact->Sumw2();
-	
-	//- Flux accuracy histos
-	histoName= "SpeakAccuracyHisto_compact";
-	SpeakAccuracyHisto_compact= new TProfile(histoName,"Speak accuracy",nBins,LgFluxBins.data(),"");
-	SpeakAccuracyHisto_compact->Sumw2();
-	
-	histoName= "FluxDensityAccuracyHisto";
-	FluxDensityAccuracyHisto= new TProfile(histoName,"Flux density accuracy",nBins,LgFluxBins.data(),"");
-	FluxDensityAccuracyHisto->Sumw2();
-
-	histoName= "FluxDensityAccuracyHisto_ext";
-	FluxDensityAccuracyHisto_ext= new TProfile(histoName,"Extended source flux density accuracy",nBins,LgFluxBins.data(),"");
-	FluxDensityAccuracyHisto_ext->Sumw2();
-	
-	//- Offset accuracy histos
-	histoName= "BkgAccuracyHisto";
-	BkgAccuracyHisto= new TProfile(histoName,"Offset accuracy",nBins,LgFluxBins.data(),"");
-	BkgAccuracyHisto->Sumw2();
-	*/
-
 	//- Pos accuracy graphs
 	TString graphName= "xPosAccuracyGraph_compact";
 	xPosAccuracyGraph_compact= new TGraphAsymmErrors;
@@ -314,7 +316,39 @@ void Init(){
 	graphName= "yPosAccuracyGraph_compact";
 	yPosAccuracyGraph_compact= new TGraphAsymmErrors;
 	yPosAccuracyGraph_compact->SetName(graphName);
-		
+	
+	graphName= "xPosAccuracyGraph_compact_fit";
+	xPosAccuracyGraph_compact_fit= new TGraphAsymmErrors;
+	xPosAccuracyGraph_compact_fit->SetName(graphName);
+	
+	graphName= "yPosAccuracyGraph_compact_fit";
+	yPosAccuracyGraph_compact_fit= new TGraphAsymmErrors;
+	yPosAccuracyGraph_compact_fit->SetName(graphName);
+
+	graphName= "xPosAccuracyGraph_compact_centroid";
+	xPosAccuracyGraph_compact_centroid= new TGraphAsymmErrors;
+	xPosAccuracyGraph_compact_centroid->SetName(graphName);
+	
+	graphName= "yPosAccuracyGraph_compact_centroid";
+	yPosAccuracyGraph_compact_centroid= new TGraphAsymmErrors;
+	yPosAccuracyGraph_compact_centroid->SetName(graphName);
+
+	graphName= "xPosTrueAccuracyGraph_compact";
+	xPosTrueAccuracyGraph_compact= new TGraphAsymmErrors;
+	xPosTrueAccuracyGraph_compact->SetName(graphName);
+	
+	graphName= "yPosTrueAccuracyGraph_compact";
+	yPosTrueAccuracyGraph_compact= new TGraphAsymmErrors;
+	yPosTrueAccuracyGraph_compact->SetName(graphName);
+
+	graphName= "xPosTrueAccuracyGraph_compact_fit";
+	xPosTrueAccuracyGraph_compact_fit= new TGraphAsymmErrors;
+	xPosTrueAccuracyGraph_compact_fit->SetName(graphName);
+	
+	graphName= "yPosTrueAccuracyGraph_compact_fit";
+	yPosTrueAccuracyGraph_compact_fit= new TGraphAsymmErrors;
+	yPosTrueAccuracyGraph_compact_fit->SetName(graphName);
+
 	graphName= "xPosAccuracyGraph_ext";
 	xPosAccuracyGraph_ext= new TGraphAsymmErrors;
 	xPosAccuracyGraph_ext->SetName(graphName);
@@ -324,22 +358,21 @@ void Init(){
 	yPosAccuracyGraph_ext->SetName(graphName);
 
 	//- Flux accuracy graphs
-	graphName= "SpeakAccuracyGraph_compact";
-	SpeakAccuracyGraph_compact= new TGraphAsymmErrors;
-	SpeakAccuracyGraph_compact->SetName(graphName);
-	
 	graphName= "FluxDensityAccuracyGraph_compact";
 	FluxDensityAccuracyGraph_compact= new TGraphAsymmErrors;
 	FluxDensityAccuracyGraph_compact->SetName(graphName);
+	
+	graphName= "FluxDensityAccuracyGraph_compact_fit";
+	FluxDensityAccuracyGraph_compact_fit= new TGraphAsymmErrors;
+	FluxDensityAccuracyGraph_compact_fit->SetName(graphName);
+
+	graphName= "FluxDensityAccuracyGraph_compact_peak";
+	FluxDensityAccuracyGraph_compact_peak= new TGraphAsymmErrors;
+	FluxDensityAccuracyGraph_compact_peak->SetName(graphName);
 
 	graphName= "FluxDensityAccuracyGraph_ext";
 	FluxDensityAccuracyGraph_ext= new TGraphAsymmErrors;
 	FluxDensityAccuracyGraph_ext->SetName(graphName);
-	
-	//graphName= "BkgAccuracyGraph";
-	//BkgAccuracyGraph= new TGraphAsymmErrors;
-	//BkgAccuracyGraph->SetName(graphName);
-		
 	
 }//close Init()
 
@@ -352,7 +385,7 @@ void ComputeAnalysisHistos(){
 	Efficiency_compact->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
 	Efficiency_compact->SetConfidenceLevel(0.68);
 	
-	Efficiency_compact_fit = new TEfficiency(*NFitSourceHisto_compact,*NTrueSourceHisto_compact); 
+	Efficiency_compact_fit = new TEfficiency(*NRecSourceHisto_compact_fit,*NTrueSourceHisto_compact); 
 	Efficiency_compact_fit->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
 	Efficiency_compact_fit->SetConfidenceLevel(0.68);
 
@@ -360,7 +393,7 @@ void ComputeAnalysisHistos(){
 	EfficiencyVSSignificance_compact->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
 	EfficiencyVSSignificance_compact->SetConfidenceLevel(0.68);
 	
-	EfficiencyVSSignificance_compact_fit = new TEfficiency(*NFitSourceVSSignificanceHisto_compact,*NTrueSourceVSSignificanceHisto_compact); 
+	EfficiencyVSSignificance_compact_fit = new TEfficiency(*NRecSourceVSSignificanceHisto_compact_fit,*NTrueSourceVSSignificanceHisto_compact); 
 	EfficiencyVSSignificance_compact_fit->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
 	EfficiencyVSSignificance_compact_fit->SetConfidenceLevel(0.68);
 	
@@ -394,6 +427,12 @@ void ComputeAnalysisHistos(){
 	int nBins= (int)(LgFluxBins.size()-1);
 	int nPoints_xPull= 0;
 	int nPoints_yPull= 0;	
+	int nPoints_xPull_fit= 0;
+	int nPoints_yPull_fit= 0;
+	int nPoints_xPull_true= 0;
+	int nPoints_yPull_true= 0;
+	int nPoints_xPull_true_fit= 0;
+	int nPoints_yPull_true_fit= 0;		
 	int nPoints_SpeakPull= 0;
 	int nPoints_FluxPull= 0;
 	int nPoints_OffsetPull= 0;
@@ -434,9 +473,39 @@ void ComputeAnalysisHistos(){
 			nPoints_yPull++;
 		}	
 
-		//Compute Speak accuracy
-		if(SpeakPullList_compact[i].size()>=nMinPointsToDraw){
-			Caesar::BoxStats<double> stats= StatsUtils::ComputeBoxStats(SpeakPullList_compact[i]);
+		//Compute xpos accuracy	fit	
+		if(xPosPullList_compact_fit[i].size()>=nMinPointsToDraw){
+			Caesar::BoxStats<double> stats= StatsUtils::ComputeBoxStats(xPosPullList_compact_fit[i]);
+			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_compact_fit[i]);
+			double x= stats_x.median;
+			double xerr_low= x-stats_x.Q1;
+			double xerr_up= stats_x.Q3-x;
+			double y= stats.median;
+			double yerr_low= y-stats.Q1;
+			double yerr_up= stats.Q3-y;
+			xPosAccuracyGraph_compact_fit->SetPoint(nPoints_xPull_fit,x,y);
+			xPosAccuracyGraph_compact_fit->SetPointError(nPoints_xPull_fit,xerr_low,xerr_up,yerr_low,yerr_up);
+			nPoints_xPull_fit++;
+		}
+
+		//Compute ypos accuracy fit
+		if(yPosPullList_compact_fit[i].size()>=nMinPointsToDraw){
+			Caesar::BoxStats<double> stats= StatsUtils::ComputeBoxStats(yPosPullList_compact_fit[i]);
+			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_compact_fit[i]);
+			double x= stats_x.median;
+			double xerr_low= x-stats_x.Q1;
+			double xerr_up= stats_x.Q3-x;
+			double y= stats.median;
+			double yerr_low= y-stats.Q1;
+			double yerr_up= stats.Q3-y;
+			yPosAccuracyGraph_compact_fit->SetPoint(nPoints_yPull_fit,x,y);
+			yPosAccuracyGraph_compact_fit->SetPointError(nPoints_yPull_fit,xerr_low,xerr_up,yerr_low,yerr_up);
+			nPoints_yPull_fit++;
+		}	
+
+		//Compute xpos accuracy (wrt true pos)
+		if(xPosPullList_compact[i].size()>=nMinPointsToDraw){
+			Caesar::BoxStats<double> stats= StatsUtils::ComputeBoxStats(xPosTruePullList_compact[i]);
 			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_compact[i]);
 			double x= stats_x.median;
 			double xerr_low= x-stats_x.Q1;
@@ -444,10 +513,56 @@ void ComputeAnalysisHistos(){
 			double y= stats.median;
 			double yerr_low= y-stats.Q1;
 			double yerr_up= stats.Q3-y;
-			SpeakAccuracyGraph_compact->SetPoint(nPoints_SpeakPull,x,y);
-			SpeakAccuracyGraph_compact->SetPointError(nPoints_SpeakPull,xerr_low,xerr_up,yerr_low,yerr_up);
-			nPoints_SpeakPull++;
+			xPosTrueAccuracyGraph_compact->SetPoint(nPoints_xPull_true,x,y);
+			xPosTrueAccuracyGraph_compact->SetPointError(nPoints_xPull_true,xerr_low,xerr_up,yerr_low,yerr_up);
+			nPoints_xPull_true++;
+		}
+
+		//Compute ypos accuracy (wrt true pos)
+		if(yPosPullList_compact[i].size()>=nMinPointsToDraw){
+			Caesar::BoxStats<double> stats= StatsUtils::ComputeBoxStats(yPosTruePullList_compact[i]);
+			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_compact[i]);
+			double x= stats_x.median;
+			double xerr_low= x-stats_x.Q1;
+			double xerr_up= stats_x.Q3-x;
+			double y= stats.median;
+			double yerr_low= y-stats.Q1;
+			double yerr_up= stats.Q3-y;
+			yPosTrueAccuracyGraph_compact->SetPoint(nPoints_yPull_true,x,y);
+			yPosTrueAccuracyGraph_compact->SetPointError(nPoints_yPull_true,xerr_low,xerr_up,yerr_low,yerr_up);
+			nPoints_yPull_true++;
 		}	
+			
+		//Compute xpos accuracy fit (wrt true pos)
+		if(xPosPullList_compact_fit[i].size()>=nMinPointsToDraw){
+			Caesar::BoxStats<double> stats= StatsUtils::ComputeBoxStats(xPosTruePullList_compact_fit[i]);
+			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_compact_fit[i]);
+			double x= stats_x.median;
+			double xerr_low= x-stats_x.Q1;
+			double xerr_up= stats_x.Q3-x;
+			double y= stats.median;
+			double yerr_low= y-stats.Q1;
+			double yerr_up= stats.Q3-y;
+			xPosTrueAccuracyGraph_compact_fit->SetPoint(nPoints_xPull_true_fit,x,y);
+			xPosTrueAccuracyGraph_compact_fit->SetPointError(nPoints_xPull_true_fit,xerr_low,xerr_up,yerr_low,yerr_up);
+			nPoints_xPull_true_fit++;
+		}
+
+		//Compute ypos accuracy fit (wrt true pos)
+		if(yPosPullList_compact_fit[i].size()>=nMinPointsToDraw){
+			Caesar::BoxStats<double> stats= StatsUtils::ComputeBoxStats(yPosTruePullList_compact_fit[i]);
+			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_compact_fit[i]);
+			double x= stats_x.median;
+			double xerr_low= x-stats_x.Q1;
+			double xerr_up= stats_x.Q3-x;
+			double y= stats.median;
+			double yerr_low= y-stats.Q1;
+			double yerr_up= stats.Q3-y;
+			yPosTrueAccuracyGraph_compact_fit->SetPoint(nPoints_yPull_true_fit,x,y);
+			yPosTrueAccuracyGraph_compact_fit->SetPointError(nPoints_yPull_true_fit,xerr_low,xerr_up,yerr_low,yerr_up);
+			nPoints_yPull_true_fit++;
+		}	
+			
 
 		//Compute Flux accuracy
 		if(FluxDensityPullList_compact[i].size()>=nMinPointsToDraw){
@@ -520,22 +635,6 @@ void Draw(){
 	gROOT->SetStyle("myStyle2");
 	//gStyle->SetOptLogx();
 
-	//===============================================
-	//==          DRAW HISTO
-	//===============================================
-	TCanvas* TrueSourceDistributionPlot= new TCanvas("TrueSourceDistributionPlot","TrueSourceDistributionPlot");
-	TrueSourceDistributionPlot->cd();
-	
-	NTrueSourceHisto_compact->Draw("ep");
-
-	TCanvas* FittedSourceDistributionPlot= new TCanvas("FittedSourceDistributionPlot","FittedSourceDistributionPlot");
-	FittedSourceDistributionPlot->cd();
-	
-	NFitSourceHisto_compact->Draw("ep");
-
-	//===============================================
-	//==          DRAW COMPLETENESS
-	//===============================================
 	double xMin_draw= LgFluxBins[0];
 	double xMax_draw= LgFluxBins[LgFluxBins.size()-1];
 	double ZMin_draw= Zbins[0];
@@ -546,12 +645,15 @@ void Draw(){
 	TLine* detectionThrLine= new TLine(SNThr,0,SNThr,1);
 	detectionThrLine->SetLineColor(kBlack);
 	detectionThrLine->SetLineStyle(kDashed);
-	
+
+	//===============================================
+	//==          DRAW COMPLETENESS
+	//===============================================	
 	//- Efficiency plot compact source
 	TCanvas* EffPlot= new TCanvas("EffPlot","EffPlot");
 	EffPlot->cd();
 
-	TH2D* EffPlotBkg= new TH2D("EffPlotBkg","",100,xMin_draw,xMax_draw,100,0,1.2);
+	TH2D* EffPlotBkg= new TH2D("EffPlotBkg","",100,xMin_draw,xMax_draw,100,0,1.1);
 	EffPlotBkg->GetXaxis()->SetTitle("log_{10}(S_{true}/Jy)");
 	EffPlotBkg->GetYaxis()->SetTitle("Completeness");
 	EffPlotBkg->Draw();
@@ -560,13 +662,27 @@ void Draw(){
 	Efficiency_compact->SetMarkerColor(kBlack);
 	Efficiency_compact->SetLineColor(kBlack);
 	Efficiency_compact->Draw("p same");
+
+	Efficiency_compact_fit->SetMarkerStyle(21);
+	Efficiency_compact_fit->SetMarkerColor(kRed);
+	Efficiency_compact_fit->SetLineColor(kRed);
+	Efficiency_compact_fit->Draw("p same");
 	
 	detectionThrLine->Draw("l");
+
+	TLegend* EffPlotLegend= new TLegend(0.6,0.7,0.7,0.8);
+	EffPlotLegend->SetFillColor(0);
+	EffPlotLegend->SetTextSize(0.045);
+	EffPlotLegend->SetTextFont(52);
+	EffPlotLegend->AddEntry(Efficiency_compact,"detected","PL");
+	EffPlotLegend->AddEntry(Efficiency_compact_fit,"fitted","PL");
+	EffPlotLegend->Draw("same");
+
 
 	TCanvas* EffVSSignificancePlot= new TCanvas("EffVSSignificancePlot","EffVSSignificancePlot");
 	EffVSSignificancePlot->cd();
 
-	TH2D* EffVSSignificancePlotBkg= new TH2D("EffVSSignificancePlotBkg","",100,ZMin_draw,ZMax_draw,100,0,1.2);
+	TH2D* EffVSSignificancePlotBkg= new TH2D("EffVSSignificancePlotBkg","",100,ZMin_draw,ZMax_draw,100,0,1.1);
 	EffVSSignificancePlotBkg->GetXaxis()->SetTitle("S/N");
 	EffVSSignificancePlotBkg->GetYaxis()->SetTitle("Completeness");
 	EffVSSignificancePlotBkg->Draw();
@@ -576,34 +692,20 @@ void Draw(){
 	EfficiencyVSSignificance_compact->SetLineColor(kBlack);
 	EfficiencyVSSignificance_compact->Draw("p same");
 
-	//- Efficiency plot compact source (fitted data)
-	TCanvas* EffPlot_fit= new TCanvas("EffPlot_fit","EffPlot_fit");
-	EffPlot_fit->cd();
-
-	TH2D* EffPlotBkg_fit= new TH2D("EffPlotBkg_fit","",100,xMin_draw,xMax_draw,100,0,1.2);
-	EffPlotBkg_fit->GetXaxis()->SetTitle("log_{10}(S_{true}/Jy)");
-	EffPlotBkg_fit->GetYaxis()->SetTitle("Completeness");
-	EffPlotBkg_fit->Draw();
-
-	Efficiency_compact_fit->SetMarkerStyle(8);
-	Efficiency_compact_fit->SetMarkerColor(kBlack);
-	Efficiency_compact_fit->SetLineColor(kBlack);
-	Efficiency_compact_fit->Draw("p same");
-	
-	detectionThrLine->Draw("l");
-
-	TCanvas* EffVSSignificancePlot_fit= new TCanvas("EffVSSignificancePlot_fit","EffVSSignificancePlot_fit");
-	EffVSSignificancePlot_fit->cd();
-
-	TH2D* EffVSSignificancePlotBkg_fit= new TH2D("EffVSSignificancePlotBkg_fit","",100,ZMin_draw,ZMax_draw,100,0,1.2);
-	EffVSSignificancePlotBkg_fit->GetXaxis()->SetTitle("S/N");
-	EffVSSignificancePlotBkg_fit->GetYaxis()->SetTitle("Completeness");
-	EffVSSignificancePlotBkg_fit->Draw();
-
-	EfficiencyVSSignificance_compact_fit->SetMarkerStyle(8);
-	EfficiencyVSSignificance_compact_fit->SetMarkerColor(kBlack);
-	EfficiencyVSSignificance_compact_fit->SetLineColor(kBlack);
+	EfficiencyVSSignificance_compact_fit->SetMarkerStyle(21);
+	EfficiencyVSSignificance_compact_fit->SetMarkerColor(kRed);
+	EfficiencyVSSignificance_compact_fit->SetLineColor(kRed);
 	EfficiencyVSSignificance_compact_fit->Draw("p same");
+
+	TLegend* EffVSSignificancePlotLegend= new TLegend(0.6,0.7,0.7,0.8);
+	EffVSSignificancePlotLegend->SetFillColor(0);
+	EffVSSignificancePlotLegend->SetTextSize(0.045);
+	EffVSSignificancePlotLegend->SetTextFont(52);
+	EffVSSignificancePlotLegend->AddEntry(EfficiencyVSSignificance_compact,"detected","PL");
+	EffVSSignificancePlotLegend->AddEntry(EfficiencyVSSignificance_compact_fit,"fitted","PL");
+	EffVSSignificancePlotLegend->Draw("same");
+
+
 
 	//- Efficiency plot extended source
 	TCanvas* EffPlot_ext= new TCanvas("EffPlot_ext","EffPlot_ext");
@@ -701,80 +803,121 @@ void Draw(){
 	//===============================================
 	//==          DRAW POSITIONAL ACCURACY
 	//===============================================
-	//- X pos accuracy
-	TCanvas* xPosAccuracyPlot= new TCanvas("xPosAccuracyPlot","xPosAccuracyPlot");
-	xPosAccuracyPlot->cd();
+	TCanvas* PosAccuracyPlot= new TCanvas("PosAccuracyPlot","PosAccuracyPlot");
+	PosAccuracyPlot->cd();
 
-	TH2D* xPosAccuracyPlotBkg= new TH2D("xPosAccuracyPlotBkg","",100,xMin_draw,xMax_draw,100,-5,5);
-	xPosAccuracyPlotBkg->GetXaxis()->SetTitle("log_{10}(S/Jy)");
-	xPosAccuracyPlotBkg->GetYaxis()->SetTitle("<X0_{rec}-X0_{true}> ('')");
-	xPosAccuracyPlotBkg->Draw();
+	TH2D* PosAccuracyPlotBkg= new TH2D("PosAccuracyPlotBkg","",100,xMin_draw,xMax_draw,100,-20,20);
+	PosAccuracyPlotBkg->GetXaxis()->SetTitle("log_{10}(S_{true}/Jy)");
+	PosAccuracyPlotBkg->GetYaxis()->SetTitle("<#deltaRA>, <#deltaDec> ('')");
+	PosAccuracyPlotBkg->Draw();
 
 	xPosAccuracyGraph_compact->SetMarkerStyle(8);
 	xPosAccuracyGraph_compact->SetMarkerColor(kBlack);
 	xPosAccuracyGraph_compact->SetLineColor(kBlack);
 	xPosAccuracyGraph_compact->Draw("ep same");
 	
-	TLine* refLine_xposAccuracy= new TLine(xMin_draw,0,xMax_draw,0);
-	refLine_xposAccuracy->SetLineColor(kBlack);
-	refLine_xposAccuracy->SetLineStyle(kDashed);
-	refLine_xposAccuracy->Draw("same");
-
-	TLine* detectionThrLine_xposAccuracy= new TLine(SNThr,-5,SNThr,5);
-	detectionThrLine_xposAccuracy->SetLineColor(kBlack);
-	detectionThrLine_xposAccuracy->SetLineStyle(kDashed);
-	detectionThrLine_xposAccuracy->Draw("same");
-
-	double sigmaToFirstQuantile= ROOT::Math::gaussian_quantile(0.75,1);
-	TF1* expPosXSigmaFcn_plus= new TF1("expPosXSigmaFcn_plus",GausPosSigmaFcn,xMin_draw,xMax_draw,4);
-	expPosXSigmaFcn_plus->SetParameters(sigmaToFirstQuantile,pixSize,Bmaj,Bmin);
-	expPosXSigmaFcn_plus->SetLineColor(kBlack);
-	expPosXSigmaFcn_plus->SetLineStyle(9);
-	expPosXSigmaFcn_plus->Draw("l same");
-
-	TF1* expPosXSigmaFcn_minus= new TF1("expPosXSigmaFcn_minus",GausPosSigmaFcn,xMin_draw,xMax_draw,4);
-	expPosXSigmaFcn_minus->SetParameters(-sigmaToFirstQuantile,pixSize,Bmaj,Bmin);
-	expPosXSigmaFcn_minus->SetLineColor(kBlack);
-	expPosXSigmaFcn_minus->SetLineStyle(9);
-	expPosXSigmaFcn_minus->Draw("l same");
-
-	//- Y pos accuracy
-	TCanvas* yPosAccuracyPlot= new TCanvas("yPosAccuracyPlot","yPosAccuracyPlot");
-	yPosAccuracyPlot->cd();
-
-	TH2D* yPosAccuracyPlotBkg= new TH2D("yPosAccuracyPlotBkg","",100,xMin_draw,xMax_draw,100,-5,5);
-	yPosAccuracyPlotBkg->GetXaxis()->SetTitle("log_{10}(S/Jy)");
-	yPosAccuracyPlotBkg->GetYaxis()->SetTitle("<Y0_{rec}-Y0_{true}> ('')");
-	yPosAccuracyPlotBkg->Draw();
-
-	yPosAccuracyGraph_compact->SetMarkerStyle(8);
+	yPosAccuracyGraph_compact->SetMarkerStyle(24);
 	yPosAccuracyGraph_compact->SetMarkerColor(kBlack);
 	yPosAccuracyGraph_compact->SetLineColor(kBlack);
 	yPosAccuracyGraph_compact->Draw("ep same");
 
-	TLine* refLine_yposAccuracy= new TLine(xMin_draw,0,xMax_draw,0);
-	refLine_yposAccuracy->SetLineColor(kBlack);
-	refLine_yposAccuracy->SetLineStyle(kDashed);
-	refLine_yposAccuracy->Draw("same");
+	xPosAccuracyGraph_compact_fit->SetMarkerStyle(21);
+	xPosAccuracyGraph_compact_fit->SetMarkerColor(kRed);
+	xPosAccuracyGraph_compact_fit->SetLineColor(kRed);
+	xPosAccuracyGraph_compact_fit->Draw("ep same");
+	
+	yPosAccuracyGraph_compact_fit->SetMarkerStyle(25);
+	yPosAccuracyGraph_compact_fit->SetMarkerColor(kRed);
+	yPosAccuracyGraph_compact_fit->SetLineColor(kRed);
+	yPosAccuracyGraph_compact_fit->Draw("ep same");
+	
+	TLine* refLine_posAccuracy= new TLine(xMin_draw,0,xMax_draw,0);
+	refLine_posAccuracy->SetLineColor(kBlack);
+	refLine_posAccuracy->SetLineStyle(kDashed);
+	refLine_posAccuracy->Draw("same");
 
-	TLine* detectionThrLine_yposAccuracy= new TLine(SNThr,-5,SNThr,5);
-	detectionThrLine_yposAccuracy->SetLineColor(kBlack);
-	detectionThrLine_yposAccuracy->SetLineStyle(kDashed);
-	detectionThrLine_yposAccuracy->Draw("same");
+	double sigmaToFirstQuantile= ROOT::Math::gaussian_quantile(0.75,1);
+	TF1* expPosSigmaFcn_plus= new TF1("expPosSigmaFcn_plus",GausPosSigmaFcn,xMin_draw,xMax_draw,4);
+	expPosSigmaFcn_plus->SetParameters(sigmaToFirstQuantile,pixSize,Bmaj,Bmin);
+	expPosSigmaFcn_plus->SetLineColor(kBlack);
+	expPosSigmaFcn_plus->SetLineStyle(9);
+	//expPosSigmaFcn_plus->Draw("l same");
 
-	TF1* expPosYSigmaFcn_plus= new TF1("expPosYSigmaFcn_plus",GausPosSigmaFcn,xMin_draw,xMax_draw,4);
-	expPosYSigmaFcn_plus->SetParameters(sigmaToFirstQuantile,pixSize,Bmaj,Bmin);
-	expPosYSigmaFcn_plus->SetLineColor(kBlack);
-	expPosYSigmaFcn_plus->SetLineStyle(9);
-	expPosYSigmaFcn_plus->Draw("l same");
+	TF1* expPosSigmaFcn_minus= new TF1("expPosSigmaFcn_minus",GausPosSigmaFcn,xMin_draw,xMax_draw,4);
+	expPosSigmaFcn_minus->SetParameters(-sigmaToFirstQuantile,pixSize,Bmaj,Bmin);
+	expPosSigmaFcn_minus->SetLineColor(kBlack);
+	expPosSigmaFcn_minus->SetLineStyle(9);
+	//expPosSigmaFcn_minus->Draw("l same");
 
-	TF1* expPosYSigmaFcn_minus= new TF1("expPosYSigmaFcn_minus",GausPosSigmaFcn,xMin_draw,xMax_draw,4);
-	expPosYSigmaFcn_minus->SetParameters(-sigmaToFirstQuantile,pixSize,Bmaj,Bmin);
-	expPosYSigmaFcn_minus->SetLineColor(kBlack);
-	expPosYSigmaFcn_minus->SetLineStyle(9);
-	expPosYSigmaFcn_minus->Draw("l same");
+	TLegend* PosAccuracyPlotLegend= new TLegend(0.6,0.7,0.7,0.8);
+	PosAccuracyPlotLegend->SetFillColor(0);
+	PosAccuracyPlotLegend->SetTextSize(0.045);
+	PosAccuracyPlotLegend->SetTextFont(52);
+	PosAccuracyPlotLegend->SetHeader("Detected");
+	PosAccuracyPlotLegend->AddEntry(xPosAccuracyGraph_compact,"<#deltaRA>","PL");
+	PosAccuracyPlotLegend->AddEntry(yPosAccuracyGraph_compact,"<#deltaDec>","PL");
+	PosAccuracyPlotLegend->Draw("same");
 
+	TLegend* PosAccuracyPlotLegend2= new TLegend(0.2,0.7,0.3,0.8);
+	PosAccuracyPlotLegend2->SetFillColor(0);
+	PosAccuracyPlotLegend2->SetTextSize(0.045);
+	PosAccuracyPlotLegend2->SetTextFont(52);
+	PosAccuracyPlotLegend2->SetHeader("Fitted");
+	PosAccuracyPlotLegend2->AddEntry(xPosAccuracyGraph_compact_fit,"<#deltaRA>","PL");
+	PosAccuracyPlotLegend2->AddEntry(yPosAccuracyGraph_compact_fit,"<#deltaDec>","PL");
+	PosAccuracyPlotLegend2->Draw("same");
 
+	//True pos accuracy
+	TCanvas* TruePosAccuracyPlot= new TCanvas("TruePosAccuracyPlot","TruePosAccuracyPlot");
+	TruePosAccuracyPlot->cd();
+
+	TH2D* TruePosAccuracyPlotBkg= new TH2D("TruePosAccuracyPlotBkg","",100,xMin_draw,xMax_draw,100,-20,20);
+	TruePosAccuracyPlotBkg->GetXaxis()->SetTitle("log_{10}(S_{true}/Jy)");
+	TruePosAccuracyPlotBkg->GetYaxis()->SetTitle("<#deltaRA>, <#deltaDec> ('')");
+	TruePosAccuracyPlotBkg->Draw();
+
+	xPosTrueAccuracyGraph_compact->SetMarkerStyle(8);
+	xPosTrueAccuracyGraph_compact->SetMarkerColor(kBlack);
+	xPosTrueAccuracyGraph_compact->SetLineColor(kBlack);
+	xPosTrueAccuracyGraph_compact->Draw("ep same");
+	
+	yPosTrueAccuracyGraph_compact->SetMarkerStyle(21);
+	yPosTrueAccuracyGraph_compact->SetMarkerColor(kBlack);
+	yPosTrueAccuracyGraph_compact->SetLineColor(kBlack);
+	yPosTrueAccuracyGraph_compact->Draw("ep same");
+
+	xPosTrueAccuracyGraph_compact_fit->SetMarkerStyle(21);
+	xPosTrueAccuracyGraph_compact_fit->SetMarkerColor(kRed);
+	xPosTrueAccuracyGraph_compact_fit->SetLineColor(kRed);
+	xPosTrueAccuracyGraph_compact_fit->Draw("ep same");
+	
+	yPosTrueAccuracyGraph_compact_fit->SetMarkerStyle(25);
+	yPosTrueAccuracyGraph_compact_fit->SetMarkerColor(kRed);
+	yPosTrueAccuracyGraph_compact_fit->SetLineColor(kRed);
+	yPosTrueAccuracyGraph_compact_fit->Draw("ep same");
+	
+	refLine_posAccuracy->Draw("same");
+	//expPosSigmaFcn_plus->Draw("l same");
+	//expPosSigmaFcn_minus->Draw("l same");
+
+	TLegend* TruePosAccuracyPlotLegend= new TLegend(0.6,0.7,0.7,0.8);
+	TruePosAccuracyPlotLegend->SetFillColor(0);
+	TruePosAccuracyPlotLegend->SetTextSize(0.045);
+	TruePosAccuracyPlotLegend->SetTextFont(52);	
+	TruePosAccuracyPlotLegend->SetHeader("Detected");
+	TruePosAccuracyPlotLegend->AddEntry(xPosTrueAccuracyGraph_compact,"<#deltaRA>","PL");
+	TruePosAccuracyPlotLegend->AddEntry(yPosTrueAccuracyGraph_compact,"<#deltaDec>","PL");
+	TruePosAccuracyPlotLegend->Draw("same");
+
+	TLegend* TruePosAccuracyPlotLegend2= new TLegend(0.6,0.7,0.7,0.8);
+	TruePosAccuracyPlotLegend2->SetFillColor(0);
+	TruePosAccuracyPlotLegend2->SetTextSize(0.045);
+	TruePosAccuracyPlotLegend2->SetTextFont(52);
+	TruePosAccuracyPlotLegend2->SetHeader("Fitted");
+	TruePosAccuracyPlotLegend2->AddEntry(xPosTrueAccuracyGraph_compact_fit,"<#deltaRA>","PL");
+	TruePosAccuracyPlotLegend2->AddEntry(yPosTrueAccuracyGraph_compact_fit,"<#deltaDec>","PL");
+	TruePosAccuracyPlotLegend2->Draw("same");
+	
 	//- Pos accuracy for extended sources
 	TCanvas* PosAccuracyPlot_ext= new TCanvas("PosAccuracyPlot_ext","PosAccuracyPlot_ext");
 	PosAccuracyPlot_ext->cd();
@@ -807,33 +950,10 @@ void Draw(){
 	PosAccuracyPlotLegend_ext->AddEntry(yPosAccuracyGraph_ext,"<#deltaDec>","PL");
 	PosAccuracyPlotLegend_ext->Draw("same");
 
+	
 	//===============================================
 	//==          DRAW FLUX ACCURACY
 	//===============================================
-	//- Peak accuracy
-	TCanvas* SPeakAccuracyPlot= new TCanvas("SPeakAccuracyPlot","SPeakAccuracyPlot");
-	SPeakAccuracyPlot->cd();
-
-	TH2D* SPeakAccuracyPlotBkg= new TH2D("SPeakAccuracyPlotBkg","",100,xMin_draw,xMax_draw,100,-5,5);
-	SPeakAccuracyPlotBkg->GetXaxis()->SetTitle("log_{10}(S/Jy)");
-	SPeakAccuracyPlotBkg->GetYaxis()->SetTitle("<Speak_{rec}/Speak_{true}-1>");
-	SPeakAccuracyPlotBkg->Draw();
-
-	SpeakAccuracyGraph_compact->SetMarkerStyle(8);
-	SpeakAccuracyGraph_compact->SetMarkerColor(kBlack);
-	SpeakAccuracyGraph_compact->SetLineColor(kBlack);
-	SpeakAccuracyGraph_compact->Draw("ep same");
-	
-	TLine* refLine_SpeakAccuracy= new TLine(xMin_draw,0,xMax_draw,0);
-	refLine_SpeakAccuracy->SetLineColor(kBlack);
-	refLine_SpeakAccuracy->SetLineStyle(kDashed);
-	refLine_SpeakAccuracy->Draw("same");
-
-	TLine* detectionThrLine_SpeakAccuracy= new TLine(SNThr,-5,SNThr,5);
-	detectionThrLine_SpeakAccuracy->SetLineColor(kBlack);
-	detectionThrLine_SpeakAccuracy->SetLineStyle(kDashed);
-	detectionThrLine_SpeakAccuracy->Draw("same");
-
 	//- FLux accuracy
 	TCanvas* FluxAccuracyPlot= new TCanvas("FluxAccuracyPlot","FluxAccuracyPlot");
 	FluxAccuracyPlot->cd();
@@ -1104,58 +1224,92 @@ int AnalyzeData(std::string filename){
 		NTrueSourceVSSignificanceHisto_compact->Fill(Z_true,1);
 		nTrueSources++;
 
-			
+		//Skip if not found
+		if(found==0) continue;			
+
 		//Fill rec info
-		if(found==1) {	
-			NRecSourceHisto_compact->Fill(lgFlux_true,1);
-			NRecSourceVSSignificanceHisto_compact->Fill(Z_true,1);
+		NRecSourceHisto_compact->Fill(lgFlux_true,1);
+		NRecSourceVSSignificanceHisto_compact->Fill(Z_true,1);
 
-			//double xOffset= fabs(X0_rec-X0_true);
-			//double yOffset= fabs(Y0_rec-Y0_true);
-			double xOffset= X0_sweighted_rec-X0_true;
-			double yOffset= Y0_sweighted_rec-Y0_true;
-			double Speak= Smax_rec;
-			double fluxDensity= S_rec/beamArea_rec;
-			double SpeakPull= Speak/S_true-1;
-			double FluxPull= fluxDensity/fluxDensity_true-1;
+		double xOffset_true= X0_sweighted_rec-X0_true;
+		double yOffset_true= Y0_sweighted_rec-Y0_true;
+
+		double xOffset= X0_sweighted_rec-X0_sweighted;
+		double yOffset= Y0_sweighted_rec-Y0_sweighted;
+		double Speak= Smax_rec;
+		double fluxDensity= S_rec/beamArea_rec;
+		double SpeakPull= Speak/S_true-1;
+		double FluxPull= fluxDensity/fluxDensity_true-1;
+		double FluxPull_peak= Speak/fluxDensity_true-1;
 			
-			if(HasFitInfo){
+		FluxList_compact[gBin-1].push_back(lgFlux_true);
+		xPosPullList_compact_centroid[gBin-1].push_back(xOffset);
+		yPosPullList_compact_centroid[gBin-1].push_back(yOffset);	
+		FluxDensityPullList_compact_peak[gBin-1].push_back(FluxPull_peak);					
 
-				//Get fit info
-				xOffset= X0_fit-X0_true;
-				yOffset= Y0_fit-Y0_true;
-				Speak= S_fit;
-				//fluxDensity= fluxDensity_fit/beamArea_rec;	
-				fluxDensity= fluxDensity_fit;	
-				SpeakPull= Speak/S_true-1;
-				FluxPull= fluxDensity/fluxDensity_true-1;
-						
-				NFitSourceHisto_compact->Fill(lgFlux_true,1);	
+		if(HasFitInfo){
+			
+			//Get fit info
+			xOffset_true= X0_fit-X0_true;
+			yOffset_true= Y0_fit-Y0_true;
+			xOffset= X0_fit-X0_sweighted;
+			yOffset= Y0_fit-Y0_sweighted;
+
+			Speak= S_fit;
+			//fluxDensity= fluxDensity_fit/beamArea_rec;	
+			fluxDensity= fluxDensity_fit;	
+			SpeakPull= Speak/S_true-1;
+			FluxPull= fluxDensity/fluxDensity_true-1;
 				
-				FluxList_compact[gBin-1].push_back(lgFlux_true);
-				xPosPullList_compact[gBin-1].push_back(xOffset);
-				yPosPullList_compact[gBin-1].push_back(yOffset);
-				SpeakPullList_compact[gBin-1].push_back(SpeakPull);
-				FluxDensityPullList_compact[gBin-1].push_back(FluxPull);
-							
-			}//close if has fit info			
-						
-		}//close if found
+			//Fill histos
+			NRecSourceHisto_compact_fit->Fill(lgFlux_true,1);
+			NRecSourceVSSignificanceHisto_compact_fit->Fill(Z_true,1);
 		
+			//Fill vector fit info
+			FluxList_compact_fit[gBin-1].push_back(lgFlux_true);
+			xPosPullList_compact_fit[gBin-1].push_back(xOffset);
+			yPosPullList_compact_fit[gBin-1].push_back(yOffset);
+			xPosTruePullList_compact_fit[gBin-1].push_back(xOffset_true);
+			yPosTruePullList_compact_fit[gBin-1].push_back(yOffset_true);
+			FluxDensityPullList_compact_fit[gBin-1].push_back(FluxPull);
+							
+			//Fill vectors cumulated info
+			xPosPullList_compact[gBin-1].push_back(xOffset);
+			yPosPullList_compact[gBin-1].push_back(yOffset);
+			xPosTruePullList_compact[gBin-1].push_back(xOffset_true);
+			yPosTruePullList_compact[gBin-1].push_back(yOffset_true);
+			FluxDensityPullList_compact[gBin-1].push_back(FluxPull);
+				
+		}//close if has fit info
+		else{
+			//Fill vectors cumulated info
+			xPosPullList_compact[gBin-1].push_back(xOffset);
+			yPosPullList_compact[gBin-1].push_back(yOffset);
+			xPosTruePullList_compact[gBin-1].push_back(xOffset_true);
+			yPosTruePullList_compact[gBin-1].push_back(yOffset_true);
+			FluxDensityPullList_compact[gBin-1].push_back(FluxPull_peak);
+				
+		}
+			
 	}//end loop sources
 
 	INFO_LOG("Selected "<<nTrueSources<<"/"<<SourceMatchInfo->GetEntries()<<" true compact sources for analysis...");
 
 	//============================================================
-	//===    COMPUTE SOURCE FINDING RELIABILITY
+	//===    COMPUTE COMPACT SOURCE FINDING RELIABILITY
 	//============================================================	
 	//## Loop over rec sources
 	for(int i=0;i<RecSourceInfo->GetEntries();i++){
 		RecSourceInfo->GetEntry(i);
 		
+		//Skip if not compact source
+		bool isPointSource= (Type_rec==Source::ePointLike);
+		if(!isPointSource) continue;
+
 		//Fill rec info
 		double lgFlux_rec= log10(fluxDensity_rec/beamArea_rec);
-		double Z_rec= fluxDensity_rec/noiseLevel_true;
+		double Z_rec= (fluxDensity_rec/beamArea_rec)/noiseLevel_true;
+		INFO_LOG("fluxDensity_rec="<<fluxDensity_rec<<", lgFlux_rec="<<lgFlux_rec<<", Z_rec="<<Z_rec);
 		NRecSourceHisto_reliability_compact->Fill(lgFlux_rec,1);
 		NRecSourceVSSignificanceHisto_reliability_compact->Fill(Z_rec,1);
 
