@@ -228,18 +228,17 @@ const std::string Source::GetDS9Region(bool dumpNestedSourceInfo){
 	//global color=red dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 image
 	std::stringstream sstream;
 	sstream<<"polygon ";
-	for(unsigned int i=0; i<m_Contours.size(); i++){ 
+	for(size_t i=0; i<m_Contours.size(); i++){ 
 		int nPoints= m_Contours[i]->GetN();
 		for(int j=0;j<nPoints;j++){
 			TVector2* contPnt= m_Contours[i]->GetPoint(j);
 			if(!contPnt) continue;
 			sstream<<(int)contPnt->X()+1<<" "<<(int)contPnt->Y()+1<<" ";
-			//sstream<<(int)contPnt->X()<<" "<<(int)contPnt->Y()<<" ";
 		}
 	}
-	//sstream<<"# text={S"<<Id<<"}";
-	sstream<<"# text={"<<this->GetName()<<"}";
+	sstream<<"# text={"<<this->GetName()<<"} color="<<this->GetDS9RegionColor()<<" tag={"<<this->GetDS9RegionTag()<<"}";
 
+	//Fill nested source regions
 	if(dumpNestedSourceInfo && m_HasNestedSources){			
 		sstream<<endl;
 		for(unsigned int k=0;k<m_NestedSources.size();k++){
@@ -251,11 +250,10 @@ const std::string Source::GetDS9Region(bool dumpNestedSourceInfo){
 					TVector2* contPnt= nestedContours[i]->GetPoint(j);
 					if(!contPnt) continue;
 					sstream<<(int)contPnt->X()+1<<" "<<(int)contPnt->Y()+1<<" ";
-					//sstream<<(int)contPnt->X()<<" "<<(int)contPnt->Y()<<" ";
 				}
 			}//end loop contours
-			//sstream<<"# text={S"<<Id<<"_Nest"<<k<<"}";
-			sstream<<"# text={"<<this->GetName()<<"_Nest"<<k<<"}";
+			//sstream<<"# text={"<<m_NestedSources[k]->GetName()<<"}";
+			sstream<<"# text={"<<m_NestedSources[k]->GetName()<<"} color="<<m_NestedSources[k]->GetDS9RegionColor()<<" tag={"<<m_NestedSources[k]->GetDS9RegionTag()<<"}";
 			if(k!=m_NestedSources.size()-1) sstream<<endl;
 		}//end loop nested sources
 	}//close dumpNestedSourceInfo
@@ -280,12 +278,14 @@ const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNested
 			//Get ellipse pars
 			double x0= ellipses[i]->GetX1();
 			double y0= ellipses[i]->GetY1();
-			double R1= ellipses[i]->GetR1();
-			double R2= ellipses[i]->GetR2();
+			double R1= ellipses[i]->GetR1()*2;//DS9 wants axis (not semi-axis)
+			double R2= ellipses[i]->GetR2()*2;
 			double theta= ellipses[i]->GetTheta();
 			//theta-= 90;//DS9 format
-			//sstream<<"ellipse "<<x0+1<<" "<<y0+1<<" "<<R1<<" "<<R2<<" "<<theta<<" # text={S"<<Id<<"_"<<i+1<<"}";
-			sstream<<"ellipse "<<x0+1<<" "<<y0+1<<" "<<R1<<" "<<R2<<" "<<theta<<" # text={"<<this->GetName()<<"_"<<i+1<<"}";
+			//sstream<<"ellipse "<<x0+1<<" "<<y0+1<<" "<<R1<<" "<<R2<<" "<<theta<<" # text={"<<this->GetName()<<"_"<<i+1<<"}";
+			sstream<<"ellipse "<<x0+1<<" "<<y0+1<<" "<<R1<<" "<<R2<<" "<<theta<<" # text={"<<this->GetName()<<"_fitcomp"<<i+1<<"} ";
+			sstream<<"color=red tag={point-like} tag={fitted component}";
+
 			if(i!=ellipses.size()-1) sstream<<endl;
 		}//end loop ellipses
 

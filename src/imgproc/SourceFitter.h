@@ -30,6 +30,7 @@
 
 #include <SysUtils.h>
 #include <CodeUtils.h>
+#include <Consts.h>
 
 #include <TObject.h>
 #include <TMatrixD.h>
@@ -226,7 +227,12 @@ class SourceComponentPars : public TObject {
 			double y0= FitPars["y0"];
 			double sigmaX= FitPars["sigmaX"];
 			double sigmaY= FitPars["sigmaY"];
-			double theta= FitPars["theta"];			
+			double theta= FitPars["theta"];	
+			if(useFWHM){
+				sigmaX*= GausSigma2FWHM/2.;
+				sigmaY*= GausSigma2FWHM/2.;
+			}
+		
 			//return StatsUtils::GetFitEllipse(x0,y0,sigmaX,sigmaY,theta,useFWHM);
 
 			TEllipse* ellipse= new TEllipse(x0,y0,sigmaX,sigmaY,0.,360.,theta);

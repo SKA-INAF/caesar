@@ -152,7 +152,9 @@ int SourceFitter::FitSource(Source* aSource,SourceFitOptions& fitOptions)
 	double Smax= aSource->GetSmax();
 	double Smin= aSource->GetSmin();
 	double Srms=  aSource->RMS; 
-	INFO_LOG("Source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") range: X["<<Xmin<<","<<Xmax<<"], Y["<<Ymin<<","<<Ymax<<"]");
+	double Smedian= aSource->Median;
+	double Smad= aSource->MedianRMS;
+	INFO_LOG("Source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") range: X["<<Xmin<<","<<Xmax<<"], Y["<<Ymin<<","<<Ymax<<"], Smedian="<<Smedian<<", Smad="<<Smax<<", Srms="<<Srms);
 
 	//## Get source flux image
 	INFO_LOG("Get flux histo & curv map for source (id="<<aSource->Id<<", name="<<aSource->GetName()<<")");	
@@ -271,15 +273,19 @@ int SourceFitter::FitSource(Source* aSource,SourceFitOptions& fitOptions)
 			return -1;
 		}
 
-		//Remove faint peaks
-		if(rmsMean>0){
+		//Remove faint peaks in case more than one peak is found
+		if(peakPoints.size()>1){
 			double Speak= fluxMapHisto->GetBinContent(gbin);
-			double Zpeak= (Speak-bkgMean)/rmsMean;
-			if(Zpeak<fitOptions.peakZThrMin) {
-				INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak="<<Zpeak<<"<"<<fitOptions.peakZThrMin<<")");
+			double Zpeak_imgbkg= 0;	
+			double Zpeak_sourcebkg= 0;
+			if(rmsMean!=0) Zpeak_imgbkg= (Speak-bkgMean)/rmsMean;
+			if(Smad!=0) Zpeak_sourcebkg= (Speak-Smedian)/Smad;
+			//if(Zpeak_imgbkg<fitOptions.peakZThrMin) {
+			if(Zpeak_sourcebkg<fitOptions.peakZThrMin) {
+				INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak_imgbkg="<<Zpeak_imgbkg<<", Zpeak_sourcebkg="<<Zpeak_sourcebkg<<"<"<<fitOptions.peakZThrMin<<")");
 				continue;
 			}
-		}
+		}//close if
 
 		//Remove peaks lying on the source contour
 		if(aSource->HasContours() && aSource->IsPointOnContour(x,y,0.5)) {

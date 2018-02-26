@@ -258,8 +258,7 @@ class Source : public Blob {
 
 			//Check input list
 			if(sources.empty()){
-				WARN_LOG("Given nested collection to be set is empty, nothing to be done!");
-				return -1;
+				WARN_LOG("Given nested collection to be set is empty, will remove all existing sources!");
 			}
 	
 			//Release memory of existing collection?
@@ -310,10 +309,46 @@ class Source : public Blob {
 		* \brief Get DS9 fitted ellipse info
 		*/
 		const std::string GetDS9FittedEllipseRegion(bool useFWHM=true,bool dumpNestedSourceInfo=false);
-		
+
+		/**
+		* \brief Get DS9 region color according to source type
+		*/
+		std::string GetDS9RegionColor(){
+			std::string colorStr= "white";
+			if(Type==Source::eExtended) colorStr= "green";
+			else if(Type==Source::eCompactPlusExtended) colorStr= "magenta";
+			else if(Type==Source::ePointLike) colorStr= "red";
+			else if(Type==Source::eCompact) colorStr= "blue";
+			else colorStr= "white";
+			return colorStr;
+		}//close GetDS9RegionColor()
+
+		/**
+		* \brief Get DS9 region tag according to source type
+		*/
+		std::string GetDS9RegionTag(){
+			std::string tagStr= "unknown";
+			if(Type==Source::eExtended) tagStr= "extended";
+			else if(Type==Source::eCompactPlusExtended) tagStr= "extended-compact";
+			else if(Type==Source::ePointLike) tagStr= "point-like";
+			else if(Type==Source::eCompact) tagStr= "compact";
+			else tagStr= "unknown";
+			return tagStr;
+		}//close GetDS9RegionTag()
+
 		//================================================
 		//==         UTILS
 		//================================================
+		/**
+		* \brief Dump source info
+		*/
+		void Print(){
+			cout<<"*** SOURCE NO. "<<Id<<" (NAME: "<<this->GetName()<<") ***"<<endl;
+			cout<<"N= "<<NPix<<", Type="<<Type<<", Pos("<<X0<<","<<Y0<<"), BoundingBox(["<<m_Xmin<<","<<m_Xmax<<"], ["<<m_Ymin<<","<<m_Ymax<<"])"<<endl;
+			cout<<"S="<<m_S<<", Smin/Smax="<<m_Smin<<"/"<<m_Smax<<", Mean="<<Mean<<", RMS="<<RMS<<", Median="<<Median<<", MedianRMS="<<MedianRMS<<endl;
+			cout<<"****************************"<<endl;
+		}
+
 		/**
 		* \brief Is source inside given source
 		*/

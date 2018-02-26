@@ -1244,7 +1244,7 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		sources_merged[k]->SetId(k+1);
 		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
 		sources_merged[k]->SetBeamFluxIntegral(beamArea);
-		//sources_merged[k]->Print();
+		sources_merged[k]->Print();
 		std::vector<Source*> nestedSources= sources_merged[k]->GetNestedSources();
 		for(size_t l=0;l<nestedSources.size();l++){
 			nestedSources[l]->SetId(l+1);
@@ -2345,6 +2345,9 @@ int SFinder::SelectSources(std::vector<Source*>& sources){
 			INFO_LOG("[PROC "<<m_procId<<"] - Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as a point-like source ...");
 			sources[i]->SetType(Source::ePointLike);
 		}
+		else{
+			INFO_LOG("[PROC "<<m_procId<<"] - Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) NOT tagged as point-like source ...");
+		}
 
 		//Tag nested sources
 		std::vector<Source*> nestedSources= sources[i]->GetNestedSources();
@@ -2378,7 +2381,9 @@ int SFinder::SelectSources(std::vector<Source*>& sources){
 		}//end loop nested sources
 			
 		//Add selected nested collection
-		sources[i]->SetNestedSources(nestedSources_sel,true);	
+		if(!nestedSources.empty()){
+			sources[i]->SetNestedSources(nestedSources_sel,true);	
+		}
 
 		//Add source to the list	
 		sources_sel.push_back(sources[i]);
@@ -2386,7 +2391,7 @@ int SFinder::SelectSources(std::vector<Source*>& sources){
 	}//end loop sources
 
 	
-	INFO_LOG("[PROC "<<m_procId<<"] - Added "<<nSelSources<<" bright sources to the selected list...");
+	INFO_LOG("[PROC "<<m_procId<<"] - Added "<<nSelSources<<" sources to the selected list...");
 
 	//Clear initial vector (DO NOT CLEAR MEMORY!) and fill with selection (then reset selection)
 	sources.clear();
@@ -2803,12 +2808,12 @@ int SFinder::SaveDS9RegionFile(){
 
 	DEBUG_LOG("[PROC "<<m_procId<<"] - Saving "<<m_SourceCollection.size()<<" sources to file...");
 
-	std::string colorStr_last= "white";
-
-	for(unsigned int k=0;k<m_SourceCollection.size();k++){
+	
+	for(size_t k=0;k<m_SourceCollection.size();k++){
 		int source_type= m_SourceCollection[k]->Type;
 		bool isAtEdge= m_SourceCollection[k]->IsAtEdge();
 
+		/*
 		//Set source color/tag/...
 		std::string colorStr= "white";
 		std::string tagStr= "unknown";
@@ -2837,6 +2842,7 @@ int SFinder::SaveDS9RegionFile(){
 			colorStr_last= colorStr;
 			//fprintf(fout,"global color=%s font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n",colorStr.c_str());
 		}
+		*/
 
 		DEBUG_LOG("[PROC "<<m_procId<<"] - Dumping DS9 region info for source no. "<<k<<" ...");
 		std::string regionInfo= "";
@@ -2848,8 +2854,8 @@ int SFinder::SaveDS9RegionFile(){
 		}
 
 		//Set source color & tag
-		regionInfo+= std::string(" color=") + colorStr;
-		regionInfo+= std::string(" tag={") + tagStr + std::string("}");
+		//regionInfo+= std::string(" color=") + colorStr;
+		//regionInfo+= std::string(" tag={") + tagStr + std::string("}");
 		
 		//Write source region to file
 		fprintf(fout,"%s\n",regionInfo.c_str());
@@ -2868,17 +2874,16 @@ int SFinder::SaveDS9RegionFile(){
 
 		//## Saving DS9 file region
 		DEBUG_LOG("[PROC "<<m_procId<<"] - Saving DS9 region header for fitted source catalog...");
-		fprintf(fout_fit,"global color=blue font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
+		fprintf(fout_fit,"global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
 		fprintf(fout_fit,"image\n");
 
 		DEBUG_LOG("[PROC "<<m_procId<<"] - Saving "<<m_SourceCollection.size()<<" sources to file...");
-		bool useFWHM= false;
+		bool useFWHM= true;
 
 		for(unsigned int k=0;k<m_SourceCollection.size();k++){
 			DEBUG_LOG("[PROC "<<m_procId<<"] - Dumping DS9 region fitting info for source no. "<<k<<" ...");
 			std::string regionInfo= m_SourceCollection[k]->GetDS9FittedEllipseRegion(useFWHM,true);
 			fprintf(fout_fit,"%s\n",regionInfo.c_str());
-	  	
 		}//end loop sources
 		
 		DEBUG_LOG("[PROC "<<m_procId<<"] - Closing DS9 file region for fitted sources...");

@@ -1705,14 +1705,12 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 			
 			for(int i=0;i<nSources;i++){
 				int sourceId= sources[i]->Id;
-				bool isInside= NestedSources[j]->IsInsideSource(sources[i]);
+				//bool isInside= NestedSources[j]->IsInsideSource(sources[i]);
+				bool isOverlapping= NestedSources[j]->IsAdjacentSource(sources[i]);
 				
-				if(isInside){
+				if(isOverlapping){
 					DEBUG_LOG("Nested source no. "<<j<<" added to source id="<<sourceId<<" ...");
 					MotherNestedAssociationList[i].push_back(j);
-					//NestedSources[j]->ComputeStats();
-					//NestedSources[j]->ComputeMorphologyParams();
-					//sources[i]->AddNestedSource(NestedSources[j]);
 					isMotherFound= true;
 					break;
 				}
