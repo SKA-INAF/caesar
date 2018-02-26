@@ -202,6 +202,7 @@ bool FindPointSourceMatch(int source_true_index);
 bool FindExtendedSourceMatch(int source_true_index);
 int FindSourceMatches();
 int FindRealAndFakeSources();
+int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex);
 int FindPointSourceRealAndFakeSources(int source_rec_index);
 int FindExtendedRealAndFakeSources(int source_rec_index);
 int ReadSourceData();
@@ -447,32 +448,6 @@ int FindSourceMatches()
 
 }//close FindSourceMatches()
 
-int FindRealAndFakeSources()
-{
-	//Loop over rec sources and find associations to true
-	for(size_t i=0;i<sources_rec.size();i++){
-
-		if(i%100==0) INFO_LOG("Finding associations for rec source no. "<<i<<"/"<<sources_rec.size()<<"...");
-
-		int sourceType= sources_rec[i]->Type;
-		if(enableCompactSourceCorrelation && (sourceType==Source::eCompact || sourceType==Source::ePointLike) ){
-			if(FindPointSourceRealAndFakeSources(i)<0){
-				WARN_LOG("Failed to find true associations to rec source "<<i<<"!");
-			}
-		}
-		if(enableExtendedSourceCorrelation && (sourceType==Source::eExtended || sourceType==Source::eCompactPlusExtended) ){
-			if(FindExtendedRealAndFakeSources(i)<0){
-				WARN_LOG("Failed to find true associations to rec source "<<i<<"!");
-			}
-		}
-
-	}//end loop rec sources
-
-
-	return 0;
-
-}//close FindRealAndFakeSources()
-
 
 
 bool FindPointSourceMatch(int source_true_index)
@@ -626,6 +601,7 @@ bool FindPointSourceMatch(int source_true_index)
 		MatchingSourceInfo info(match_source_index,componentIndex,nestedIndex);
 		std::map<MatchingSourceInfo,std::vector<int>>::iterator it= RecSourceAssociationMap.find(info);
 		if(RecSourceAssociationMap.empty() || it==RecSourceAssociationMap.end()){//item not found
+			INFO_LOG("Match rec source (name="<<SourceName_rec<<", index="<<match_source_index<<", nestedIndex="<<nestedIndex<<", componentIndex="<<componentIndex<<") not found in map, adding it...");
 			RecSourceAssociationMap[info].push_back(source_true_index);
 		}
 		else{
@@ -635,6 +611,7 @@ bool FindPointSourceMatch(int source_true_index)
 				!RecSourceAssociationMap[info].empty() && 
 				vIt!=RecSourceAssociationMap[info].end()
 			);
+			INFO_LOG("Match rec source (name="<<SourceName_rec<<", index="<<match_source_index<<", nestedIndex="<<nestedIndex<<", componentIndex="<<componentIndex<<") found in map, appending to it...");
 			if(!itemAlreadyPresent){
 				RecSourceAssociationMap[info].push_back(source_true_index);
 			}
@@ -762,6 +739,22 @@ bool FindExtendedSourceMatch(int source_true_index)
 		//## Store rec-true association map
 		//## NB: Find if this rec source was already associated to other true sources
 		MatchingSourceInfo info(match_source_index,-1);
+		std::map<MatchingSourceInfo,std::vector<int>>::iterator it= RecSourceAssociationMap.find(info);
+		if(RecSourceAssociationMap.empty() || it==RecSourceAssociationMap.end()){//item not found
+			RecSourceAssociationMap[info].push_back(source_true_index);
+		}
+		else{
+			//Find if true source was already associated to this source
+			std::vector<int>::iterator vIt= std::find(RecSourceAssociationMap[info].begin(),RecSourceAssociationMap[info].end(),source_true_index);
+			bool itemAlreadyPresent= (
+				!RecSourceAssociationMap[info].empty() && 
+				vIt!=RecSourceAssociationMap[info].end()
+			);
+			if(!itemAlreadyPresent){
+				RecSourceAssociationMap[info].push_back(source_true_index);
+			}
+		}
+		/*
 		std::map<MatchingSourceInfo,std::vector<int>>::iterator it= RecSourceAssociationMap_ext.find(info);
 		if(RecSourceAssociationMap_ext.empty() || it==RecSourceAssociationMap_ext.end()){//item not found
 			RecSourceAssociationMap_ext[info].push_back(source_true_index);
@@ -777,7 +770,7 @@ bool FindExtendedSourceMatch(int source_true_index)
 				RecSourceAssociationMap_ext[info].push_back(source_true_index);
 			}
 		}
-
+		*/
 	}//close if match found
 	
 	//## Fill ROOT tree with match info
@@ -786,6 +779,152 @@ bool FindExtendedSourceMatch(int source_true_index)
 	return foundSource;
 
 }//close FindExtendedSourceMatch()
+
+int FindRealAndFakeSources()
+{
+	//Loop over rec sources and find associations to true
+	for(size_t i=0;i<sources_rec.size();i++){
+
+		if(i%100==0) INFO_LOG("Finding associations for rec source no. "<<i<<"/"<<sources_rec.size()<<"...");
+
+		int sourceType= sources_rec[i]->Type;
+
+		//Store mother rec source associations to true sources
+		INFO_LOG("Store mother rec source no. "<<i+1<<" (name="<<sources_rec[i]->GetName()<<") associations to true sources");
+		if(FindRecSourceMatch(sources_rec[i],i,-1)<0){
+			WARN_LOG("Failed to find true associations to rec source "<<i<<" (type="<<sourceType<<")!");
+		}
+
+		//Loop over nested sources
+		std::vector<Source*> nestedSources= sources_rec[i]->GetNestedSources();
+		for(size_t k=0;k<nestedSources.size();k++){
+			INFO_LOG("Store nested source no. "<<k+1<<" (name="<<nestedSources[k]->GetName()<<") of mother rec source no. "<<i+1<<" (name="<<sources_rec[i]->GetName()<<") associations to true sources");
+		
+			if(FindRecSourceMatch(nestedSources[k],i,k)<0){
+				WARN_LOG("Failed to find true associations to nested source no. "<<k+1<<" of rec source "<<i<<" (type="<<sourceType<<")!");
+			}
+		}//end loop nested
+
+		/*
+		if(enableCompactSourceCorrelation && (sourceType==Source::eCompact || sourceType==Source::ePointLike) ){
+			if(FindPointSourceRealAndFakeSources(i)<0){
+				WARN_LOG("Failed to find true associations to rec source "<<i<<"!");
+			}
+		}
+		if(enableExtendedSourceCorrelation && (sourceType==Source::eExtended || sourceType==Source::eCompactPlusExtended) ){
+			if(FindExtendedRealAndFakeSources(i)<0){
+				WARN_LOG("Failed to find true associations to rec source "<<i<<"!");
+			}
+		}
+		*/
+
+	}//end loop rec sources
+
+
+	return 0;
+
+}//close FindRealAndFakeSources()
+
+
+int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex)
+{
+	//Get rec source info
+	if(!source_rec){
+		WARN_LOG("Null ptr to source given!");
+		return -1;
+	}
+	std::string sname= std::string(source_rec->GetName());
+	SourceName_rec= std::string(source_rec->GetName());
+	SourceType_rec= source_rec->Type;			
+	X0_rec= source_rec->X0;
+	Y0_rec= source_rec->Y0;
+	Smax_rec= source_rec->GetSmax();
+	fluxDensity_rec= source_rec->GetS();
+	beamArea_rec= source_rec->GetBeamFluxIntegral();
+	if(correctFlux){
+		//Smax_rec/= beamArea_rec;
+		fluxDensity_rec/= beamArea_rec;
+	}
+	HasFitInfo= source_rec->HasFitInfo();
+
+	//Init association info
+	nTrueMatchedSources= 0;
+	SourceNameList_true.clear();
+	PosXList_true.clear();
+	PosYList_true.clear();
+
+	//Find association to true sources
+	if(HasFitInfo){
+		SourceFitPars fitPars= source_rec->GetFitPars();
+		for(int k=0;k<fitPars.GetNComponents();k++){
+			SourceName_rec= sname + std::string(Form("_fitcomp%d",k+1));
+			SourceType_rec= Source::ePointLike;
+			X0_rec= fitPars.GetParValue(k,"x0");	
+			Y0_rec= fitPars.GetParValue(k,"y0");
+			Smax_rec= fitPars.GetParValue(k,"A");
+			fluxDensity_rec= fitPars.GetComponentFluxDensity(k);
+			if(correctFlux){
+				//Smax_rec/= beamArea_rec;
+				fluxDensity_rec/= beamArea_rec;
+			}
+
+			nTrueMatchedSources= 0;
+			SourceNameList_true.clear();
+			PosXList_true.clear();
+			PosYList_true.clear();
+
+			//Find true sources associated to rec source
+			std::map<MatchingSourceInfo,std::vector<int>>::iterator it= RecSourceAssociationMap.find(MatchingSourceInfo(sourceIndex,k,nestedIndex));
+			if(it!=RecSourceAssociationMap.end()){
+				std::vector<int> true_source_indexes= it->second;
+				nTrueMatchedSources= static_cast<int>(true_source_indexes.size());
+				for(size_t j=0;j<true_source_indexes.size();j++){
+					int index= true_source_indexes[j];
+					SourceName= std::string(sources[index]->GetName());
+					X0_true= sources[index]->X0;
+					Y0_true= sources[index]->Y0;
+					bool hasTrueInfo= sources[index]->HasTrueInfo();
+					if(hasTrueInfo) sources[index]->GetTruePos(X0_true,Y0_true);
+					SourceNameList_true.push_back(SourceName);
+					PosXList_true.push_back(X0_true);
+					PosYList_true.push_back(Y0_true);
+				}//end loop associated true sources
+			}//close if found true source association
+
+			//Fill tree
+			recSourceInfo->Fill();
+				
+		}//end loop fitted components	
+	}//close has fit info
+	else{
+			
+		//Find true sources associated to rec source
+		std::map<MatchingSourceInfo,std::vector<int>>::iterator it= RecSourceAssociationMap.find(MatchingSourceInfo(sourceIndex,-1,nestedIndex));
+		if(it!=RecSourceAssociationMap.end()){
+			std::vector<int> true_source_indexes= it->second;
+			nTrueMatchedSources= static_cast<int>(true_source_indexes.size());
+			for(size_t j=0;j<true_source_indexes.size();j++){
+				int index= true_source_indexes[j];
+				SourceName= std::string(sources[index]->GetName());
+				X0_true= sources[index]->X0;
+				Y0_true= sources[index]->Y0;
+				bool hasTrueInfo= sources[index]->HasTrueInfo();
+				if(hasTrueInfo) sources[index]->GetTruePos(X0_true,Y0_true);
+				SourceNameList_true.push_back(SourceName);
+				PosXList_true.push_back(X0_true);
+				PosYList_true.push_back(Y0_true);
+			}//end loop associated true sources
+		}//close if found true source association
+
+		//Fill tree
+		recSourceInfo->Fill();	
+
+	}//close !hasFitInfo
+
+
+	return 0;
+
+}//close FindRealAndFakeSources()
 
 int FindPointSourceRealAndFakeSources(int source_rec_index)
 {
