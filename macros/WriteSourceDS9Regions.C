@@ -94,6 +94,8 @@ int WriteRegions(std::string fileName)
 	}
 
 	std::string fileName_noext= CodeUtils::ExtractFileNameFromPath(fileName,true);
+	INFO_LOG("Reading input file "<<fileName<<" (fileName_noext="<<fileName_noext<<")...");	
+
 	std::string DS9CatalogFileName= std::string("ds9regions_") + fileName_noext + std::string(".reg");
 	INFO_LOG("Writing DS9 region file "<<DS9CatalogFileName<<"...");
 	

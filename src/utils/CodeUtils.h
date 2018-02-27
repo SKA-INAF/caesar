@@ -462,14 +462,14 @@ class CodeUtils : public TObject {
 		static std::string ExtractFileNameFromPath(const std::string& s,bool strip_extension=false){
 			char sep = '/';
    		size_t pos = s.rfind(sep, s.length());
-			std::string filename= "";
+			std::string filename= s;
    		if (pos != string::npos) {
       	filename= s.substr(pos+1, s.length() - pos);
-				if(strip_extension) {
-					std::string filename_noext= ExtractSubString(filename,".");
-					filename= filename_noext;
-				}
    		}
+			if(strip_extension) {
+				std::string filename_noext= ExtractSubString(filename,".");
+				filename= filename_noext;
+			}
    		return filename;
 		}
 

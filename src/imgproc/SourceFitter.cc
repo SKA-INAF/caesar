@@ -280,8 +280,8 @@ int SourceFitter::FitSource(Source* aSource,SourceFitOptions& fitOptions)
 			double Zpeak_sourcebkg= 0;
 			if(rmsMean!=0) Zpeak_imgbkg= (Speak-bkgMean)/rmsMean;
 			if(Smad!=0) Zpeak_sourcebkg= (Speak-Smedian)/Smad;
-			if(Zpeak_imgbkg<fitOptions.peakZThrMin) {
-			//if(Zpeak_sourcebkg<fitOptions.peakZThrMin) {
+			//if(Zpeak_imgbkg<fitOptions.peakZThrMin) {
+			if(Zpeak_sourcebkg<fitOptions.peakZThrMin) {
 				INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak_imgbkg="<<Zpeak_imgbkg<<", Zpeak_sourcebkg="<<Zpeak_sourcebkg<<"<"<<fitOptions.peakZThrMin<<")");
 				continue;
 			}
