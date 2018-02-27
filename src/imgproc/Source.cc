@@ -630,7 +630,71 @@ bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, const std::vector<So
 
 }//close FindSourceMatchByPos()
 
+bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, Source* source, float matchPosThr)
+{
+	//Set reference position to be compared with collection
+	double X0_ref= X0;
+	double Y0_ref= Y0;
+	//double X0_ref= m_Sx;
+	//double Y0_ref= m_Sy;
+	if(m_HasTrueInfo){
+		X0_ref= m_X0_true;
+		Y0_ref= m_Y0_true;
+	}	
 
+	//If source has fit info loop over fitted components to find best match
+	bool hasFitInfo= source->HasFitInfo();
+	bool foundMatch= false;
+	if(hasFitInfo){
+		SourceFitPars fitPars= source->GetFitPars();
+		double dist_best= 1.e+99;
+		long int best_component= -1;
+		INFO_LOG("# fit components="<<fitPars.GetNComponents());
+		for(int k=0;k<fitPars.GetNComponents();k++){
+			double X0_fitcomp= fitPars.GetParValue(k,"x0");	
+			double Y0_fitcomp= fitPars.GetParValue(k,"y0");
+			double dx= fabs(X0_fitcomp-X0_ref);
+			double dy= fabs(Y0_fitcomp-Y0_ref);
+			double dist= sqrt(dx*dx+dy*dy);
+			if(dx<=matchPosThr && dy<=matchPosThr && dist<dist_best){//match found
+				best_component= k;
+				dist_best= dist;
+			}
+			INFO_LOG("Match info for source "<<this->GetName()<<" (pos("<<X0_ref<<","<<Y0_ref<<") against source "<<source->GetName()<<" (pos("<<X0_fitcomp<<","<<Y0_fitcomp<<"), dx="<<dx<<", dy="<<dy<<" dist="<<dist<<", matchPosThr="<<matchPosThr);
+		}//end loop fitted components	
+			
+		if(best_component!=-1){
+			foundMatch= true;
+			pars.posDiff= dist_best;
+			pars.fitComponentIndex= best_component;
+		}
+	
+		INFO_LOG("Match info for source "<<this->GetName()<<" (pos("<<X0_ref<<","<<Y0_ref<<") against source "<<source->GetName()<<" (pos("<<source->X0<<","<<source->Y0<<"), found? "<<foundMatch<<", hasFitInfo? "<<hasFitInfo<<", dist_best="<<dist_best<<" best_component="<<best_component<<", matchPosThr="<<matchPosThr);
+	
+
+	}//close if has fit info
+	else{
+		//No fit info available so compute offset using source barycenter 
+		double dx= fabs(source->X0 - X0_ref);
+		double dy= fabs(source->Y0 - Y0_ref);
+		//double dx= fabs(source->GetSx() - X0_ref);
+		//double dy= fabs(source->GetSy() - Y0_ref);
+		double dist= sqrt(dx*dx+dy*dy);
+		
+		if(dx<=matchPosThr && dy<=matchPosThr){//match found
+			foundMatch= true;
+			pars.posDiff= dist;
+			pars.fitComponentIndex= -1;
+		}
+
+		INFO_LOG("Match info for source "<<this->GetName()<<" (pos("<<X0_ref<<","<<Y0_ref<<") against source "<<source->GetName()<<" (pos("<<source->X0<<","<<source->Y0<<"), found? "<<foundMatch<<", dx="<<dx<<", dy="<<dy<<" matchPosThr="<<matchPosThr); 
+
+	}//close else !has fit info
+
+	
+	return foundMatch;
+
+}//close FindSourceMatchByPos()
 /*
 bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, const std::vector<Source*>& sources, float matchPosThr)
 {
@@ -735,57 +799,7 @@ bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, const std::vector<So
 
 
 
-bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, Source* source, float matchPosThr)
-{
-	//Set reference position to be compared with collection
-	double X0_ref= X0;
-	double Y0_ref= Y0;
-	if(m_HasTrueInfo){
-		X0_ref= m_X0_true;
-		Y0_ref= m_Y0_true;
-	}	
 
-	//If source has fit info loop over fitted components to find best match
-	bool hasFitInfo= source->HasFitInfo();
-	bool foundMatch= false;
-	if(hasFitInfo){
-		SourceFitPars fitPars= source->GetFitPars();
-		double dist_best= 1.e+99;
-		long int best_component= -1;
-		for(int k=0;k<fitPars.GetNComponents();k++){
-			double X0_fitcomp= fitPars.GetParValue(k,"x0");	
-			double Y0_fitcomp= fitPars.GetParValue(k,"y0");
-			double dx= fabs(X0_fitcomp-X0_ref);
-			double dy= fabs(Y0_fitcomp-Y0_ref);
-			double dist= sqrt(dx*dx+dy*dy);
-			if(dx<=matchPosThr && dy<=matchPosThr && dist<dist_best){//match found
-				best_component= k;
-				dist_best= dist;
-			}
-		}//end loop fitted components	
-			
-		if(best_component!=-1){
-			foundMatch= true;
-			pars.posDiff= dist_best;
-			pars.fitComponentIndex= best_component;
-		}
-	
-	}//close if has fit info
-	else{
-		//No fit info available so compute offset using source barycenter 
-		double dx= fabs(source->X0 - X0_ref);
-		double dy= fabs(source->Y0 - Y0_ref);
-		double dist= sqrt(dx*dx+dy*dy);
-		if(dx<=matchPosThr && dy<=matchPosThr){//match found
-			foundMatch= true;
-			pars.posDiff= dist;
-			pars.fitComponentIndex= -1;
-		}
-	}//close else !has fit info
-
-	return foundMatch;
-
-}//close FindSourceMatchByPos()
 
 
 int Source::MergeSource(Source* aSource,bool copyPixels,bool checkIfAdjacent,bool computeStatPars,bool computeMorphPars,bool sumMatchingPixels){
