@@ -3612,7 +3612,7 @@ int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* task
 		sigmaMin,sigmaMax,sigmaStep,
 		m_nestedBlobPeakZThr,m_nestedBlobPeakZMergeThr,m_NMinPix,
 		m_NestedBlobThrFactor,m_nestedBlobKernFactor,
-		boxSize,gridSize
+		m_BkgEstimator,boxSize,gridSize
 	);
 		
 

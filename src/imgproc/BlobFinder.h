@@ -28,6 +28,8 @@
 #ifndef _BLOB_FINDER_h
 #define _BLOB_FINDER_h 1
 
+#include <Consts.h>
+
 #include <TObject.h>
 #include <TMatrixD.h>
 
@@ -93,7 +95,7 @@ class BlobFinder : public TObject {
 		/**
 		* \brief Compute multiscale blob mask
 		*/
-		static Image* ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double peakZThr=5,double peakZMergeThr=2.5,int minBlobSize=5,double thrFactor=0,int kernelFactor=1,int bkgBox=100,double bkgGridStepSize=20);
+		static Image* ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double peakZThr=5,double peakZMergeThr=2.5,int minBlobSize=5,double thrFactor=0,int kernelFactor=1,int bkgEstimator=eMedianBkg,int bkgBox=100,double bkgGridStepSize=20);
 
 	public:
 		

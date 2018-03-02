@@ -456,7 +456,7 @@ Image* BlobFinder::ComputeMultiScaleBlobMap(Image* img,double sigmaMin,double si
 }//close ComputeMultiScaleBlobMap()
 
 
-Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double peakZThr,double peakZMergeThr,int minBlobSize,double thrFactor,int kernelFactor,int bkgBox,double bkgGridStepSize)
+Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double peakZThr,double peakZMergeThr,int minBlobSize,double thrFactor,int kernelFactor,int bkgEstimator,int bkgBox,double bkgGridStepSize)
 {
 	//## Check image
 	if(!img){
@@ -684,7 +684,7 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 			long int ix= filterSignificanceMaps[i]->GetBinX(seedPixelId);
 			long int iy= filterSignificanceMaps[i]->GetBinY(seedPixelId);	
 			nBlobs++;
-			INFO_LOG("Blob found @ (x,y)=("<<ix<<","<<iy<<") (N="<<nPixInBlob<<")");
+			DEBUG_LOG("Blob found @ (x,y)=("<<ix<<","<<iy<<") (N="<<nPixInBlob<<")");
 			
 			//Mask blob pixels
 			for(size_t k=0;k<clusterPixelIds.size();k++){
