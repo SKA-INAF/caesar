@@ -46,6 +46,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <math.h>
+#include <limits>
 using namespace std;
 
 ClassImp(Caesar::BkgFinder)
@@ -65,7 +66,7 @@ BkgFinder::~BkgFinder()
 }//close destructor
 
 
-ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int boxSizeX,int boxSizeY, double gridStepSizeX,double gridStepSizeY,bool use2ndPass,bool skipOutliers,double seedThr,double mergeThr,int minPixels)
+ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int boxSizeX,int boxSizeY, double gridStepSizeX,double gridStepSizeY,bool use2ndPass,bool skipOutliers,double seedThr,double mergeThr,int minPixels,bool useRange,double minThr,double maxThr)
 {
 	//## Check input image
 	if(!img) {
@@ -87,7 +88,7 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 	
 	//## Compute global bkg
 	INFO_LOG("Computing global bkg...");
-	if(ComputeGlobalBkg(bkgData,img,estimator)<0){
+	if(ComputeGlobalBkg(bkgData,img,estimator,useRange,minThr,maxThr)<0){
 		ERROR_LOG("Failed to compute global bkg!");
 		delete bkgData;
 		bkgData= 0;
@@ -97,7 +98,7 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 	//## Compute local bkg?		
 	if(computeLocalBkg){
 		INFO_LOG("Computing local bkg ...");
-		int status= FindLocalGridBkg(bkgData,img,estimator,boxSizeX,boxSizeY,gridStepSizeX,gridStepSizeY,use2ndPass);
+		int status= FindLocalGridBkg(bkgData,img,estimator,boxSizeX,boxSizeY,gridStepSizeX,gridStepSizeY,use2ndPass,useRange,minThr,maxThr);
 		if(status<0){
 			ERROR_LOG("Failed to compute local grid bkg!");
 			delete bkgData;
@@ -164,7 +165,7 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 		//Recompute bkg on residual map (using this function recursively)
 		//Do not skip outliers this time!
 		INFO_LOG("Recomputing bkg on residual map...");
-		ImgBkgData* robustBkgData= FindBkg(img_wOutliers,estimator,computeLocalBkg,boxSizeX,boxSizeY,gridStepSizeX,gridStepSizeY,use2ndPass,false);
+		ImgBkgData* robustBkgData= FindBkg(img_wOutliers,estimator,computeLocalBkg,boxSizeX,boxSizeY,gridStepSizeX,gridStepSizeY,use2ndPass,false,seedThr,mergeThr,minPixels,useRange, minThr,maxThr);
 		if(!robustBkgData){
 			ERROR_LOG("Failed to compute bkg over image with blob outliers subtracted!");
 			delete bkgData;
@@ -213,11 +214,11 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 }//close FindBkg()
 
 
-int BkgFinder::FindLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,long int boxSizeX,long int boxSizeY, double gridStepSizeX, double gridStepSizeY,bool use2ndPass){
+int BkgFinder::FindLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,long int boxSizeX,long int boxSizeY, double gridStepSizeX, double gridStepSizeY,bool use2ndPass,bool useRange,double minThr,double maxThr){
 
 	//## Compute bkg data
 	INFO_LOG("Computing local bkg (1st pass)...");
-	if(ComputeLocalGridBkg(bkgData,img, estimator, boxSizeX, boxSizeY, gridStepSizeX,gridStepSizeY)<0){	
+	if(ComputeLocalGridBkg(bkgData,img, estimator, boxSizeX, boxSizeY, gridStepSizeX,gridStepSizeY,useRange,minThr,maxThr)<0){	
 		ERROR_LOG("Computation of local background failed for this image!");
 		return -1;
 	}
@@ -233,7 +234,7 @@ int BkgFinder::FindLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,lon
 
 		//Compute bkg for residual map
 		ImgBkgData* bkgData_residual= new ImgBkgData;
-		if(ComputeLocalGridBkg(bkgData_residual,residualMap,estimator,boxSizeX, boxSizeY, gridStepSizeX,gridStepSizeY)<0){
+		if(ComputeLocalGridBkg(bkgData_residual,residualMap,estimator,boxSizeX, boxSizeY, gridStepSizeX,gridStepSizeY,useRange,minThr,maxThr)<0){
 			ERROR_LOG("Computation of local background failed @ 2nd pass!");
 			delete residualMap;
 			residualMap= 0;
@@ -267,7 +268,7 @@ int BkgFinder::FindLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,lon
 
 
 
-int BkgFinder::ComputeLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,long int boxSizeX,long int boxSizeY,double gridStepSizeX, double gridStepSizeY){
+int BkgFinder::ComputeLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,long int boxSizeX,long int boxSizeY,double gridStepSizeX, double gridStepSizeY,bool useRange,double minThr,double maxThr){
 
 	//## Check input image
 	if(!img) {
@@ -379,7 +380,7 @@ int BkgFinder::ComputeLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,
 			bool isValidSampling= true;
 			BkgSampleData tileBkgData;
 			tileBkgData.id= index;
-			if(ComputeSampleBkg(tileBkgData,img,estimator,ix_min,ix_max,iy_min,iy_max)<0){
+			if(ComputeSampleBkg(tileBkgData,img,estimator,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr)<0){
 				WARN_LOG("Background estimation failed for tile (i,j)=("<<i<<","<<j<<")!");
 				isValidSampling= false;
 			}
@@ -629,11 +630,11 @@ int BkgFinder::ComputeLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,
 }//close ComputeLocalGridBkg()
 
 
-int BkgFinder::ComputeGlobalBkg(ImgBkgData* bkgData,Image* img,int estimator){
+int BkgFinder::ComputeGlobalBkg(ImgBkgData* bkgData,Image* img,int estimator,bool useRange,double minThr,double maxThr){
 
 	//## Compute bkg
 	BkgSampleData bkgSampleData;
-	if(ComputeSampleBkg(bkgSampleData,img,estimator)<0){
+	if(ComputeSampleBkg(bkgSampleData,img,estimator,-1,-1,-1,-1,useRange,minThr,maxThr)<0){
 		ERROR_LOG("Failed to compute bkg estimator!");
 		return -1;
 	}			
@@ -647,7 +648,7 @@ int BkgFinder::ComputeGlobalBkg(ImgBkgData* bkgData,Image* img,int estimator){
 
 
 
-int BkgFinder::ComputeSampleBkg(BkgSampleData& bkgSampleData,Image* img,int estimator,long int ix_min,long int ix_max,long int iy_min,long int iy_max){
+int BkgFinder::ComputeSampleBkg(BkgSampleData& bkgSampleData,Image* img,int estimator,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr){
 
 	//## Check input image
 	if(!img) {
@@ -670,7 +671,7 @@ int BkgFinder::ComputeSampleBkg(BkgSampleData& bkgSampleData,Image* img,int esti
 	bkgSampleData.iy_min= iy_min;
 	bkgSampleData.iy_max= iy_max;
 
-	bool skipNegativePixels= false;
+	//bool skipNegativePixels= false;
 	int status= 0;
 	long int npix= 0;
 	DEBUG_LOG("Computing stats for tile x("<<ix_min<<","<<ix_max<<"), y("<<iy_min<<","<<iy_max<<")");
@@ -678,7 +679,8 @@ int BkgFinder::ComputeSampleBkg(BkgSampleData& bkgSampleData,Image* img,int esti
 	// == mean bkg ==
 	if(estimator == BkgEstimator::eMeanBkg){
 		float mean, rms;
-		status= img->GetTileMeanStats(mean,rms,npix,ix_min,ix_max,iy_min,iy_max,skipNegativePixels);
+		//status= img->GetTileMeanStats(mean,rms,npix,ix_min,ix_max,iy_min,iy_max,skipNegativePixels);
+		status= img->GetTileMeanStats(mean,rms,npix,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr);
 		if(status==0){
 			bkgSampleData.bkgLevel= mean;
 			bkgSampleData.bkgRMS= rms;
@@ -689,7 +691,8 @@ int BkgFinder::ComputeSampleBkg(BkgSampleData& bkgSampleData,Image* img,int esti
 	//== median bkg ==
 	else if(estimator == BkgEstimator::eMedianBkg){
 		float median, medianRMS;
-		status= img->GetTileMedianStats(median,medianRMS,npix,ix_min,ix_max,iy_min,iy_max,skipNegativePixels);
+		//status= img->GetTileMedianStats(median,medianRMS,npix,ix_min,ix_max,iy_min,iy_max,skipNegativePixels);
+		status= img->GetTileMedianStats(median,medianRMS,npix,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr);
 		if(status==0){
 			bkgSampleData.bkgLevel= median;
 			bkgSampleData.bkgRMS= medianRMS;
@@ -701,7 +704,8 @@ int BkgFinder::ComputeSampleBkg(BkgSampleData& bkgSampleData,Image* img,int esti
 	else if(estimator == BkgEstimator::eBiWeightBkg){
 		float bwLocation, bwScale;
 		double C= 6;
-		status= img->GetTileBiWeightStats(bwLocation,bwScale,npix,C,ix_min,ix_max,iy_min,iy_max,skipNegativePixels);	
+		//status= img->GetTileBiWeightStats(bwLocation,bwScale,npix,C,ix_min,ix_max,iy_min,iy_max,skipNegativePixels);
+		status= img->GetTileBiWeightStats(bwLocation,bwScale,npix,C,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr);
 		if(status==0){
 			bkgSampleData.bkgLevel= bwLocation;
 			bkgSampleData.bkgRMS= bwScale;
@@ -712,7 +716,8 @@ int BkgFinder::ComputeSampleBkg(BkgSampleData& bkgSampleData,Image* img,int esti
 	else if(estimator == BkgEstimator::eMedianClippedBkg){
 		ClippedStats<float> clipped_stats;
 		double clipSigma= 3;
-		status= img->GetTileClippedStats(clipped_stats,npix,clipSigma,ix_min,ix_max,iy_min,iy_max,skipNegativePixels);
+		//status= img->GetTileClippedStats(clipped_stats,npix,clipSigma,ix_min,ix_max,iy_min,iy_max,skipNegativePixels);
+		status= img->GetTileClippedStats(clipped_stats,npix,clipSigma,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr);
 		if(status==0){
 			bkgSampleData.bkgLevel= clipped_stats.median;
 			bkgSampleData.bkgRMS= clipped_stats.stddev;

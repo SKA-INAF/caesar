@@ -272,7 +272,8 @@ class SFinder : public TObject {
 		/**
 		* \brief Merge task sources
 		*/
-		int MergeTaskSources(TaskData* taskData);
+		//int MergeTaskSources(TaskData* taskData);
+		int MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* taskData);
 
 	public:
 		
@@ -410,6 +411,11 @@ class SFinder : public TObject {
 		double m_minNestedMotherDist;
 		double m_maxMatchingPixFraction;
 		double m_nestedBlobPeakZThr;
+		double m_nestedBlobPeakZMergeThr;
+		double m_nestedBlobMinScale;
+		double m_nestedBlobMaxScale;
+		double m_nestedBlobScaleStep;
+		double m_nestedBlobKernFactor;
 		
 		//Source selection
 		bool m_ApplySourceSelection;

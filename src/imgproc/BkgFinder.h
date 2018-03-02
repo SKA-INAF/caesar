@@ -30,6 +30,7 @@
 
 #include <Consts.h>
 #include <TObject.h>
+#include <limits>
 
 namespace Caesar {
 
@@ -57,7 +58,7 @@ class BkgFinder : public TObject {
 		/**
 		* \brief Find image background
 		*/
-		static ImgBkgData* FindBkg(Image* img,int estimator=eMedianBkg,bool computeLocalBkg=true,int boxSizeX=100,int boxSizeY=100, double gridStepSizeX=10, double gridStepSizeY=10, bool use2ndPass=true,bool skipOutliers=false,double seedThr=5,double mergeThr=2.6,int minPixels=10);
+		static ImgBkgData* FindBkg(Image* img,int estimator=eMedianBkg,bool computeLocalBkg=true,int boxSizeX=100,int boxSizeY=100, double gridStepSizeX=10, double gridStepSizeY=10, bool use2ndPass=true,bool skipOutliers=false,double seedThr=5,double mergeThr=2.6,int minPixels=10,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity());
 	
 		
 	private:
@@ -65,19 +66,19 @@ class BkgFinder : public TObject {
 		/**
 		* \brief Compute global background
 		*/
-		static int ComputeGlobalBkg(ImgBkgData* bkgData,Image* img,int estimator);
+		static int ComputeGlobalBkg(ImgBkgData* bkgData,Image* img,int estimator,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity());
 		/**
 		* \brief Compute background of sample/tile image
 		*/
-		static int ComputeSampleBkg(BkgSampleData& bkgSampleData,Image* img,int estimator,long int ix_min=-1,long int ix_max=-1,long int iy_min=-1,long int iy_max=-1);
+		static int ComputeSampleBkg(BkgSampleData& bkgSampleData,Image* img,int estimator,long int ix_min=-1,long int ix_max=-1,long int iy_min=-1,long int iy_max=-1,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity());
 		/**
 		* \brief Find local grid background
 		*/
-		static int FindLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,long int boxSizeX,long int boxSizeY,double gridStepSizeX,double gridStepSizeY,bool use2ndPass);
+		static int FindLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,long int boxSizeX,long int boxSizeY,double gridStepSizeX,double gridStepSizeY,bool use2ndPass,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity());
 		/**
 		* \brief Compute local grid background
 		*/
-		static int ComputeLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,long int boxSizeX,long int boxSizeY,double gridStepSizeX,double gridStepSizeY);
+		static int ComputeLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,long int boxSizeX,long int boxSizeY,double gridStepSizeX,double gridStepSizeY,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity());
 		
 	private:
 

@@ -90,6 +90,11 @@ class BlobFinder : public TObject {
 		*/
 		static Image* ComputeMultiScaleBlobMap(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double thrFactor,int kernelFactor=1,double multiplicityThrFactor=0.7);
 
+		/**
+		* \brief Compute multiscale blob mask
+		*/
+		static Image* ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double peakZThr=5,double peakZMergeThr=2.5,int minBlobSize=5,double thrFactor=0,int kernelFactor=1,int bkgBox=100,double bkgGridStepSize=20);
+
 	public:
 		
 		ClassDef(BlobFinder,1)

@@ -37,6 +37,7 @@
 #include <SysUtils.h>
 #include <Logger.h>
 #include <Consts.h>
+#include <GausFilter.h>
 
 #include <SLIC.h>
 #include <SLICSegmenter.h>
@@ -464,7 +465,6 @@ int SFinder::Configure(){
 	//Get source search options
 	GET_OPTION_VALUE(searchCompactSources,m_SearchCompactSources);
 	GET_OPTION_VALUE(minNPix,m_NMinPix);
-	//GET_OPTION_VALUE(seedBrightThr,m_SeedBrightThr);//DEPRECATED	
 	GET_OPTION_VALUE(seedThr,m_SeedThr);
 	GET_OPTION_VALUE(mergeThr,m_MergeThr);
 	GET_OPTION_VALUE(compactSourceSearchNIters,m_compactSourceSearchNIters);
@@ -479,6 +479,20 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(minNestedMotherDist,m_minNestedMotherDist);
 	GET_OPTION_VALUE(maxMatchingPixFraction,m_maxMatchingPixFraction);
 	GET_OPTION_VALUE(nestedBlobPeakZThr,m_nestedBlobPeakZThr);
+	GET_OPTION_VALUE(nestedBlobPeakZMergeThr,m_nestedBlobPeakZMergeThr);
+	GET_OPTION_VALUE(nestedBlobMinScale,m_nestedBlobMinScale);
+	GET_OPTION_VALUE(nestedBlobMaxScale,m_nestedBlobMaxScale);
+	GET_OPTION_VALUE(nestedBlobScaleStep,m_nestedBlobScaleStep);
+	GET_OPTION_VALUE(nestedBlobKernFactor,m_nestedBlobKernFactor);
+	
+	if(m_nestedBlobMinScale>m_nestedBlobMaxScale){
+		ERROR_LOG("[PROC "<<m_procId<<"] - Invalid nested blob search scales given (hint: min scale cannot be larger than max scale)!");
+		return -1;
+	}
+	if(m_nestedBlobScaleStep<=0){
+		ERROR_LOG("[PROC "<<m_procId<<"] - Invalid nested blob scale step given (hint: step must be >0)!");
+		return -1;
+	}
 
 	//Get source selection options
 	GET_OPTION_VALUE(applySourceSelection,m_ApplySourceSelection);
@@ -548,6 +562,8 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(guidedFilterRadius,m_GuidedFilterRadius);
 	GET_OPTION_VALUE(guidedFilterColorEps,m_GuidedFilterColorEps);
 	
+	
+
 	//Get saliency options
 	GET_OPTION_VALUE(saliencyUseOptimalThr,m_SaliencyUseOptimalThr);
 	GET_OPTION_VALUE(saliencyThrFactor,m_SaliencyThrFactor);
@@ -724,7 +740,8 @@ int SFinder::RunTask(TaskData* taskData,bool storeData){
 	//============================
 	if(!stopTask && m_mergeSources){
 		INFO_LOG("[PROC "<<m_procId<<"] - Merging task sources ...");
-		if(MergeTaskSources(taskData)<0){
+		//if(MergeTaskSources(taskData)<0){
+		if(MergeTaskSources(taskImg,bkgData,taskData)<0){
 			ERROR_LOG("[PROC "<<m_procId<<"] - Merging task sources failed!");
 			status= -1;
 		}
@@ -1094,15 +1111,6 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 			searchNested,m_NestedBlobThrFactor, m_minNestedMotherDist, m_maxMatchingPixFraction,nPixThrToSearchNested,m_nestedBlobPeakZThr,
 			curvMap
 		);
-		/*
-		int status= img->FindCompactSource(
-			sources_iter,
-			significanceMap_iter,bkgData_iter,
-			seedThr,m_MergeThr,m_NMinPix,m_SearchNegativeExcess,m_MergeBelowSeed,
-			m_SearchNestedSources,m_NestedBlobThrFactor, m_minNestedMotherDist, m_maxMatchingPixFraction,nPixThrToSearchNested,
-			curvMap
-		);
-		*/
 
 		if(status<0) {
 			ERROR_LOG("[PROC "<<m_procId<<"] - Compact source finding failed!");
@@ -1172,7 +1180,6 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	}//end loop iterations
 
 	
-
 	//Merge sources found at each iterations
 	//NB: First compute the mask and then use it in flood-fill for final source collection
 	INFO_LOG("[PROC "<<m_procId<<"] - Merging compact sources found at each iteration cycle (#"<<sources.size()<<" sources in list after #"<<iterations_done<<" iterations) ...");
@@ -3523,6 +3530,181 @@ int SFinder::MergeTaskData()
 }//close MergeTaskData()
 
 
+int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* taskData)
+{
+	//Check input data
+	if(!taskData || !inputImg || !bkgData){
+		ERROR_LOG("[PROC "<<m_procId<<"] - Null ptr to input data (img/bkgData/taskData) given!");
+		return -1;
+	}
+
+	//## Return if there are no sources to be merged
+	if( (taskData->sources).empty() ){
+		DEBUG_LOG("[PROC "<<m_procId<<"] - No task sources to be merged, nothing to be done...");
+		return 0;
+	}
+
+	//## Compute npixel threshold to add nested sources
+	//Get beam area if available, otherwise use user-supplied beam info
+	double beamArea= 1;
+	bool hasBeamData= false;
+	if(inputImg->HasMetaData()){
+		beamArea= inputImg->GetMetaData()->GetBeamFluxIntegral();
+		if(beamArea>0 && std::isnormal(beamArea)) hasBeamData= true;
+	}
+	if(!hasBeamData){
+		INFO_LOG("[PROC "<<m_procId<<"] - Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+		beamArea= m_fluxCorrectionFactor;
+	}
+	long int nPixThrToSearchNested= std::ceil(m_SourceToBeamAreaThrToSearchNested*beamArea);	
+	INFO_LOG("[PROC "<<m_procId<<"] - Assuming a threshold nPix>"<<nPixThrToSearchNested<<" to add nested sources...");
+		
+
+	//## Create a mask with all detected sources
+	//NB: First compute the mask and then use it in flood-fill for final source collection
+	INFO_LOG("[PROC "<<m_procId<<"] - Computing mask with all detected sources ...");
+	bool isBinary= true;
+	bool invert= false;
+	Image* sourceMask= inputImg->GetSourceMask(taskData->sources,isBinary,invert);
+	if(!sourceMask){
+		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute mask from all detected sources!");
+		return -1;
+	}
+
+
+	/*
+	//## Smooth image with elliptical kernel
+	INFO_LOG("[PROC "<<m_procId<<"] - Computing smoothed map with elliptical gaussian kernel (bmaj/bmin/bpa="<<m_beamBmaj<<","<<m_beamBmin<<","<<m_beamBpa<<") ...");
+	Image* filtMap= GausFilter::GetGausFilter(inputImg,m_beamBmaj,m_beamBmin,m_beamBpa,m_MergeThr);
+	if(!filtMap){
+		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute smoothed map!");
+		CodeUtils::DeletePtrCollection<Image>({sourceMask});
+		return -1;
+	}
+
+	//## Compute curvature map to be used for nested source search
+	Image* curvMap= filtMap->GetLaplacianImage(true);
+	if(!curvMap){
+		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute multi-scale curvature map...");
+		CodeUtils::DeletePtrCollection<Image>({sourceMask,filtMap});
+		return -1;
+	}
+	*/
+
+	
+	//## NB: Convert scale pars in pixels assuming they represent multiple of beam width (Bmin)	
+	double pixSize= fabs(std::min(m_pixSizeX,m_pixSizeY));
+	double beamWidth= fabs(std::min(m_beamBmaj,m_beamBmin));
+	double beamPixSize= beamWidth/pixSize;
+	double sigmaMin= m_nestedBlobMinScale*beamPixSize/GausSigma2FWHM;//convert from FWHM to sigma
+	double sigmaMax= m_nestedBlobMaxScale*beamPixSize/GausSigma2FWHM;//convert from FWHM to sigma
+	double sigmaStep= m_nestedBlobScaleStep;	
+	double boxSizeX= beamPixSize*m_BoxSizeX;
+	double boxSizeY= beamPixSize*m_BoxSizeY;
+	double boxSize= std::min(boxSizeX,boxSizeY);
+	double gridSizeX= m_GridSizeX*boxSizeX;
+	double gridSizeY= m_GridSizeY*boxSizeY;
+	double gridSize= std::min(gridSizeX,gridSizeY);
+	INFO_LOG("[PROC "<<m_procId<<"] - Computing multi-scale blob mask (scale min/max/step="<<sigmaMin<<"/"<<sigmaMax<<"/"<<sigmaStep<<") ...");
+	
+	Image* blobMask= BlobFinder::ComputeMultiScaleBlobMask(
+		inputImg,
+		sigmaMin,sigmaMax,sigmaStep,
+		m_nestedBlobPeakZThr,m_nestedBlobPeakZMergeThr,m_NMinPix,
+		m_NestedBlobThrFactor,m_nestedBlobKernFactor,
+		boxSize,gridSize
+	);
+		
+
+	//## Find aggregated sources
+	INFO_LOG("[PROC "<<m_procId<<"] - Merging all detected overlapping sources found (#"<<(taskData->sources).size()<<") using provided source mask ...");
+	std::vector<Source*> sources_merged;
+	double seedThr_binary= 0.5;//dummy values (>0)
+	double mergeThr_binary= 0.4;//dummy values (>0)
+	int status= inputImg->FindCompactSource(
+		sources_merged,
+		sourceMask,bkgData,
+		seedThr_binary,mergeThr_binary,m_NMinPix,
+		m_SearchNestedSources,blobMask,m_minNestedMotherDist,m_maxMatchingPixFraction,nPixThrToSearchNested
+	);
+
+
+	//Clearup data
+	//CodeUtils::DeletePtrCollection<Image>({sourceMask,filtMap,curvMap});
+	CodeUtils::DeletePtrCollection<Image>({sourceMask,blobMask});
+	
+	if(status<0) {
+		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute merged sources!");
+		return -1;			
+	}
+
+	
+	//## Tag aggregated sources 
+	int nSources= static_cast<int>( sources_merged.size() );
+	INFO_LOG("[PROC "<<m_procId<<"] - #"<<nSources<<" sources present in input image after merging ...");
+	for(size_t k=0;k<sources_merged.size();k++) {	
+		sources_merged[k]->SetId(k+1);
+		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
+		sources_merged[k]->SetBeamFluxIntegral(beamArea);
+		sources_merged[k]->SetType(Source::eCompact);
+		bool isFittable= IsFittableSource(sources_merged[k]);
+		if(!isFittable){
+			sources_merged[k]->SetType(Source::eExtended);
+		}
+
+		std::vector<Source*> nestedSources= sources_merged[k]->GetNestedSources();
+		for(size_t l=0;l<nestedSources.size();l++){
+			nestedSources[l]->SetId(l+1);
+			nestedSources[l]->SetName(Form("S%d_N%d",(signed)(k+1),(signed)(l+1)));
+			nestedSources[l]->SetBeamFluxIntegral(beamArea);
+			nestedSources[l]->SetType(Source::eCompact);
+			bool isFittable_nested= IsFittableSource(nestedSources[l]);
+			if(!isFittable_nested){
+				nestedSources[l]->SetType(Source::eExtended);
+			}
+			if(sources_merged[k]->Type==Source::eExtended && nestedSources[l]->Type==Source::eCompact){
+				sources_merged[k]->SetType(Source::eCompactPlusExtended);
+			}
+		}//end loop nested sources
+	}//end loop sources
+	
+	//## Apply source selection?
+	if(m_ApplySourceSelection && nSources>0){
+		if(SelectSources(sources_merged)<0){
+			ERROR_LOG("[PROC "<<m_procId<<"] - Failed to select aggregated sources!");
+			CodeUtils::DeletePtrCollection(sources_merged);
+			return -1;
+		}
+		nSources= static_cast<int>(sources_merged.size());
+	}//close if source selection
+	
+	INFO_LOG("[PROC "<<m_procId<<"] - #"<<sources_merged.size()<<" sources present in merged collection after selection...");
+	
+
+	//## Set source pars
+	for(size_t k=0;k<sources_merged.size();k++) {
+		sources_merged[k]->SetId(k+1);
+		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
+		sources_merged[k]->SetBeamFluxIntegral(beamArea);
+		sources_merged[k]->Print();
+		std::vector<Source*> nestedSources= sources_merged[k]->GetNestedSources();
+		for(size_t l=0;l<nestedSources.size();l++){
+			nestedSources[l]->SetId(l+1);
+			nestedSources[l]->SetName(Form("S%d_N%d",(signed)(k+1),(signed)(l+1)));
+			nestedSources[l]->SetBeamFluxIntegral(beamArea);
+		}
+	}//end loop sources
+		
+	
+	//## Clear task collection and replace with merged collection
+	taskData->ClearSources();
+	(taskData->sources).insert( (taskData->sources).end(),sources_merged.begin(),sources_merged.end());		
+
+	return 0;
+
+}//close MergeTaskSources()
+
+/*
 int SFinder::MergeTaskSources(TaskData* taskData)
 {
 	//Check task data
@@ -3680,62 +3862,7 @@ int SFinder::MergeTaskSources(TaskData* taskData)
 
 	}//end loop number of components
 
-	/*
-	for(size_t i=0;i<connected_source_indexes.size();i++){
-		//Skip empty or single-sources
-		if(connected_source_indexes[i].empty()) continue;
-		
-		//Get source id=0 of this component
-		int index= connected_source_indexes[i][0];
-		Source* source= (taskData->sources)[index];
-		
-		//Create a new source which merges the two
-		Source* merged_source= new Source;
-		*merged_source= *source;
-
-		//Merge other sources in the group if any 
-		int nMerged= 0;
-		
-		for(size_t j=1;j<connected_source_indexes[i].size();j++){
-			int index_adj= connected_source_indexes[i][j];
-			Source* source_adj= (taskData->sources)[index_adj];
-				
-			int status= merged_source->MergeSource(source_adj,copyPixels,checkIfAdjacent,computeStatPars,computeMorphPars,sumMatchingPixels);
-			if(status<0){
-				WARN_LOG("[PROC "<<m_procId<<"] - Failed to merge sources (i,j)=("<<index<<","<<index_adj<<"), skip to next...");
-				continue;
-			}
-			nMerged++;
-
-		}//end loop of sources to be merged in this component
-
-		//If at least one was merged recompute stats & pars of merged source
-		if(nMerged>0) {
-			//Set name
-			TString sname= Form("Smerg%d",i+1);
-			merged_source->SetId(i+1);
-			merged_source->SetName(std::string(sname));
-
-			//Compute stats of merged source
-			DEBUG_LOG("[PROC "<<m_procId<<"] - Recomputing stats & moments of merged source in merge group "<<i<<" after #"<<nMerged<<" merged source...");
-			if(merged_source->ComputeStats(computeRobustStats,forceRecomputing)<0){
-				WARN_LOG("[PROC "<<m_procId<<"] - Failed to compute stats for merged source in merge group "<<i<<"...");
-				continue;
-			}
-
-			//Compute morphology pars of merged source
-			if(merged_source->ComputeMorphologyParams()<0){
-				WARN_LOG("[PROC "<<m_procId<<"] - Failed to compute morph pars for merged source in merge group "<<i<<"...");
-				continue;
-			}
-		}//close if
-
-		//Add merged source to collection
-		sources_merged.push_back(merged_source);
-
-	}//end loop number of components
-	*/
-
+	
 	INFO_LOG("[PROC "<<m_procId<<"] - #"<<sources_merged.size()<<" sources present in merged collection...");
 	
 	//## Clear task collection and replace with merged collection
@@ -3745,7 +3872,7 @@ int SFinder::MergeTaskSources(TaskData* taskData)
 	return 0;
 
 }//close MergeTaskSources()
-
+*/
 
 int SFinder::MergeSourcesAtEdge()
 {

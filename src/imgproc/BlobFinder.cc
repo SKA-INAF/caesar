@@ -32,6 +32,7 @@
 #include <Blob.h>
 #include <Source.h>
 #include <Logger.h>
+#include <Graph.h>
 
 #include <TObject.h>
 #include <TMatrixD.h>
@@ -386,9 +387,6 @@ Image* BlobFinder::ComputeMultiScaleBlobMap(Image* img,double sigmaMin,double si
 	//## Init scales
 	int nScales= (sigmaMax-sigmaMin)/sigmaStep + 1;	
 	int multiplicityThr= static_cast<int>(std::round(multiplicityThrFactor*nScales));
-	double NormMin= 1;
-	double NormMax= 256;
-	int nbins= 100;
 	std::vector<Image*> filterMaps;
 	std::vector<double> thresholdLevels;
 	
@@ -456,6 +454,256 @@ Image* BlobFinder::ComputeMultiScaleBlobMap(Image* img,double sigmaMin,double si
 	return blobMask;
 
 }//close ComputeMultiScaleBlobMap()
+
+
+Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double peakZThr,double peakZMergeThr,int minBlobSize,double thrFactor,int kernelFactor,int bkgBox,double bkgGridStepSize)
+{
+	//## Check image
+	if(!img){
+		ERROR_LOG("Null ptr to given image!");
+		return nullptr;
+	}
+
+	//## Init scales
+	int nScales= (sigmaMax-sigmaMin)/sigmaStep + 1;	
+	std::vector<Image*> filterMaps;
+	std::vector<Image*> filterSignificanceMaps;
+	std::vector<double> thresholdLevels;
+	int peakShiftTolerance= 2;
+	struct PeakInfo {
+		long int gbin;
+		long int ix;
+		long int iy;
+		double S;
+		int scale;
+		double Z;
+		PeakInfo(long int _gbin,long int _ix,long int _iy,double _S, int _scale)
+			: gbin(_gbin), ix(_ix), iy(_iy), S(_S), scale(_scale)
+		{}
+	};
+	std::vector<PeakInfo> peaks;
+	
+	for(int i=0;i<nScales;i++){
+		double sigma= sigmaMin + i*sigmaStep;
+		int kernelSize= kernelFactor*sigma;	
+		if(kernelSize%2==0) kernelSize++;
+		
+		//Compute LoG filter
+		INFO_LOG("Computing LoG map @ scale "<<sigma<<" (step="<<sigmaStep<<", kernsize="<<kernelSize<<")");
+		bool invert= true;
+		Image* filterMap= img->GetNormLoGImage(kernelSize,sigma,invert);
+		filterMaps.push_back(filterMap);
+	
+		//Compute stats
+		//NB: Skip negative pixels
+		bool skipNegativePixels= true;
+		bool computeRobustStats= true;
+		bool forceRecomputing= true;
+		filterMap->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
+		
+		//Compute threshold levels
+		ImgStats* imgStats= filterMap->GetPixelStats();	
+		double median= imgStats->median;
+		double medianThr= thrFactor*median;
+		double thrLevel= medianThr;
+		thresholdLevels.push_back(thrLevel);
+
+		//Zero-threshold filtered map
+		INFO_LOG("Zero-thresholding LoG map @ scale "<<sigma<<" ...");
+		filterMap->ApplyThreshold(thrLevel);
+
+		//Compute bkg map
+		INFO_LOG("Computing bkg map @ scale "<<sigma<<"...");
+		bool useLocalBkg= true;
+		bool use2ndPass= true;
+		bool skipOutliers= false;
+		bool useRangeInBkg= true;
+		ImgBkgData* bkgData= filterMap->ComputeBkg(
+			eMedianClippedBkg,
+			useLocalBkg,bkgBox,bkgBox,bkgGridStepSize,bkgGridStepSize,	
+			use2ndPass,
+			skipOutliers,peakZThr,peakZMergeThr,minBlobSize,
+			useRangeInBkg,thrLevel
+		);
+		if(!bkgData){
+			ERROR_LOG("Failed to compute bkg map @ scale "<<sigma<<"!");
+			CodeUtils::DeletePtrCollection<Image>(filterMaps);	
+			CodeUtils::DeletePtrCollection<Image>(filterSignificanceMaps);
+			return nullptr;
+		}
+
+		//Compute significance map
+		INFO_LOG("Computing significance map @ scale "<<sigma<<"...");
+		Image* filterSignificanceMap= filterMap->GetSignificanceMap(bkgData,useLocalBkg);
+		if(!filterSignificanceMap){
+			ERROR_LOG("Failed to compute significance map @ scale "<<sigma<<"!");
+			CodeUtils::DeletePtrCollection<Image>(filterMaps);	
+			CodeUtils::DeletePtrCollection<Image>(filterSignificanceMaps);
+			return nullptr;
+		}
+		filterSignificanceMaps.push_back(filterSignificanceMap);
+		delete bkgData;
+		bkgData= 0;
+
+		//Find peaks in filter map
+		INFO_LOG("Finding peaks in significance map @ scale "<<sigma<<" ...");
+		std::vector<TVector2> peakPoints;
+		bool skipBorders= true;
+		double peakKernelMultiplicityThr= 1;
+		std::vector<int> kernels {3};
+		if(filterSignificanceMap->FindPeaks(peakPoints,kernels,peakShiftTolerance,skipBorders,peakKernelMultiplicityThr)<0){
+			ERROR_LOG("Failed to find peaks @ scale "<<sigma<<"!");
+			CodeUtils::DeletePtrCollection<Image>(filterMaps);	
+			CodeUtils::DeletePtrCollection<Image>(filterSignificanceMaps);
+			return nullptr;		
+		}
+		INFO_LOG("#"<<peakPoints.size()<<" peaks found @ scale "<<sigma<<" ...");
+		
+		//## Select peaks (skip peaks at boundary or faint peaks)
+		std::vector<PeakInfo> peaks_scale;
+		for(size_t k=0;k<peakPoints.size();k++){
+			double x= peakPoints[k].X();
+			double y= peakPoints[k].Y();
+			long int gbin= filterSignificanceMap->FindBin(x,y);
+			if(gbin<0){
+				ERROR_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
+				CodeUtils::DeletePtrCollection<Image>(filterMaps);	
+				CodeUtils::DeletePtrCollection<Image>(filterSignificanceMaps);
+				return nullptr;			
+			}
+			long int ix= filterSignificanceMap->GetBinX(gbin);
+			long int iy= filterSignificanceMap->GetBinY(gbin);
+		
+			//Skip peaks below threshold
+			double Zpeak= filterSignificanceMap->GetBinContent(gbin);
+			if(Zpeak<peakZThr) {
+				DEBUG_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak="<<Zpeak<<"<"<<peakZThr<<")");
+				continue;
+			}
+			double Speak= filterMap->GetBinContent(gbin);
+			
+			//Add peak to selected peak
+			PeakInfo peakInfo(gbin,ix,iy,Speak,(int)(i));
+			peakInfo.Z= Zpeak;
+			peaks_scale.push_back(peakInfo);
+		}//end loop peaks
+		peaks.insert(peaks.end(),peaks_scale.begin(),peaks_scale.end());		
+		INFO_LOG("#"<<peaks_scale.size()<<" peaks selected @ scale "<<sigma<<" ...");
+		
+	}//end loop scales
+
+	//## Clear significance maps
+	//CodeUtils::DeletePtrCollection<Image>(filterSignificanceMaps);
+
+	//## Select peak scale according to max peak across scales
+	std::vector<PeakInfo> peaks_best;
+	std::vector<std::vector<long int>> peakIds;
+	for(int i=0;i<nScales;i++){
+		peakIds.push_back( std::vector<long int>() );
+	}
+
+	if(nScales>1){
+
+		// Create graph with "matching/adjacent" peaks
+		Graph linkGraph(peaks.size());
+		for(size_t i=0;i<peaks.size()-1;i++) {
+			for(size_t j=i+1;j<peaks.size();j++) {	
+				long int distX= peaks[i].ix - peaks[j].ix;
+				long int distY= peaks[i].iy - peaks[j].iy;
+				bool areAdjacent= (fabs(distX)<=peakShiftTolerance && fabs(distY)<=peakShiftTolerance);
+				if(!areAdjacent) continue;
+				linkGraph.AddEdge(i,j);
+			}//end loop peaks
+		}//end loop peaks
+	
+		//Find connected peaks
+		std::vector<std::vector<int>> connected_indexes;
+		linkGraph.GetConnectedComponents(connected_indexes);
+
+		//Find best scale according to max peak across scales
+		for(size_t i=0;i<connected_indexes.size();i++){
+			
+			double Speak_max= -1.e+99;
+			int bestScaleIndex= 0;
+			
+			for(size_t j=1;j<connected_indexes[i].size();j++){
+				int index= connected_indexes[i][j];
+				double Speak= peaks[index].S;
+				if(Speak>Speak_max){
+					Speak_max= Speak;
+					bestScaleIndex= index;
+				}
+			}//end loop items in cluster
+		
+			int scale_best= peaks[bestScaleIndex].scale;
+			long int gbin_best= peaks[bestScaleIndex].gbin;
+			peaks_best.push_back(peaks[bestScaleIndex]);
+			peakIds[scale_best].push_back(gbin_best);
+		}//end loop clusters	
+
+	}//close if
+	else{
+		for(size_t i=0;i<peaks.size();i++) {
+			peaks_best.push_back(peaks[i]);
+			peakIds[0].push_back(peaks[i].gbin);
+		}
+	}//close else
+
+	INFO_LOG("#"<<peaks_best.size()<<" best peaks selected across scales ...");
+
+	
+	//Find blobs across scales
+	Image* blobMask= img->GetCloned("",true,true);
+	blobMask->Reset();
+
+	int nBlobs= 0;
+
+	for(size_t i=0;i<filterMaps.size();i++){
+		INFO_LOG("Finding blobs across scale no. "<<i+1<<" (#"<<peakIds[i].size()<<" peaks present) ...");		
+		//double floodMinThr= thresholdLevels[i];
+		double floodMinThr= std::max(0.,peakZMergeThr);
+		double floodMaxThr= std::numeric_limits<double>::infinity();
+		
+		for(size_t j=0;j<peakIds[i].size();j++){
+
+			//Find blobs given current seed peak
+			long int seedPixelId= peakIds[i][j];	
+			std::vector<long int> clusterPixelIds;
+			//if(FloodFill(filterMaps[i],clusterPixelIds,seedPixelId,floodMinThr,floodMaxThr)<0){
+			if(FloodFill(filterSignificanceMaps[i],clusterPixelIds,seedPixelId,floodMinThr,floodMaxThr)<0){
+				WARN_LOG("Failed to find blobs by flood-fill @ scale "<<i+1<<" (seed pix="<<seedPixelId<<"), skip to next...");
+				continue;
+			}
+			
+			//Check blob size agaist min size required
+			int nPixInBlob= (int)(clusterPixelIds.size());
+			if(nPixInBlob<minBlobSize){
+				INFO_LOG("Skip blob @ scale "<<i+1<<" (id="<<seedPixelId<<") as below min size threshold (npix="<<nPixInBlob<<"<"<<minBlobSize<<")");
+				continue;
+			}
+			long int ix= filterSignificanceMaps[i]->GetBinX(seedPixelId);
+			long int iy= filterSignificanceMaps[i]->GetBinY(seedPixelId);	
+			nBlobs++;
+			INFO_LOG("Blob found @ (x,y)=("<<ix<<","<<iy<<") (N="<<nPixInBlob<<")");
+			
+			//Mask blob pixels
+			for(size_t k=0;k<clusterPixelIds.size();k++){
+				long int gbin= clusterPixelIds[k];
+				blobMask->SetPixelValue(gbin,1);
+			}
+
+		}//end loop blobs per scale
+	}//end loop scales
+
+	INFO_LOG("#"<<nBlobs<<" blobs present in mask");
+
+	//## Clear memory 
+	CodeUtils::DeletePtrCollection<Image>(filterSignificanceMaps);
+	CodeUtils::DeletePtrCollection<Image>(filterMaps);	
+			
+	return blobMask;
+
+}//close ComputeMultiScaleBlobMask()
 
 
 Image* BlobFinder::GetMultiScaleBlobMask(Image* img,int kernelFactor,double sigmaMin,double sigmaMax,double sigmaStep,int thrModel,double thrFactor){
@@ -542,5 +790,6 @@ Image* BlobFinder::GetMultiScaleBlobMask(Image* img,int kernelFactor,double sigm
 	return blobMask;
 
 }//close GetMultiScaleBlobMask()
+
 
 }//close namespace
