@@ -724,22 +724,26 @@ class Image : public TNamed {
 		/**
 		* \brief Get tile mean stats
 		*/
-		int GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false); 
+		//int GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false); 
+		int GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity()); 
 		
 		/**
 		* \brief Get tile median stats
 		*/
-		int GetTileMedianStats(float& median,float& mad,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false); 
+		//int GetTileMedianStats(float& median,float& mad,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false); 
+		int GetTileMedianStats(float& median,float& mad,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity()); 
 		
 		/**
 		* \brief Get tile median stats
 		*/
-		int GetTileClippedStats(Caesar::ClippedStats<float>& clipped_stats,long int& npix,double clipsigma,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false); 
+		//int GetTileClippedStats(Caesar::ClippedStats<float>& clipped_stats,long int& npix,double clipsigma,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false); 
+		int GetTileClippedStats(Caesar::ClippedStats<float>& clipped_stats,long int& npix,double clipsigma,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity()); 
 		
 		/**
 		* \brief Get tile biweight stats
 		*/
-		int GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,double C,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false); 
+		//int GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,double C,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false); 
+		int GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,double C,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity()); 
 		
 		//================================
 		//==       BKG METHODS
@@ -747,7 +751,7 @@ class Image : public TNamed {
 		/**
 		* \brief Compute local bkg
 		*/
-		ImgBkgData* ComputeBkg(int estimator=eMedianBkg,bool computeLocalBkg=true,int boxSizeX=100,int boxSizeY=100, double gridStepSizeX=10, double gridStepSizeY=10, bool use2ndPass=true,bool skipOutliers=false,double seedThr=5,double mergeThr=2.6,int minPixels=10);
+		ImgBkgData* ComputeBkg(int estimator=eMedianBkg,bool computeLocalBkg=true,int boxSizeX=100,int boxSizeY=100, double gridStepSizeX=10, double gridStepSizeY=10, bool use2ndPass=true,bool skipOutliers=false,double seedThr=5,double mergeThr=2.6,int minPixels=10,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity());
 		/**
 		* \brief Compute significance map
 		*/
@@ -786,6 +790,11 @@ class Image : public TNamed {
 		* \brief Get binarized image
 		*/
 		Image* GetBinarizedImage(double threshold,double fgValue=1,bool isLowerThreshold=false);
+		/**
+		* \brief Apply threshold to image and replace pixel outside thr range with masked value
+		*/	
+		int ApplyThreshold(double thr_min,double thr_max=1.e+99,double maskedValue=0.);
+
 
 		/**
 		* \brief Find image threshold at which the cumulative pixel sum (scaled to image sum) is lower than desired threshold 
@@ -804,9 +813,18 @@ class Image : public TNamed {
 		*/
 		int FindCompactSource(std::vector<Source*>&,Image* floodImg=0,ImgBkgData* bkgData=0,double seedThr=5,double mergeThr=2.6,int minPixels=10,bool findNegativeExcess=false,bool mergeBelowSeed=false,bool findNestedSources=false,double nestedBlobThrFactor=1,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5,long int nPixThrToSearchNested=0,double nestedBlobPeakZThr=5,Image* curvMap=0);
 		/**
+		* \brief Find compact sources
+		*/
+		int FindCompactSource(std::vector<Source*>& sources,Image* floodImg=0,ImgBkgData* bkgData=0,double seedThr=5,double mergeThr=2.6,int minPixels=10,bool findNestedSources=false,Image* blobMask=0,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5,long int nPixThrToSearchNested=0);
+
+		/**
 		* \brief Find nested sources
 		*/
-		int	FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData=0,int minPixels=5,double nestedBlobThreshold=1,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5,long int nPixThrToSearchNested=0,double nestedBlobPeakZThr=5);
+		int	FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData=0,int minPixels=5,double nestedBlobThreshold=1,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5,long int nPixThrToSearchNested=0,double nestedBlobPeakZThr=5,Image* curvMap=0);
+		/**
+		* \brief Find nested sources
+		*/
+		int FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkgData* bkgData=0,int minPixels=5,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5,long int nPixThrToSearchNested=0);
 
 		/**
 		* \brief Find extended sources with ChanVese method
@@ -835,8 +853,9 @@ class Image : public TNamed {
 		/**
 		* \brief Mask sources
 		*/
-		int MaskSources(std::vector<Source*>const& source,float maskValue=0.);	
+		int MaskSources(std::vector<Source*>const& source,float maskValue=0.);
 
+		
 		/**
 		* \brief Returns a residual image obtained by dilating given sources with a random background
 		*/
@@ -1007,7 +1026,8 @@ class Image : public TNamed {
 		/**
 		* \brief Get tile pixels
 		*/
-		int GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false);
+		//int GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false);
+		int GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity());
 
 		
 	protected:

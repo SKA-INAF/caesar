@@ -1232,7 +1232,8 @@ int Image::ComputeStats(bool computeRobustStats,bool skipNegativePixels,bool for
 }//close ComputeStats()
 
 
-int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels)
+//int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels)
+int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr)
 {
 	//Check range given
 	if(ix_min<0 || ix_max<0 || ix_max>=m_Nx || ix_min>=ix_max){
@@ -1243,10 +1244,17 @@ int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_
 		ERROR_LOG("Invalid y range given!");
 		return -1;
 	}
+
+	//Check thr
+	if(minThr>=maxThr){
+		ERROR_LOG("Invalid min/max threshold given (hint: max thr must be larger then min thr)!");
+		return -1;
+	}
 	
 	//Extract pixel sub vector
 	pixels.clear();
 
+	/*
 	if(skipNegativePixels){
 
 		for(long int j=iy_min;j<=iy_max;j++){
@@ -1264,7 +1272,24 @@ int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_
 			);
 		}//end loop rows
 	}//close if
+	*/
+	if(useRange){
 
+		for(long int j=iy_min;j<=iy_max;j++){
+			//Get row start/end iterators
+			long int gBin_min= GetBin(ix_min,j);		
+			long int gBin_max= GetBin(ix_max,j);
+
+			std::copy_if (
+				m_pixels.begin() + gBin_min, 
+				m_pixels.begin() + gBin_max + 1, 
+				std::back_inserter(pixels), 
+				[minThr,maxThr](float w){
+					return (w>minThr && w<maxThr);
+				}
+			);
+		}//end loop rows
+	}//close if
 	else{
 
 		for(long int j=iy_min;j<=iy_max;j++){
@@ -1283,7 +1308,8 @@ int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_
 }//close GetTilePixels()
 
 
-int Image::GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels)
+//int Image::GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels)
+int Image::GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr)
 {
 	//Init
 	mean= 0;
@@ -1292,7 +1318,8 @@ int Image::GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix
 
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
-	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,skipNegativePixels)<0){
+	//if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,skipNegativePixels)<0){
+	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr)<0){
 		ERROR_LOG("Failed to extract pixel rectangular data!");
 		return -1;
 	}
@@ -1305,7 +1332,8 @@ int Image::GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix
 
 }//close GetTileMeanStats()
 		
-int Image::GetTileMedianStats(float& median,float& mad_rms,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels)
+//int Image::GetTileMedianStats(float& median,float& mad_rms,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels)
+int Image::GetTileMedianStats(float& median,float& mad_rms,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr)
 {
 
 	//Init
@@ -1315,7 +1343,8 @@ int Image::GetTileMedianStats(float& median,float& mad_rms,long int& npix,long i
 
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
-	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,skipNegativePixels)<0){
+	//if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,skipNegativePixels)<0){
+	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr)<0){
 		ERROR_LOG("Failed to extract pixel rectangular data!");
 		return -1;
 	}
@@ -1331,14 +1360,16 @@ int Image::GetTileMedianStats(float& median,float& mad_rms,long int& npix,long i
 }//close GetTileMedianStats()
 
 
-int Image::GetTileClippedStats(ClippedStats<float>& clipped_stats,long int& npix,double clipSigma,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels)
+//int Image::GetTileClippedStats(ClippedStats<float>& clipped_stats,long int& npix,double clipSigma,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels)
+int Image::GetTileClippedStats(ClippedStats<float>& clipped_stats,long int& npix,double clipSigma,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr)
 {
 	//Init
 	npix= 0;
 	
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
-	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,skipNegativePixels)<0){
+	//if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,skipNegativePixels)<0){
+	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr)<0){
 		ERROR_LOG("Failed to extract pixel rectangular data!");
 		return -1;
 	}
@@ -1361,7 +1392,8 @@ int Image::GetTileClippedStats(ClippedStats<float>& clipped_stats,long int& npix
 }//close GetTileClippedStats()
 		
 
-int Image::GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,double C,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels)
+//int Image::GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,double C,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels)
+int Image::GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,double C,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr)
 {
 	//Init
 	bwLocation= 0;
@@ -1370,7 +1402,8 @@ int Image::GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,
 
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
-	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,skipNegativePixels)<0){
+	//if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,skipNegativePixels)<0){
+	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr)<0){
 		ERROR_LOG("Failed to extract pixel rectangular data!");
 		return -1;
 	}
@@ -1395,11 +1428,17 @@ int Image::GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,
 //================================================================
 //===    BACKGROUND CALCULATION
 //================================================================
-ImgBkgData* Image::ComputeBkg(int estimator,bool computeLocalBkg,int boxSizeX,int boxSizeY, double gridStepSizeX,double gridStepSizeY,bool use2ndPass,bool skipOutliers,double seedThr,double mergeThr,int minPixels){
+ImgBkgData* Image::ComputeBkg(int estimator,bool computeLocalBkg,int boxSizeX,int boxSizeY, double gridStepSizeX,double gridStepSizeY,bool use2ndPass,bool skipOutliers,double seedThr,double mergeThr,int minPixels,bool useRange,double minThr,double maxThr){
 	
 	//## Compute bkg data
 	DEBUG_LOG("Using grid bkg method...");
-	ImgBkgData* bkgData= BkgFinder::FindBkg(this,estimator,computeLocalBkg, boxSizeX, boxSizeY, gridStepSizeX,gridStepSizeY,use2ndPass,skipOutliers,seedThr,mergeThr,minPixels);	
+	ImgBkgData* bkgData= BkgFinder::FindBkg(
+		this,estimator,
+		computeLocalBkg, boxSizeX, boxSizeY, gridStepSizeX,gridStepSizeY,
+		use2ndPass,
+		skipOutliers,seedThr,mergeThr,minPixels,
+		useRange,minThr,maxThr
+	);	
 	if(!bkgData){
 		ERROR_LOG("Computation of local background failed for this image!");
 		return 0;
@@ -1554,10 +1593,12 @@ Image* Image::GetSignificanceMap(ImgBkgData* bkgData,bool useLocalBkg){
 int Image::FindCompactSource(std::vector<Source*>& sources,double thr,int minPixels){
 
 	//Find sources by simple thresholding using the same image as significance map and no bkgdata
-	bool findNegativeExcess= false;
-	bool mergeBelowSeed= false;
 	bool findNestedSources= false;
-	if(this->FindCompactSource(sources,this,0,thr,thr,minPixels,findNegativeExcess,mergeBelowSeed,findNestedSources)<0){
+	Image* blobMask= 0;
+	//bool findNegativeExcess= false;
+	//bool mergeBelowSeed= false;	
+	//if(this->FindCompactSource(sources,this,0,thr,thr,minPixels,findNegativeExcess,mergeBelowSeed,findNestedSources)<0){
+	if(this->FindCompactSource(sources,this,0,thr,thr,minPixels,findNestedSources,blobMask)<0){
 		ERROR_LOG("Compact source finder failed!");
 		return -1;
 	}
@@ -1568,25 +1609,18 @@ int Image::FindCompactSource(std::vector<Source*>& sources,double thr,int minPix
 
 int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBkgData* bkgData,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,bool findNestedSources,double nestedBlobThreshold,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested,double nestedBlobPeakZThr,Image* curvMap)
 {
-
 	//Find sources
 	int status= BlobFinder::FindBlobs(this,sources,floodImg,bkgData,seedThr,mergeThr,minPixels,findNegativeExcess,mergeBelowSeed,curvMap);
 	if(status<0){
 		ERROR_LOG("Blob finder failed!");
-		for(unsigned int k=0;k<sources.size();k++){
-			if(sources[k]){
-				delete sources[k];
-				sources[k]= 0;
-			}	
-		}//end loop sources
-		sources.clear();
+		CodeUtils::DeletePtrCollection<Source>(sources);
 		return -1;
 	}
 
 	//Find nested sources?
 	if(findNestedSources && sources.size()>0){
-		int status= FindNestedSource(sources,bkgData,minPixels,nestedBlobThreshold,minNestedMotherDist,maxMatchingPixFraction,nPixThrToSearchNested,nestedBlobPeakZThr);
-		if(status<0){
+		int status_nested= FindNestedSource(sources,bkgData,minPixels,nestedBlobThreshold,minNestedMotherDist,maxMatchingPixFraction,nPixThrToSearchNested,nestedBlobPeakZThr,curvMap);
+		if(status_nested<0){
 			WARN_LOG("Nested source search failed!");
 		}
 	}//close if
@@ -1596,7 +1630,32 @@ int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBk
 }//close FindCompactSource()
 
 
-int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,int minPixels,double nestedBlobThreshold,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested,double nestedBlobPeakZThr){
+int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBkgData* bkgData,double seedThr,double mergeThr,int minPixels,bool findNestedSources,Image* blobMask,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested)
+{
+	//Find sources
+	bool findNegativeExcess= false;
+	bool mergeBelowSeed= false;
+	int status= BlobFinder::FindBlobs(this,sources,floodImg,bkgData,seedThr,mergeThr,minPixels,findNegativeExcess,mergeBelowSeed);
+	if(status<0){
+		ERROR_LOG("Blob finder failed!");
+		CodeUtils::DeletePtrCollection<Source>(sources);
+		return -1;
+	}
+
+	//Find nested sources?
+	if(findNestedSources && sources.size()>0){
+		int status_nested= FindNestedSource(sources,blobMask,bkgData,minPixels,minNestedMotherDist,maxMatchingPixFraction,nPixThrToSearchNested);
+		if(status_nested<0){
+			WARN_LOG("Nested source search failed!");
+		}
+	}//close if
+
+	return 0;
+
+}//close FindCompactSource()
+
+
+int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,int minPixels,double nestedBlobThreshold,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested,double nestedBlobPeakZThr,Image* curvMap){
 
 	//Check if given mother source list is empty
 	int nSources= static_cast<int>(sources.size());
@@ -1613,12 +1672,17 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 	}
 
 	//Find curvature map
-	Image* curvMap= this->GetLaplacianImage(true);
+	bool deleteCurvMap= false;
 	if(!curvMap){
-		ERROR_LOG("Failed to compute curvature map!");
-		delete sourceMask;
-		sourceMask= 0;
-		return -1;
+		INFO_LOG("Curvature map was not given in input, will compute it now...");
+		curvMap= this->GetLaplacianImage(true);
+		if(!curvMap){
+			ERROR_LOG("Failed to compute curvature map!");
+			delete sourceMask;
+			sourceMask= 0;
+			return -1;
+		}
+		deleteCurvMap= true;
 	}
 
 	//Compute curvature map stats
@@ -1629,14 +1693,14 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 		ERROR_LOG("Failed to compute curvature map stats!");
 		delete sourceMask;
 		sourceMask= 0;
-		delete curvMap;
-		curvMap= 0;
+		if(deleteCurvMap && curvMap){
+			delete curvMap;
+			curvMap= 0;
+		}
 		return -1;
 	}
 
 	//Thresholding the curvature map
-	//double curvMapRMS= curvMap->GetPixelStats()->medianRMS;
-	//double curvMapThr= curvMapRMS*nestedBlobThreshold;
 	double curvMapMedian= curvMap->GetPixelStats()->median;
 	double curvMapThr= nestedBlobThreshold*curvMapMedian;
 	Image* blobMask= curvMap->GetBinarizedImage(curvMapThr);
@@ -1644,8 +1708,10 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 		ERROR_LOG("Failed to compute curvature blob mask!");
 		delete sourceMask;
 		sourceMask= 0;
-		delete curvMap;
-		curvMap= 0;
+		if(deleteCurvMap && curvMap){
+			delete curvMap;
+			curvMap= 0;
+		}
 		return -1;
 	}
 
@@ -1655,8 +1721,10 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 		ERROR_LOG("Failed to compute (source+blob) mask!");
 		delete sourceMask;
 		sourceMask= 0;
-		delete curvMap;
-		curvMap= 0;
+		if(deleteCurvMap && curvMap){
+			delete curvMap;
+			curvMap= 0;
+		}
 		delete blobMask;
 		blobMask= 0;
 		return -1;
@@ -1670,8 +1738,10 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 		ERROR_LOG("Nested blob finder failed!");
 		delete sourceMask;
 		sourceMask= 0;
-		delete curvMap;
-		curvMap= 0;
+		if(deleteCurvMap && curvMap){
+			delete curvMap;
+			curvMap= 0;
+		}
 		delete blobMask;
 		blobMask= 0;
 		delete sourcePlusBlobMask;
@@ -1688,7 +1758,6 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 
 	//Add nested sources to mother source
 	int nNestedSources= static_cast<int>(NestedSources.size());
-	
 	
 	if(nNestedSources>=0){
 		INFO_LOG("#"<<nNestedSources<<" blobs found in curvature map!");
@@ -1767,10 +1836,10 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 				else{
 					INFO_LOG("Nested source no. "<<j<<" blob peak significance above desired threshold (Smax="<<Smax<<", peakRatio="<<peakRatio<<", Z="<<Z<<", ZThr="<<nestedBlobPeakZThr<<") ...");
 				}
+				
 				/*
 				if(bkgData && bkgData->BkgMap && bkgData->NoiseMap){
-					long int blobPeakId= NestedSources[nestedIndex]->GetSmaxPixId();	
-					
+					long int blobPeakId= NestedSources[nestedIndex]->GetSmaxPixId();		
 					double bkg= (bkgData->BkgMap)->GetPixelValue(blobPeakId);
 					double rms= (bkgData->NoiseMap)->GetPixelValue(blobPeakId);
 					double Z= (Smax-bkg)/rms;
@@ -1834,7 +1903,7 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 		delete sourceMask;
 		sourceMask= 0;
 	}
-	if(curvMap) {
+	if(deleteCurvMap && curvMap) {
 		delete curvMap;
 		curvMap= 0;
 	}
@@ -1850,6 +1919,166 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 	return 0;
 
 }//close FindNestedSources()
+
+
+
+int Image::FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkgData* bkgData,int minPixels,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested)
+{
+	//Check if given mother source list is empty
+	int nSources= static_cast<int>(sources.size());
+	if(nSources<=0){
+		WARN_LOG("Empty source list given!");
+		return 0;
+	}
+
+	//Check blob mask given
+	if(!blobMask){
+		ERROR_LOG("Null ptr to blob mask given!");
+		return -1;
+	}
+
+	//Find image mask of found sources
+	Image* sourceMask= this->GetSourceMask(sources,false);
+	if(!sourceMask){
+		ERROR_LOG("Null ptr to computed source mask!");
+		return -1;
+	}
+
+	//Find blob+source mask
+	Image* sourcePlusBlobMask= sourceMask->GetMask(blobMask,true);
+	if(!sourcePlusBlobMask){
+		ERROR_LOG("Failed to compute (source+blob) mask!");
+		CodeUtils::DeletePtrCollection<Image>({sourceMask});	
+		return -1;
+	}
+
+	//Find nested blobs 
+	std::vector<Source*> NestedSources;
+	double fgValue= 1;
+	int status= BlobFinder::FindBlobs(this,NestedSources,sourcePlusBlobMask,bkgData,fgValue,fgValue,minPixels,false,false);
+	if(status<0){
+		ERROR_LOG("Nested blob finder failed!");
+		CodeUtils::DeletePtrCollection<Image>({sourceMask,sourcePlusBlobMask});	
+		CodeUtils::DeletePtrCollection<Source>(NestedSources);	
+		return -1;
+	}
+
+	//Clear maps
+	CodeUtils::DeletePtrCollection<Image>({sourceMask,sourcePlusBlobMask});	
+
+	//Add nested sources to mother source
+	int nNestedSources= static_cast<int>(NestedSources.size());
+	
+	if(nNestedSources>=0){
+		INFO_LOG("#"<<nNestedSources<<" blobs found in curvature map!");
+
+		//## Init mother-nested association list
+		std::vector<int> nestedSourcesToBeRemoved;
+		std::vector< std::vector<int> > MotherNestedAssociationList;
+		for(int i=0;i<nSources;i++) MotherNestedAssociationList.push_back( std::vector<int>() );
+
+		//## Find matching between mother and nested sources
+		for(int j=0;j<nNestedSources;j++){
+			bool isMotherFound= false;
+			DEBUG_LOG("Finding matching for nested source no. "<<j);
+			
+			for(int i=0;i<nSources;i++){
+				int sourceId= sources[i]->Id;
+				bool isOverlapping= NestedSources[j]->IsAdjacentSource(sources[i]);
+				
+				if(isOverlapping){
+					DEBUG_LOG("Nested source no. "<<j<<" added to source id="<<sourceId<<" ...");
+					MotherNestedAssociationList[i].push_back(j);
+					isMotherFound= true;
+					break;
+				}
+				
+			}//end loop mother sources
+
+			//If nested is not associated to any mother source, mark for removal
+			if(!isMotherFound){
+				WARN_LOG("Cannot find mother source for nested source no. "<<j<<", will remove it from the list of nested sources...");
+				nestedSourcesToBeRemoved.push_back(j);
+			}			
+
+		}//end loop nested sources	
+
+		//## Select nested
+		int nSelNestedSources= 0;
+		for(size_t i=0;i<MotherNestedAssociationList.size();i++){
+			long int NPix= sources[i]->GetNPixels(); 
+			double beamArea= sources[i]->GetBeamFluxIntegral();
+			bool isMotherSourceSplittableInNestedComponents= (NPix>nPixThrToSearchNested);
+			int nComponents= static_cast<int>(MotherNestedAssociationList[i].size());
+			if(nComponents<=0 || !isMotherSourceSplittableInNestedComponents) continue;
+
+			//Get mother source stats
+			if(!sources[i]->HasStats()){
+				sources[i]->ComputeStats();
+			}
+			
+			//If only one component is present select it if:
+			//  1) mother and nested distance is > thr (e.g. 
+			//  2) mother and nested pix superposition is <thr (e.g. 50%)
+			for(int j=0;j<nComponents;j++){
+				int nestedIndex= MotherNestedAssociationList[i][j];
+
+				//Set pars
+				NestedSources[nestedIndex]->SetBeamFluxIntegral(beamArea);
+
+				//Compute nested source stats & pars
+				NestedSources[nestedIndex]->ComputeStats();
+				NestedSources[nestedIndex]->ComputeMorphologyParams();
+
+				if(nComponents==1){
+					//Compute centroid distances
+					float centroidDistX= fabs(sources[i]->X0-NestedSources[nestedIndex]->X0);
+					float centroidDistY= fabs(sources[i]->Y0-NestedSources[nestedIndex]->Y0);
+					
+					//Compute nmatching pixels
+					long int nMatchingPixels= sources[i]->GetNMatchingPixels(NestedSources[nestedIndex]);
+					float matchingPixFraction= (float)(nMatchingPixels)/(float)(NPix);
+
+					//Select nested?
+					bool areOffset= (centroidDistX>minNestedMotherDist || centroidDistY>minNestedMotherDist);
+					bool isNestedSmaller= (matchingPixFraction<maxMatchingPixFraction);
+					
+					if( areOffset || isNestedSmaller){//Add nested to mother source
+						INFO_LOG("Adding nested source to mother source (name="<<sources[i]->GetName()<<", id="<<sources[i]->Id<<", nPix="<<NPix<<"): areOffset? "<<areOffset<<" (dist_x="<<centroidDistX<<", dist_y="<<centroidDistY<<"), isNestedSmaller?"<<isNestedSmaller<<" (matchingPixFraction="<<matchingPixFraction<<", maxMatchingPixFraction="<<maxMatchingPixFraction<<", nPixThrToSearchNested="<<nPixThrToSearchNested<<")");					
+
+						sources[i]->AddNestedSource(NestedSources[nestedIndex]);
+						nSelNestedSources++;
+					}
+					else{//do not select nested!
+						nestedSourcesToBeRemoved.push_back(nestedIndex);
+					}
+				}//close if
+				else{
+					//Add nested to mother source
+					sources[i]->AddNestedSource(NestedSources[nestedIndex]);
+					nSelNestedSources++;
+				}
+			}//end loop nested components
+		}//end loop mother sources
+
+		INFO_LOG("#"<<nSelNestedSources<<" nested sources found and added to mother sources...");
+
+		//Delete nested source selected for removal
+		for(size_t k=0;k<nestedSourcesToBeRemoved.size();k++){
+			int nestedSourceIndex= nestedSourcesToBeRemoved[k];
+			if(NestedSources[nestedSourceIndex]){
+				delete NestedSources[nestedSourceIndex];
+				NestedSources[nestedSourceIndex]= 0;
+			}
+		}
+		NestedSources.clear();
+						
+	}//close nNestedBlobs>0
+
+	return 0;
+
+}//close FindNestedSources()
+
 
 int Image::FindExtendedSource_CV(std::vector<Source*>& sources,Image* initSegmImg,ImgBkgData* bkgData,int minPixels,bool findNegativeExcess,double dt,double h,double lambda1,double lambda2,double mu,double nu,double p,int niters){
 
@@ -2800,6 +3029,42 @@ Image* Image::GetBinarizedImage(double threshold,double fgValue,bool isLowerThre
 	return BinarizedImg;
 
 }//close GetBinarizedImage()
+
+
+int Image::ApplyThreshold(double thr_min,double thr_max,double maskedValue){
+
+	#ifdef OPENMP_ENABLED
+	#pragma omp parallel for
+	#endif
+	for(size_t i=0;i<m_pixels.size();i++){
+		double w= m_pixels[i];
+		if(w==0) continue;
+		if(w<thr_min || w>thr_max) {
+			this->SetPixelValue(i,maskedValue);
+		}
+	}//end loop pixels
+	
+	//Force recomputation of stats if present, otherwise recompute only moments
+	bool skipNegativePixels= false;
+	bool computeRobustStats= true;
+	bool forceRecomputing= true;
+	if(this->HasStats()){
+		if(ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing)<0){
+			ERROR_LOG("Failed to re-compute stats of thresholded image!");
+			return -1;
+		}
+	}
+	else{
+		if(this->ComputeMoments(skipNegativePixels)<0){
+			ERROR_LOG("Failed to re-compute moments of thresholded image!");
+			return -1;
+		}	
+	}
+
+	return 0;
+
+}//close ApplyThreshold()
+
 
 //================================================================
 //===    CONVERSION METHODS
