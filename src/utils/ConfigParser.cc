@@ -253,10 +253,15 @@ int ConfigParser::RegisterPredefinedOptions(){
 		//=====================================
 		REGISTER_OPTION(searchNestedSources,bool,true,false,true);
 		REGISTER_OPTION(sourceToBeamAreaThrToSearchNested,double,0,-0.001,1000000);
-		REGISTER_OPTION(nestedBlobThrFactor,double,1,0,100);
+		REGISTER_OPTION(nestedBlobThrFactor,double,0,-0.001,100);
 		REGISTER_OPTION(minNestedMotherDist,double,2,0,100);
 		REGISTER_OPTION(maxMatchingPixFraction,double,0.5,0,1);
 		REGISTER_OPTION(nestedBlobPeakZThr,double,5,-10,10000);
+		REGISTER_OPTION(nestedBlobPeakZMergeThr,double,2.5,-10,10000);
+		REGISTER_OPTION(nestedBlobMinScale,double,1,0,10000);
+		REGISTER_OPTION(nestedBlobMaxScale,double,3,0,10000);
+		REGISTER_OPTION(nestedBlobScaleStep,double,1,0,10000);
+		REGISTER_OPTION(nestedBlobKernFactor,double,1,0,1000);
 		
 		//=======================================
 		//==  Extended Source finding options  ==
