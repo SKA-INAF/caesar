@@ -100,7 +100,13 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--nested-blobthr=[NESTED_BLOB_THR] - Threshold (multiple of curvature median) used for nested blob finding (default=0)"
 	echo "--nested-minmotherdist=[NESTED_MIN_MOTHER_DIST] - Minimum distance in pixels (in x or y) between nested and parent blob below which nested is skipped (default=2)"
 	echo "--nested-maxmotherpixmatch=[NESTED_MAX_MOTHER_PIX_MATCH] - Maximum fraction of matching pixels between nested and parent blob above which nested is skipped (default=0.5)"
-	echo "--nested-blobpeakzthr=[NESTED_BLOB_PEAK_ZTHR] - Nested blob peak significance threshold (wrt to mother source) (default=5)"
+	echo "--nested-blobpeakzthr=[NESTED_BLOB_PEAK_ZTHR] - Nested blob peak significance threshold (in scale curv map) (default=5)"
+	echo "--nested-blobpeakzthrmerge=[NESTED_BLOB_PEAK_ZTHR_MERGE] - Nested blob significance merge threshold (in scale curv map) (default=2.5)"
+	echo "--nested-blobminscale=[NESTED_BLOB_MIN_SCALE] - Nested blob min scale search factor f (blob sigma_min=f x beam width) (default=1)"
+	echo "--nested-blobmaxscale=[NESTED_BLOB_MAX_SCALE] - Nested blob max scale search factor f (blob sigma_max=f x beam width) (default=3)"
+	echo "--nested-blobscalestep=[NESTED_BLOB_SCALE_STEP] - Nested blob scale step (sigma=sigma_min + step) (default=1)"
+	echo "--nested-blobkernfactor=[NESTED_BLOB_KERN_FACTOR] - Nested blob curvature/LoG kernel size factor f (kern size=f x sigma) (default=1)"
+	
 	echo ""
 	
 	echo "=== SFINDER SOURCE RESIDUAL OPTIONS ==="
@@ -262,7 +268,12 @@ NESTED_BLOB_THR="0"
 NESTED_MIN_MOTHER_DIST="2"
 NESTED_MAX_MOTHER_PIX_MATCH="0.5"
 NESTED_BLOB_PEAK_ZTHR="5"
-
+NESTED_BLOB_PEAK_ZTHR_MERGE="2.5"
+NESTED_BLOB_MIN_SCALE="1"
+NESTED_BLOB_MAX_SCALE="3"
+NESTED_BLOB_SCALE_STEP="1"
+NESTED_BLOB_KERN_FACTOR="1"
+	
 SP_SIZE="20"
 SP_BETA="1"
 SP_MINAREA="10"
@@ -549,6 +560,21 @@ do
 		--nested-blobpeakzthr=*)
 			NESTED_BLOB_PEAK_ZTHR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
 		;;
+		--nested-blobpeakzthrmerge=*)
+			NESTED_BLOB_PEAK_ZTHR_MERGE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
+		--nested-blobminscale=*)
+			NESTED_BLOB_MIN_SCALE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
+		--nested-blobmaxscale=*)
+			NESTED_BLOB_MAX_SCALE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
+		--nested-blobscalestep=*)
+			NESTED_BLOB_SCALE_STEP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
+		--nested-blobkernfactor=*)
+			NESTED_BLOB_KERN_FACTOR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
 
 		## RESIDUAL OPTIONS
 		--dilatethr=*)
@@ -754,7 +780,7 @@ echo "GUIDED_FILTER PARS: ($GUIDED_FILTER_RADIUS, $GUIDED_FILTER_EPS)"
 echo "EXT_SFINDER_METHOD: $EXT_SFINDER_METHOD"
 echo "AC_METHOD: $AC_METHOD"
 echo "SEARCH_NESTED_SOURCES: $SEARCH_NESTED_SOURCES"
-echo "NESTED_SOURCE_TO_BEAM_THR: $NESTED_SOURCE_TO_BEAM_THR, NESTED_BLOB_THR: $NESTED_BLOB_THR, NESTED_MIN_MOTHER_DIST: $NESTED_MIN_MOTHER_DIST, NESTED_MAX_MOTHER_PIX_MATCH: $NESTED_MAX_MOTHER_PIX_MATCH, NESTED_BLOB_PEAK_ZTHR: $NESTED_BLOB_PEAK_ZTHR"
+echo "NESTED_SOURCE_TO_BEAM_THR: $NESTED_SOURCE_TO_BEAM_THR, NESTED_BLOB_THR: $NESTED_BLOB_THR, NESTED_MIN_MOTHER_DIST: $NESTED_MIN_MOTHER_DIST, NESTED_MAX_MOTHER_PIX_MATCH: $NESTED_MAX_MOTHER_PIX_MATCH, NESTED_BLOB_PEAK_ZTHR: $NESTED_BLOB_PEAK_ZTHR, NESTED_BLOB_PEAK_ZTHR_MERGE: $NESTED_BLOB_PEAK_ZTHR_MERGE"
 echo "SELECT_SOURCES: $SELECT_SOURCES"
 echo "MERGE_EDGE_SOURCES: $MERGE_EDGE_SOURCES"
 echo "FIT_SOURCES: $FIT_SOURCES"
@@ -959,10 +985,14 @@ generate_config(){
 		echo "nestedBlobThrFactor = $NESTED_BLOB_THR                           | Threshold (multiple of curvature rms) used for nested blob finding"
 		echo "minNestedMotherDist = $NESTED_MIN_MOTHER_DIST                    | Minimum distance in pixels (in x or y) between nested and parent blob below which nested is skipped"
 		echo "maxMatchingPixFraction = $NESTED_MAX_MOTHER_PIX_MATCH            | Maximum fraction of matching pixels between nested and parent blob above which nested is skipped"
-		echo "nestedBlobPeakZThr = $NESTED_BLOB_PEAK_ZTHR											 | Nested blob peak significance threshold wrt mother source (below thr nested blob is skipped) (default=5 sigmas) "
+		echo "nestedBlobPeakZThr = $NESTED_BLOB_PEAK_ZTHR											 | Nested blob peak significance thr (in curv map) (below thr nested blob is skipped) (default=5 sigmas) "
+		echo "nestedBlobPeakZMergeThr = $NESTED_BLOB_PEAK_ZTHR_MERGE        	 | Nested blob significance merge thr (in curv map) (default=2.5 sigmas)"
+		echo "nestedBlobMinScale = $NESTED_BLOB_MIN_SCALE                      | Nested blob min search scale (sigma=minscale x beam width) (default=1)"
+		echo "nestedBlobMaxScale = $NESTED_BLOB_MAX_SCALE                      | Nested blob max search scale (sigma=maxscale x beam width) (default=3)"
+		echo "nestedBlobScaleStep = $NESTED_BLOB_SCALE_STEP                    | Nested blob scale step (scale=minscale + step) (default=1)"
+		echo "nestedBlobKernFactor = $NESTED_BLOB_KERN_FACTOR                  | Nested blob curvature/LoG kernel size factor f (kern size=f x sigma) (default=1)"
 		echo '###'
 		echo '###'
-
 		echo '//=================================='
 		echo '//==  SOURCE FITTING OPTIONS  =='
 		echo '//=================================='
@@ -1261,9 +1291,9 @@ if [ "$FILELIST_GIVEN" = true ]; then
 			CMD="$CMD -f $HOSTFILE "
 		fi
 		if [ "$RUN_IN_CONTAINER" = true ] ; then
-			EXE="singularity run --app sfinder $CONTAINER_IMG"		
+			EXE="$CMD singularity run --app sfinder $CONTAINER_IMG"		
 		else
-			EXE="$CAESAR_DIR/bin/FindSourceMPI"
+			EXE="$CMD $CAESAR_DIR/bin/FindSourceMPI"
 		fi
 		EXE_ARGS="--config=$configfile"
 
@@ -1329,9 +1359,9 @@ else
 		CMD="$CMD -f $HOSTFILE "
 	fi
 	if [ "$RUN_IN_CONTAINER" = true ] ; then
-		EXE="singularity run --app sfinder $CONTAINER_IMG"		
+		EXE="$CMD singularity run --app sfinder $CONTAINER_IMG"		
 	else
-		EXE="$CAESAR_DIR/bin/FindSourceMPI"
+		EXE="$CMD $CAESAR_DIR/bin/FindSourceMPI"
 	fi
 	EXE_ARGS="--config=$configfile"
 
