@@ -111,6 +111,7 @@ int main(int argc, char *argv[]){
 
 	INFO_LOG("Finalizing MPI run...");
 	MPI_Finalize();
+	INFO_LOG("MPI comm finalized with success");
 
 	return 0;
 
