@@ -181,7 +181,7 @@ int MorphFilter::FindPeaks(std::vector<TVector2>& peakPoints,Image* img,std::vec
 		}
 		peakMean*= 1./(float)(connected_indexes[i].size());
 		peakPoints.push_back(peakMean);
-		INFO_LOG("Peak no. "<<npeaks+1<<" C("<<peakMean.X()<<","<<peakMean.Y()<<")");
+		DEBUG_LOG("Peak no. "<<npeaks+1<<" C("<<peakMean.X()<<","<<peakMean.Y()<<")");
 		npeaks++;	
 
 	}//end loop clusters
@@ -263,7 +263,7 @@ Image* MorphFilter::Dilate(std::vector<long int>& peakPixelIds,Image* img,int Ke
 				}//end loop kernel x
 
 				if(!isFlatArea){
-					INFO_LOG("Peaks #"<<npeaks<<" detected @ ("<<i<<","<<j<<")");
+					DEBUG_LOG("Peaks #"<<npeaks<<" detected @ ("<<i<<","<<j<<")");
 					long int gBin= img->GetBin(i,j);
 					peakPixelIds.push_back(gBin);
 					npeaks++;			
