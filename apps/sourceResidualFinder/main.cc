@@ -423,10 +423,6 @@ int FindSources(){
 	bool searchNestedSources;
 	double nestedBlobThrFactor;
 
-	//if(GET_OPTION_VALUE(seedBrightThr,seedBrightThr)<0){
-	//	ERROR_LOG("Failed to get seedBrightThr option!");
-	//	return -1;
-	//}	
 	if(GET_OPTION_VALUE(seedThr,seedThr)<0){
 		ERROR_LOG("Failed to get seedThr option!");
 		return -1;
@@ -458,14 +454,22 @@ int FindSources(){
 
 	//## Extract bright source
 	sources.clear();
+	/*
 	int status= inputImg->FindCompactSource(
 		sources,
 		significanceMap,bkgData,
 		seedThr,mergeThr,minNPix,searchNegativeExcess,mergeBelowSeed,
 		searchNestedSources,nestedBlobThrFactor
 	);
+	*/
+	int status= inputImg->FindCompactSource(
+		sources,
+		significanceMap,bkgData,
+		seedThr,mergeThr,minNPix,
+		searchNestedSources
+	);
 	if(status<0){
-		ERROR_LOG("Bright source search failed!");
+		ERROR_LOG("Source search failed!");
 		return -1;
 	}
 
@@ -665,7 +669,10 @@ int ComputeStats(){
 
 	//## Compute stats
 	INFO_LOG("Computing input image stats...");
-	if(inputImg->ComputeStats(true,false,false)<0){
+	bool computeRobustStats= true;
+	bool useRange= false;
+	bool forceRecomputing= false;	
+	if(inputImg->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0){
 		ERROR_LOG("Stats computing failed!");
 		return -1;
 	}

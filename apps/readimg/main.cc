@@ -418,10 +418,13 @@ int ComputeStats(){
 	//## Compute stats
 	INFO_LOG("Computing input image stats...");	
 	bool computeRobustStats= true;
-	bool skipNegativePixels= false;
+	//bool skipNegativePixels= false;
+	bool useRange= false;
 	bool forceRecomputing= false;	
-	
-	if(inputImg->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing,useParallelVersion)<0){
+	double minThr= -std::numeric_limits<double>::infinity();
+	double maxThr= std::numeric_limits<double>::infinity();
+	//if(inputImg->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing,useParallelVersion)<0){
+	if(inputImg->ComputeStats(computeRobustStats,forceRecomputing,useRange,minThr,maxThr,useParallelVersion)<0){
 		ERROR_LOG("Stats computing failed!");
 		return -1;
 	}

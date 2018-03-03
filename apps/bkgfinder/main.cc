@@ -497,7 +497,10 @@ int ComputeStats(){
 
 	//## Compute stats
 	INFO_LOG("Computing input image stats...");
-	if(inputImg->ComputeStats(true,false,false)<0){
+	bool computeRobustStats= true;
+	bool useRange= false;
+	bool forceRecomputing= false;
+	if(inputImg->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0){
 		ERROR_LOG("Stats computing failed!");
 		return -1;
 	}
