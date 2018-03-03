@@ -52,6 +52,7 @@
 #include <iostream>
 #include <time.h>
 #include <ctime>
+#include <limits>
 
 #ifdef MPI_ENABLED
 #include <mpi.h>
@@ -139,7 +140,7 @@ class SFinder : public TObject {
 		/**
 		* \brief Compute Stats and Bkg info
 		*/
-		ImgBkgData* ComputeStatsAndBkg(Image*);
+		ImgBkgData* ComputeStatsAndBkg(Image* inputImg,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity());
 
 		/**
 		* \brief Read image
@@ -200,7 +201,11 @@ class SFinder : public TObject {
 		*/
 		Image* FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,TaskData* taskData,Image* searchedImg=0,bool storeData=false);
 
-		
+		/**
+		* \brief Compute blob mask image
+		*/
+		Image* ComputeBlobMaskImage(Image* inputImg);
+
 		/**
 		* \brief Compute edge image
 		*/
@@ -405,6 +410,8 @@ class SFinder : public TObject {
 		double m_seedThrStep;
 
 		//Nested source search
+		Image* m_blobMask;
+		int m_blobMaskMethod;
 		bool m_SearchNestedSources;
 		double m_SourceToBeamAreaThrToSearchNested;
 		double m_NestedBlobThrFactor;

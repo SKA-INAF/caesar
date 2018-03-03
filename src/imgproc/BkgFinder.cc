@@ -76,7 +76,11 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 		
 	//## Compute stats
 	if(!img->HasStats()){//computing stats
-		if( img->ComputeStats(true,false,false)<0 ){
+		bool computeRobustStats= true;
+		bool useRange= false;
+		bool forceRecomputing= false;
+		//if( img->ComputeStats(true,false,false)<0 ){
+		if( img->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0 ){	
 			ERROR_LOG("Failed to compute stats!");
 			return 0;	
 		}
@@ -128,10 +132,11 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 		//Find blobs
 		INFO_LOG("Finding compact blobs to be tagged as outliers...");
 		std::vector<Source*> blobs;
-		bool findNegativeExcess= true;
-		bool mergeBelowSeed= false;
 		bool findNestedSources= false;
-		int status= img->FindCompactSource(blobs,significanceMap,bkgData,seedThr,mergeThr,minPixels,findNegativeExcess,mergeBelowSeed,findNestedSources);
+		//bool findNegativeExcess= true;
+		//bool mergeBelowSeed= false;
+		//int status= img->FindCompactSource(blobs,significanceMap,bkgData,seedThr,mergeThr,minPixels,findNegativeExcess,mergeBelowSeed,findNestedSources);
+		int status= img->FindCompactSource(blobs,significanceMap,bkgData,seedThr,mergeThr,minPixels,findNestedSources);
 		if(status<0){
 			ERROR_LOG("Failed to find significant blobs!");
 			delete bkgData;

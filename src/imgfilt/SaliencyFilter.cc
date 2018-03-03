@@ -340,8 +340,12 @@ Image* SaliencyFilter::ComputeMultiResoSaliencyMap(Image* img,int resoMin,int re
 	}
 
 	//## Compute img stats
+	bool computeRobustStats= true;
+	bool useRange= false;
+	bool forceRecomputing= false;
 	if(!img->HasStats()){
-		img->ComputeStats(true,false,false);
+		//img->ComputeStats(true,false,false);
+		img->ComputeStats(computeRobustStats,forceRecomputing,useRange);
 	}
 	ImgStats* imgStats= img->GetPixelStats();
 	if(!imgStats){
@@ -385,7 +389,11 @@ Image* SaliencyFilter::ComputeMultiResoSaliencyMap(Image* img,int resoMin,int re
 
 		//Compute stats		
 		INFO_LOG("Computing stats for normalized saliency map @ reso "<<reso<<" (step="<<resoStep<<")");
-		salMap_norm->ComputeStats(true,false,false);
+		bool computeRobustStats= true;
+		bool useRange= false;
+		bool forceRecomputing= false;
+		//salMap_norm->ComputeStats(true,false,false);	
+		salMap_norm->ComputeStats(computeRobustStats,forceRecomputing,useRange);
 		ImgStats* stats= salMap_norm->GetPixelStats();
 		double salMedian= stats->median;
 		double salMin= salMap_norm->GetMinimum();
@@ -405,7 +413,9 @@ Image* SaliencyFilter::ComputeMultiResoSaliencyMap(Image* img,int resoMin,int re
 	//Normalize final saliency
 	if(!saliencyImg_mean->HasStats()){
 		INFO_LOG("Computing stats of mean saliency map...");
-		saliencyImg_mean->ComputeStats(true,false,true);
+		//saliencyImg_mean->ComputeStats(true,false,true);
+		forceRecomputing= true;
+		saliencyImg_mean->ComputeStats(computeRobustStats,forceRecomputing,useRange);
 	}
 	if(nReso>1){
 		saliencyImg_mean->Scale(1./(double)nReso);
@@ -494,7 +504,11 @@ Image* SaliencyFilter::ComputeMultiResoSaliencyMap(Image* img,int resoMin,int re
 
 	//Compute saliency stats
 	INFO_LOG("Multi-reso combined saliency stats (before normalization and after bkg/noise sum)");
-	saliencyImg->ComputeStats(true,false,true);
+	computeRobustStats= true;
+	useRange= false;
+	forceRecomputing= true;
+	//saliencyImg->ComputeStats(true,false,true);
+	saliencyImg->ComputeStats(computeRobustStats,forceRecomputing,useRange);
 	//saliencyImg->PrintStats();
 
 	//Normalize final map
@@ -513,7 +527,12 @@ Image* SaliencyFilter::ComputeMultiResoSaliencyMap(Image* img,int resoMin,int re
 			}
 		}
 	}		
-	saliencyMap->ComputeStats(true,false,true);
+
+	computeRobustStats= true;
+	useRange= false;
+	forceRecomputing= true;
+	//saliencyMap->ComputeStats(true,false,true);
+	saliencyMap->ComputeStats(computeRobustStats,forceRecomputing,useRange);
 
 	return saliencyMap;
 

@@ -658,12 +658,15 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 	gsl_rng_free(rand_generator); 
 
 	//Force recomputation of stats if present, otherwise recompute only moments
-	bool skipNegativePixels= false;
+	//bool skipNegativePixels= false;
+	bool useRange= false;
 	bool computeRobustStats= true;	
 	bool forceRecomputing= true;
 	int status= 0;
-	if(img->HasStats()) status= img->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
-	else status= img->ComputeMoments(skipNegativePixels);
+	//if(img->HasStats()) status= img->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
+	//else status= img->ComputeMoments(skipNegativePixels);
+	if(img->HasStats()) status= img->ComputeStats(computeRobustStats,forceRecomputing,useRange);
+	else status= img->ComputeMoments(useRange);
 		
 	if(status<0){
 		WARN_LOG("Failed to recompute moments/stats after source dilation!");

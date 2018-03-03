@@ -155,7 +155,11 @@ void SFinder::Clear()
 		delete m_SaliencyImg;
 		m_SaliencyImg= 0;
 	}
-	
+	if(m_blobMask){
+		DEBUG_LOG("[PROC "<<m_procId<<"] - Deleting blob mask image...");	
+		delete m_blobMask;
+		m_blobMask= 0;		
+	}
 
 	//## Delete TApplication??	
 	//if(m_Application) {
@@ -285,6 +289,8 @@ void SFinder::InitOptions()
 	m_LaplImg= 0;
 	m_SegmImg= 0;
 
+	//Nested blob mask
+	m_blobMask= 0;
 	
 	//Task info
 	m_TaskInfoTree= 0;
@@ -484,6 +490,7 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(nestedBlobMaxScale,m_nestedBlobMaxScale);
 	GET_OPTION_VALUE(nestedBlobScaleStep,m_nestedBlobScaleStep);
 	GET_OPTION_VALUE(nestedBlobKernFactor,m_nestedBlobKernFactor);
+	GET_OPTION_VALUE(blobMaskMethod,m_blobMaskMethod);
 	
 	if(m_nestedBlobMinScale>m_nestedBlobMaxScale){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Invalid nested blob search scales given (hint: min scale cannot be larger than max scale)!");
@@ -562,8 +569,6 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(guidedFilterRadius,m_GuidedFilterRadius);
 	GET_OPTION_VALUE(guidedFilterColorEps,m_GuidedFilterColorEps);
 	
-	
-
 	//Get saliency options
 	GET_OPTION_VALUE(saliencyUseOptimalThr,m_SaliencyUseOptimalThr);
 	GET_OPTION_VALUE(saliencyThrFactor,m_SaliencyThrFactor);
@@ -740,7 +745,6 @@ int SFinder::RunTask(TaskData* taskData,bool storeData){
 	//============================
 	if(!stopTask && m_mergeSources){
 		INFO_LOG("[PROC "<<m_procId<<"] - Merging task sources ...");
-		//if(MergeTaskSources(taskData)<0){
 		if(MergeTaskSources(taskImg,bkgData,taskData)<0){
 			ERROR_LOG("[PROC "<<m_procId<<"] - Merging task sources failed!");
 			status= -1;
@@ -953,15 +957,28 @@ int SFinder::FindSources(std::vector<Source*>& sources,Image* inputImg,double se
 	Image* significanceMap= img->GetSignificanceMap(bkgData,m_UseLocalBkg);
 	if(!significanceMap){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute significance map!");
+		CodeUtils::DeletePtr<ImgBkgData>(bkgData);
 		return -1;
+	}
+
+	//## Compute blob mask
+	if(!m_blobMask && m_SearchNestedSources){
+		INFO_LOG("[PROC "<<m_procId<<"] - Computing multi-scale blob mask...");
+		m_blobMask= ComputeBlobMaskImage(img);
+		if(!m_blobMask){
+			ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute blob mask map!");
+			CodeUtils::DeletePtr<ImgBkgData>(bkgData);
+			CodeUtils::DeletePtr<Image>(significanceMap);
+			return -1;
+		}
 	}
 
 	//## Compute npixel threshold to add nested sources
 	//Get beam area if available, otherwise use user-supplied beam info
 	double beamArea= 1;
 	bool hasBeamData= false;
-	if(inputImg->HasMetaData()){
-		beamArea= inputImg->GetMetaData()->GetBeamFluxIntegral();
+	if(img->HasMetaData()){
+		beamArea= img->GetMetaData()->GetBeamFluxIntegral();
 		if(beamArea>0 && std::isnormal(beamArea)) hasBeamData= true;
 	}
 	if(!hasBeamData){
@@ -974,22 +991,25 @@ int SFinder::FindSources(std::vector<Source*>& sources,Image* inputImg,double se
 
 	//## Find sources
 	INFO_LOG("[PROC "<<m_procId<<"] - Finding sources...");	
+	/*
 	int status= inputImg->FindCompactSource(
 		sources,
 		significanceMap,bkgData,
 		seedThr,mergeThr,m_NMinPix,m_SearchNegativeExcess,m_MergeBelowSeed,
 		m_SearchNestedSources,m_NestedBlobThrFactor, m_minNestedMotherDist, m_maxMatchingPixFraction, nPixThrToSearchNested, m_nestedBlobPeakZThr
 	);
+	*/
+	int status= inputImg->FindCompactSource(
+		sources,
+		significanceMap,bkgData,
+		seedThr,mergeThr,m_NMinPix,
+		m_SearchNestedSources,m_blobMask,m_minNestedMotherDist, m_maxMatchingPixFraction,nPixThrToSearchNested
+	);
+
 
 	//## Clear data
-	if(bkgData){
-		delete bkgData;
-		bkgData= 0;
-	}
-	if(significanceMap) {
-		delete significanceMap;	
-		significanceMap= 0;
-	}
+	CodeUtils::DeletePtr<ImgBkgData>(bkgData);
+	CodeUtils::DeletePtr<Image>(significanceMap);
 
 	//## Check status
 	if(status<0) {
@@ -1037,11 +1057,25 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	}
 
 	//## Compute curvature map to be added to sources
+	/*
 	Image* curvMap= ComputeLaplacianImage(inputImg);
 	if(!curvMap){
 		WARN_LOG("[PROC "<<m_procId<<"] - Failed to compute curvature map!");
 		return nullptr;
 	}
+	*/
+
+	//## Compute blob mask
+	if(!m_blobMask && m_SearchNestedSources){
+		INFO_LOG("[PROC "<<m_procId<<"] - Computing multi-scale blob mask...");
+		m_blobMask= ComputeBlobMaskImage(inputImg);
+		if(!m_blobMask){
+			ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute blob mask map!");
+			CodeUtils::DeletePtr<Image>(img);
+			return nullptr;
+		}
+	}
+
 
 	//## Iterate source finding subtracting sources found at each iteration
 	std::vector<Source*> sources;
@@ -1067,15 +1101,8 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 			bkgData_iter= ComputeStatsAndBkg(img);
 			if(!bkgData_iter){
 				ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute bkg for input image at iter no. "<<k+1<<"!");
-				delete img;
-				img= 0;
-				for(size_t i=0;i<sources.size();i++) {	
-					if(sources[i]) {
-						delete sources[i];
-						sources[i]= 0;
-					}
-				}
-				sources.clear();
+				CodeUtils::DeletePtr<Image>(img);
+				CodeUtils::DeletePtrCollection<Source>(sources);
 				return nullptr;
 			}
 		}//close else
@@ -1083,20 +1110,10 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		//## Compute significance map
 		Image* significanceMap_iter= img->GetSignificanceMap(bkgData_iter,m_UseLocalBkg);
 		if(!significanceMap_iter){
-			ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute significance map at iter no. "<<k+1<<"!");
-			delete img;
-			img= 0;
-			delete bkgData_iter;
-			bkgData_iter= 0;
-			for(size_t i=0;i<sources.size();i++) {	
-				if(sources[i]) {
-					delete sources[i];
-					sources[i]= 0;
-				}
-			}
-			sources.clear();
-			delete curvMap;
-			curvMap= 0;
+			ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute significance map at iter no. "<<k+1<<"!");			
+			CodeUtils::DeletePtr<Image>(img);
+			CodeUtils::DeletePtr<ImgBkgData>(bkgData_iter);
+			CodeUtils::DeletePtrCollection<Source>(sources);
 			return nullptr;
 		}
 
@@ -1107,35 +1124,32 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		int status= img->FindCompactSource(
 			sources_iter,
 			significanceMap_iter,bkgData_iter,
+			seedThr,m_MergeThr,m_NMinPix,
+			searchNested
+		);
+		/*
+		int status= img->FindCompactSource(
+			sources_iter,
+			significanceMap_iter,bkgData_iter,
 			seedThr,m_MergeThr,m_NMinPix,m_SearchNegativeExcess,m_MergeBelowSeed,
 			searchNested,m_NestedBlobThrFactor, m_minNestedMotherDist, m_maxMatchingPixFraction,nPixThrToSearchNested,m_nestedBlobPeakZThr,
 			curvMap
 		);
+		*/
 
 		if(status<0) {
 			ERROR_LOG("[PROC "<<m_procId<<"] - Compact source finding failed!");
-			delete img;
-			img= 0;
-			delete bkgData_iter;
-			bkgData_iter= 0;
-			delete significanceMap_iter;
-			significanceMap_iter= 0;
-			for(size_t i=0;i<sources.size();i++) {	
-				if(sources[i]) {
-					delete sources[i];
-					sources[i]= 0;
-				}
-			}
-			delete curvMap;
-			curvMap= 0;
+			CodeUtils::DeletePtr<Image>(img);
+			CodeUtils::DeletePtr<Image>(significanceMap_iter);
+			CodeUtils::DeletePtr<ImgBkgData>(bkgData_iter);
+			CodeUtils::DeletePtrCollection<Source>(sources);
 			return nullptr;
 		}
 
 		//## If no sources have been found stop iteration loop
 		if(sources_iter.empty()){
 			INFO_LOG("[PROC "<<m_procId<<"] - No compact sources found at iter "<<k+1<<", stop iteration.");
-			delete bkgData_iter;
-			bkgData_iter= 0;
+			CodeUtils::DeletePtr<ImgBkgData>(bkgData_iter);
 			significanceMap= significanceMap_iter;
 			break;
 		}
@@ -1163,17 +1177,13 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		img->MaskSources(sources_iter,0.);		
 
 		//## Clear iter data
-		if(bkgData_iter){
-			delete bkgData_iter;
-			bkgData_iter= 0;
-		}
+		CodeUtils::DeletePtr<ImgBkgData>(bkgData_iter);	
 		if(significanceMap_iter){
 			if(k==niter-1){//store significance map at the last iteration
 				significanceMap= significanceMap_iter;
 			}
 			else{
-				delete significanceMap_iter;
-				significanceMap_iter= 0;					
+				CodeUtils::DeletePtr<Image>(significanceMap_iter);				
 			}
 		}//close if significance map
 
@@ -1188,7 +1198,7 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	Image* segmMap= inputImg->GetSourceMask(sources,isBinary,invert);
 	if(!segmMap){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute segmented map from all compact sources found!");
-		CodeUtils::DeletePtrCollection<Image>({img,curvMap});
+		CodeUtils::DeletePtr<Image>(img);
 		CodeUtils::DeletePtrCollection(sources);
 		return nullptr;
 	}
@@ -1196,6 +1206,7 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	std::vector<Source*> sources_merged;
 	double seedThr_binary= 0.5;//dummy values (>0)
 	double mergeThr_binary= 0.4;//dummy values (>0)
+	/*
 	int merge_status= inputImg->FindCompactSource(
 		sources_merged,
 		segmMap,bkgData,
@@ -1203,15 +1214,22 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		m_SearchNestedSources,m_NestedBlobThrFactor, m_minNestedMotherDist, m_maxMatchingPixFraction,nPixThrToSearchNested,m_nestedBlobPeakZThr,
 		curvMap
 	);
+	*/
+	int merge_status= inputImg->FindCompactSource(
+		sources_merged,
+		segmMap,bkgData,
+		seedThr_binary,mergeThr_binary,m_NMinPix,
+		m_SearchNestedSources,m_blobMask,m_minNestedMotherDist, m_maxMatchingPixFraction,nPixThrToSearchNested
+	);
+
 
 	//Clearup data
-	CodeUtils::DeletePtrCollection<Image>({img,curvMap});
-	CodeUtils::DeletePtrCollection(sources);
+	CodeUtils::DeletePtr<Image>(img);
+	CodeUtils::DeletePtrCollection<Source>(sources);
 
 	if(merge_status<0) {
 		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute merged compact sources!");
-		delete significanceMap;
-		significanceMap= 0;
+		CodeUtils::DeletePtr<Image>(significanceMap);
 		return nullptr;				
 	}
 
@@ -1237,8 +1255,7 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	if(m_ApplySourceSelection && nSources>0){
 		if(SelectSources(sources_merged)<0){
 			ERROR_LOG("[PROC "<<m_procId<<"] - Failed to select sources!");
-			delete significanceMap;
-			significanceMap= 0;
+			CodeUtils::DeletePtr<Image>(significanceMap);
 			CodeUtils::DeletePtrCollection(sources_merged);
 			return nullptr;
 		}
@@ -1251,7 +1268,7 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		sources_merged[k]->SetId(k+1);
 		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
 		sources_merged[k]->SetBeamFluxIntegral(beamArea);
-		sources_merged[k]->Print();
+		//sources_merged[k]->Print();
 		std::vector<Source*> nestedSources= sources_merged[k]->GetNestedSources();
 		for(size_t l=0;l<nestedSources.size();l++){
 			nestedSources[l]->SetId(l+1);
@@ -1277,12 +1294,22 @@ Image* SFinder::FindCompactSources(Image* inputImg, ImgBkgData* bkgData, TaskDat
 		return nullptr;
 	}
 
-	
 	//## Compute significance map
 	Image* significanceMap= inputImg->GetSignificanceMap(bkgData,m_UseLocalBkg);
 	if(!significanceMap){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute significance map!");
 		return nullptr;
+	}
+
+	//## Compute blob mask
+	if(!m_blobMask && m_SearchNestedSources){
+		INFO_LOG("[PROC "<<m_procId<<"] - Computing multi-scale blob mask...");
+		m_blobMask= ComputeBlobMaskImage(inputImg);
+		if(!m_blobMask){
+			ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute blob mask map!");
+			CodeUtils::DeletePtr<Image>(significanceMap);
+			return nullptr;
+		}
 	}
 
 	//## Compute npixel threshold to add nested sources
@@ -1305,17 +1332,24 @@ Image* SFinder::FindCompactSources(Image* inputImg, ImgBkgData* bkgData, TaskDat
 	//## Find sources
 	INFO_LOG("[PROC "<<m_procId<<"] - Finding compact sources...");	
 	std::vector<Source*> sources;
+	/*
 	int status= inputImg->FindCompactSource(
 		sources,
 		significanceMap,bkgData,
 		m_SeedThr,m_MergeThr,m_NMinPix,m_SearchNegativeExcess,m_MergeBelowSeed,
 		m_SearchNestedSources,m_NestedBlobThrFactor,m_minNestedMotherDist,m_maxMatchingPixFraction,nPixThrToSearchNested,m_nestedBlobPeakZThr
 	);
+	*/
+	int status= inputImg->FindCompactSource(
+		sources,
+		significanceMap,bkgData,
+		m_SeedThr,m_MergeThr,m_NMinPix,
+		m_SearchNestedSources,m_blobMask,m_minNestedMotherDist, m_maxMatchingPixFraction,nPixThrToSearchNested
+	);
 
 	if(status<0) {
 		ERROR_LOG("[PROC "<<m_procId<<"] - Compact source finding failed!");
-		delete significanceMap;
-		significanceMap= 0;
+		CodeUtils::DeletePtr<Image>(significanceMap);
 		return nullptr;
 	}
 
@@ -1331,8 +1365,7 @@ Image* SFinder::FindCompactSources(Image* inputImg, ImgBkgData* bkgData, TaskDat
 	if(m_ApplySourceSelection && nSources>0){
 		if(SelectSources(sources)<0){
 			ERROR_LOG("[PROC "<<m_procId<<"] - Failed to select sources!");
-			delete significanceMap;
-			significanceMap= 0;
+			CodeUtils::DeletePtr<Image>(significanceMap);
 			return nullptr;
 		}
 		nSources= static_cast<int>(sources.size());
@@ -1344,7 +1377,7 @@ Image* SFinder::FindCompactSources(Image* inputImg, ImgBkgData* bkgData, TaskDat
 		sources[k]->SetId(k+1);
 		sources[k]->SetName(Form("S%d",(signed)(k+1)));
 		sources[k]->SetBeamFluxIntegral(beamArea);
-		sources[k]->Print();
+		//sources[k]->Print();
 	}	
 			
 	//## Add sources to task data sources
@@ -1604,15 +1637,22 @@ Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,T
 	//==========================================
 	//## Find compact blobs in saliency map by simple thresholding
 	INFO_LOG("[PROC "<<m_procId<<"] - Finding blobs in saliency map with threshold="<<signalThr<<"...");	
-	bool findNegativeExcess= false;
-	bool mergeBelowSeed= false;
+	//bool findNegativeExcess= false;
+	//bool mergeBelowSeed= false;
 	bool findNestedSources= false;
 	int minNPix= m_NMinPix;
 	std::vector<Source*> sources;
+	/*
 	int status= inputImg->FindCompactSource(	
 		sources, saliencyImg, 0,
 		signalThr,signalThr,minNPix,
 		findNegativeExcess,mergeBelowSeed,findNestedSources
+	);
+	*/
+	int status= inputImg->FindCompactSource(	
+		sources, saliencyImg, 0,
+		signalThr,signalThr,minNPix,
+		findNestedSources
 	);
 
 	//Delete saliency map if not needed
@@ -1849,14 +1889,21 @@ Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,T
 
 
 	//## Finding blobs in masked image
-	bool findNegativeExcess= false;
-	bool mergeBelowSeed= false;
+	//bool findNegativeExcess= false;
+	//bool mergeBelowSeed= false;
 	bool findNestedSources= false;
 	std::vector<Source*> sources;
+	/*
 	int status= inputImg->FindCompactSource(
 		sources, segmentedImg,
 		bkgData, fgValue, fgValue, 
 		m_NMinPix, findNegativeExcess, mergeBelowSeed, findNestedSources
+	);
+	*/
+	int status= inputImg->FindCompactSource(
+		sources, segmentedImg,
+		bkgData, fgValue, fgValue, m_NMinPix, 
+		findNestedSources
 	);
 	if(status<0){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Finding sources in hierarchical algorithm segmented mask failed!");
@@ -1914,7 +1961,66 @@ Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,T
 }//close FindExtendedSources_HClust()
 
 
+Image* SFinder::ComputeBlobMaskImage(Image* inputImg)
+{
+	//## Check input image
+	if(!inputImg){
+		ERROR_LOG("[PROC "<<m_procId<<"] - Null ptr to given input image!");
+		return nullptr;
+	}
 
+	//## NB: Convert scale pars in pixels assuming they represent multiple of beam width (Bmin)	
+	double pixSize= fabs(std::min(m_pixSizeX,m_pixSizeY));
+	double beamWidth= fabs(std::min(m_beamBmaj,m_beamBmin));
+	double beamPixSize= beamWidth/pixSize;
+	double boxSizeX= beamPixSize*m_BoxSizeX;
+	double boxSizeY= beamPixSize*m_BoxSizeY;
+	double boxSize= std::min(boxSizeX,boxSizeY);
+	double gridSizeX= m_GridSizeX*boxSizeX;
+	double gridSizeY= m_GridSizeY*boxSizeY;
+	double gridSize= std::min(gridSizeX,gridSizeY);
+	
+	//## Compute blob mask
+	Image* blobMask= 0;
+	if(m_blobMaskMethod==eCurvMask){//NB: bmaj/bmin shall be given in arcsec (NOT in pixels)
+		INFO_LOG("[PROC "<<m_procId<<"] - Computing curvature blob mask ...");		
+		double kernNSigmaSize= 3;
+
+		blobMask= BlobFinder::ComputeBlobMask(
+			inputImg,	
+			m_beamBmaj,m_beamBmin,m_beamBpa,kernNSigmaSize,
+			m_nestedBlobPeakZThr,m_nestedBlobPeakZMergeThr,m_NMinPix,
+			m_NestedBlobThrFactor,
+			m_BkgEstimator,boxSize,gridSize
+		);
+	}//close if
+	else if(m_blobMaskMethod==eMultiScaleLoGMask){
+		double sigmaMin= m_nestedBlobMinScale*beamPixSize/GausSigma2FWHM;//convert from FWHM to sigma
+		double sigmaMax= m_nestedBlobMaxScale*beamPixSize/GausSigma2FWHM;//convert from FWHM to sigma
+		double sigmaStep= m_nestedBlobScaleStep;	
+		INFO_LOG("[PROC "<<m_procId<<"] - Computing multi-scale blob mask (scale min/max/step="<<sigmaMin<<"/"<<sigmaMax<<"/"<<sigmaStep<<") ...");
+		
+		blobMask= BlobFinder::ComputeMultiScaleBlobMask(
+			inputImg,
+			sigmaMin,sigmaMax,sigmaStep,
+			m_nestedBlobPeakZThr,m_nestedBlobPeakZMergeThr,m_NMinPix,
+			m_NestedBlobThrFactor,m_nestedBlobKernFactor,
+			m_BkgEstimator,boxSize,gridSize
+		);
+	}//close else if
+	else{
+		ERROR_LOG("Invalid blob mask method ("<<m_blobMaskMethod<<") given!");
+		return nullptr;
+	}
+
+	if(!blobMask){
+		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute blob mask!");
+		return nullptr;
+	}
+
+	return blobMask;	
+
+}//close ComputeBlobMaskImage()
 
 Image* SFinder::ComputeLaplacianImage(Image* inputImg){
 
@@ -1934,7 +2040,12 @@ Image* SFinder::ComputeLaplacianImage(Image* inputImg){
 
 	//Compute laplacian image stats
 	INFO_LOG("[PROC "<<m_procId<<"] - Compute Laplacian image stats...");
-	if(laplImg->ComputeStats(true,false,false)<0){	
+	
+	bool computeRobustStats= true;	
+	bool forceRecomputing= false;
+	bool useRange= false;
+	//if(laplImg->ComputeStats(true,false,false)<0){
+	if(laplImg->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0){	
 		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute Laplacian image stats, returning nullptr!");
 		delete laplImg;
 		laplImg= 0;
@@ -1982,7 +2093,11 @@ Image* SFinder::ComputeEdgeImage(Image* inputImg,int edgeModel){
 
 	//Compute edge image stats
 	INFO_LOG("[PROC "<<m_procId<<"] - Compute edge image stats...");
-	if(edgeImg->ComputeStats(true,false,false)<0){
+	bool computeRobustStats= true;	
+	bool forceRecomputing= false;
+	bool useRange= false;
+	//if(edgeImg->ComputeStats(true,false,false)<0){
+	if(edgeImg->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute edge image stats, returning nullptr!");
 		delete edgeImg;
 		edgeImg= 0;
@@ -2110,14 +2225,21 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 	}
 	
 	//## Finding blobs in masked image
-	bool findNegativeExcess= false;
-	bool mergeBelowSeed= false;
+	//bool findNegativeExcess= false;
+	//bool mergeBelowSeed= false;
 	bool findNestedSources= false;
 	std::vector<Source*> sources;
+	/*
 	int status= inputImg->FindCompactSource(
 		sources, segmentedImg,
 		bkgData, fgValue, fgValue, 
 		m_NMinPix, findNegativeExcess, mergeBelowSeed, findNestedSources
+	);
+	*/
+	int status= inputImg->FindCompactSource(
+		sources, segmentedImg,
+		bkgData, fgValue, fgValue, m_NMinPix,
+		findNestedSources
 	);
 	if(status<0){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Finding sources in active contour segmented mask failed!");
@@ -2258,15 +2380,23 @@ Image* SFinder::FindExtendedSources_WT(Image* inputImg,TaskData* taskData,Image*
 	//## Find source blobs in binary mask
 	double seedThr= 0.5;//dummy values (>0)
 	double mergeThr= 0.4;//dummy values (>0)
-	bool searchNegative= false;
+	//bool searchNegative= false;
 	bool searchNested= false;
 	std::vector<Source*> sources;
+	/*
 	status= inputImg->FindCompactSource(
-			sources,
-			binaryMaskImg,m_BkgData,
-			seedThr,mergeThr,m_NMinPix,searchNegative,m_MergeBelowSeed,
-			searchNested
-		);
+		sources,
+		binaryMaskImg,m_BkgData,
+		seedThr,mergeThr,m_NMinPix,searchNegative,m_MergeBelowSeed,
+		searchNested
+	);
+	*/
+	status= inputImg->FindCompactSource(
+		sources,
+		binaryMaskImg,m_BkgData,
+		seedThr,mergeThr,m_NMinPix,
+		searchNested
+	);
 
 	if(status<0){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to found source blobs in binary mask!");
@@ -2687,7 +2817,7 @@ Image* SFinder::ReadImage(FileInfo& info,std::string filename,std::string imgnam
 
 
 
-ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img){
+ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,double maxThr){
 
 	//## Check input img
 	if(!img){
@@ -2698,9 +2828,10 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img){
 	//## Compute stats
 	INFO_LOG("[PROC "<<m_procId<<"] - Computing image stats...");
 	bool computeRobustStats= true;
-	bool skipNegativePix= false;
+	//bool skipNegativePix= false;
 	bool forceRecomputing= false;
-	if(img->ComputeStats(computeRobustStats,skipNegativePix,forceRecomputing)<0){
+	//if(img->ComputeStats(computeRobustStats,skipNegativePix,forceRecomputing)<0){
+	if(img->ComputeStats(computeRobustStats,forceRecomputing,useRange,minThr,maxThr)<0){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Stats computing failed!");
 		return nullptr;
 	}
@@ -2732,9 +2863,6 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img){
 		//If beam data are not present in metadata, use those provided in the config file
 		if(!hasBeamData){
 			WARN_LOG("[PROC "<<m_procId<<"] - Using user-provided beam info to set bkg box size (beam info are not available/valid in image)...");
-			//pixelWidthInBeam= AstroUtils::GetBeamWidthInPixels(m_beamFWHM,m_beamFWHM,m_pixSize,m_pixSize);
-			//m_beamBmaj= m_beamFWHM;
-			//m_beamBmin= m_beamFWHM;
 			pixelWidthInBeam= AstroUtils::GetBeamWidthInPixels(m_beamFWHMMax,m_beamFWHMMin,m_pixSize,m_pixSize);
 			m_beamBmaj= m_beamFWHMMax;
 			m_beamBmin= m_beamFWHMMin;
@@ -2771,7 +2899,8 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img){
 		m_BkgEstimator,
 		m_UseLocalBkg,boxSizeX,boxSizeY,gridSizeX,gridSizeY,
 		m_Use2ndPassInLocalBkg,
-		m_SkipOutliersInLocalBkg,m_SeedThr,m_MergeThr,m_NMinPix
+		m_SkipOutliersInLocalBkg,m_SeedThr,m_MergeThr,m_NMinPix,
+		useRange,minThr,maxThr
 	);
 
 	if(!bkgData) {
@@ -3570,51 +3699,17 @@ int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* task
 		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute mask from all detected sources!");
 		return -1;
 	}
-
-
-	/*
-	//## Smooth image with elliptical kernel
-	INFO_LOG("[PROC "<<m_procId<<"] - Computing smoothed map with elliptical gaussian kernel (bmaj/bmin/bpa="<<m_beamBmaj<<","<<m_beamBmin<<","<<m_beamBpa<<") ...");
-	Image* filtMap= GausFilter::GetGausFilter(inputImg,m_beamBmaj,m_beamBmin,m_beamBpa,m_MergeThr);
-	if(!filtMap){
-		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute smoothed map!");
-		CodeUtils::DeletePtrCollection<Image>({sourceMask});
-		return -1;
-	}
-
-	//## Compute curvature map to be used for nested source search
-	Image* curvMap= filtMap->GetLaplacianImage(true);
-	if(!curvMap){
-		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute multi-scale curvature map...");
-		CodeUtils::DeletePtrCollection<Image>({sourceMask,filtMap});
-		return -1;
-	}
-	*/
-
 	
-	//## NB: Convert scale pars in pixels assuming they represent multiple of beam width (Bmin)	
-	double pixSize= fabs(std::min(m_pixSizeX,m_pixSizeY));
-	double beamWidth= fabs(std::min(m_beamBmaj,m_beamBmin));
-	double beamPixSize= beamWidth/pixSize;
-	double sigmaMin= m_nestedBlobMinScale*beamPixSize/GausSigma2FWHM;//convert from FWHM to sigma
-	double sigmaMax= m_nestedBlobMaxScale*beamPixSize/GausSigma2FWHM;//convert from FWHM to sigma
-	double sigmaStep= m_nestedBlobScaleStep;	
-	double boxSizeX= beamPixSize*m_BoxSizeX;
-	double boxSizeY= beamPixSize*m_BoxSizeY;
-	double boxSize= std::min(boxSizeX,boxSizeY);
-	double gridSizeX= m_GridSizeX*boxSizeX;
-	double gridSizeY= m_GridSizeY*boxSizeY;
-	double gridSize= std::min(gridSizeX,gridSizeY);
-	INFO_LOG("[PROC "<<m_procId<<"] - Computing multi-scale blob mask (scale min/max/step="<<sigmaMin<<"/"<<sigmaMax<<"/"<<sigmaStep<<") ...");
-	
-	Image* blobMask= BlobFinder::ComputeMultiScaleBlobMask(
-		inputImg,
-		sigmaMin,sigmaMax,sigmaStep,
-		m_nestedBlobPeakZThr,m_nestedBlobPeakZMergeThr,m_NMinPix,
-		m_NestedBlobThrFactor,m_nestedBlobKernFactor,
-		m_BkgEstimator,boxSize,gridSize
-	);
-		
+	//## Compute blob mask
+	if(!m_blobMask && m_SearchNestedSources){
+		INFO_LOG("[PROC "<<m_procId<<"] - Computing multi-scale blob mask...");
+		m_blobMask= ComputeBlobMaskImage(inputImg);
+		if(!m_blobMask){
+			ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute blob mask map!");
+			CodeUtils::DeletePtr<Image>(sourceMask);
+			return -1;
+		}
+	}	
 
 	//## Find aggregated sources
 	INFO_LOG("[PROC "<<m_procId<<"] - Merging all detected overlapping sources found (#"<<(taskData->sources).size()<<") using provided source mask ...");
@@ -3625,16 +3720,16 @@ int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* task
 		sources_merged,
 		sourceMask,bkgData,
 		seedThr_binary,mergeThr_binary,m_NMinPix,
-		m_SearchNestedSources,blobMask,m_minNestedMotherDist,m_maxMatchingPixFraction,nPixThrToSearchNested
+		m_SearchNestedSources,m_blobMask,m_minNestedMotherDist,m_maxMatchingPixFraction,nPixThrToSearchNested
 	);
 
 
 	//Clearup data
-	//CodeUtils::DeletePtrCollection<Image>({sourceMask,filtMap,curvMap});
-	CodeUtils::DeletePtrCollection<Image>({sourceMask,blobMask});
+	CodeUtils::DeletePtrCollection<Image>({sourceMask});
 	
 	if(status<0) {
 		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute merged sources!");
+		CodeUtils::DeletePtrCollection(sources_merged);
 		return -1;			
 	}
 
@@ -3686,7 +3781,7 @@ int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* task
 		sources_merged[k]->SetId(k+1);
 		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
 		sources_merged[k]->SetBeamFluxIntegral(beamArea);
-		sources_merged[k]->Print();
+		//sources_merged[k]->Print();
 		std::vector<Source*> nestedSources= sources_merged[k]->GetNestedSources();
 		for(size_t l=0;l<nestedSources.size();l++){
 			nestedSources[l]->SetId(l+1);

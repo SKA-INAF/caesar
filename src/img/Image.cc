@@ -1042,7 +1042,8 @@ void Image::ResetImgStats(bool resetMoments,bool clearStats){
 
 }//close ResetImgStats()
 
-int Image::ComputeMoments(bool skipNegativePixels){
+//int Image::ComputeMoments(bool skipNegativePixels){
+int Image::ComputeMoments(bool useRange,double minThr,double maxThr){
 
 	//#### DEBUG ####
 	DEBUG_LOG("m_StatMoments min/max (before): "<<m_StatMoments.minVal<<"/"<<m_StatMoments.maxVal);
@@ -1051,7 +1052,8 @@ int Image::ComputeMoments(bool skipNegativePixels){
 	//## Recompute stat moments
 	//## NB: If OMP is enabled this is done in parallel and moments are aggregated to return the correct cumulative estimate 
 	bool maskNanInfValues= true;
-	int status= Caesar::StatsUtils::ComputeStatsMoments(m_StatMoments,m_pixels,skipNegativePixels,maskNanInfValues);
+	//int status= Caesar::StatsUtils::ComputeStatsMoments(m_StatMoments,m_pixels,skipNegativePixels,maskNanInfValues);
+	int status= Caesar::StatsUtils::ComputeStatsMoments(m_StatMoments,m_pixels,useRange,minThr,maxThr,maskNanInfValues);
 	if(status<0){
 		ERROR_LOG("Failed to compute stat moments!");
 	}
@@ -1067,13 +1069,13 @@ int Image::ComputeMoments(bool skipNegativePixels){
 
 
 
-void Image::ComputeStatsParams(bool computeRobustStats,bool skipNegativePixels,bool useParallelVersion){
+//void Image::ComputeStatsParams(bool computeRobustStats,bool skipNegativePixels,bool useParallelVersion){
+void Image::ComputeStatsParams(bool computeRobustStats,bool useRange,double minThr,double maxThr,bool useParallelVersion){
 
 	//## Reset previous stats params (Reset only Stats not moments!)
 	ResetImgStats(false);
 
 	//-- DEBUG
-	//DEBUG_LOG("Npix="<<m_Npix<<", M1="<<m_M1<<", m_M2="<<m_M2<<", m_M3="<<m_M3<<", m_M4="<<m_M4<<", pixel sizes="<<m_pixels.size());
 	DEBUG_LOG("Npix="<<m_StatMoments.N<<", M1="<<m_StatMoments.M1<<", M2="<<m_StatMoments.M2<<", M3="<<m_StatMoments.M3<<", M4="<<m_StatMoments.M4<<", pixel sizes="<<m_pixels.size());
 	//----
 	
@@ -1125,7 +1127,8 @@ void Image::ComputeStatsParams(bool computeRobustStats,bool skipNegativePixels,b
 	std::vector<float> pixels;
 	for(size_t i=0;i<m_pixels.size();i++){
 		float w= m_pixels[i];
-		if( w==0 || (skipNegativePixels && w<0) ) continue;
+		//if( w==0 || (skipNegativePixels && w<0) ) continue;
+		if( w==0 || (useRange && (w<=minThr || w>=maxThr)) ) continue;
 		pixels.push_back(w);
 	}
 	
@@ -1181,13 +1184,12 @@ void Image::ComputeStatsParams(bool computeRobustStats,bool skipNegativePixels,b
 
 
 
-int Image::ComputeStats(bool computeRobustStats,bool skipNegativePixels,bool forceRecomputing,bool useParallelVersion){
-
-	
+//int Image::ComputeStats(bool computeRobustStats,bool skipNegativePixels,bool forceRecomputing,bool useParallelVersion){
+int Image::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool useRange,double minThr,double maxThr,bool useParallelVersion)
+{
 	//## Start timer
 	auto start = chrono::steady_clock::now();
 
-	
 	//## Check if image has already stats computed
 	if(!HasStats()){
 		m_Stats= new Caesar::ImgStats;
@@ -1198,7 +1200,8 @@ int Image::ComputeStats(bool computeRobustStats,bool skipNegativePixels,bool for
 
 	//## If recomputing is not requested (i.e. some pixels has been reset by the user, just set the stats params!
 	if(!forceRecomputing){
-		ComputeStatsParams(computeRobustStats,skipNegativePixels,useParallelVersion);
+		//ComputeStatsParams(computeRobustStats,skipNegativePixels,useParallelVersion);
+		ComputeStatsParams(computeRobustStats,useRange,minThr,maxThr,useParallelVersion);
 		m_HasStats= true;
 		
 		auto stop = chrono::steady_clock::now();
@@ -1215,10 +1218,12 @@ int Image::ComputeStats(bool computeRobustStats,bool skipNegativePixels,bool for
 	ResetImgStats(true);
 
 	//--> Recompute moments
-	ComputeMoments(skipNegativePixels);
+	//ComputeMoments(skipNegativePixels);
+	ComputeMoments(useRange,minThr,maxThr);
 
 	//--> Recompute stats params
-	ComputeStatsParams(computeRobustStats,skipNegativePixels,useParallelVersion);
+	//ComputeStatsParams(computeRobustStats,skipNegativePixels,useParallelVersion);
+	ComputeStatsParams(computeRobustStats,useRange,minThr,maxThr,useParallelVersion);
 
 	m_HasStats= true;
 
@@ -1594,11 +1599,10 @@ int Image::FindCompactSource(std::vector<Source*>& sources,double thr,int minPix
 
 	//Find sources by simple thresholding using the same image as significance map and no bkgdata
 	bool findNestedSources= false;
-	Image* blobMask= 0;
 	//bool findNegativeExcess= false;
 	//bool mergeBelowSeed= false;	
 	//if(this->FindCompactSource(sources,this,0,thr,thr,minPixels,findNegativeExcess,mergeBelowSeed,findNestedSources)<0){
-	if(this->FindCompactSource(sources,this,0,thr,thr,minPixels,findNestedSources,blobMask)<0){
+	if(this->FindCompactSource(sources,this,0,thr,thr,minPixels,findNestedSources)<0){
 		ERROR_LOG("Compact source finder failed!");
 		return -1;
 	}
@@ -1606,7 +1610,7 @@ int Image::FindCompactSource(std::vector<Source*>& sources,double thr,int minPix
 
 }//close FindCompactSource()
 
-
+/*
 int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBkgData* bkgData,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,bool findNestedSources,double nestedBlobThreshold,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested,double nestedBlobPeakZThr,Image* curvMap)
 {
 	//Find sources
@@ -1628,10 +1632,16 @@ int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBk
 	return 0;
 
 }//close FindCompactSource()
-
+*/
 
 int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBkgData* bkgData,double seedThr,double mergeThr,int minPixels,bool findNestedSources,Image* blobMask,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested)
 {
+	//Check blob mask (if nested source search is required)
+	if(findNestedSources && !blobMask){
+		ERROR_LOG("Null ptr to blob mask given (hint: you must provide a binary blob mask to search nested sources!");
+		return -1;
+	}
+
 	//Find sources
 	bool findNegativeExcess= false;
 	bool mergeBelowSeed= false;
@@ -1654,7 +1664,7 @@ int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBk
 
 }//close FindCompactSource()
 
-
+/*
 int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,int minPixels,double nestedBlobThreshold,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested,double nestedBlobPeakZThr,Image* curvMap){
 
 	//Check if given mother source list is empty
@@ -1687,9 +1697,12 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 
 	//Compute curvature map stats
 	bool computeRobustStats= true;
-	bool skipNegativePixels= true;
+	//bool skipNegativePixels= true;
+	bool useRange= true;
+	double minThr= 0;
 	bool forceRecompute= false;
-	if(curvMap->ComputeStats(computeRobustStats,skipNegativePixels,forceRecompute)<0){
+	//if(curvMap->ComputeStats(computeRobustStats,skipNegativePixels,forceRecompute)<0){
+	if(curvMap->ComputeStats(computeRobustStats,forceRecompute,useRange,minThr)<0){
 		ERROR_LOG("Failed to compute curvature map stats!");
 		delete sourceMask;
 		sourceMask= 0;
@@ -1837,21 +1850,20 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 					INFO_LOG("Nested source no. "<<j<<" blob peak significance above desired threshold (Smax="<<Smax<<", peakRatio="<<peakRatio<<", Z="<<Z<<", ZThr="<<nestedBlobPeakZThr<<") ...");
 				}
 				
-				/*
-				if(bkgData && bkgData->BkgMap && bkgData->NoiseMap){
-					long int blobPeakId= NestedSources[nestedIndex]->GetSmaxPixId();		
-					double bkg= (bkgData->BkgMap)->GetPixelValue(blobPeakId);
-					double rms= (bkgData->NoiseMap)->GetPixelValue(blobPeakId);
-					double Z= (Smax-bkg)/rms;
-					if(Z<nestedBlobPeakZThr){
-						INFO_LOG("Skip nested source no. "<<j<<" as blob peak significance below desired threshold (Smax="<<Smax<<", Z="<<Z<<", ZThr="<<nestedBlobPeakZThr<<") ...");
-						continue;
-					}
-					else{
-						INFO_LOG("Nested source no. "<<j<<" blob peak significance above desired threshold (Smax="<<Smax<<", Z="<<Z<<", ZThr="<<nestedBlobPeakZThr<<") ...");
-					}
-				}//close if
-				*/
+				//if(bkgData && bkgData->BkgMap && bkgData->NoiseMap){
+				//	long int blobPeakId= NestedSources[nestedIndex]->GetSmaxPixId();		
+				//	double bkg= (bkgData->BkgMap)->GetPixelValue(blobPeakId);
+				//	double rms= (bkgData->NoiseMap)->GetPixelValue(blobPeakId);
+				//	double Z= (Smax-bkg)/rms;
+				//	if(Z<nestedBlobPeakZThr){
+				//		INFO_LOG("Skip nested source no. "<<j<<" as blob peak significance below desired threshold (Smax="<<Smax<<", Z="<<Z<<", ZThr="<<nestedBlobPeakZThr<<") ...");
+				//		continue;
+				//	}
+				//	else{
+				//		INFO_LOG("Nested source no. "<<j<<" blob peak significance above desired threshold (Smax="<<Smax<<", Z="<<Z<<", ZThr="<<nestedBlobPeakZThr<<") ...");
+				//	}
+				//}//close if
+				
 		
 				if(nComponents==1){
 					//Compute centroid distances
@@ -1919,7 +1931,7 @@ int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,in
 	return 0;
 
 }//close FindNestedSources()
-
+*/
 
 
 int Image::FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkgData* bkgData,int minPixels,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested)
@@ -2091,7 +2103,9 @@ int Image::FindExtendedSource_CV(std::vector<Source*>& sources,Image* initSegmIm
 	
 	//## Finding blobs in masked image
 	double fgValue= 1;	
-	int status= this->FindCompactSource(sources,segmentedImg,bkgData,fgValue,fgValue,minPixels,false,false,false);
+	bool findNestedSources= false;
+	//int status= this->FindCompactSource(sources,segmentedImg,bkgData,fgValue,fgValue,minPixels,false,false,false);
+	int status= this->FindCompactSource(sources,segmentedImg,bkgData,fgValue,fgValue,minPixels,findNestedSources);
 	if(status<0){
 		ERROR_LOG("Finding sources in Chan-Vese segmented mask failed!");
 		return -1;
@@ -2224,9 +2238,11 @@ int Image::MaskSources(std::vector<Source*>const& sources,float maskValue)
 		
 	//Force re-computation of stats after masks
 	bool computeRobustStats= true;
-	bool skipNegativePixels= false;
+	//bool skipNegativePixels= false;
+	bool useRange= false;
 	bool forceRecomputing= true;
-	this->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
+	//this->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
+	this->ComputeStats(computeRobustStats,forceRecomputing,useRange);
 
 	return 0;
 
@@ -2425,12 +2441,15 @@ Image* Image::GetNormalizedImage(std::string normScale,int normmin,int normmax,b
 	}
 
 	//Force recomputation of stats if present, otherwise recompute only moments
-	bool skipNegativePixels= false;
+	//bool skipNegativePixels= false;
+	bool useRange= false;
 	bool computeRobustStats= true;	
 	bool forceRecomputing= true;
 	int status= 0;
-	if(this->HasStats()) status= norm_img->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
-	else status= norm_img->ComputeMoments(skipNegativePixels);
+	//if(this->HasStats()) status= norm_img->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
+	//else status= norm_img->ComputeMoments(skipNegativePixels);
+	if(this->HasStats()) status= norm_img->ComputeStats(computeRobustStats,forceRecomputing,useRange);
+	else status= norm_img->ComputeMoments(useRange);
 	if(status<0){
 		WARN_LOG("Failed to re-compute moments/stats for normalized image!");
 	}
@@ -2696,9 +2715,11 @@ int Image::Add(Image* img,double c,bool computeStats)
 
 	if(computeStats){
 		bool computeRobustStats= true;
-		bool skipNegativePixels= false;
+		//bool skipNegativePixels= false;
+		bool useRange= false;
 		bool forceRecomputing= false;
-		if(ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing)<0){
+		//if(ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing)<0){
+		if(ComputeStats(computeRobustStats,forceRecomputing,useRange)<0){
 			WARN_LOG("Failed to compute stats after adding the two images!");
 			return -1;
 		}	
@@ -2721,12 +2742,15 @@ int Image::Scale(double c)
 	}
 
 	//Force recomputation of stats if present, otherwise recompute only moments
-	bool skipNegativePixels= false;
+	//bool skipNegativePixels= false;
+	bool useRange= false;
 	bool computeRobustStats= true;	
 	bool forceRecomputing= true;
 	int status= 0;
-	if(this->HasStats()) status= this->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
-	else status= this->ComputeMoments(skipNegativePixels);
+	//if(this->HasStats()) status= this->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
+	//else status= this->ComputeMoments(skipNegativePixels);
+	if(this->HasStats()) status= this->ComputeStats(computeRobustStats,forceRecomputing,useRange);
+	else status= this->ComputeMoments(useRange);
 		
 	return status;
 
@@ -2973,7 +2997,8 @@ double Image::FindValleyThreshold(int nbins,bool smooth){
 }//close FindValleyThreshold()
 
 
-double Image::FindCumulativeSumThr(double threshold,bool skipNegativePixels)
+//double Image::FindCumulativeSumThr(double threshold,bool skipNegativePixels)
+double Image::FindCumulativeSumThr(double threshold,bool useRange,double minThr,double maxThr)
 {
 	//Check if image has pixels
 	if(m_pixels.empty()){
@@ -2986,7 +3011,8 @@ double Image::FindCumulativeSumThr(double threshold,bool skipNegativePixels)
 	std::vector<float> pixels;
 	for(size_t i=0;i<m_pixels.size();i++){
 		float w= m_pixels[i];
-		if( w==0 || (skipNegativePixels && w<0) ) continue;
+		//if( w==0 || (skipNegativePixels && w<0) ) continue;
+		if( w==0 || (useRange && (w<=minThr || w>=maxThr)) ) continue;
 		pixels.push_back(w);
 	}
 
@@ -3020,8 +3046,9 @@ Image* Image::GetBinarizedImage(double threshold,double fgValue,bool isLowerThre
 	}//end loop pixels
 	
 	//Force recomputation of stats if present, otherwise recompute only moments
-	bool skipNegativePixels= false;
-	if(BinarizedImg->ComputeMoments(skipNegativePixels)<0){
+	//bool skipNegativePixels= false;
+	bool useRange= false;
+	if(BinarizedImg->ComputeMoments(useRange)<0){
 		ERROR_LOG("Failed to re-compute moments of binarized image!");
 		return nullptr;
 	}	
@@ -3045,17 +3072,20 @@ int Image::ApplyThreshold(double thr_min,double thr_max,double maskedValue){
 	}//end loop pixels
 	
 	//Force recomputation of stats if present, otherwise recompute only moments
-	bool skipNegativePixels= false;
+	//bool skipNegativePixels= false;
+	bool useRange= false;
 	bool computeRobustStats= true;
 	bool forceRecomputing= true;
 	if(this->HasStats()){
-		if(ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing)<0){
+		//if(ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing)<0){
+		if(ComputeStats(computeRobustStats,forceRecomputing,useRange)<0){
 			ERROR_LOG("Failed to re-compute stats of thresholded image!");
 			return -1;
 		}
 	}
 	else{
-		if(this->ComputeMoments(skipNegativePixels)<0){
+		//if(this->ComputeMoments(skipNegativePixels)<0){
+		if(this->ComputeMoments(useRange)<0){
 			ERROR_LOG("Failed to re-compute moments of thresholded image!");
 			return -1;
 		}	

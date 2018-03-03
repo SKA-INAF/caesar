@@ -280,6 +280,17 @@ class CodeUtils : public TObject {
 			}
 		}//close DeletePtrCollection()
 
+		/**
+		* \brief Delete object pointer 
+		*/
+		template <class T>
+		static void DeletePtr(T* data){
+			if(data){
+				delete data;
+				data= 0;
+			}
+		}//close DeletePtr()
+
 		
 		/**
 		* \brief Order vectors and get ordering index

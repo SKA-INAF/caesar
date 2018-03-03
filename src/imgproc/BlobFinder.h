@@ -85,15 +85,20 @@ class BlobFinder : public TObject {
 		/**
 		* \brief Get multiscale blob mask
 		*/
-		static Image* GetMultiScaleBlobMask(Image* img,int kernelFactor,double sigmaMin,double sigmaMax,double sigmaStep,int thrModel=2,double thrFactor=1);
+		//static Image* GetMultiScaleBlobMask(Image* img,int kernelFactor,double sigmaMin,double sigmaMax,double sigmaStep,int thrModel=2,double thrFactor=1);
 
 		/**
 		* \brief Compute multiscale blob filtered map
 		*/
-		static Image* ComputeMultiScaleBlobMap(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double thrFactor,int kernelFactor=1,double multiplicityThrFactor=0.7);
+		//static Image* ComputeMultiScaleBlobMap(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double thrFactor,int kernelFactor=1,double multiplicityThrFactor=0.7);
 
 		/**
-		* \brief Compute multiscale blob mask
+		* \brief Compute single-scale blob mask using elliptical gaus smoothing + laplacian filter map
+		*/
+		static Image* ComputeBlobMask(Image* img,double Bmaj,double Bmin,double Bpa=0,double kernNSigmaSize=2.5,double peakZThr=5,double peakZMergeThr=2.5,int minBlobSize=5,double thrFactor=0,int bkgEstimator=eMedianBkg,int bkgBox=100,double bkgGridStepSize=20);
+
+		/**
+		* \brief Compute multiscale blob mask using LoG filter maps
 		*/
 		static Image* ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double peakZThr=5,double peakZMergeThr=2.5,int minBlobSize=5,double thrFactor=0,int kernelFactor=1,int bkgEstimator=eMedianBkg,int bkgBox=100,double bkgGridStepSize=20);
 

@@ -82,6 +82,11 @@ enum SegmAlgo {
 	eSaliencyThr= 4,
 };
 
+enum BlobMaskMethod {
+	eCurvMask=1,
+	eMultiScaleLoGMask=2
+};
+
 enum BkgEstimator {
 	eMeanBkg=1,
 	eMedianBkg=2,

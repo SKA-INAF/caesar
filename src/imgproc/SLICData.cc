@@ -198,7 +198,11 @@ int SLICData::Init(Image* img,bool useLogScaleMapping,Image* edgeImage){
 	//## Compute image stats (needed to normalize it)
 	if(!img->HasStats()){
 		INFO_LOG("Input image has no stats computed, computing them...");
-		if(img->ComputeStats(true,false,true)<0) {
+		bool computeRobustStats= true;
+		bool useRange= false;
+		bool forceRecomputing= true;
+		//if(img->ComputeStats(true,false,true)<0) {
+		if(img->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0) {
 			ERROR_LOG("Failed to compute input image stats!");
 			return -1;
 		}
@@ -220,8 +224,12 @@ int SLICData::Init(Image* img,bool useLogScaleMapping,Image* edgeImage){
 	}
 
 	if( !inputImg->HasStats() ){	
-		INFO_LOG("Computing norm image stats...");
-		if(inputImg->ComputeStats(true,false,false)<0) {
+		INFO_LOG("Computing norm image stats...");	
+		bool computeRobustStats= true;
+		bool useRange= false;
+		bool forceRecomputing= false;
+		//if(inputImg->ComputeStats(true,false,false)<0) {
+		if(inputImg->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0) {
 			ERROR_LOG("Failed to compute norm image stats!");
 			return -1;
 		}
@@ -238,7 +246,11 @@ int SLICData::Init(Image* img,bool useLogScaleMapping,Image* edgeImage){
 	}
 	if(!laplImg->HasStats()){
 		INFO_LOG("Laplacian image has no stats computed, computing them...");
-		if(laplImg->ComputeStats(true,false,false)<0) {
+		bool computeRobustStats= true;
+		bool useRange= false;
+		bool forceRecomputing= false;
+		//if(laplImg->ComputeStats(true,false,false)<0) {
+		if(laplImg->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0) {
 			ERROR_LOG("Failed to compute lapl image stats!");
 			return -1;
 		}
@@ -248,7 +260,11 @@ int SLICData::Init(Image* img,bool useLogScaleMapping,Image* edgeImage){
 	if(edgeImage){
 		if(!edgeImage->HasStats()){
 			INFO_LOG("Edge image has no stats computed, computing them...");
-			if(edgeImage->ComputeStats(true,false,false)<0) {
+			bool computeRobustStats= true;
+			bool useRange= false;
+			bool forceRecomputing= false;
+			//if(edgeImage->ComputeStats(true,false,false)<0) {
+			if(edgeImage->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0) {
 				ERROR_LOG("Failed to compute edge image stats!");
 				return -1;
 			}

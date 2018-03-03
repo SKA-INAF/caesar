@@ -33,6 +33,7 @@
 #include <Source.h>
 #include <Logger.h>
 #include <Graph.h>
+#include <GausFilter.h>
 
 #include <TObject.h>
 #include <TMatrixD.h>
@@ -376,6 +377,8 @@ int BlobFinder::FloodFill(Image* img,std::vector<long int>& clusterPixelIds,long
 
 }//close BlobFinder::FloodFill()
 
+
+/*
 Image* BlobFinder::ComputeMultiScaleBlobMap(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double thrFactor,int kernelFactor,double multiplicityThrFactor)
 {
 	//## Check image
@@ -402,10 +405,13 @@ Image* BlobFinder::ComputeMultiScaleBlobMap(Image* img,double sigmaMin,double si
 
 		//Compute stats
 		//NB: Skip negative pixels
-		bool skipNegativePixels= true;
+		bool useRange= true;
+		double minRangeThr= 0;
+		//bool skipNegativePixels= true;
 		bool computeRobustStats= true;
 		bool forceRecomputing= true;
-		filterMap->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
+		//filterMap->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
+		filterMap->ComputeStats(computeRobustStats,forceRecomputing,useRange,minRangeThr);
 		filterMaps.push_back(filterMap);
 
 		//Compute threshold levels
@@ -454,6 +460,164 @@ Image* BlobFinder::ComputeMultiScaleBlobMap(Image* img,double sigmaMin,double si
 	return blobMask;
 
 }//close ComputeMultiScaleBlobMap()
+*/
+
+
+Image* BlobFinder::ComputeBlobMask(Image* img,double Bmaj,double Bmin,double Bpa,double kernNSigmaSize,double peakZThr,double peakZMergeThr,int minBlobSize,double thrFactor,int bkgEstimator,int bkgBox,double bkgGridStepSize)
+{
+	//## Check image
+	if(!img){
+		ERROR_LOG("Null ptr to given image!");
+		return nullptr;
+	}
+
+	//## Smooth image with elliptical kernel
+	INFO_LOG("Computing smoothed map with elliptical gaussian kernel (bmaj/bmin/bpa="<<Bmaj<<","<<Bmin<<","<<Bpa<<" pixels) ...");
+	double kernelScaleFactor= 1;
+	Image* filtMap= img->GetBeamConvolvedImage(Bmaj,Bmin,Bpa,kernNSigmaSize,kernelScaleFactor);
+	if(!filtMap){
+		ERROR_LOG("Failed to compute smoothed map!");
+		return nullptr;
+	}
+
+	//## Compute curvature map to be thresholded
+	INFO_LOG("Computing curvature map ...");
+	bool invert= true;
+	Image* curvMap= filtMap->GetLaplacianImage(invert);
+	if(!curvMap){
+		ERROR_LOG("Failed to compute curvature filtered map...");
+		CodeUtils::DeletePtr<Image>(filtMap);
+		return nullptr;
+	}
+
+	//Clear filt map
+	CodeUtils::DeletePtr<Image>(filtMap);
+
+	//Compute stats
+	//NB: Skip negative and zero pixels
+	bool useRange= true;
+	double minRangeThr= 0;
+	bool computeRobustStats= true;
+	bool forceRecomputing= true;
+	curvMap->ComputeStats(computeRobustStats,forceRecomputing,useRange,minRangeThr);
+		
+	//Compute threshold levels
+	ImgStats* imgStats= curvMap->GetPixelStats();	
+	double median= imgStats->median;
+	double medianThr= thrFactor*median;
+	double thrLevel= medianThr;
+	
+	//Zero-threshold filtered map
+	INFO_LOG("Thresholding curvature map ...");
+	curvMap->ApplyThreshold(thrLevel);
+
+	//Compute bkg map
+	INFO_LOG("Computing bkg/rms of curvature map...");
+	bool useLocalBkg= true;
+	bool use2ndPass= true;
+	bool skipOutliers= false;
+	bool useRangeInBkg= true;
+	ImgBkgData* bkgData= curvMap->ComputeBkg(
+		bkgEstimator,
+		useLocalBkg,bkgBox,bkgBox,bkgGridStepSize,bkgGridStepSize,	
+		use2ndPass,
+		skipOutliers,peakZThr,peakZMergeThr,minBlobSize,
+		useRangeInBkg,thrLevel
+	);
+	if(!bkgData){
+		ERROR_LOG("Failed to compute bkg map of curvature image!");
+		CodeUtils::DeletePtr<Image>(curvMap);	
+		return nullptr;
+	}
+
+	//Compute significance map
+	INFO_LOG("Computing curvature significance map ...");
+	Image* significanceMap= curvMap->GetSignificanceMap(bkgData,useLocalBkg);
+	if(!significanceMap){
+		ERROR_LOG("Failed to compute curvature significance map!");
+		CodeUtils::DeletePtr<Image>(curvMap);
+		return nullptr;
+	}
+
+	//Clear bkg & curv data
+	CodeUtils::DeletePtr<Image>(curvMap);
+	CodeUtils::DeletePtr<ImgBkgData>(bkgData);	
+
+	//Find peaks in curvature map
+	INFO_LOG("Finding peaks in curvature significance map ...");
+	std::vector<TVector2> peakPoints;
+	bool skipBorders= true;
+	double peakKernelMultiplicityThr= 1;	
+	int peakShiftTolerance= 2;
+	std::vector<int> kernels {3};
+	if(significanceMap->FindPeaks(peakPoints,kernels,peakShiftTolerance,skipBorders,peakKernelMultiplicityThr)<0){
+		ERROR_LOG("Failed to find peaks in curvature map!");
+		CodeUtils::DeletePtr<Image>(significanceMap);
+		return nullptr;		
+	}
+	INFO_LOG("#"<<peakPoints.size()<<" peaks found in curvature map ...");
+		
+	//## Select peaks (skip peaks at boundary or faint peaks)
+	Image* blobMask= img->GetCloned("",true,true);
+	blobMask->Reset();
+	
+	int nBlobs= 0;
+	double floodMinThr= std::max(0.,peakZMergeThr);
+	double floodMaxThr= std::numeric_limits<double>::infinity();
+
+	for(size_t k=0;k<peakPoints.size();k++){
+		double x= peakPoints[k].X();
+		double y= peakPoints[k].Y();
+		long int seedPixelId= significanceMap->FindBin(x,y);
+		if(seedPixelId<0){
+			ERROR_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
+			CodeUtils::DeletePtr<Image>(blobMask);	
+			CodeUtils::DeletePtr<Image>(significanceMap);
+			return nullptr;			
+		}
+		long int ix= significanceMap->GetBinX(seedPixelId);
+		long int iy= significanceMap->GetBinY(seedPixelId);
+		
+		//Skip peaks below threshold
+		double Zpeak= significanceMap->GetBinContent(seedPixelId);
+		if(Zpeak<peakZThr) {
+			DEBUG_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak="<<Zpeak<<"<"<<peakZThr<<")");
+			continue;
+		}
+			
+		//Find blobs given current seed peak
+		std::vector<long int> clusterPixelIds;
+		if(FloodFill(significanceMap,clusterPixelIds,seedPixelId,floodMinThr,floodMaxThr)<0){
+			WARN_LOG("Failed to find blobs in curvature map (seed pix="<<seedPixelId<<"), skip to next...");
+			continue;
+		}
+			
+		//Check blob size agaist min size required
+		long int nPixInBlob= (long int)(clusterPixelIds.size());
+		if(nPixInBlob<(long int)(minBlobSize)){
+			INFO_LOG("Skip blob (id="<<seedPixelId<<") as below min size threshold (npix="<<nPixInBlob<<"<"<<minBlobSize<<")");
+			continue;
+		}
+		nBlobs++;
+		DEBUG_LOG("Blob found @ (x,y)=("<<ix<<","<<iy<<") (N="<<nPixInBlob<<")");
+			
+		//Mask blob pixels
+		for(size_t k=0;k<clusterPixelIds.size();k++){
+			long int gbin= clusterPixelIds[k];
+			blobMask->SetPixelValue(gbin,1);
+		}
+	
+	}//end loop peaks
+		
+	INFO_LOG("#"<<nBlobs<<" blobs found  ...");
+		
+	//Clear data
+	CodeUtils::DeletePtr<Image>(significanceMap);
+
+	return blobMask;
+
+}//close ComputeBlobMask()
+
 
 
 Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double peakZThr,double peakZMergeThr,int minBlobSize,double thrFactor,int kernelFactor,int bkgEstimator,int bkgBox,double bkgGridStepSize)
@@ -496,10 +660,13 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 	
 		//Compute stats
 		//NB: Skip negative pixels
-		bool skipNegativePixels= true;
+		//bool skipNegativePixels= true;
+		bool useRange= true;
+		double minRangeThr= 0;
 		bool computeRobustStats= true;
 		bool forceRecomputing= true;
-		filterMap->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
+		//filterMap->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
+		filterMap->ComputeStats(computeRobustStats,forceRecomputing,useRange,minRangeThr);
 		
 		//Compute threshold levels
 		ImgStats* imgStats= filterMap->GetPixelStats();	
@@ -519,7 +686,7 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 		bool skipOutliers= false;
 		bool useRangeInBkg= true;
 		ImgBkgData* bkgData= filterMap->ComputeBkg(
-			eMedianClippedBkg,
+			bkgEstimator,
 			useLocalBkg,bkgBox,bkgBox,bkgGridStepSize,bkgGridStepSize,	
 			use2ndPass,
 			skipOutliers,peakZThr,peakZMergeThr,minBlobSize,
@@ -705,7 +872,7 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 
 }//close ComputeMultiScaleBlobMask()
 
-
+/*
 Image* BlobFinder::GetMultiScaleBlobMask(Image* img,int kernelFactor,double sigmaMin,double sigmaMax,double sigmaStep,int thrModel,double thrFactor){
 
 	//## Check image
@@ -737,10 +904,13 @@ Image* BlobFinder::GetMultiScaleBlobMask(Image* img,int kernelFactor,double sigm
 
 		//Compute stats
 		//NB: Skip negative pixels
-		bool skipNegativePixels= true;
+		//bool skipNegativePixels= true;
+		bool useRange= true;	
+		double minRangeThr= 0;
 		bool computeRobustStats= true;
 		bool forceRecomputing= true;
-		filterMap->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
+		//filterMap->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
+		filterMap->ComputeStats(computeRobustStats,forceRecomputing,useRange,minRangeThr);
 		filterMaps.push_back(filterMap);
 
 		//Compute threshold levels
@@ -790,6 +960,6 @@ Image* BlobFinder::GetMultiScaleBlobMask(Image* img,int kernelFactor,double sigm
 	return blobMask;
 
 }//close GetMultiScaleBlobMask()
-
+*/
 
 }//close namespace

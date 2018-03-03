@@ -107,7 +107,11 @@ SLICData* SLIC::SPGenerator(Image* img, int regionSize,double regParam, int minR
 		// Compute image stats (needed to normalize it)
 		if(!img->HasStats()){
 			INFO_LOG("Input image has no stats computed, computing them...");
-			if(img->ComputeStats(true,false,true)<0) {
+			bool computeRobustStats= true;
+			bool useRange= false;
+			bool forceRecomputing= true;
+			//if(img->ComputeStats(true,false,true)<0) {
+			if(img->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0) {
 				ERROR_LOG("Failed to compute input image stats!");
 				return nullptr;
 			}

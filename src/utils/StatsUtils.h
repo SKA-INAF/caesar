@@ -942,7 +942,8 @@ class StatsUtils : public TObject {
 
 
 		template<typename T,typename K> 
-		static int ComputeStatsMoments(StatMoments<T>& moments,std::vector<K>& data,bool skipNegativeValues=false,bool maskNanInfValues=true)
+		//static int ComputeStatsMoments(StatMoments<T>& moments,std::vector<K>& data,bool skipNegativeValues=false,bool maskNanInfValues=true)
+		static int ComputeStatsMoments(StatMoments<T>& moments,std::vector<K>& data,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),bool maskNanInfValues=true)
 		{
 			if(data.empty()) return 0;
 		
@@ -978,12 +979,14 @@ class StatsUtils : public TObject {
    				}
 
 					//Compute moments
-					if(skipNegativeValues){
+					//if(skipNegativeValues){
+					if(useRange){
 						#pragma omp for
 						for(size_t i=0;i<data.size();i++){			
 							T w= static_cast<T>(data[i]);
-							if( isnormal(w) ){
-								if(w>0) { 
+							if( isnormal(w) && w>minThr && w<maxThr ){
+							//if( isnormal(w) ){
+								//if(w>0) { 
 									if(w<minVal_t) minVal_t= w;
 									if(w>maxVal_t) maxVal_t= w;
 									N_t++;
@@ -995,7 +998,7 @@ class StatsUtils : public TObject {
   								M4_t+= f * delta_n2 * (N_t*N_t - 3*N_t + 3) + 6 * delta_n2 * M2_t - 4 * delta_n * M3_t;
   								M3_t+= f * delta_n * (N_t - 2) - 3 * delta_n * M2_t;
   								M2_t+= f;
-								}//close w>0
+								//}//close w>0
 							}//close if normal
 							else{//modify unnormal value
 								data[i]= 0;
@@ -1054,11 +1057,13 @@ class StatsUtils : public TObject {
 				T maxVal= -std::numeric_limits<T>::max();
 
 				//Compute moments
-				if(skipNegativeValues){
+				//if(skipNegativeValues){
+				if(useRange){
 					for(size_t i=0;i<data.size();i++){			
 						T w= static_cast<T>(data[i]);
-						if( isnormal(w) ){
-							if(w>0){
+						if( isnormal(w) && w>minThr && w<maxThr ){
+						//if( isnormal(w) ){
+							//if(w>0){
 								if(w<minVal) minVal= w;
 								if(w>maxVal) maxVal= w;
 								N++;
@@ -1070,7 +1075,7 @@ class StatsUtils : public TObject {
   							M4+= f * delta_n2 * (N*N - 3*N + 3) + 6 * delta_n2 * M2 - 4 * delta_n * M3;
   							M3+= f * delta_n * (N - 2) - 3 * delta_n * M2;
   							M2+= f;
-							}//close if w>0
+							//}//close if w>0
 						}//close if isnormal
 						else{//modify unnormal value
 							data[i]= 0;

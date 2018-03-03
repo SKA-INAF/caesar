@@ -262,6 +262,8 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(nestedBlobMaxScale,double,3,0,10000);
 		REGISTER_OPTION(nestedBlobScaleStep,double,1,0,10000);
 		REGISTER_OPTION(nestedBlobKernFactor,double,1,0,1000);
+		REGISTER_OPTION(blobMaskMethod,int,2,0,5);
+		
 		
 		//=======================================
 		//==  Extended Source finding options  ==
