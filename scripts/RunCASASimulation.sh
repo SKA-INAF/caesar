@@ -37,9 +37,12 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--truncthr=[TRUNC_THRESHOLD] - Flux loss with respect to total at which model is truncated (default: 0.001)"
 	echo "--extsources - Generate extended sources in skymodel (default=no)"
 	echo "--no-extsources - Do not generate extended sources in skymodel. NB: By default extended sources are not generated."
+	echo "--nsources=[NSOURCES] - Number of compact sources to be generated. NB: If <=0 sources are generated according to specified density (default=0)"
 	echo "--sourcedensity=[SOURCE_DENSITY] - Compact source density in sources/deg^2 (default: 1000)"
+	echo "--ext-sourcetype=[EXT_SOURCE_TYPE] - Generated source type (-1=all types, 1=Ring, 2=Ellipse, 3=Bubble+Shell, 4=Sersic, 5=Gauss, 6=Disk) (default=-1)"	
 	echo "--ext-zmin=[ZMIN_EXT] - Min generated extended source significance level wrt to bkg level & rms (default: 1)"
 	echo "--ext-zmax=[ZMAX_EXT] - Max generated extended source significance level wrt to bkg level & rms (default: 5)"
+	echo "--ext-nsources=[EXT_NSOURCES] - Number of extended sources to be generated. NB: If <=0 sources are generated according to specified density (default=0)"
 	echo "--ext-sourcedensity=[EXT_SOURCE_DENSITY] - Extended source density in sources/deg^2 (default: 100)"
 	echo "--ext-scalemin=[EXT_SCALE_MIN] - Minimum extended source size in arcsec (default: 10)"
 	echo "--ext-scalemax=[EXT_SCALE_MAX] - Maximum extended source size in arcsec (default: 100)"
@@ -48,6 +51,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--simproject=[SIM_PROJECT] - Name of CASA simulation project (default: sim)"
 	echo "--visimagename=[VIS_IMAGE_NAME] - Name of CASA sim visibility image name (default: vis.ms)"
 	echo "--simtottime=[SIM_TOT_TIME] - Simulation total time in seconds (default: 43200)"
+	echo "--pointingspacing=[POINTING_SPACING] - Pointing spacing (default: ALMA default)"
 	echo "--telconfigs=[TELCONFIGS] - Antenna configurations (default: [atca_all.cfg])"
 	echo "--addnoise - Add noise to CASA simulation (default: no)"
 	echo "--maptype=[MAP_TYPE] - Simulated map type (square|hexagonal) (default=square)"
@@ -101,9 +105,11 @@ ZMIN=1
 ZMAX=10000
 ZMIN_EXT=1
 ZMAX_EXT=5
-##ZMIN_MODEL=1
 TRUNC_THRESHOLD=0.001
 SOURCE_DENSITY=1000
+NSOURCES=0
+EXT_NSOURCES=0
+EXT_SOURCE_TYPE=-1
 EXT_SOURCE_DENSITY=100
 EXT_SCALE_MIN=10
 EXT_SCALE_MAX=100
@@ -120,6 +126,7 @@ ADD_NOISE=false
 MAP_TYPE="square"
 FREQUENCY="2.1GHz"
 FREQUENCYBW="10MHz"
+POINTING_SPACING=""
 GRAPHICS_FLAG="--no-graphics"
 JOB_WALLTIME="96:00:00"
 JOB_MEMORY="4"
@@ -154,8 +161,7 @@ do
     ;;
 		
 
-		## OPTIONAL ##	
-		
+		## OPTIONAL ##		
 		--sourcegenmargin=*)
     	SOURCE_GEN_MARGIN_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
@@ -182,6 +188,9 @@ do
 		--no-sources*)
     	GEN_SOURCES=false
     ;;
+		--nsources=*)
+			NSOURCES=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+		;;
 		--zmin=*)
     	ZMIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
@@ -203,6 +212,12 @@ do
 		--no-extsources*)
     	GEN_EXT_SOURCES=false
     ;;
+		--ext-nsources=*)
+			EXT_NSOURCES=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+		;;
+		--ext-sourcetype=*)
+			EXT_SOURCE_TYPE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+		;;
 		--ext-zmin=*)
     	ZMIN_EXT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
@@ -250,6 +265,9 @@ do
 		--frequencybw=*)
     	FREQUENCYBW=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
+		--pointingspacing=*)
+			POINTING_SPACING=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
 
 		## SUBMISSION OPTIONS	
 		--submit*)
@@ -307,15 +325,17 @@ echo "CRPIX: $CRPIX"
 echo "BKG_LEVEL: $BKG_LEVEL, BKG_RMS: $BKG_RMS"
 echo "ZMIN/ZMAX: $ZMIN/$ZMAX"
 echo "ZMIN_EXT/ZMAX_EXT: $ZMIN_EXT/$ZMAX_EXT"
+echo "EXT_SOURCE_TYPE: $EXT_SOURCE_TYPE"
 echo "EXT_SCALE MIN/MAX: $EXT_SCALE_MIN/$EXT_SCALE_MAX"
 echo "RING WIDTH MIN/MAX: $RING_WIDTH_MIN/$RING_WIDTH_MAX"
-echo "SOURCE_DENSITY: $SOURCE_DENSITY, EXT_SOURCE_DENSITY: $EXT_SOURCE_DENSITY"
+echo "NSOURCES: $NSOURCES, EXT_NSOURCES: $EXT_NSOURCES, SOURCE_DENSITY: $SOURCE_DENSITY, EXT_SOURCE_DENSITY: $EXT_SOURCE_DENSITY"
 echo "TRUNC_THRESHOLD: $TRUNC_THRESHOLD"
 echo "SOURCE_GEN_MARGIN_SIZE: $SOURCE_GEN_MARGIN_SIZE (pixels)"
 echo "GEN_SOURCES? $GEN_EXT_SOURCES, GEN_EXT_SOURCES? $GEN_EXT_SOURCES"
 echo "SIM_PROJECT: $SIM_PROJECT, VIS: $VIS_IMAGE_NAME"
 echo "SIM_TOT_TIME: $SIM_TOT_TIME"
 echo "TELCONFIGS: $TELCONFIGS"
+echo "POINTING_SPACING: $POINTING_SPACING"
 echo "ADD_NOISE: $ADD_NOISE"
 echo "MAP_TYPE: $MAP_TYPE"
 echo "FREQUENCY CENTER/BW: $FREQUENCY/$FREQUENCYBW"
@@ -467,7 +487,7 @@ for ((index=1; index<=$NRUNS; index=$index+1))
 			echo 'EXE="'"$CAESAR_SCRIPTS_DIR/skymodel_generator.py"'"'
 		fi
 
-		echo 'EXE_ARGS="'"--nx=$MAP_SIZE --ny=$MAP_SIZE --pixsize=$PIX_SIZE --marginx=$SOURCE_GEN_MARGIN_SIZE --marginy=$SOURCE_GEN_MARGIN_SIZE $GEN_SOURCE_FLAG $GEN_EXT_SOURCE_FLAG --bmaj=$BMAJ --bmin=$BMIN --bpa=$BPA --crpix1=$CRPIX --crpix2=$CRPIX --bkg --bkg_level=$BKG_LEVEL --bkg_rms=$BKG_RMS --zmin=$ZMIN --zmax=$ZMAX --zmin_ext=$ZMIN_EXT --zmax_ext=$ZMAX_EXT --source_density=$SOURCE_DENSITY --trunc_thr=$TRUNC_THRESHOLD --ext_source_density=$EXT_SOURCE_DENSITY --ext_scale_min=$EXT_SCALE_MIN --ext_scale_max=$EXT_SCALE_MAX --ring_wmin=$RING_WIDTH_MIN --ring_wmax=$RING_WIDTH_MAX --outputfile=$simmapfile --outputfile_model=$skymodelfile --outputfile_sources=$sourcefile --outputfile_ds9region=$ds9regionfile --outputfile_casaregion=$casaregionfile "'"'
+		echo 'EXE_ARGS="'"--nx=$MAP_SIZE --ny=$MAP_SIZE --pixsize=$PIX_SIZE --marginx=$SOURCE_GEN_MARGIN_SIZE --marginy=$SOURCE_GEN_MARGIN_SIZE $GEN_SOURCE_FLAG $GEN_EXT_SOURCE_FLAG --bmaj=$BMAJ --bmin=$BMIN --bpa=$BPA --crpix1=$CRPIX --crpix2=$CRPIX --bkg --bkg_level=$BKG_LEVEL --bkg_rms=$BKG_RMS --zmin=$ZMIN --zmax=$ZMAX --zmin_ext=$ZMIN_EXT --zmax_ext=$ZMAX_EXT --nsources=$NSOURCES --source_density=$SOURCE_DENSITY --trunc_thr=$TRUNC_THRESHOLD --ext_source_type=$EXT_SOURCE_TYPE --ext_nsources=$EXT_NSOURCES --ext_source_density=$EXT_SOURCE_DENSITY --ext_scale_min=$EXT_SCALE_MIN --ext_scale_max=$EXT_SCALE_MAX --ring_wmin=$RING_WIDTH_MIN --ring_wmax=$RING_WIDTH_MAX --outputfile=$simmapfile --outputfile_model=$skymodelfile --outputfile_sources=$sourcefile --outputfile_ds9region=$ds9regionfile --outputfile_casaregion=$casaregionfile "'"'
 
 		echo 'echo "Running command $EXE $EXE_ARGS"'
 		echo '$EXE $EXE_ARGS'
@@ -489,7 +509,7 @@ for ((index=1; index<=$NRUNS; index=$index+1))
 			echo 'EXE="'"$CASAPATH/bin/casa --nologger --log2term --nogui -c $CAESAR_SCRIPTS_DIR/simulate_observation.py"'"'
 		fi
 
-		echo 'EXE_ARGS="'"--outproject=$simproject --vis=$visimg --skymodel=$skymodelfile --total_time=$SIM_TOT_TIME --telconfigs=$TELCONFIGS $ADD_NOISE_FLAG --maptype=$MAP_TYPE --frequency_center=$FREQUENCY --frequency_bandwidth=$FREQUENCYBW $GRAPHICS_FLAG "'"'
+		echo 'EXE_ARGS="'"--outproject=$simproject --vis=$visimg --skymodel=$skymodelfile --total_time=$SIM_TOT_TIME --telconfigs=$TELCONFIGS $ADD_NOISE_FLAG --maptype=$MAP_TYPE --frequency_center=$FREQUENCY --frequency_bandwidth=$FREQUENCYBW --pointingspacing=$POINTING_SPACING $GRAPHICS_FLAG "'"'
 		
 		echo 'echo "Running command $EXE $EXE_ARGS"'
 		echo '$EXE $EXE_ARGS'

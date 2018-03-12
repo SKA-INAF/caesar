@@ -45,6 +45,8 @@ def get_args():
 	parser.add_argument('-skymodel', '--skymodel', dest='skymodel', required=False, type=str, default='skymodel.fits',action='store',help='Input FITS skymodel file (default=skymodel.fits')
 	parser.add_argument('-outproject', '--outproject', dest='outproject', required=False, type=str, default='sim',action='store',help='Output simulation project name (default=sim)')
 	
+	parser.add_argument('-pointingspacing', '--pointingspacing', dest='pointingspacing', required=False, type=str, default='',action='store',help='Pointing spacing (default=ALMA default)')
+	
 	parser.add_argument('-total_time', '--total_time', dest='total_time', required=False, type=int, default=43200,action='store',help='Total observation time in seconds (default=43200)')
 	#parser.add_argument('-telconfigs', '--telconfigs', dest='telconfigs', required=False, type=list, default=['atca_all.cfg'],action='store',help='Telescope configuration list (default=atca_all.cfg)')
 	#parser.add_argument('-telconfigs', '--telconfigs', dest='telconfigs', required=False, nargs='+', type=str, default=['atca_all.cfg'],action='store',help='Telescope configuration list (default=atca_all.cfg)')
@@ -79,7 +81,7 @@ def mkdir_p(path):
 
 
 #### SIMULATE OBSERVATION ####
-def simulate_observation(concat_vis='vis.ms',skymodel='skymodel.fits',exec_simobs_step=True,project_name='sim',total_time='43200s',telconfigs=['atca_6a.cfg','atca_6b.cfg','atca_ew352.cfg','atca_ew367.cfg'],obsmode='int',maptype='square',mapsize='',direction='',indirection='',incell='',incenter= '2.1GHz',inwidth='10MHz',integration='10s',imgaxes=['254.851041667','-41.4765888889','2.1GHz','I'],use_noise_vis=True,add_thermal_noise=False,graphics='both'):
+def simulate_observation(concat_vis='vis.ms',skymodel='skymodel.fits',exec_simobs_step=True,project_name='sim',total_time='43200s',telconfigs=['atca_6a.cfg','atca_6b.cfg','atca_ew352.cfg','atca_ew367.cfg'],obsmode='int',maptype='square',mapsize='',direction='',indirection='',incell='',incenter= '2.1GHz',inwidth='10MHz',integration='10s',imgaxes=['254.851041667','-41.4765888889','2.1GHz','I'],pointingspacing='',use_noise_vis=True,add_thermal_noise=False,graphics='both'):
 	"""Simulate an observation from a sky model"""
 
 	# Create output dir
@@ -137,6 +139,7 @@ def simulate_observation(concat_vis='vis.ms',skymodel='skymodel.fits',exec_simob
 				obsmode=obsmode,
 				maptype=maptype,
 				mapsize=mapsize,
+				pointingspacing=pointingspacing,
 				thermalnoise=thermalnoise,
 				graphics=graphics,
 				overwrite=True
@@ -182,6 +185,7 @@ def main():
 	mapsize= args.mapsize
 	maptype= args.maptype
 	obsmode= args.obsmode
+	pointingspacing= args.pointingspacing
 	##obsmode= [str(item) for item in args.obsmode.split(',')]
 	pixsize= args.pixsize
 	frequency_center= args.frequency_center
@@ -229,6 +233,7 @@ def main():
 		maptype=maptype,
 		incenter=frequency_center,
 		inwidth=frequency_bandwidth,
+		pointingspacing=pointingspacing,
 		use_noise_vis=use_noise_vis,
 		add_thermal_noise=add_thermal_noise,
 		total_time=t_tot,	
