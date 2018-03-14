@@ -14,6 +14,54 @@ message Timestamp {
   optional int32 nanos = 2;
 }
 
+
+message ImgMetaData {
+	//Image size
+	optional int32 Nx= 1;
+	optional int32 Ny= 2;
+
+	//Reference pixel id
+	optional int32 Cx= 3;
+	optional int32 Cy= 4;
+
+	//Reference pixel coords
+	optional float Xc= 5;
+	optional float Yc= 6;
+
+	//Pixel size
+	optional float dX= 7;
+	optional float dY= 8;
+
+	//System rotation info
+	optional float RotX= 9;
+	optional float RotY= 10;
+
+	//Type of astro coords
+	optional string CoordTypeX= 11;
+	optional string CoordTypeY= 12;
+
+	//Units
+	optional string BUnit= 13;
+
+	//Beam info
+	optional float Bmaj= 14;
+	optional float Bmin= 15;
+	optional float Bpa= 16;
+
+	//Frequency info		
+	optional string FreqUnit= 17;
+	optional float Freq= 18;
+	optional float dFreq= 19;		
+	optional float FreqRef= 20;
+
+	//Obs Epoch
+	optional float Epoch= 21;
+
+	//Type of WCS
+	optional string m_wcsType= 22;
+
+}//close ImgMetaData schema
+
 message Pixel {
 	optional int64 id= 1;
 	enum PixelType {
@@ -193,6 +241,13 @@ message Blob {
 	//Contour collection
 	repeated Contour m_Contours= 61;
 
+	//Bkg average info
+	optional float m_bkgSum= 62;
+	optional float m_bkgRMSSum= 63;
+
+	//Image metadata
+	optional ImgMetaData m_imgMetaData= 64;
+
 }//close Blob schema
 
 message Dict {
@@ -224,23 +279,25 @@ message Source {
 	optional Blob blob= 1;
 	optional int32 Type= 2;
 	optional int32 Flag= 3;
-	optional float m_BeamFluxIntegral= 4;
-	optional bool m_IsGoodSource= 5;
+	optional int32 SimType= 4;
+	optional float SimMaxScale= 5;
+	optional float m_BeamFluxIntegral= 6;
+	optional bool m_IsGoodSource= 7;
 
 	//Nested source info
-	optional int32 m_DepthLevel= 6;
-	optional bool m_HasNestedSources= 7;
-	repeated Source m_NestedSources= 8;
+	optional int32 m_DepthLevel= 8;
+	optional bool m_HasNestedSources= 9;
+	repeated Source m_NestedSources= 10;
 
 	//True source info
-	optional bool m_HasTrueInfo= 9;
-	optional float m_S_true= 10;
-	optional float m_X0_true= 11;
-	optional float m_Y0_true= 12;
+	optional bool m_HasTrueInfo= 11;
+	optional float m_S_true= 12;
+	optional float m_X0_true= 13;
+	optional float m_Y0_true= 14;
 
 	//Fit pars
-	optional bool m_HasFitInfo= 13;
-	optional SourceFitPars m_fitPars= 14;
+	optional bool m_HasFitInfo= 15;
+	optional SourceFitPars m_fitPars= 16;
 	
 }//close Source schema
 
