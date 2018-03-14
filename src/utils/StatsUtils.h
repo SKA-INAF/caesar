@@ -1207,6 +1207,35 @@ class StatsUtils : public TObject {
 			return scaleFactor;
 		}
 
+	
+		/** 
+		\brief Get 2D gaussian confidence ellipse
+ 		*/
+		static int GetEllipseParsFromCovMatrix(double& sigmaX_rot,double& sigmaY_rot,double& theta,double sigmaX,double sigmaY,double covXY)	
+		{
+			//Compute eigenvectors of covariance matrix
+			TMatrixD C(2,2);
+			C(0,0)= sigmaX*sigmaX;
+			C(1,1)= sigmaY*sigmaY;
+			C(0,1)= covXY;
+			C(1,0)= C(0,1);
+			TMatrixDEigen E(C);
+			TMatrixD eigenvect= E.GetEigenVectors();
+			TMatrixD eigenvals= E.GetEigenValues();
+			//INFO_LOG("Eigenvec");
+			//eigenvect.Print();
+			//INFO_LOG("Eigenvals");
+			//eigenvals.Print();
+			
+			double lambda1= eigenvals(0,0);
+			double lambda2= eigenvals(1,1);
+			sigmaX_rot= sqrt(lambda1);	
+			sigmaY_rot= sqrt(lambda2);
+			theta= atan2(eigenvect(1,0),eigenvect(0,0))*TMath::RadToDeg();
+
+			return 0;
+		}
+
 		/** 
 		\brief Get 2D gaussian confidence ellipse
  		*/
@@ -1249,6 +1278,16 @@ class StatsUtils : public TObject {
 
 		}//close GetFitCLEllipse()
 		
+		/** 
+		\brief Get elliptical 2D gaussian 
+ 		*/
+		static double GetGaus2DThetaPar(double sigmaX,double sigmaY,double covXY){
+			double sx2= sigmaX*sigmaX;
+			double sy2= sigmaY*sigmaY;
+			double t= 0.5*atan2(2*covXY, sx2 - sy2);//in rad
+			double theta= t*TMath::RadToDeg();//in deg
+			return theta;
+		}
 
 		/** 
 		\brief Get ellipse corresponding to 2D gaussian
@@ -1261,7 +1300,7 @@ class StatsUtils : public TObject {
 			//double cxy2= covXY*covXY;
 			double rho= covXY/(sigmaX*sigmaY);
 			double t= 0.5*atan2(2*covXY, sx2 - sy2);//in rad
-			double theta= t*TMath::DegToRad();//in deg
+			double theta= t*TMath::DegToRad();//in deg WRONG???!!!!
 			double a= sqrt(sx2*sy2*(1-rho*rho)/(pow(sigmaY*cos(t),2)-2*covXY*cos(t)*sin(t)+pow(sigmaX*sin(t),2)));
 			double b= sqrt(sx2*sy2*(1-rho*rho)/(pow(sigmaY*sin(t),2)+2*covXY*cos(t)*sin(t)+pow(sigmaX*cos(t),2)));
 			

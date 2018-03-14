@@ -146,6 +146,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(saveDS9Region,bool,true,false,true);
 		REGISTER_OPTION(DS9RegionFormat,int,2,0,3);
 		REGISTER_OPTION(ds9FitRegionFile,std::string,"DS9SourceFitRegion.reg","","");
+		REGISTER_OPTION(convertDSRegionsToWCS,bool,false,false,true);
 		REGISTER_OPTION(saveToFile,bool,true,false,true);
 		REGISTER_OPTION(saveConfig,bool,true,false,true);
 		REGISTER_OPTION(saveResidualMap,bool,true,false,true);

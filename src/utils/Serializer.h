@@ -51,6 +51,8 @@
 
 namespace Caesar {
 
+class ImgMetaData;
+
 class SBuffer : public TObject {
 	public:
 		SBuffer(){};
@@ -78,6 +80,7 @@ class Serializer : public TObject {
 		
 			//## SOURCE SERIALIZATION
 			//Source --> Buffer
+			static int EncodeMetaDataToProtobuf(CaesarPB::ImgMetaData& metadata_pb,ImgMetaData* metadata);
 			static int EncodePointToProtobuf(CaesarPB::Point& point_pb,TVector2& point);
 			static int EncodeContourToProtobuf(CaesarPB::Contour& contour_pb,Contour* contour);
 			static int EncodePixelToProtobuf(CaesarPB::Pixel& pixel_pb,Pixel* pixel);
@@ -88,6 +91,7 @@ class Serializer : public TObject {
 			static int EncodeSourceFitParsToProtobuf(CaesarPB::SourceFitPars& sourceFitPars_pb,SourceFitPars& sourceFitPars);
 
 			//Buffer --> Source
+			static int EncodeProtobufToMetaData(ImgMetaData& metadata,const CaesarPB::ImgMetaData& metadata_pb);
 			static int EncodeProtobufToPoint(TVector2& point,const CaesarPB::Point& point_pb);
 			static int EncodeProtobufToContour(Contour& contour,const CaesarPB::Contour& contour_pb);
 			static int EncodeProtobufToPixel(Pixel& pixel,const CaesarPB::Pixel& pixel_pb);	

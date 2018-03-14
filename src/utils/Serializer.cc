@@ -135,6 +135,43 @@ int Serializer::EncodeSourceFitParsToProtobuf(CaesarPB::SourceFitPars& sourceFit
 }//close EncodeSourceFitParsToProtobuf()
 
 
+int Serializer::EncodeMetaDataToProtobuf(CaesarPB::ImgMetaData& metadata_pb,ImgMetaData* metadata)
+{
+	if(!metadata) return -1;
+
+	try{
+		metadata_pb.set_nx(metadata->Nx);
+		metadata_pb.set_ny(metadata->Ny);
+		metadata_pb.set_cx(metadata->Cx);
+		metadata_pb.set_cy(metadata->Cy);
+		metadata_pb.set_xc(metadata->Xc);
+		metadata_pb.set_yc(metadata->Yc);
+		metadata_pb.set_dx(metadata->dX);
+		metadata_pb.set_dy(metadata->dY);
+		metadata_pb.set_rotx(metadata->RotX);
+		metadata_pb.set_roty(metadata->RotY);
+		metadata_pb.set_coordtypex(metadata->CoordTypeX);
+		metadata_pb.set_coordtypey(metadata->CoordTypeY);
+		metadata_pb.set_bunit(metadata->BUnit);
+		metadata_pb.set_bmaj(metadata->Bmaj);
+		metadata_pb.set_bmin(metadata->Bmin);
+		metadata_pb.set_bpa(metadata->Bpa);
+		metadata_pb.set_frequnit(metadata->FreqUnit);
+		metadata_pb.set_freq(metadata->Freq);
+		metadata_pb.set_dfreq(metadata->dFreq);
+		metadata_pb.set_freqref(metadata->FreqRef);
+		metadata_pb.set_epoch(metadata->Epoch);
+		metadata_pb.set_m_wcstype(metadata->GetWCSType());
+	}
+	catch(std::exception const & e) {
+		ERROR_LOG("Image metadata encoding to protobuf failed with status "<<e.what());
+		return -1;
+	}
+
+	return 0;
+
+}//close EncodeMetaDataToProtobuf()
+
 int Serializer::EncodePointToProtobuf(CaesarPB::Point& point_pb,TVector2& point){
 
 	try {
@@ -418,7 +455,20 @@ int Serializer::EncodeBlobToProtobuf(CaesarPB::Blob& blob_pb,Source* source){
 		blob_pb.set_m_ix_max(ixmax);
 		blob_pb.set_m_iy_min(iymin);
 		blob_pb.set_m_iy_max(iymax);
+
+		//Add average bkg info
+		blob_pb.set_m_bkgsum(source->GetBkgSum());
+		blob_pb.set_m_bkgrmssum(source->GetBkgRMSSum());
 		
+		//Set metadata
+		if(source->HasImageMetaData()){
+			CaesarPB::ImgMetaData* metadata_pb= new CaesarPB::ImgMetaData;
+			if(EncodeMetaDataToProtobuf(*metadata_pb,source->GetImageMetaData())<0){
+				throw std::runtime_error("Failed to encode image metadata field");
+			}
+			blob_pb.set_allocated_m_imgmetadata(metadata_pb);
+		}
+
 		//Add pixel collection to blob
 		for(int k=0;k<source->GetNPixels();k++){
 			CaesarPB::Pixel* thisPixel = blob_pb.add_m_pixels();
@@ -430,7 +480,7 @@ int Serializer::EncodeBlobToProtobuf(CaesarPB::Blob& blob_pb,Source* source){
 		}
 
 		//Add contout to blob
-		for(unsigned int k=0;k<source->GetContours().size();k++){
+		for(size_t k=0;k<source->GetContours().size();k++){
 			CaesarPB::Contour* thisContour = blob_pb.add_m_contours();
 			if(EncodeContourToProtobuf(*thisContour,source->GetContour(k))<0){
 				std::stringstream errMsg;
@@ -458,7 +508,9 @@ int Serializer::EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* sourc
 		
 		source_pb.set_type(source->Type);
 		source_pb.set_flag(source->Flag);
-	
+		source_pb.set_simtype(source->SimType);
+		source_pb.set_simmaxscale(source->SimMaxScale);
+		
 		//Set private source fields
 		source_pb.set_m_beamfluxintegral(source->GetBeamFluxIntegral());
 		source_pb.set_m_isgoodsource(source->IsGoodSource());
@@ -801,7 +853,9 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 		//Set public fields
 		if(source_pb.has_type()) source.Type= source_pb.type();
 		if(source_pb.has_flag()) source.Flag= source_pb.flag();
-	
+		if(source_pb.has_simtype()) source.SimType= source_pb.simtype();
+		if(source_pb.has_simmaxscale()) source.SimMaxScale= source_pb.simmaxscale();
+		
 		//Set private source fields
 		if(source_pb.has_m_beamfluxintegral()) source.SetBeamFluxIntegral(source_pb.m_beamfluxintegral());
 		if(source_pb.has_m_isgoodsource()) source.SetGoodSourceFlag(source_pb.m_isgoodsource());
@@ -955,6 +1009,18 @@ int Serializer::EncodeProtobufToBlob(Source& source,const CaesarPB::Blob& blob_p
 			source.SetSourcePixelRange(blob_pb.m_ix_min(),blob_pb.m_ix_max(),blob_pb.m_iy_min(),blob_pb.m_iy_max());
 		}
 
+		//Add metadata to blob		
+		const CaesarPB::ImgMetaData& thisMetaDataPB= blob_pb.m_imgmetadata();
+		ImgMetaData* metadata= new ImgMetaData;
+		if(EncodeProtobufToMetaData(*metadata,thisMetaDataPB)<0){
+			throw std::runtime_error("Encoding of image metadata from protobuf failed!");
+		}
+		source.SetImageMetaData(metadata);//metadata is copied here so delete after
+		if(metadata){
+			delete metadata;
+			metadata= 0;
+		}
+
 		//Add pixel collection to blob
 		Pixel* aPixel= 0;
 		std::vector<Pixel*> pixel_list;
@@ -1052,6 +1118,45 @@ int Serializer::EncodeProtobufToPixel(Pixel& pixel,const CaesarPB::Pixel& pixel_
 	return 0;
 
 }//close EncodeProtobufToPixel()
+
+
+int Serializer::EncodeProtobufToMetaData(ImgMetaData& metadata,const CaesarPB::ImgMetaData& metadata_pb){
+	
+	try {	
+		if(metadata_pb.has_nx()) metadata.Nx= metadata_pb.nx();
+		if(metadata_pb.has_ny()) metadata.Ny= metadata_pb.ny();
+		if(metadata_pb.has_cx()) metadata.Cx= metadata_pb.cx();
+		if(metadata_pb.has_cy()) metadata.Cy= metadata_pb.cy();
+		if(metadata_pb.has_xc()) metadata.Xc= metadata_pb.xc();
+		if(metadata_pb.has_yc()) metadata.Yc= metadata_pb.yc();
+		if(metadata_pb.has_dx()) metadata.dX= metadata_pb.dx();
+		if(metadata_pb.has_dy()) metadata.dY= metadata_pb.dy();
+		if(metadata_pb.has_rotx()) metadata.RotX= metadata_pb.rotx();
+		if(metadata_pb.has_roty()) metadata.RotY= metadata_pb.roty();
+		if(metadata_pb.has_coordtypex()) metadata.CoordTypeX= metadata_pb.coordtypex();
+		if(metadata_pb.has_coordtypey()) metadata.CoordTypeY= metadata_pb.coordtypey();
+
+		if(metadata_pb.has_bunit()) metadata.BUnit= metadata_pb.bunit();
+		if(metadata_pb.has_bmaj()) metadata.Bmaj= metadata_pb.bmaj();
+		if(metadata_pb.has_bmin()) metadata.Bmin= metadata_pb.bmin();
+		if(metadata_pb.has_bpa()) metadata.Bpa= metadata_pb.bpa();
+		if(metadata_pb.has_frequnit()) metadata.FreqUnit= metadata_pb.frequnit();
+		if(metadata_pb.has_freq()) metadata.Freq= metadata_pb.freq();
+		if(metadata_pb.has_dfreq()) metadata.dFreq= metadata_pb.dfreq();
+		if(metadata_pb.has_freqref()) metadata.FreqRef= metadata_pb.freqref();
+		if(metadata_pb.has_epoch()) metadata.Epoch= metadata_pb.epoch();
+	
+		if(metadata_pb.has_m_wcstype()) metadata.SetWCSType(metadata_pb.m_wcstype());
+	
+	}//close try block
+	catch(std::exception const & e) {
+		ERROR_LOG("Image metadata encoding from protobuf failed with status "<<e.what());
+		return -1;
+	}
+	
+	return 0;
+
+}//close EncodeProtobufToMetaData()
 
 
 int Serializer::EncodeProtobufToContour(Contour& contour,const CaesarPB::Contour& contour_pb){
