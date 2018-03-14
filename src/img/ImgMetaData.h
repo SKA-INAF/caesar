@@ -60,6 +60,11 @@ class ImgMetaData : public TObject {
 		* \brief Get current WCS type
 		*/
 		std::string GetWCSType(){return m_wcsType;}
+
+		/**
+		* \brief Set current WCS type
+		*/
+		void SetWCSType(std::string value){m_wcsType=value;}
 		
 		/**
 		* \brief Get world coordinate system 
@@ -109,6 +114,16 @@ class ImgMetaData : public TObject {
 			double f= beamArea/pixelArea;
 			return f;
 		}
+
+		/**
+		* \brief Check if beam info have been specified and are valid
+		*/
+		bool HasBeamInfo();
+
+		/**
+		* \brief Check if frequency info have been specified and are valid
+		*/
+		bool HasFrequencyInfo();
 	
 	protected:
 	
@@ -116,6 +131,7 @@ class ImgMetaData : public TObject {
 		* \brief Initialize fields
 		*/
 		void Init();
+
 
 	public:
 		//Image size
@@ -150,8 +166,15 @@ class ImgMetaData : public TObject {
 		double Bmin;
 		double Bpa;
 
+		//Frequency info		
+		std::string FreqUnit;
+		double Freq;
+		double dFreq;		
+		double FreqRef;
+
 		//Obs Epoch
 		double Epoch;
+
 
 	private:
 		//Type of WCS

@@ -2259,7 +2259,7 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 	//Image* maskedImage= this->GetCloned(std::string(imgName),copyMetaData,resetStats);
 	Image* maskedImage= this->GetCloned("",copyMetaData,resetStats);
 	
-	INFO_LOG("pixel size="<<maskedImage->GetPixelDataSize()<<" (original size="<<this->GetPixelDataSize()<<")");
+	DEBUG_LOG("pixel size="<<maskedImage->GetPixelDataSize()<<" (original size="<<this->GetPixelDataSize()<<")");
 
 	//## Check source list
 	int nSources= static_cast<int>(sources.size());
@@ -2342,7 +2342,7 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 
 	}//close else
 
-	INFO_LOG("(after) pixel size="<<maskedImage->GetPixelDataSize()<<" (original size="<<this->GetPixelDataSize()<<")");
+	DEBUG_LOG("(after) pixel size="<<maskedImage->GetPixelDataSize()<<" (original size="<<this->GetPixelDataSize()<<")");
 
 
 	return maskedImage;

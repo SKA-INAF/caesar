@@ -59,6 +59,7 @@ void ImgMetaData::Init()
 	CoordTypeX= ""; CoordTypeY= "";
 	BUnit= "";
 	Bmaj= 0; Bmin= 0; Bpa= 0;
+	Freq= 0; dFreq= 0; FreqRef= 0;
 	Epoch= 0;
 	m_wcsType= "";	
 
@@ -84,7 +85,11 @@ void ImgMetaData::SetFITSCards(Caesar::FITSFileInfo& fits_info){
 	RotX= (fits_info.header).RotX;
 	RotY= (fits_info.header).RotY;
 	Epoch= (fits_info.header).Epoch;
-	
+	FreqUnit= (fits_info.header).FreqUnit;
+	Freq= (fits_info.header).Freq;
+	FreqRef= (fits_info.header).FreqRef;
+	dFreq= (fits_info.header).dFreq;
+		
 }//close SetFITSCards()
 
 
@@ -116,5 +121,26 @@ WorldCoor* ImgMetaData::GetWorldCoord(int coordSystem){
 	return wcs;
 		
 }//close GetWorldCoord()
+
+bool ImgMetaData::HasBeamInfo()
+{
+	if(!std::isnormal(Bmaj)) return false;
+	if(!std::isnormal(Bmin)) return false;
+	if(!std::isfinite(Bpa)) return false;
+	if(BUnit=="") return false;
+
+	return true;
+
+}//close HasBeamInfo()
+
+bool ImgMetaData::HasFrequencyInfo()
+{
+	if(!std::isnormal(Freq)) return false;
+	if(!std::isnormal(dFreq)) return false;
+	if(FreqUnit=="") return false;
+
+	return true;
+
+}//close HasFrequencyInfo()
 
 }//close namespace

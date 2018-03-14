@@ -458,15 +458,6 @@ class Image : public TNamed {
 		float GetMaximum(){
 			return m_StatMoments.maxVal;
 		}
-
-		/**
-		* \brief Get pixel world coordinate
-		*/
-		/*
-		int GetWorldCoord(int ix,int iy,double& xpos, double& ypos) {
-			return Caesar::AstroUtils::PixelToWCSCoords(this,ix,iy,xpos,ypos);
-		}
-		*/
 		
 		/**
 		* \brief Check if given bin id is within image range
@@ -680,35 +671,38 @@ class Image : public TNamed {
 		/**
 		* \brief Update moments (multithreaded version)
 		*/
-		//int ComputeMoments(bool skipNegativePixels=false);
 		int ComputeMoments(bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity());
+
 		/**
 		* \brief Get stats information
 		*/
 		ImgStats* GetPixelStats(){return m_Stats;}
+
 		/**
 		* \brief Check if stats has been computed 
 		*/
 		bool HasStats(){return (m_HasStats && m_Stats);}
+
 		/**
 		* \brief Compute stats information 
 		*/
-		//int ComputeStats(bool computeRobustStats,bool skipNegativePixels=false,bool forceRecomputing=false,bool useParallelVersion=false);
 		int ComputeStats(bool computeRobustStats,bool forceRecomputing=false,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),bool useParallelVersion=false);
+
 		/**
 		* \brief Print stats information 
 		*/
 		void PrintStats(){
 			if(!HasStats()) return;
 			m_Stats->Print();
-		}//close PrintStats()
+		}
+
 		/**
 		* \brief Print stats information 
 		*/
 		void LogStats(std::string level="INFO"){
 			if(!HasStats()) return;
 			m_Stats->Log(level);
-		}//close LogStats()
+		}
 
 		/**
 		* \brief Set stat moments
@@ -726,25 +720,21 @@ class Image : public TNamed {
 		/**
 		* \brief Get tile mean stats
 		*/
-		//int GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false); 
 		int GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity()); 
 		
 		/**
 		* \brief Get tile median stats
 		*/
-		//int GetTileMedianStats(float& median,float& mad,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false); 
 		int GetTileMedianStats(float& median,float& mad,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity()); 
 		
 		/**
 		* \brief Get tile median stats
 		*/
-		//int GetTileClippedStats(Caesar::ClippedStats<float>& clipped_stats,long int& npix,double clipsigma,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false); 
 		int GetTileClippedStats(Caesar::ClippedStats<float>& clipped_stats,long int& npix,double clipsigma,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity()); 
 		
 		/**
 		* \brief Get tile biweight stats
 		*/
-		//int GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,double C,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false); 
 		int GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,double C,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity()); 
 		
 		//================================
@@ -801,7 +791,6 @@ class Image : public TNamed {
 		/**
 		* \brief Find image threshold at which the cumulative pixel sum (scaled to image sum) is lower than desired threshold 
 		*/
-		//double FindCumulativeSumThr(double threshold,bool skipNegativePixels=false);
 		double FindCumulativeSumThr(double threshold,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity());
 
 		//=========================================
@@ -811,19 +800,12 @@ class Image : public TNamed {
 		* \brief Find compact sources by thresholding
 		*/
 		int FindCompactSource(std::vector<Source*>&,double thr,int minPixels=10);
-		/**
-		* \brief Find compact sources
-		*/
-		//int FindCompactSource(std::vector<Source*>&,Image* floodImg=0,ImgBkgData* bkgData=0,double seedThr=5,double mergeThr=2.6,int minPixels=10,bool findNegativeExcess=false,bool mergeBelowSeed=false,bool findNestedSources=false,double nestedBlobThrFactor=1,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5,long int nPixThrToSearchNested=0,double nestedBlobPeakZThr=5,Image* curvMap=0);
+		
 		/**
 		* \brief Find compact sources
 		*/
 		int FindCompactSource(std::vector<Source*>& sources,Image* floodImg=0,ImgBkgData* bkgData=0,double seedThr=5,double mergeThr=2.6,int minPixels=10,bool findNestedSources=false,Image* blobMask=0,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5,long int nPixThrToSearchNested=0);
 
-		/**
-		* \brief Find nested sources
-		*/
-		//int	FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData=0,int minPixels=5,double nestedBlobThreshold=1,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5,long int nPixThrToSearchNested=0,double nestedBlobPeakZThr=5,Image* curvMap=0);
 		/**
 		* \brief Find nested sources
 		*/
