@@ -761,13 +761,6 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 		return -1;	
 	}
 
-	
-	/*
-	if(Nchannels!=2){
-		ERROR_LOG("Unsupported number of channels ("<<Nchannels<<"), only 2 channel images are supported!");
-		return -1;	
-	}
-	*/
 
 	//Get dimensions
 	long int Nx= 0;
@@ -861,7 +854,7 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	double Bmin= 0;
 	double Bpa= 0;
 	if(records.find("BMAJ") == records.end() || records.find("BMIN") == records.end()){
-		WARN_LOG("BMAJ/BMIN keywords not found in header!");
+		WARN_LOG("BMAJ/BMIN keywords not found in header, beam info not available...");
 	}
 	else{
 		Bmaj= std::stod(records["BMAJ"]); 
@@ -882,7 +875,7 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	double RotX= 0;
 	double RotY= 0;
 	if(records.find("CROTA1") == records.end() || records.find("CROTA2") == records.end()){
-		WARN_LOG("CROTA keyword(s) not found in header, setting rotation to 0!");
+		DEBUG_LOG("CROTA keyword(s) not found in header, setting rotation to 0!");
 	}
 	else{
 		RotX= std::stod(records["CROTA1"]);
@@ -893,7 +886,7 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	double ObsRA= -999;
 	double ObsDEC= -999;
 	if(records.find("OBSRA") == records.end() || records.find("OBSDEC") == records.end()){
-		WARN_LOG("OBSRA/OBSDEC keywords not found in header, setting them to fake values!");
+		DEBUG_LOG("OBSRA/OBSDEC keywords not found in header, setting them to fake values!");
 	}
 	else{
 		ObsRA= std::stod(records["OBSRA"]);
@@ -903,13 +896,34 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	// Get epoch information
 	double Epoch= 2000;
 	if(records.find("EPOCH") == records.end()){
-		WARN_LOG("EPOCH keyword not found in header, setting it to 2000!");
+		DEBUG_LOG("EPOCH keyword not found in header, setting it to 2000!");
 	}
 	else{
 		Epoch= std::stod(records["EPOCH"]);
 	}
 
-	
+	//## Get frequency info
+	std::string FreqUnit= "";
+	double Freq= 0;
+	double dFreq= 0;
+	double FreqRef= 0;
+	if( records.find("CUNIT3") == records.end() || 
+			records.find("CRVAL3") == records.end() || 
+			records.find("CDELT3") == records.end() || 
+			records.find("CRPIX3") == records.end()
+	)
+	{
+		WARN_LOG("CRVAL3/CDELT3/CRPIX3 keywords not found in header (frequency info not available)...");
+	}
+	else{	
+		FreqUnit= records["CUNIT3"];	
+		if(FreqUnit[0]=='\'') FreqUnit.erase(0,1);
+		if(FreqUnit[FreqUnit.length()-1]=='\'') FreqUnit.erase(FreqUnit.length()-1,1);	
+		Freq= std::stod(records["CRVAL3"]); 
+		dFreq= std::stod(records["CDELT3"]);
+		FreqRef= std::stod(records["CRPIX3"]); 
+	}
+
 	//## Fill header info in FITS INFO struct
 	(fits_info.header).Nx= Nx;
 	(fits_info.header).Ny= Ny;
@@ -930,6 +944,10 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	(fits_info.header).RotX= RotX;
 	(fits_info.header).RotY= RotY;
 	(fits_info.header).Epoch= Epoch;
+	(fits_info.header).FreqUnit= FreqUnit;
+	(fits_info.header).Freq= Freq;
+	(fits_info.header).dFreq= dFreq;
+	(fits_info.header).FreqRef= FreqRef;
 	
 	return 0;
 

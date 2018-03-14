@@ -73,12 +73,12 @@ class FITSHeader : public TObject {
 			cout<<"*** HEADER INFO ***"<<endl;
 			cout<<"Image Size: "<<Nx<<"x"<<Ny<<" pixels, nRec="<<nRec<<endl;
 			cout<<"Obs Coords: ("<<ObsRA<<","<<ObsDEC<<")"<<endl;
-			cout<<"BUnit: "<<BUnit<<endl;
 			cout<<"Coords Type: ("<<CoordTypeX<<","<<CoordTypeY<<")"<<endl;
 			cout<<"PixelCoordCenter: ("<<Cx<<","<<Cy<<")"<<endl;
 			cout<<"CoordCenter: ("<<Xc<<","<<Yc<<")"<<endl;
 			cout<<"PixelStep: ("<<dX<<","<<dY<<")"<<endl;
-			cout<<"BeamSize: ("<<Bmaj<<","<<Bmin<<","<<Bpa<<")"<<endl;
+			cout<<"Beam: ("<<Bmaj<<","<<Bmin<<","<<Bpa<<"), unit="<<BUnit<<endl;
+			cout<<"Frequency: ("<<Freq<<","<<dFreq<<","<<FreqRef<<"), unit="<<FreqUnit<<endl;
 			cout<<"Rot: ("<<RotX<<","<<RotY<<")"<<endl;
 			cout<<"Epoch: "<<Epoch<<endl;
 			cout<<"***********************"<<endl;	
@@ -105,6 +105,10 @@ class FITSHeader : public TObject {
 		double Epoch;
 		double RotX;
 		double RotY;
+		double Freq;
+		double dFreq;
+		double FreqRef;
+		std::string FreqUnit;
 
 	ClassDef(FITSHeader,1)
 
