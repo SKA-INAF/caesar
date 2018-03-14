@@ -118,6 +118,11 @@ struct SourcePosMatchPars {
 		nestedIndex= -1;
 	}
 
+	//Comparison operator for sorting
+	bool operator<(const SourcePosMatchPars& obj) const {
+  	return posDiff < obj.posDiff;
+  }
+
 	//Pars
 	long int index;//index of match source in collection
 	float posDiff;//posDiff (>0)
@@ -300,7 +305,7 @@ class Source : public Blob {
 		/**
 		* \brief Get DS9 region info
 		*/
-		const std::string GetDS9Region(bool dumpNestedSourceInfo=false);
+		const std::string GetDS9Region(bool dumpNestedSourceInfo=false,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1);
 		/**
 		* \brief Get DS9 ellipse info
 		*/
@@ -308,7 +313,7 @@ class Source : public Blob {
 		/**
 		* \brief Get DS9 fitted ellipse info
 		*/
-		const std::string GetDS9FittedEllipseRegion(bool useFWHM=true,bool dumpNestedSourceInfo=false);
+		const std::string GetDS9FittedEllipseRegion(bool useFWHM=true,bool dumpNestedSourceInfo=false,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1);
 
 		/**
 		* \brief Get DS9 region color according to source type
@@ -419,7 +424,7 @@ class Source : public Blob {
 		/**
 		* \brief Find source match in a collection by position
 		*/
-		bool FindSourceMatchByPos(SourcePosMatchPars& pars, const std::vector<Source*>& sources, float posThr);
+		bool FindSourceMatchByPos(std::vector<SourcePosMatchPars>& pars, const std::vector<Source*>& sources, float posThr);
 
 		
 		/**
@@ -466,6 +471,13 @@ class Source : public Blob {
 		SourceFitPars& GetFitPars(){return m_fitPars;}
 	
 		/**
+		* \brief Get fit ellipses
+		*/
+		int GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM=true,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1);
+	
+		
+
+		/**
 		* \brief Get number of fit components
 		*/
 		int GetNFitComponents(){
@@ -473,11 +485,16 @@ class Source : public Blob {
 			return m_fitPars.GetNComponents();
 		}
 
+		/**
+		* \brief Find component peaks
+		*/
+		int FindComponentPeaks(std::vector<TVector2>& peaks,double peakZThr=0,int maxPeaks=-1,int peakShiftTolerance=2,std::vector<int> kernels= {3,5,7},int peakKernelMultiplicityThr=1);
+
 	protected:
 		/**
 		* \brief Find source match by position
 		*/
-		bool FindSourceMatchByPos(SourcePosMatchPars& pars, Source* source, float matchPosThr);
+		bool FindSourceMatchByPos(std::vector<SourcePosMatchPars>& pars, long int source_index,long int nested_source_index,Source* source, float matchPosThr);
 		
 
 	private:
@@ -524,6 +541,19 @@ class Source : public Blob {
 };//close Source()
 
 typedef std::vector<Source*> SourceCollection;
+
+struct SourceCompareByPeakFlux {
+	bool operator()(const Source* lhs, const Source* rhs) const { 
+		return lhs->GetSmax() < rhs->GetSmax();
+	}
+};//close SourceCompareByPeakFlux()
+
+struct SourceCompareByLargerPeakFlux {
+	bool operator()(const Source* lhs, const Source* rhs) const { 
+		return lhs->GetSmax() > rhs->GetSmax();
+	}
+};//close SourceCompareByLargerPeakFlux()
+
 
 #ifdef __MAKECINT__
 #pragma link C++ class Source+;

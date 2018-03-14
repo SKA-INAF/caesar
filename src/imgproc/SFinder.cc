@@ -444,6 +444,7 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(ds9RegionFile,m_DS9CatalogFileName);
 	GET_OPTION_VALUE(ds9FitRegionFile,m_DS9FitCatalogFileName);
 	GET_OPTION_VALUE(DS9RegionFormat,m_DS9RegionFormat);
+	GET_OPTION_VALUE(convertDSRegionsToWCS,m_convertDSRegionsToWCS);
 	GET_OPTION_VALUE(saveSources,m_saveSources);
 	GET_OPTION_VALUE(isInteractiveRun,m_IsInteractiveRun);
 	GET_OPTION_VALUE(saveResidualMap,m_saveResidualMap);
@@ -2944,55 +2945,33 @@ int SFinder::SaveDS9RegionFile(){
 
 	DEBUG_LOG("[PROC "<<m_procId<<"] - Saving "<<m_SourceCollection.size()<<" sources to file...");
 
-	
+	//Init WCS
+	WorldCoor* wcs= 0;
+
 	for(size_t k=0;k<m_SourceCollection.size();k++){
 		int source_type= m_SourceCollection[k]->Type;
 		bool isAtEdge= m_SourceCollection[k]->IsAtEdge();
 
-		/*
-		//Set source color/tag/...
-		std::string colorStr= "white";
-		std::string tagStr= "unknown";
-		if(source_type==Source::eExtended) {
-			colorStr= "green";
-			tagStr= "extended";
+		//If WCS is not computed, compute it
+		if(m_convertDSRegionsToWCS && !wcs){
+			wcs= m_SourceCollection[k]->GetWCS();
+			if(!wcs) WARN_LOG("Failed to compute WCS from source no "<<k<<"!");
 		}
-		else if(source_type==Source::eCompactPlusExtended) {
-			colorStr= "magenta";
-			tagStr= "extended-compact";
-		}
-		else if(source_type==Source::ePointLike) {
-			colorStr= "red";
-			tagStr= "point-like";
-		}
-		else if(source_type==Source::eCompact) {
-			colorStr= "blue";
-			tagStr= "compact";
-		}
-		else {
-			colorStr= "white";
-			tagStr= "unknown";
-		}
-
-		if(colorStr!=colorStr_last){
-			colorStr_last= colorStr;
-			//fprintf(fout,"global color=%s font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n",colorStr.c_str());
-		}
-		*/
-
+	
+		//Get DS9 regions
 		DEBUG_LOG("[PROC "<<m_procId<<"] - Dumping DS9 region info for source no. "<<k<<" ...");
 		std::string regionInfo= "";
-		if(m_DS9RegionFormat==ePolygonRegion) regionInfo= m_SourceCollection[k]->GetDS9Region(true);
-		else if(m_DS9RegionFormat==eEllipseRegion) regionInfo= m_SourceCollection[k]->GetDS9EllipseRegion(true);
+		if(m_DS9RegionFormat==ePolygonRegion) {
+			regionInfo= m_SourceCollection[k]->GetDS9Region(true,m_convertDSRegionsToWCS,wcs);
+		}
+		else if(m_DS9RegionFormat==eEllipseRegion) {
+			regionInfo= m_SourceCollection[k]->GetDS9EllipseRegion(true);
+		}
 		else {
 			WARN_LOG("[PROC "<<m_procId<<"] - Invalid DS9RegionType given ("<<m_DS9RegionFormat<<")");
 			return -1;
 		}
 
-		//Set source color & tag
-		//regionInfo+= std::string(" color=") + colorStr;
-		//regionInfo+= std::string(" tag={") + tagStr + std::string("}");
-		
 		//Write source region to file
 		fprintf(fout,"%s\n",regionInfo.c_str());
 	  	
@@ -3016,9 +2995,18 @@ int SFinder::SaveDS9RegionFile(){
 		DEBUG_LOG("[PROC "<<m_procId<<"] - Saving "<<m_SourceCollection.size()<<" sources to file...");
 		bool useFWHM= true;
 
-		for(unsigned int k=0;k<m_SourceCollection.size();k++){
+		for(size_t k=0;k<m_SourceCollection.size();k++){
 			DEBUG_LOG("[PROC "<<m_procId<<"] - Dumping DS9 region fitting info for source no. "<<k<<" ...");
-			std::string regionInfo= m_SourceCollection[k]->GetDS9FittedEllipseRegion(useFWHM,true);
+
+			//If WCS is not computed, compute it
+			if(m_convertDSRegionsToWCS && !wcs){
+				wcs= m_SourceCollection[k]->GetWCS();
+				if(!wcs) WARN_LOG("Failed to compute WCS from source no "<<k<<"!");
+			}
+
+			//Get DS9 regions for fitted components
+			std::string regionInfo= m_SourceCollection[k]->GetDS9FittedEllipseRegion(useFWHM,true,m_convertDSRegionsToWCS,wcs);
+
 			fprintf(fout_fit,"%s\n",regionInfo.c_str());
 		}//end loop sources
 		
@@ -3781,7 +3769,7 @@ int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* task
 		sources_merged[k]->SetId(k+1);
 		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
 		sources_merged[k]->SetBeamFluxIntegral(beamArea);
-		//sources_merged[k]->Print();
+		sources_merged[k]->Print();
 		std::vector<Source*> nestedSources= sources_merged[k]->GetNestedSources();
 		for(size_t l=0;l<nestedSources.size();l++){
 			nestedSources[l]->SetId(l+1);

@@ -102,6 +102,9 @@ Blob::~Blob()
 	ClearPixels();
 	ClearContours();	
 
+	//Clear metadata
+	CodeUtils::DeletePtr<ImgMetaData>(m_imgMetaData);
+
 }//close destructor
 
 
@@ -159,21 +162,14 @@ void Blob::Copy(TObject &obj) const {
 	((Blob&)obj).m_S_curv = m_S_curv;
 	((Blob&)obj).m_S_edge = m_S_edge;
 
-	//((Blob&)obj).m_ImgRange = m_ImgRange;
-	//((Blob&)obj).m_ImageSizeX = m_ImageSizeX;
-	//((Blob&)obj).m_ImageSizeY = m_ImageSizeY;
-	//((Blob&)obj).m_ImageMinX = m_ImageMinX;
-	//((Blob&)obj).m_ImageMaxX = m_ImageMaxX;
-	//((Blob&)obj).m_ImageMinY = m_ImageMinY;
-	//((Blob&)obj).m_ImageMaxY = m_ImageMaxY;
-	//((Blob&)obj).m_ImageMinS = m_ImageMinS;
-	//((Blob&)obj).m_ImageMaxS = m_ImageMaxS;
-	//((Blob&)obj).m_ImageMinScurv = m_ImageMinScurv;
-	//((Blob&)obj).m_ImageMaxScurv = m_ImageMaxScurv;
-	//((Blob&)obj).m_ImageMinSedge = m_ImageMinSedge;
-	//((Blob&)obj).m_ImageMaxSedge = m_ImageMaxSedge;
-	//((Blob&)obj).m_ImageRMS = m_ImageRMS;
-	
+	//Bkg & noise sum
+	((Blob&)obj).m_bkgSum= m_bkgSum;
+	((Blob&)obj).m_bkgRMSSum= m_bkgRMSSum;
+
+	//Image metadata 
+	((Blob&)obj).m_imgMetaData= m_imgMetaData;
+
+	//Image range
 	((Blob&)obj).m_Xmin = m_Xmin;
 	((Blob&)obj).m_Xmax = m_Xmax;
 	((Blob&)obj).m_Ymin = m_Ymin;
@@ -205,7 +201,7 @@ void Blob::Copy(TObject &obj) const {
 		
 	//Copy contour collection
 	//Delete first any existing collection
-	for(unsigned int i=0;i<(((Blob&)obj).m_Contours).size();i++){
+	for(size_t i=0;i<(((Blob&)obj).m_Contours).size();i++){
 		if( (((Blob&)obj).m_Contours)[i] ){
 			delete (((Blob&)obj).m_Contours)[i];
 			(((Blob&)obj).m_Contours)[i]= 0;
@@ -233,6 +229,8 @@ void Blob::Init(){
 
 	//Initialize parameters & data
 	Id= -999;
+	m_imgMetaData= 0;
+
 	//this->SetNameTitle("","");
 	HasPixelsAtEdge= false;
 	ResetStats();
@@ -322,6 +320,9 @@ void Blob::ResetMoments(){
 	m_Iy_min= LONG_MAX;
 	m_Iy_max= LONG_MIN;
 	
+	m_bkgSum= 0;
+	m_bkgRMSSum= 0;
+
 	m_HasStats= false;
 
 }//close ResetMoments()
@@ -340,6 +341,7 @@ void Blob::UpdateMoments(Pixel* pixel){
 	int id= pixel->id;
 	double w_edge= pixel->S_edge;
 	double w_curv= pixel->S_curv;
+	std::pair<double,double> bkgValues= pixel->GetBkg();
 	
 	//Update accumulator
 	if(w<m_Smin) {
@@ -371,7 +373,10 @@ void Blob::UpdateMoments(Pixel* pixel){
 	if(iy<m_Iy_min) m_Iy_min= iy;
 	if(iy>m_Iy_max) m_Iy_max= iy;
 
-	
+	//Update bkg accumulator
+	m_bkgSum+= bkgValues.first;
+	m_bkgRMSSum+= bkgValues.second;
+
 	//Update moments
 	NPix++;
   double delta = w - m_M1;
@@ -803,6 +808,75 @@ int Blob::ComputeZernikeMoments(int order){
 }//close ComputeZernikeMoments()
 
 
+Contour* Blob::GetWCSContour(int index,WorldCoor* wcs,int coordSystem) 
+{
+	//## Check requested contour index
+	if(index<0 || index>=(int)m_Contours.size() ) {
+		WARN_LOG("Requested contour index exceed contour size (N="<<m_Contours.size()<<"), returning nullptr!");
+		return nullptr;
+	}
+	
+	//## Convert contour to WCS
+	//Create WCS if not provided
+	bool deleteWCS= false;
+	if(!wcs){
+		if(!m_imgMetaData){
+			WARN_LOG("Requested to convert contour to WCS but no wcs was provided and no metadata are available to built it, returning null ptr!");
+			return nullptr;
+		}
+		wcs= m_imgMetaData->GetWorldCoord(coordSystem);
+		if(!wcs){
+			ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			return nullptr;
+		}
+		deleteWCS= true;
+	}//close if
+
+	//Convert contour to WCS
+	Contour* contour_wcs= AstroUtils::PixelToWCSContour(m_Contours[index],wcs);
+	
+	//Delete WCS
+	if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+
+	return contour_wcs;
+		
+}//close GetWCSContour()
+
+
+std::vector<Contour*> Blob::GetWCSContours(WorldCoor* wcs,int coordSystem)
+{
+	//## Convert contours to WCS
+	//Create WCS if not provided
+	bool deleteWCS= false;
+	std::vector<Contour*> contours_wcs;
+
+	if(!wcs){
+		if(!m_imgMetaData){
+			WARN_LOG("Requested to convert contour to WCS but no wcs was provided and no metadata are available to built it, returning null ptr!");
+			return contours_wcs;
+		}
+		wcs= m_imgMetaData->GetWorldCoord(coordSystem);
+		if(!wcs){
+			ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			return contours_wcs;
+		}
+		deleteWCS= true;
+	}//close if
+
+	//Loop over contours and convert to WCS
+	//NB: If conversion fails vector and memory is cleared inside PixelToWCSContours method
+	if(AstroUtils::PixelToWCSContours(contours_wcs,m_Contours,wcs)<0){
+		WARN_LOG("Failed to convert contours to WCS!");
+	}
+
+	//Delete WCS
+	if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+
+	return contours_wcs;
+
+}//close GetWCSContours()
+		
+
 bool Blob::IsPointOnContour(double x,double y,double tol)
 {
 	//If no contours are present return false
@@ -820,6 +894,48 @@ bool Blob::IsPointOnContour(double x,double y,double tol)
 	return isOnContour;
 
 }//close IsPointOnContour()
+
+
+int Blob::GetSampleStdDev(double& sigmaX,double& sigmaY,double& covXY)
+{
+	//Init
+	sigmaX= 0;
+	sigmaY= 0;
+	covXY= 0;
+
+	//Compute standard deviations along axis		
+	double varX= 0;
+	double varY= 0;
+	double varXY= 0;
+	double wsum= 0;
+	double w2sum= 0;
+	for(size_t k=0;k<m_Pixels.size();k++){
+		double x= m_Pixels[k]->x;
+		double y= m_Pixels[k]->y;
+		double S= m_Pixels[k]->S;
+		double w= fabs(S-m_Smin);//Check this, weights can be negative!
+		wsum+= w;
+		w2sum+= w*w; 
+		varX+= w*(x-m_Sx)*(x-m_Sx);
+		varY+= w*(y-m_Sy)*(y-m_Sy);
+		varXY+= w*(x-m_Sx)*(y-m_Sy);
+	}//end loop pixels
+
+	if(wsum==0 || w2sum==0){
+		WARN_LOG("Failed to compute blob standard deviations as sum of weights is zero!");	
+		return -1;
+	}
+		
+	double normFactor= wsum-w2sum/wsum;
+	sigmaX= sqrt(varX/normFactor);
+	sigmaY= sqrt(varY/normFactor);
+	covXY= varXY/normFactor;
+	INFO_LOG("Source "<<this->GetName()<<" sample std dev (sigmaX,sigmaY,covXY)=("<<sigmaX<<","<<sigmaY<<","<<covXY<<"), normFactor="<<normFactor);
+
+	return 0;
+	
+}//close GetSampleStdDev()
+
 
 
 }//close namespace

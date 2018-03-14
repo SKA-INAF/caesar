@@ -123,6 +123,7 @@ class Pixel : public TObject {
 		* \brief Set coordinates
 		*/
 		void SetCoords(long int i,long int j){ix=i; iy=j;}
+		
 
 		/**
 		* \brief Set bkg and rms value
@@ -198,6 +199,8 @@ class Pixel : public TObject {
 		double y;//pixel y coordinate
 		long int ix;//pixel id x
 		long int iy;//pixel id y
+		//double x_wcs;//pixel x coordinate
+		//double y_wcs;//pixel y coordinate
 		//bool isOnEdge;//flag marking if pixel is found on region contour
 		//double distanceToEdge;//distance to the edge (=0 for edge pixels)		
 
@@ -234,7 +237,6 @@ struct PixelCompareByFlux {
 		return lhs->S < rhs->S;
 	}
 };//close PixelCompareByFlux()
-
 
 
 #ifdef __MAKECINT__

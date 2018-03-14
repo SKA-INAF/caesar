@@ -120,9 +120,9 @@ void Pixel::Init(){
 	S_curv= 0; 
 	S_edge= 0;
 	x= -1; 
-	y=-1; 
+	y= -1; 
 	ix= -1; 
-	iy= -1; 
+	iy= -1;
 	//isOnEdge= false; 
 	//distanceToEdge= std::numeric_limits<double>::infinity();
 	bkgLevel= 0;

@@ -77,6 +77,9 @@ int BlobFinder::FindBlobs(Image* inputImg,std::vector<T*>& blobs,Image* floodImg
 		return -1;
 	}
 
+	//Get metadata if available
+	ImgMetaData* metadata= inputImg->GetMetaData();
+
 	//Set img range data
 	long int Nx= inputImg->GetNx();
 	long int Ny= inputImg->GetNy();
@@ -260,6 +263,9 @@ int BlobFinder::FindBlobs(Image* inputImg,std::vector<T*>& blobs,Image* floodImg
 		//## Compute morphology parameters
 		DEBUG_LOG("Computing blob morphology params...");
 		aBlob->ComputeMorphologyParams();
+
+		//## Adding image metadata to image (needed for WCS)
+		aBlob->SetImageMetaData(metadata);
 
 		//## Add blob to list
 		blobs.push_back(aBlob);

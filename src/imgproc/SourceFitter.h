@@ -58,11 +58,12 @@
 #include <time.h>
 #include <ctime>
 
+class TH2D;
+
 namespace Caesar {
 
 class Image;
 class Source;
-
 
 struct SourceFitOptions {
 	//- Blob start fit pars
@@ -111,8 +112,6 @@ struct SourceFitOptions {
 	//- Flux significance min threshold (in nsigmas above the bkg)
 	bool useFluxZCut;
 	double fluxZThrMin;
-
-	
 
 	//Default constructor
 	SourceFitOptions() 
@@ -535,7 +534,10 @@ class SourceFitPars : public TObject {
 			pars.clear();
 		}
 
+		
+
 	private:
+
 		int nComponents;
 		double chi2;
 		double ndof;
@@ -617,12 +619,33 @@ class SourceFitter : public TObject {
 		* \brief Check if fit has parameters converged at bounds
 		*/
 		bool HasFitParsAtLimit(const ROOT::Fit::FitResult& fitRes);
+		/**
+		* \brief Estimate fit components
+		*/
+		int EstimateFitComponents(std::vector<std::vector<double>>& fitPars_start,Source* aSource,SourceFitOptions& fitOptions);
+		/**
+		* \brief Perform fit using given initial fit components pars
+		*/
+		int DoFit(Source* aSource,SourceFitOptions& fitOptions,std::vector< std::vector<double> >& fitPars_start);
+
+		/**
+		* \brief Init data
+		*/
+		int InitData(Source* aSource,SourceFitOptions& fitOptions);
+		/**
+		* \brief Check fit options
+		*/
+		int CheckFitOptions(SourceFitOptions& fitOptions);
 
 	private:
 	
 		static int m_NFitComponents;
 		static int m_fitStatus;
 		static SourceFitPars m_sourceFitPars;
+
+		static TH2D* m_fluxMapHisto;
+		double m_bkgMean;
+		double m_rmsMean;
 		
 	ClassDef(SourceFitter,1)
 

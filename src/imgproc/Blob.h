@@ -58,6 +58,7 @@ using namespace std;
 
 namespace Caesar {
 
+class ImgMetaData;
 class Contour;
 
 
@@ -119,43 +120,7 @@ class Blob : public TNamed {
 		/**
 		* \brief Set blob name
 		*/
-		//void SetName(std::string name){Name=name;}
 		void SetName(std::string name){TNamed::SetName(name.c_str());}
-
-		/**
-		* \brief Set image range
-		*/
-		//void SetImageRange(Caesar::ImgRange range){m_ImgRange= range;}
-		/**
-		* \brief Set image range
-		*/
-		/*
-		void SetImageRange(float xmin,float xmax,float ymin,float ymax){
-			m_ImgRange= Caesar::ImgRange(xmin,xmax,ymin,ymax);
-			//m_ImageMinX= xmin;
-			//m_ImageMaxX= xmax;
-			//m_ImageMinY= ymin;
-			//m_ImageMaxY= ymax;
-		}
-		*/
-
-		/**
-		* \brief Get image range
-		*/
-		/*
-		void GetImageRange(float& xmin,float& xmax,float& ymin,float& ymax){
-			m_ImgRange.GetRange(xmin,xmax,ymin,ymax);
-			//xmin= m_ImageMinX;
-			//xmax= m_ImageMaxX;
-			//ymin= m_ImageMinY;
-			//ymax= m_ImageMaxY;
-		}
-		*/
-
-		/**
-		* \brief Get image range
-		*/	
-		//const ImgRange& GetImageRange() const {return m_ImgRange;}
 
 		/**
 		* \brief Is blob at image edge
@@ -167,7 +132,29 @@ class Blob : public TNamed {
 		*/
 		void SetEdgeFlag(bool choice){HasPixelsAtEdge=choice;}
 
-		
+		/**
+		* \brief Set image metadata
+		*/
+		int SetImageMetaData(ImgMetaData* data){
+			if(!data) return -1;
+			CodeUtils::DeletePtr<ImgMetaData>(m_imgMetaData);//delete existing
+			m_imgMetaData= new ImgMetaData;
+			*m_imgMetaData = *data;
+			return 0;
+		}
+
+		/**
+		* \brief get image metadata
+		*/
+		ImgMetaData* GetImageMetaData(){return m_imgMetaData;}
+
+		/**
+		* \brief Set image metadata
+		*/
+		bool HasImageMetaData(){
+			if(!m_imgMetaData) return false; 
+			return true;
+		}
 
 		//================================================
 		//==         PIXELS 
@@ -320,7 +307,7 @@ class Blob : public TNamed {
 		/**
 		* \brief Get pixel flux max
 		*/
-		double GetSmax(){return m_Smax;}
+		double GetSmax() const {return m_Smax;}
 		/**
 		* \brief Set pixel flux max
 		*/
@@ -328,7 +315,7 @@ class Blob : public TNamed {
 		/**
 		* \brief Get pixel flux min
 		*/
-		double GetSmin(){return m_Smin;}
+		double GetSmin() const {return m_Smin;}
 		/**
 		* \brief Set pixel flux min
 		*/
@@ -466,7 +453,10 @@ class Blob : public TNamed {
 			m_Iy_max= iymax;
 		}
 
-		
+		/**
+		* \brief Get sample source standard deviations
+		*/
+		int GetSampleStdDev(double& sigmaX,double& sigmaY,double& covXY);
 
 		/**
 		* \brief Dump blob info
@@ -491,7 +481,7 @@ class Blob : public TNamed {
 		bool HasContours(){return !m_Contours.empty();}
 
 		/**
-		* \brief Return contours
+		* \brief Return contours. NB: Do not delete pointers.
 		*/
 		std::vector<Contour*> GetContours(){return m_Contours;}
 		/**
@@ -501,6 +491,19 @@ class Blob : public TNamed {
 			if(index<0 || index>=(int)m_Contours.size() ) return 0;
 			return m_Contours[index];
 		}
+
+		/**
+		* \brief Return contours converted in WCS 
+		*/
+		std::vector<Contour*> GetWCSContours(WorldCoor* wcs=0,int coordSystem=-1);
+		
+		/**
+		* \brief Return contour with index and convert to WCS
+		*/
+		Contour* GetWCSContour(int index,WorldCoor* wcs=0,int coordSystem=-1);
+
+
+
 		/**
 		* \brief Add contour
 		*/
@@ -512,6 +515,29 @@ class Blob : public TNamed {
 		* \brief Is point on contour?
 		*/
 		bool IsPointOnContour(double x,double y,double tol=1);
+
+		//================================================
+		//==         BKG INFO
+		//================================================
+		/**
+		* \brief Get bkg sum
+		*/
+		double GetBkgSum(){return m_bkgSum;}
+		/**
+		* \brief Get bkg rms sum
+		*/
+		double GetBkgRMSSum(){return m_bkgRMSSum;}
+
+		//================================================
+		//==         WCS
+		//================================================
+		/**
+		* \brief Get WCS from stored metadata
+		*/
+		WorldCoor* GetWCS(int coordSystem=-1){
+			if(!m_imgMetaData) return nullptr;
+			return m_imgMetaData->GetWorldCoord(coordSystem);
+		}
 
 	private:
 
@@ -603,7 +629,11 @@ class Blob : public TNamed {
 		double m_S_curv;//sum of pixel curvature
 		double m_S_edge;//sum of edge estimator
 
+		//Bkg/noise sum	
+		double m_bkgSum;
+		double m_bkgRMSSum;
 
+		//Image range
 		float m_Xmin;
 		float m_Xmax;
 		float m_Ymin;
@@ -618,10 +648,15 @@ class Blob : public TNamed {
 			
 		//Contour collection
 		std::vector<Contour*> m_Contours;
+
+		//Image metadata
+		ImgMetaData* m_imgMetaData;
 	
 	ClassDef(Blob,1)
 
 };//close Blob()
+
+
 
 
 

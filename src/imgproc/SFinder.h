@@ -299,6 +299,7 @@ class SFinder : public TObject {
 		bool m_saveToFile;
 		bool m_saveConfig;
 		bool m_saveDS9Region;
+		bool m_convertDSRegionsToWCS;
 		std::string m_DS9CatalogFileName;
 		int m_DS9RegionFormat;
 		std::string m_DS9FitCatalogFileName;			
@@ -378,6 +379,7 @@ class SFinder : public TObject {
 		double m_BoxSizeY;
 		double m_GridSizeX;
 		double m_GridSizeY;
+
 
 		//Residual map
 		Image* m_ResidualImg;

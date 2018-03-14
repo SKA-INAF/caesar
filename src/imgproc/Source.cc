@@ -219,6 +219,88 @@ void Source::Draw(bool drawBoundingBox,bool drawEllipse,bool drawNested,int line
 }//close Draw()
 
 
+const std::string Source::GetDS9Region(bool dumpNestedSourceInfo,bool convertToWCS,WorldCoor* wcs,int coordSystem)
+{
+	//Check if has pixels
+	//NB: DS9 crashes miserably when given a polygon region with one point 
+	if(NPix<=1) return std::string("");
+
+	//Convert contours to WCS?
+	std::stringstream sstream;
+	std::string regionText= this->GetName();
+	std::string regionColor= this->GetDS9RegionColor();
+	std::vector<std::string> regionTags {this->GetDS9RegionTag()};
+	std::string region= "";
+
+	if(convertToWCS){
+		std::vector<Contour*> contours_wcs= GetWCSContours(wcs,coordSystem);
+		if(contours_wcs.empty()){
+			WARN_LOG("Failed to convert contours in WCS, region will be empty!");
+		}
+		else{
+			//Loop over WCS contours
+			for(size_t i=0; i<contours_wcs.size(); i++){ 
+				region= AstroUtils::ContourToDS9Region(contours_wcs[i],regionText,regionColor,regionTags);
+			}
+
+			//Delete contours at the end
+			CodeUtils::DeletePtrCollection<Contour>(contours_wcs);
+		}
+
+	}//close if
+	else{
+		for(size_t i=0; i<m_Contours.size(); i++){ 
+			region= AstroUtils::ContourToDS9Region(m_Contours[i],regionText,regionColor,regionTags);
+		}
+	}//close else
+
+	sstream<<region;
+
+	//###### FILL NESTED SOURCE REGIONS ###########
+	//Fill nested source regions
+	if(dumpNestedSourceInfo && m_HasNestedSources){			
+		sstream<<endl;
+		for(size_t k=0;k<m_NestedSources.size();k++){
+
+			std::string regionText_nested= m_NestedSources[k]->GetName();
+			std::string regionColor_nested= m_NestedSources[k]->GetDS9RegionColor();
+			std::vector<std::string> regionTags_nested {m_NestedSources[k]->GetDS9RegionTag()};
+			std::string region_nested= "";
+			if(convertToWCS){
+				std::vector<Contour*> contours_wcs= m_NestedSources[k]->GetWCSContours(wcs,coordSystem);
+				if(contours_wcs.empty()){
+					WARN_LOG("Failed to convert contours in WCS, region will be empty!");
+				}
+				else{
+					//Loop over WCS contours
+					for(size_t i=0;i<contours_wcs.size(); i++){ 
+						region_nested= AstroUtils::ContourToDS9Region(contours_wcs[i],regionText_nested,regionColor_nested,regionTags_nested);
+					}
+
+					//Delete contours at the end
+					CodeUtils::DeletePtrCollection<Contour>(contours_wcs);
+				}
+			}//close if
+			else{
+				std::vector<Contour*> nestedContours= m_NestedSources[k]->m_Contours;
+				for(size_t i=0;i<nestedContours.size(); i++){ 
+					region_nested= AstroUtils::ContourToDS9Region(nestedContours[i],regionText_nested,regionColor_nested,regionTags_nested);
+				}
+			}//close else
+
+			sstream<<region_nested;
+			if(k!=m_NestedSources.size()-1) sstream<<endl;
+
+		}//end loop nested sources
+	}//close dumpNestedSourceInfo
+
+	const std::string dsregions= sstream.str();
+	return dsregions;
+
+}//close GetDS9Region()
+
+
+/*
 const std::string Source::GetDS9Region(bool dumpNestedSourceInfo){
 
 	//Check if has pixels
@@ -262,7 +344,60 @@ const std::string Source::GetDS9Region(bool dumpNestedSourceInfo){
 	return dsregions;
 
 }//close GetDS9Region()
+*/
 
+const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNestedSourceInfo,bool convertToWCS,WorldCoor* wcs,int coordSystem)
+{
+	//Check WCS & metadata
+	if(convertToWCS && !wcs && !m_imgMetaData){
+		WARN_LOG("Requested to convert ellipse to WCS but no wcs was provided and no metadata to compute it are available!");
+		return std::string("");
+	}
+
+	//Check if source has fit info
+	std::stringstream sstream;
+	
+	if(m_HasFitInfo){
+		//Get fit ellipses
+		std::vector<TEllipse*> ellipses;
+		if(GetFitEllipses(ellipses,useFWHM,convertToWCS,wcs,coordSystem)<0){
+			ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			return std::string("");
+		}
+	
+		//Loop over fit ellipses and convert to DS9 regions
+		for(size_t i=0;i<ellipses.size();i++){
+			if(!ellipses[i]) continue;
+
+			//Get encoded string region
+			std::string regionText(Form("%s_fitcomp%d",this->GetName(),(int)(i+1)));
+			std::string regionColor= "red";
+			std::vector<std::string> regionTags {"point-like","fitted component"};
+			std::string region= AstroUtils::EllipseToDS9Region(ellipses[i],regionText,regionColor,regionTags);
+			sstream<<region;
+
+			if(i!=ellipses.size()-1) sstream<<endl;
+		}//end loop ellipses
+
+		//Delete ellipses
+		CodeUtils::DeletePtrCollection<TEllipse>(ellipses);
+
+	}//close if has fit info
+
+	//Loop over nested components and get fit ellipse regions
+	if(dumpNestedSourceInfo && m_HasNestedSources){			
+		for(size_t k=0;k<m_NestedSources.size();k++){	
+			std::string nestedRegionStr= m_NestedSources[k]->GetDS9FittedEllipseRegion(useFWHM,false,convertToWCS,wcs,coordSystem);
+			if(nestedRegionStr!="") sstream<<nestedRegionStr<<endl;
+		}//end loop nested sources
+	}//close if
+
+	return sstream.str();
+	
+}//close GetDS9FittedEllipseRegion()
+
+
+/*
 const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNestedSourceInfo)
 {
 	//Check if source has fit info
@@ -302,6 +437,7 @@ const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNested
 	return sstream.str();
 	
 }//close GetDS9FittedEllipseRegion()
+*/
 
 
 const std::string Source::GetDS9EllipseRegion(bool dumpNestedSourceInfo){
@@ -553,10 +689,11 @@ bool Source::FindSourceMatchByOverlapArea(SourceOverlapMatchPars& pars, const st
 }//close FindSourceMatchByOverlapArea()
 
 
-bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, const std::vector<Source*>& sources, float matchPosThr)
+bool Source::FindSourceMatchByPos(std::vector<SourcePosMatchPars>& matchPars, const std::vector<Source*>& sources, float matchPosThr)
 {
 	//Reset pars
-	pars.ResetPars();
+	matchPars.clear();
+	//pars.ResetPars();
 
 	//Check given threshold
 	if(matchPosThr<=0){
@@ -578,59 +715,43 @@ bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, const std::vector<So
 
 
 	//Loop over all reconstructed sources and match them in position
-	std::vector<SourcePosMatchPars> tmpMatchPars;	
+	//std::vector<SourcePosMatchPars> tmpMatchPars;	
 	
 	for(size_t j=0;j<sources.size();j++){
 	
 		//Find match for mother source
-		SourcePosMatchPars matchInfo(j,0,-1,-1);
-		bool foundMatch= FindSourceMatchByPos(matchInfo,sources[j],matchPosThr);
+		std::vector<SourcePosMatchPars> matchInfo;
+		bool foundMatch= FindSourceMatchByPos(matchInfo,j,-1,sources[j],matchPosThr);
 		if(foundMatch){
-			tmpMatchPars.push_back(matchInfo);
+			matchPars.insert(matchPars.end(),matchInfo.begin(),matchInfo.end());		
 		}
 
 		//Find match for nested source (if any present)
 		std::vector<Source*> nestedSources= sources[j]->GetNestedSources();
 		for(size_t k=0;k<nestedSources.size();k++){
-			SourcePosMatchPars matchInfo_nested(j,0,-1,k);
-			bool foundMatch_nested= FindSourceMatchByPos(matchInfo_nested,nestedSources[k],matchPosThr);
+			std::vector<SourcePosMatchPars> matchInfo_nested;
+			bool foundMatch_nested= FindSourceMatchByPos(matchInfo_nested,j,k,nestedSources[k],matchPosThr);
 			if(foundMatch_nested){
-				tmpMatchPars.push_back(matchInfo_nested);
+				matchPars.insert(matchPars.end(),matchInfo_nested.begin(),matchInfo_nested.end());		
 			}
 		}//end loop nested sources
 
 	}//end loop sources
 
 	//Check if match is found
-	if(tmpMatchPars.empty()) return false;
+	if(matchPars.empty()) return false;
 
 	//Search for best overlap in case of multiple matches
-	if(tmpMatchPars.size()>1) {
-		INFO_LOG("#"<<tmpMatchPars.size()<<" source matches found, searching for the best one ...");
-		
-		double dist_best= 1.e+99;
-		int best_index= -1;
-
-		for(size_t j=0;j<tmpMatchPars.size();j++){
-			double dist= tmpMatchPars[j].posDiff;	
-			if(dist<=dist_best){
-				best_index= j;
-				dist_best= dist;
-			}
-		}//end loop matched sources
-
-		pars= tmpMatchPars[best_index];
-
-	}//close if
-	else{
-		pars= tmpMatchPars[0];
+	if(matchPars.size()>1) {
+		INFO_LOG("#"<<matchPars.size()<<" source matches found, sorting by position difference ...");
+		std::sort(matchPars.begin(),matchPars.end());		
 	}
 
 	return true;
 
 }//close FindSourceMatchByPos()
 
-bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, Source* source, float matchPosThr)
+bool Source::FindSourceMatchByPos(std::vector<SourcePosMatchPars>& matchPars, long int source_index, long int nested_source_index, Source* source, float matchPosThr)
 {
 	//Set reference position to be compared with collection
 	double X0_ref= X0;
@@ -647,30 +768,35 @@ bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, Source* source, floa
 	bool foundMatch= false;
 	if(hasFitInfo){
 		SourceFitPars fitPars= source->GetFitPars();
-		double dist_best= 1.e+99;
-		long int best_component= -1;
-		INFO_LOG("# fit components="<<fitPars.GetNComponents());
+		//double dist_best= 1.e+99;
+		//long int best_component= -1;
+		DEBUG_LOG("# fit components="<<fitPars.GetNComponents());
 		for(int k=0;k<fitPars.GetNComponents();k++){
 			double X0_fitcomp= fitPars.GetParValue(k,"x0");	
 			double Y0_fitcomp= fitPars.GetParValue(k,"y0");
 			double dx= fabs(X0_fitcomp-X0_ref);
 			double dy= fabs(Y0_fitcomp-Y0_ref);
 			double dist= sqrt(dx*dx+dy*dy);
-			if(dx<=matchPosThr && dy<=matchPosThr && dist<dist_best){//match found
-				best_component= k;
-				dist_best= dist;
+			
+			if(dx<=matchPosThr && dy<=matchPosThr){//match found
+				foundMatch= true;
+				SourcePosMatchPars matchInfo(source_index,dist,k,nested_source_index);
+				matchPars.push_back(matchInfo);
+				//best_component= k;
+				//dist_best= dist;
+				DEBUG_LOG("Match info for source "<<this->GetName()<<" (pos("<<X0_ref<<","<<Y0_ref<<") against source "<<source->GetName()<<" (pos("<<X0_fitcomp<<","<<Y0_fitcomp<<"), dx="<<dx<<", dy="<<dy<<" dist="<<dist<<", matchPosThr="<<matchPosThr);	
 			}
-			INFO_LOG("Match info for source "<<this->GetName()<<" (pos("<<X0_ref<<","<<Y0_ref<<") against source "<<source->GetName()<<" (pos("<<X0_fitcomp<<","<<Y0_fitcomp<<"), dx="<<dx<<", dy="<<dy<<" dist="<<dist<<", matchPosThr="<<matchPosThr);
+			
 		}//end loop fitted components	
 			
+		/*
 		if(best_component!=-1){
 			foundMatch= true;
 			pars.posDiff= dist_best;
 			pars.fitComponentIndex= best_component;
 		}
-	
 		INFO_LOG("Match info for source "<<this->GetName()<<" (pos("<<X0_ref<<","<<Y0_ref<<") against source "<<source->GetName()<<" (pos("<<source->X0<<","<<source->Y0<<"), found? "<<foundMatch<<", hasFitInfo? "<<hasFitInfo<<", dist_best="<<dist_best<<" best_component="<<best_component<<", matchPosThr="<<matchPosThr);
-	
+		*/
 
 	}//close if has fit info
 	else{
@@ -683,11 +809,12 @@ bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, Source* source, floa
 		
 		if(dx<=matchPosThr && dy<=matchPosThr){//match found
 			foundMatch= true;
-			pars.posDiff= dist;
-			pars.fitComponentIndex= -1;
+			SourcePosMatchPars matchInfo(source_index,dist,-1,nested_source_index);
+			matchPars.push_back(matchInfo);
+			//pars.posDiff= dist;
+			//pars.fitComponentIndex= -1;
+			DEBUG_LOG("Match info for source "<<this->GetName()<<" (pos("<<X0_ref<<","<<Y0_ref<<") against source "<<source->GetName()<<" (pos("<<source->X0<<","<<source->Y0<<"), found? "<<foundMatch<<", dx="<<dx<<", dy="<<dy<<" matchPosThr="<<matchPosThr); 
 		}
-
-		INFO_LOG("Match info for source "<<this->GetName()<<" (pos("<<X0_ref<<","<<Y0_ref<<") against source "<<source->GetName()<<" (pos("<<source->X0<<","<<source->Y0<<"), found? "<<foundMatch<<", dx="<<dx<<", dy="<<dy<<" matchPosThr="<<matchPosThr); 
 
 	}//close else !has fit info
 
@@ -695,6 +822,7 @@ bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, Source* source, floa
 	return foundMatch;
 
 }//close FindSourceMatchByPos()
+
 /*
 bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, const std::vector<Source*>& sources, float matchPosThr)
 {
@@ -1016,6 +1144,173 @@ int Source::Fit(SourceFitOptions& fitOptions)
 	return 0;
 
 }//close Fit()
+
+
+int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool convertToWCS,WorldCoor* wcs,int coordSystem)
+{
+	//Init data 
+	fitEllipses.clear();
+
+	//Return empty vector if no fit info are available
+	if(!m_HasFitInfo){
+		WARN_LOG("Source "<<this->GetName()<<" has no fit info available, returning empty vector...");
+		return 0;
+	}
+
+	//Check if metadata are not available and convertToWCS is requested
+	if(!m_imgMetaData && convertToWCS){
+		WARN_LOG("Requested to convert to WCS but not metadata have been set on this source to build the WCS!");
+		return -1;
+	}
+
+	//Get ellipses from fit parameters in pixel coordinates
+	fitEllipses= m_fitPars.GetFittedEllipses(useFWHM);
+	if(fitEllipses.empty()){
+		WARN_LOG("No fitted ellipse returned (there should be at least one component fitted, check!)...");
+		return -1;
+	}
+
+	//Convert to sky coordinates?
+	if(convertToWCS){
+		//Build the WCS with metadata if not given
+		bool deleteWCS= false;
+		if(!wcs){
+			wcs= m_imgMetaData->GetWorldCoord(coordSystem);
+			if(!wcs){
+				ERROR_LOG("Failed to get WorldCoord system from metadata!");
+				CodeUtils::DeletePtrCollection<TEllipse>(fitEllipses);
+				return -1;
+			}
+			deleteWCS= true;
+		}
+		
+		//Convert ellipses to WCS
+		std::vector<TEllipse*> fitEllipses_wcs;
+		for(size_t i=0;i<fitEllipses.size();i++){
+			TEllipse* fitEllipse_wcs= AstroUtils::PixelToWCSEllipse(fitEllipses[i],wcs);
+			if(!fitEllipse_wcs){
+				ERROR_LOG("Failed to convert fit ellipse no. "<<i+1<<" to WCS!");
+				CodeUtils::DeletePtrCollection<TEllipse>(fitEllipses);
+				if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+				return -1;
+			}
+			fitEllipses_wcs.push_back(fitEllipse_wcs);
+		}//end loop ellipses
+
+		//Delete fitEllipses and replace with wcs ones
+		CodeUtils::DeletePtrCollection<TEllipse>(fitEllipses);
+		fitEllipses.insert(fitEllipses.end(),fitEllipses_wcs.begin(),fitEllipses_wcs.end());
+	
+		//Delete wcs (if allocated)
+		if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+
+	}//close if convert to WCS
+
+	
+	return 0;
+
+}//close GetFitEllipses()
+	
+
+
+int Source::FindComponentPeaks(std::vector<TVector2>& peaks,double peakZThr,int maxPeaks,int peakShiftTolerance,std::vector<int> kernels,int peakKernelMultiplicityThr)
+{
+	//Init
+	peaks.clear();
+
+	//Get source image
+	int pixMargin= 0;
+	Image* peakSearchMap= this->GetImage(eFluxMap,pixMargin);
+	if(!peakSearchMap){
+		ERROR_LOG("Failed to get source image!");	
+		return -1;
+	}
+
+	//Get source pars (median, average bkg & noise)
+	double Smedian= this->Median;
+	double Smad= this->MedianRMS;
+	double bkgMean= m_bkgSum/(double)(m_Pixels.size());
+	double rmsMean= m_bkgRMSSum/(double)(m_Pixels.size());
+
+	//Finding peaks
+	INFO_LOG("Finding peaks in source (id="<<Id<<", name="<<this->GetName()<<")");	
+	std::vector<TVector2> peakPoints;
+	bool skipBorders= true;
+	if(peakSearchMap->FindPeaks(peakPoints,kernels,peakShiftTolerance,skipBorders,peakKernelMultiplicityThr)<0){
+		WARN_LOG("Failed to find peaks in source (id="<<Id<<", name="<<this->GetName()<<") image!");
+		CodeUtils::DeletePtr<Image>(peakSearchMap);
+		return -1;
+	}
+
+	//Select peaks (skip peaks at boundary or faint peaks)
+	INFO_LOG("#"<<peakPoints.size()<<" peaks found in source (id="<<Id<<", name="<<this->GetName()<<"), apply selection...");	
+	std::vector<TVector2> peakPoints_selected;
+	std::vector<double> peakFluxes_selected;
+	for(size_t i=0;i<peakPoints.size();i++){
+		double x= peakPoints[i].X();
+		double y= peakPoints[i].Y();
+		long int gbin= peakSearchMap->FindBin(x,y);
+		if(gbin<0){
+			WARN_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
+			CodeUtils::DeletePtr<Image>(peakSearchMap);
+			return -1;
+		}
+		double Speak= peakSearchMap->GetBinContent(gbin);
+
+		//Remove faint peaks in case more than one peak is found
+		if(peakPoints.size()>1){			
+			double Zpeak_imgbkg= 0;	
+			double Zpeak_sourcebkg= 0;
+			if(rmsMean!=0) Zpeak_imgbkg= (Speak-bkgMean)/rmsMean;
+			if(Smad!=0) Zpeak_sourcebkg= (Speak-Smedian)/Smad;
+			//if(Zpeak_imgbkg<peakZThr) {
+			if(Zpeak_sourcebkg<peakZThr) {
+				INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak_imgbkg="<<Zpeak_imgbkg<<", Zpeak_sourcebkg="<<Zpeak_sourcebkg<<"<"<<peakZThr<<")");
+				continue;
+			}
+		}//close if
+
+		//Remove peaks lying on the source contour
+		if(this->HasContours() && this->IsPointOnContour(x,y,0.5)) {
+			INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as lying on source contour");
+			continue;
+		}
+
+		//Add peak to selected peak
+		peakPoints_selected.push_back(peakPoints[i]);
+		peakFluxes_selected.push_back(Speak);
+	}//end loop peaks
+
+	//Sort peaks by flux
+	std::vector<size_t> sort_index;//sorting index
+	std::vector<double> peakFluxes_sorted;
+	CodeUtils::sort_descending(peakFluxes_selected,peakFluxes_sorted,sort_index);
+
+	//Select peaks if more than max allowed
+	int nPeaks_selected= static_cast<int>(peakPoints_selected.size());
+	if(nPeaks_selected<=0){
+		WARN_LOG("No components left in source (id="<<Id<<", name="<<this->GetName()<<") after selection!");	
+		CodeUtils::DeletePtr<Image>(peakSearchMap);
+		return 0;
+	}
+	
+	int nComponents= nPeaks_selected;
+	if(maxPeaks>0) nComponents= std::min(nPeaks_selected,maxPeaks);
+	INFO_LOG("#"<<nComponents<<" components found in source (id="<<Id<<", name="<<this->GetName()<<"), max peaks="<<maxPeaks<<") ...");
+
+	peaks.clear();
+	for(int i=0;i<nComponents;i++){
+		size_t index= sort_index[i];
+		peaks.push_back(peakPoints_selected[index]);
+	}//end loop peaks
+
+
+	//Delete peak map
+	CodeUtils::DeletePtr<Image>(peakSearchMap);
+
+	return 0;
+
+}//close FindComponentPeaks()
 
 
 }//close namespace
