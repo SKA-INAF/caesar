@@ -1212,7 +1212,7 @@ generate_exec_script(){
       echo 'echo ""'
       echo '  cd $JOBDIR'
 
-      echo "  $exe $exe_args > $logfile"
+      echo "  $exe $exe_args >& $logfile"
       
       echo '  echo ""'
 

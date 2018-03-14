@@ -89,7 +89,8 @@ def get_args():
 	parser.add_argument('-npixels_min', '--npixels_min', dest='npixels_min', required=False, type=int, default=5, action='store',help='Minimum number of pixels for a generated source (default=5)')
 	parser.add_argument('--compactsources', dest='enable_compactsources', action='store_true')	
 	parser.add_argument('--no-compactsources', dest='enable_compactsources', action='store_false')	
-	parser.set_defaults(enable_compactsources=True)
+	parser.set_defaults(enable_compactsources=True)	
+	parser.add_argument('-nsources', '--nsources', dest='nsources', required=False, type=int, default=0, action='store',help='Compact source number (if >0 overrides the density generation) (default=0)')
 	parser.add_argument('-zmin', '--zmin', dest='zmin', required=False, type=float, default=1, action='store',help='Minimum source significance level in sigmas above the bkg (default=1)')
 	parser.add_argument('-zmax', '--zmax', dest='zmax', required=False, type=float, default=30, action='store',help='Maximum source significance level in sigmas above the bkg (default=30)')
 	parser.add_argument('-source_density', '--source_density', dest='source_density', required=False, type=float, default=1000, action='store',help='Compact source density (default=1000)')
@@ -98,6 +99,7 @@ def get_args():
 	parser.add_argument('--extsources', dest='enable_extsources', action='store_true')	
 	parser.add_argument('--no-extsources', dest='enable_extsources', action='store_false')	
 	parser.set_defaults(enable_extsources=True)
+	parser.add_argument('-ext_nsources', '--ext_nsources', dest='ext_nsources', required=False, type=int, default=0, action='store',help='Extended source number (if >0 overrides the density generation) (default=0)')
 	parser.add_argument('-ext_source_density', '--ext_source_density', dest='ext_source_density', required=False, type=float, default=100, action='store',help='Extended source density (default=1000)')
 	parser.add_argument('-zmin_ext', '--zmin_ext', dest='zmin_ext', required=False, type=float, default=0.1, action='store',help='Minimum extended source significance level in sigmas above the bkg (default=0.1)')
 	parser.add_argument('-zmax_ext', '--zmax_ext', dest='zmax_ext', required=False, type=float, default=2, action='store',help='Maximum extended source significance level in sigmas above the bkg (default=2)')
@@ -252,6 +254,7 @@ class SkyMapSimulator(object):
 
 		## Compact source parameters
 		self.simulate_compact_sources= True
+		self.nsources= 0 # default is density generator
 		self.source_density= 2000. # in sources/deg^2
 		self.beam_bmaj= 6.5 # in arcsec
 		self.beam_bmin= 6.5 # in arcsec
@@ -263,6 +266,7 @@ class SkyMapSimulator(object):
 		
 		## Extended source parameters
 		self.simulate_ext_sources= True
+		self.ext_nsources= 0 # default is density generator
 		self.ext_source_type= -1 # all source models generated
 		self.ext_source_density= 10 # in sources/deg^2
 		self.zmin_ext= 0.5 # in sigmas 
@@ -400,9 +404,21 @@ class SkyMapSimulator(object):
 		self.zmin_ext= zmin
 		self.zmax_ext= zmax
 
+	def set_nsources(self,n):
+		""" Set number of sources to be generated """
+		if n<0:	
+			raise ValueError('Invalid number of sources specified (shall be >=0)')
+		self.nsources= n
+
 	def set_source_density(self,density):
 		""" Set compact source density in deg^-2 """
 		self.source_density= density
+
+	def set_ext_nsources(self,n):
+		""" Set number of extended sources to be generated """
+		if n<0:	
+			raise ValueError('Invalid number of sources specified (shall be >=0)')
+		self.ext_nsources= n
 
 	def set_ext_source_density(self,density):
 		""" Set extended source density in deg^-2 """
@@ -529,6 +545,10 @@ class SkyMapSimulator(object):
 		data= disk_data + shell_data
 		return data
 		
+	def generate_disk(self,ampl,x0,y0,radius):
+		""" Generate a disk """
+		data= Disk2D(ampl,x0,y0,radius)(self.gridx, self.gridy) 
+		return data
 
 	def generate_ellipse(self,ampl,x0,y0,a,b,theta):
 		""" Generate ellipse """
@@ -691,7 +711,11 @@ class SkyMapSimulator(object):
 		# Compute number of sources to be generated given map area in pixels
 		#area= (self.nx*self.ny)*self.pixsize/(3600.*3600.) # in deg^2
 		area= ((self.nx-2*self.marginx)*(self.ny-2*self.marginy))*self.pixsize/(3600.*3600.) # in deg^2
-		nsources= int(round(self.source_density*area))
+
+		if self.nsources>0:
+			nsources= self.nsources
+		else: # density generator
+			nsources= int(round(self.source_density*area))
 		S_min= (self.zmin*self.bkg_rms) + self.bkg_level
 		S_max= (self.zmax*self.bkg_rms) + self.bkg_level
 		lgS_min= np.log(S_min)
@@ -778,7 +802,10 @@ class SkyMapSimulator(object):
 		# Compute number of sources to be generated given map area in pixels
 		#area= (self.nx*self.ny)*self.pixsize/(3600.*3600.) # in deg^2
 		area= ((self.nx-2*self.marginx)*(self.ny-2*self.marginy))*self.pixsize/(3600.*3600.) # in deg^2
-		nsources= int(round(self.ext_source_density*area))
+		if self.ext_nsources>0:
+			nsources= self.ext_nsources
+		else:
+			nsources= int(round(self.ext_source_density*area))
 		S_min= (self.zmin_ext*self.bkg_rms) + self.bkg_level
 		S_max= (self.zmax_ext*self.bkg_rms) + self.bkg_level
 		lgS_min= np.log(S_min)
@@ -796,7 +823,7 @@ class SkyMapSimulator(object):
 		sources_data = Box2D(amplitude=0,x_0=0,y_0=0,x_width=2*self.nx, y_width=2*self.ny)(self.gridx, self.gridy)
 		ngen_sources= 0	
 		if self.ext_source_type==-1:	
-			nsource_types= 5
+			nsource_types= 6
 		else:
 			nsource_types= 1
 
@@ -899,6 +926,12 @@ class SkyMapSimulator(object):
 				if source_data is None:
 					print('Failed to generate blob (hint: too large trunc threshold), skip and regenerate...')
 					continue
+
+			elif source_sim_type==6: # disk model
+				source_sim_type= Caesar.Source.eDiskLike
+				disk_r= random.uniform(self.disk_rmin,self.disk_rmax)
+				source_max_scale= disk_r*2
+				source_data= self.generate_disk(S,x0,y0,disk_r)
 
 			else:
 				print('ERROR: Invalid source type given!')
@@ -1210,10 +1243,12 @@ def main():
 	Zmin= args.zmin
 	Zmax= args.zmax
 	source_density= args.source_density
+	nsources= args.nsources
 
 	# - Extended source args
 	enable_extsources= args.enable_extsources
 	ext_source_type= args.ext_source_type
+	ext_nsources= args.ext_nsources
 	Zmin_ext= args.zmin_ext
 	Zmax_ext= args.zmax_ext
 	ext_source_density= args.ext_source_density
@@ -1284,9 +1319,11 @@ def main():
 	simulator.set_bkg_pars(bkg_level,bkg_rms)
 	simulator.set_beam_info(Bmaj,Bmin,Bpa)	
 	simulator.enable_compact_sources(enable_compactsources)
+	simulator.set_nsources(nsources)
 	simulator.set_source_significance_range(Zmin,Zmax)
 	simulator.set_source_density(source_density)
 	simulator.enable_extended_sources(enable_extsources)
+	simulator.set_ext_nsources(ext_nsources)
 	simulator.set_ext_source_type(ext_source_type)
 	simulator.set_ext_source_significance_range(Zmin_ext,Zmax_ext)
 	simulator.set_ext_source_density(ext_source_density)

@@ -67,8 +67,9 @@ def get_deconv_gaus_sigma(bmaj,bmin,freq):
 	""" bmaj/bmin in arcsec """
 	""" freq in GHz """
 	c= constants.c
-	sigmaX= 91000/bmaj*c/freq*2/sigma2fwhm()
-	sigmaY= 91000/bmin*c/freq*2/sigma2fwhm()
+	f= sigma2fwhm()
+	sigmaX= 91000./bmaj*c/freq*2/f
+	sigmaY= 91000./bmin*c/freq*2/f
 	return (sigmaX,sigmaY)
 
 
@@ -113,16 +114,19 @@ def deconvolve(vis,visout,bmaj,bmin):
 	tb.open(visout,nomodify=False)
 
 	## Compute uvdistance
-	uvdist= np.sqrt(tb.getcol('UVW')[0]**2+tb.getcol('UVW')[1]**2+tb.getcol('UVW')[2]**2)
+	uvdist_list= np.sqrt(tb.getcol('UVW')[0]**2+tb.getcol('UVW')[1]**2+tb.getcol('UVW')[2]**2)
 
 	## Compute corrected u & v
 	data= tb.getcol('DATA')
 	data_corr= data.copy()
 	for freq_index in range(data.shape[1]):
-		ucorr= gauss(uvdist,sigmaU_list[freq_index])
-		vcorr= gauss(uvdist,sigmaV_list[freq_index])
-		data_corr[0,freq_index,:]/= ucorr
-		data_corr[1,freq_index,:]/= vcorr
+		for uv_index in range(data.shape[2]):
+			ucorr= gauss(uvdist_list[uv_index],sigmaU_list[freq_index])
+			vcorr= gauss(uvdist_list[uv_index],sigmaV_list[freq_index])
+			data_corr[0,freq_index,uv_index]/= ucorr[0]
+			data_corr[1,freq_index,uv_index]/= vcorr[0]
+			#data_corr[0,freq_index,uv_index]= data[0,freq_index,uv_index]/ucorr[0]
+			#data_corr[1,freq_index,uv_index]= data[1,freq_index,uv_index]/vcorr[0]
 
 	## Write corrected u & v to table
 	tb.putcol('CORRECTED_DATA',data_corr)
