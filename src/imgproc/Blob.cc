@@ -99,11 +99,15 @@ Blob::Blob(std::vector<Pixel*>const& pixels,std::string name)
 Blob::~Blob()
 {
 	//Clear pixels
+	INFO_LOG("Clearing pixels...");
 	ClearPixels();
+	INFO_LOG("Clearing contours...");
 	ClearContours();	
 
 	//Clear metadata
+	INFO_LOG("Clearing metadata...");
 	CodeUtils::DeletePtr<ImgMetaData>(m_imgMetaData);
+	INFO_LOG("Blob destroyes...");
 
 }//close destructor
 
@@ -166,8 +170,15 @@ void Blob::Copy(TObject &obj) const {
 	((Blob&)obj).m_bkgSum= m_bkgSum;
 	((Blob&)obj).m_bkgRMSSum= m_bkgRMSSum;
 
-	//Image metadata 
-	((Blob&)obj).m_imgMetaData= m_imgMetaData;
+	//Image metadata
+	if(((Blob&)obj).m_imgMetaData){
+		delete ((Blob&)obj).m_imgMetaData;
+		((Blob&)obj).m_imgMetaData= 0;
+	}
+	if(m_imgMetaData){
+		((Blob&)obj).m_imgMetaData= new ImgMetaData;
+		*((Blob&)obj).m_imgMetaData = *m_imgMetaData;
+	}
 
 	//Image range
 	((Blob&)obj).m_Xmin = m_Xmin;
