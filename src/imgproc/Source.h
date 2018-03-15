@@ -473,7 +473,7 @@ class Source : public Blob {
 		/**
 		* \brief Get fit ellipses
 		*/
-		int GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM=true,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1);
+		int GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM=true,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1,int pixOffset=0);
 	
 		
 

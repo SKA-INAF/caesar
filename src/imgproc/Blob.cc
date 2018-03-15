@@ -854,7 +854,7 @@ Contour* Blob::GetWCSContour(int index,WorldCoor* wcs,int coordSystem)
 }//close GetWCSContour()
 
 
-std::vector<Contour*> Blob::GetWCSContours(WorldCoor* wcs,int coordSystem)
+std::vector<Contour*> Blob::GetWCSContours(WorldCoor* wcs,int coordSystem,int pixOffset)
 {
 	//## Convert contours to WCS
 	//Create WCS if not provided
@@ -876,7 +876,7 @@ std::vector<Contour*> Blob::GetWCSContours(WorldCoor* wcs,int coordSystem)
 
 	//Loop over contours and convert to WCS
 	//NB: If conversion fails vector and memory is cleared inside PixelToWCSContours method
-	if(AstroUtils::PixelToWCSContours(contours_wcs,m_Contours,wcs)<0){
+	if(AstroUtils::PixelToWCSContours(contours_wcs,m_Contours,wcs,pixOffset)<0){
 		WARN_LOG("Failed to convert contours to WCS!");
 	}
 

@@ -299,7 +299,8 @@ class SFinder : public TObject {
 		bool m_saveToFile;
 		bool m_saveConfig;
 		bool m_saveDS9Region;
-		bool m_convertDSRegionsToWCS;
+		bool m_convertDS9RegionsToWCS;
+		int m_ds9WCSType;
 		std::string m_DS9CatalogFileName;
 		int m_DS9RegionFormat;
 		std::string m_DS9FitCatalogFileName;			

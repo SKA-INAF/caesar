@@ -61,6 +61,22 @@ AstroUtils::~AstroUtils()
 
 }
 
+std::string AstroUtils::GetDS9WCSTypeHeader(int coordSys)
+{
+	std::string ds9CoordSys= "image";
+	if(coordSys==eJ2000) ds9CoordSys= "fk5";
+	else if(coordSys==eB1950) ds9CoordSys= "fk4";
+	else if(coordSys==eGALACTIC) ds9CoordSys= "galactic";
+	else{
+		WARN_LOG("Unknown coord sys given ("<<coordSys<<"), setting to 'image'");
+		ds9CoordSys= "image";
+	}
+
+	return ds9CoordSys;
+
+}//close GetDS9WCSTypeHeader()
+
+
 int AstroUtils::PixelToWCSCoords(double& xpos, double& ypos,WorldCoor* wcs,double ix,double iy) {
 
 	//Check WCS
@@ -156,7 +172,7 @@ int AstroUtils::PixelToWCSCoords(Caesar::Image* image,double ix,double iy,double
 }//close PixelToWCSCoords()
 
 
-Contour* AstroUtils::PixelToWCSContour(Contour* contour,WorldCoor* wcs)
+Contour* AstroUtils::PixelToWCSContour(Contour* contour,WorldCoor* wcs,int pixOffset)
 {
 	//Check input data
 	if(!contour){
@@ -180,8 +196,8 @@ Contour* AstroUtils::PixelToWCSContour(Contour* contour,WorldCoor* wcs)
 			WARN_LOG("Null ptr point retrieved from contour, skip it!");
 			continue;
 		}
-		double x= contPnt->X(); 
-		double y= contPnt->Y();
+		double x= contPnt->X() + pixOffset; 
+		double y= contPnt->Y() + pixOffset;
 		pix2wcs (wcs,x,y,&x_wcs, &y_wcs);
 
 		//Fill new contour with sky coords
@@ -193,7 +209,7 @@ Contour* AstroUtils::PixelToWCSContour(Contour* contour,WorldCoor* wcs)
 }//close PixelToWCSContour()
 
 
-int AstroUtils::PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vector<Contour*>const& contours,WorldCoor* wcs)
+int AstroUtils::PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vector<Contour*>const& contours,WorldCoor* wcs,int pixOffset)
 {
 	//Check input data
 	if(!wcs){
@@ -210,7 +226,7 @@ int AstroUtils::PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vect
 
 	//Loop over contours and convert them
 	for(size_t i=0;i<contours.size();i++){
-		Contour* contour_wcs= PixelToWCSContour(contours[i],wcs);
+		Contour* contour_wcs= PixelToWCSContour(contours[i],wcs,pixOffset);
 		if(!contour_wcs){
 			ERROR_LOG("Failed to convert contour no. "<<i+1<<"!");
 			CodeUtils::DeletePtrCollection<Contour>(contours_wcs);
@@ -223,7 +239,7 @@ int AstroUtils::PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vect
 
 }//close PixelToWCSContours()
 
-TEllipse* AstroUtils::PixelToWCSEllipse(TEllipse* ellipse,WorldCoor* wcs)
+TEllipse* AstroUtils::PixelToWCSEllipse(TEllipse* ellipse,WorldCoor* wcs,int pixOffset)
 {
 	//NB: See Aegean source finder wcs_helpers.py method
 	//Check input data
@@ -239,8 +255,10 @@ TEllipse* AstroUtils::PixelToWCSEllipse(TEllipse* ellipse,WorldCoor* wcs)
 	//Get ellipse pars
 	double x= ellipse->GetX1();//ellipse centroid x
 	double y= ellipse->GetY1();//ellipse centroid y
-	double sx= ellipse->GetR1()*2;//ellipse major axis
-	double sy= ellipse->GetR2()*2;//ellipse minor axis
+	x+= pixOffset;
+	y+= pixOffset;
+	double sx= ellipse->GetR1();//ellipse semi-major axis
+	double sy= ellipse->GetR2();//ellipse semi-minor axis
 	double theta= ellipse->GetTheta();//rotation angle (wrt x axis)
 	double theta_rad= theta*TMath::DegToRad();
 
@@ -264,16 +282,23 @@ TEllipse* AstroUtils::PixelToWCSEllipse(TEllipse* ellipse,WorldCoor* wcs)
 	pix2wcs (wcs,x2,y2,&x2_wcs, &y2_wcs);
 
 	//Compute ellipse axis points
-	double semimajor_wcs= GetWCSPointDist_Vincenty(x_wcs,y_wcs,x1_wcs,y1_wcs);
-	double semiminor_wcs= GetWCSPointDist_Vincenty(x_wcs,y_wcs,x2_wcs,y2_wcs);
+	//double semimajor_wcs= GetWCSPointDist_Vincenty(x_wcs,y_wcs,x1_wcs,y1_wcs);
+	//double semiminor_wcs= GetWCSPointDist_Vincenty(x_wcs,y_wcs,x2_wcs,y2_wcs);
+	double semimajor_wcs= GetWCSPointDist_Haversine(x_wcs,y_wcs,x1_wcs,y1_wcs);
+	double semiminor_wcs= GetWCSPointDist_Haversine(x_wcs,y_wcs,x2_wcs,y2_wcs);
 
 	//Compute ellipse rot angle
+	//NB: Bearing is returned from North to East (0 deg is north) but we want theta measured from x-axis so sum 90 deg
 	double theta_wcs = GetWCSPointBearing(x_wcs,y_wcs,x1_wcs,y1_wcs);
-	double theta2_wcs = GetWCSPointBearing(x_wcs,y_wcs,x1_wcs,y1_wcs) - 90;
+	double theta2_wcs = GetWCSPointBearing(x_wcs,y_wcs,x2_wcs,y2_wcs) - 90;
+	theta_wcs+= 90.;
+	theta2_wcs+= 90.;
 	double dtheta_wcs= theta_wcs-theta2_wcs; 
 
 	//Correct ellipse minor axis
 	semiminor_wcs*= fabs(cos(dtheta_wcs*TMath::DegToRad()));
+
+	INFO_LOG("(x,y,sx,sy,theta)=("<<std::setprecision(8)<<x<<","<<y<<","<<sx<<","<<sy<<","<<theta<<"), (x1,y1)=("<<x1<<","<<y1<<"), (x2,y2)=("<<x2<<","<<y2<<"), (x1_wcs,y1_wcs)=("<<x1_wcs<<","<<y1_wcs<<"), (x2_wcs,y2_wcs)=("<<x2_wcs<<","<<y2_wcs<<"), (x_wcs,y_wcs,a,b,theta)=("<<x_wcs<<","<<y_wcs<<","<<semimajor_wcs<<","<<semiminor_wcs<<","<<theta_wcs<<"), theta2_wcs="<<theta2_wcs<<", dtheta_wcs="<<dtheta_wcs);
 
 	TEllipse* ellipse_wcs= new TEllipse(x_wcs,y_wcs,semimajor_wcs,semiminor_wcs,0.,360.,theta_wcs);
 	ellipse_wcs->SetLineWidth(2);
@@ -340,6 +365,9 @@ double AstroUtils::GetWCSPointBearing(double ra1,double dec1,double ra2,double d
 	//Calculate the bearing of point 2 from point 1 along a great circle.
   //The bearing is East of North and is in [0, 360), whereas position angle is also East of North but (-180,180]
 	//Convert in radians
+
+	DEBUG_LOG("(ra1,dec1)=("<<std::setprecision(9)<<ra1<<","<<dec1<<"), (ra2,dec2)=("<<ra2<<","<<dec2<<")");
+
 	ra1*= TMath::DegToRad();
 	ra2*= TMath::DegToRad();
 	dec1*= TMath::DegToRad();
@@ -350,15 +378,15 @@ double AstroUtils::GetWCSPointBearing(double ra1,double dec1,double ra2,double d
 	double x= cos(dec1)*sin(dec2) - sin(dec1)*cos(dec2)*cos(dlon);
 	
 	double bear= atan2(y,x);
-	
-	//Convert to degrees
-	bear*= TMath::RadToDeg();
+	DEBUG_LOG("Bear dlon="<<std::setprecision(9)<<dlon<<", (y,x)=("<<y<<","<<x<<"), bear(rad)="<<bear<<", bear(deg)="<<bear*TMath::RadToDeg());
+
+	bear*= TMath::RadToDeg();//Convert to degrees
 	
 	return bear;
 
 }//close GetWCSPointBearing()
 
-std::string AstroUtils::EllipseToDS9Region(TEllipse* ellipse,std::string text,std::string color,std::vector<std::string> tags)
+std::string AstroUtils::EllipseToDS9Region(TEllipse* ellipse,std::string text,std::string color,std::vector<std::string> tags,bool useImageCoords)
 {
 	//Check input data
 	if(!ellipse){
@@ -367,8 +395,12 @@ std::string AstroUtils::EllipseToDS9Region(TEllipse* ellipse,std::string text,st
 	}
 	
 	//Get ellipse pars
-	double x0= ellipse->GetX1() + 1;//DS9 starts pix numbering from 1
-	double y0= ellipse->GetY1() + 1;//DS9 starts pix numbering from 1
+	double x0= ellipse->GetX1();
+	double y0= ellipse->GetY1();
+	if(useImageCoords){//DS9 starts pix numbering from 1
+		x0++;
+		y0++;
+	}
 	double R1= ellipse->GetR1()*2;//DS9 wants axis (not semi-axis)
 	double R2= ellipse->GetR2()*2;//DS9 wants axis (not semi-axis)
 	double theta= ellipse->GetTheta();
@@ -389,7 +421,7 @@ std::string AstroUtils::EllipseToDS9Region(TEllipse* ellipse,std::string text,st
 }//close EllipseToDS9Region()
 
 
-std::string AstroUtils::ContourToDS9Region(Contour* contour,std::string text,std::string color,std::vector<std::string> tags)
+std::string AstroUtils::ContourToDS9Region(Contour* contour,std::string text,std::string color,std::vector<std::string> tags,bool useImageCoords)
 {
 	//Check input data
 	if(!contour){
@@ -414,10 +446,18 @@ std::string AstroUtils::ContourToDS9Region(Contour* contour,std::string text,std
 			WARN_LOG("Null ptr to contour point, skip to next!");
 			continue;
 		}
-		long int x= static_cast<long int>(contPnt->X()) + 1;//DS9 starts pix numbering from 1
-		long int y= static_cast<long int>(contPnt->Y()) + 1;//DS9 starts pix numbering from 1
-		sstream<<x<<" "<<y<<" ";
-	}
+		if(useImageCoords){
+			long int x= static_cast<long int>(contPnt->X()) + 1;//DS9 starts pix numbering from 1
+			long int y= static_cast<long int>(contPnt->Y()) + 1;//DS9 starts pix numbering from 1
+			sstream<<x<<" "<<y<<" ";
+		}
+		else{
+			double x= contPnt->X();
+			double y= contPnt->Y();
+			sstream<<std::fixed<<std::setprecision(4)<<x<<" "<<y<<" ";
+		}
+		
+	}//end loop contour points
 	sstream<<"# ";
 
 	sstream<<"text={"<<text<<"} ";

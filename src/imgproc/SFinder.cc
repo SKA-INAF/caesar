@@ -444,7 +444,8 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(ds9RegionFile,m_DS9CatalogFileName);
 	GET_OPTION_VALUE(ds9FitRegionFile,m_DS9FitCatalogFileName);
 	GET_OPTION_VALUE(DS9RegionFormat,m_DS9RegionFormat);
-	GET_OPTION_VALUE(convertDSRegionsToWCS,m_convertDSRegionsToWCS);
+	GET_OPTION_VALUE(convertDS9RegionsToWCS,m_convertDS9RegionsToWCS);
+	GET_OPTION_VALUE(ds9WCSType,m_ds9WCSType);
 	GET_OPTION_VALUE(saveSources,m_saveSources);
 	GET_OPTION_VALUE(isInteractiveRun,m_IsInteractiveRun);
 	GET_OPTION_VALUE(saveResidualMap,m_saveResidualMap);
@@ -2939,9 +2940,12 @@ int SFinder::SaveDS9RegionFile(){
 	FILE* fout= fopen(m_DS9CatalogFileName.c_str(),"w");
 
 	//## Saving DS9 file region
+	std::string ds9WCSTypeHeader= "image";
+	if(m_convertDS9RegionsToWCS) ds9WCSTypeHeader= AstroUtils::GetDS9WCSTypeHeader(m_ds9WCSType);
+
 	DEBUG_LOG("[PROC "<<m_procId<<"] - Saving DS9 region header...");
 	fprintf(fout,"global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
-	fprintf(fout,"image\n");
+	fprintf(fout,"%s\n",ds9WCSTypeHeader.c_str());
 
 	DEBUG_LOG("[PROC "<<m_procId<<"] - Saving "<<m_SourceCollection.size()<<" sources to file...");
 
@@ -2953,8 +2957,8 @@ int SFinder::SaveDS9RegionFile(){
 		bool isAtEdge= m_SourceCollection[k]->IsAtEdge();
 
 		//If WCS is not computed, compute it
-		if(m_convertDSRegionsToWCS && !wcs){
-			wcs= m_SourceCollection[k]->GetWCS();
+		if(m_convertDS9RegionsToWCS && !wcs){
+			wcs= m_SourceCollection[k]->GetWCS(m_ds9WCSType);
 			if(!wcs) WARN_LOG("Failed to compute WCS from source no "<<k<<"!");
 		}
 	
@@ -2962,7 +2966,7 @@ int SFinder::SaveDS9RegionFile(){
 		DEBUG_LOG("[PROC "<<m_procId<<"] - Dumping DS9 region info for source no. "<<k<<" ...");
 		std::string regionInfo= "";
 		if(m_DS9RegionFormat==ePolygonRegion) {
-			regionInfo= m_SourceCollection[k]->GetDS9Region(true,m_convertDSRegionsToWCS,wcs);
+			regionInfo= m_SourceCollection[k]->GetDS9Region(true,m_convertDS9RegionsToWCS,wcs,m_ds9WCSType);
 		}
 		else if(m_DS9RegionFormat==eEllipseRegion) {
 			regionInfo= m_SourceCollection[k]->GetDS9EllipseRegion(true);
@@ -2990,7 +2994,7 @@ int SFinder::SaveDS9RegionFile(){
 		//## Saving DS9 file region
 		DEBUG_LOG("[PROC "<<m_procId<<"] - Saving DS9 region header for fitted source catalog...");
 		fprintf(fout_fit,"global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
-		fprintf(fout_fit,"image\n");
+		fprintf(fout_fit,"%s\n",ds9WCSTypeHeader.c_str());
 
 		DEBUG_LOG("[PROC "<<m_procId<<"] - Saving "<<m_SourceCollection.size()<<" sources to file...");
 		bool useFWHM= true;
@@ -2999,13 +3003,13 @@ int SFinder::SaveDS9RegionFile(){
 			DEBUG_LOG("[PROC "<<m_procId<<"] - Dumping DS9 region fitting info for source no. "<<k<<" ...");
 
 			//If WCS is not computed, compute it
-			if(m_convertDSRegionsToWCS && !wcs){
-				wcs= m_SourceCollection[k]->GetWCS();
+			if(m_convertDS9RegionsToWCS && !wcs){
+				wcs= m_SourceCollection[k]->GetWCS(m_ds9WCSType);
 				if(!wcs) WARN_LOG("Failed to compute WCS from source no "<<k<<"!");
 			}
 
 			//Get DS9 regions for fitted components
-			std::string regionInfo= m_SourceCollection[k]->GetDS9FittedEllipseRegion(useFWHM,true,m_convertDSRegionsToWCS,wcs);
+			std::string regionInfo= m_SourceCollection[k]->GetDS9FittedEllipseRegion(useFWHM,true,m_convertDS9RegionsToWCS,wcs,m_ds9WCSType);
 
 			fprintf(fout_fit,"%s\n",regionInfo.c_str());
 		}//end loop sources

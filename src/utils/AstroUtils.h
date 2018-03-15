@@ -121,17 +121,17 @@ class AstroUtils : public TObject {
 		/**
 		* \brief Convert contour from pixel coordinates to sky coordinates
 		*/
-		static Contour* PixelToWCSContour(Contour* contour,WorldCoor* wcs);
+		static Contour* PixelToWCSContour(Contour* contour,WorldCoor* wcs,int pixOffset=0);
 
 		/**
 		* \brief Convert contour list from pixel coordinates to sky coordinates
 		*/
-		static int PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vector<Contour*>const& contours,WorldCoor* wcs);
+		static int PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vector<Contour*>const& contours,WorldCoor* wcs,int pixOffset=0);
 	
 		/**
 		* \brief Convert ellipse from pixel coordinates to sky coordinates
 		*/
-		static TEllipse* PixelToWCSEllipse(TEllipse* ellipse,WorldCoor* wcs);
+		static TEllipse* PixelToWCSEllipse(TEllipse* ellipse,WorldCoor* wcs,int pixOffset=0);
 
 		/**
 		* \brief Get distance (in degrees) between two points on the sky using Haversine formula
@@ -150,13 +150,17 @@ class AstroUtils : public TObject {
 		/**
 		* \brief Convert ellipse to DS9 format
 		*/
-		static std::string EllipseToDS9Region(TEllipse* ellipse,std::string text="",std::string color="white",std::vector<std::string> tags={});
+		static std::string EllipseToDS9Region(TEllipse* ellipse,std::string text="",std::string color="white",std::vector<std::string> tags={},bool useImageCoords=true);
 
 		/**
 		* \brief Convert contour to DS9 format
 		*/
-		static std::string ContourToDS9Region(Contour* contour,std::string text="",std::string color="white",std::vector<std::string> tags={});
+		static std::string ContourToDS9Region(Contour* contour,std::string text="",std::string color="white",std::vector<std::string> tags={},bool useImageCoords=true);
 
+		/**
+		* \brief Returns DS9 WCS type header from flag
+		*/
+		static std::string GetDS9WCSTypeHeader(int coordSys);
 
 	private:
 	

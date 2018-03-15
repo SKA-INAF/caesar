@@ -495,7 +495,7 @@ class Blob : public TNamed {
 		/**
 		* \brief Return contours converted in WCS 
 		*/
-		std::vector<Contour*> GetWCSContours(WorldCoor* wcs=0,int coordSystem=-1);
+		std::vector<Contour*> GetWCSContours(WorldCoor* wcs=0,int coordSystem=-1,int pixOffset=0);
 		
 		/**
 		* \brief Return contour with index and convert to WCS
