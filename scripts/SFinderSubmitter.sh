@@ -32,6 +32,9 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--save-residualmap - Save residual map in output ROOT file (default=no)"
 	echo "--save-saliencymap - Save saliency map in output ROOT file (default=no)"
 	echo "--save-segmentedmap - Save segmented map in output ROOT file (default=no)"
+	echo "--save-regions - Save DS9 regions (default=no)"
+	echo "--convertregionstowcs - Save DS9 regions in WCS format (default=no)"
+	echo "--regionwcs=[DS9REGION_WCSTYPE] - DS9 region WCS output format (0=J2000,1=B1950,2=GALACTIC) (default=0)"
 	echo ""
 
 	echo "=== SFINDER IMG READ OPTIONS ==="
@@ -328,6 +331,9 @@ SAVE_SEGMENTED_MAP="false"
 BMAJ=10
 BMIN=5
 BPA=0
+SAVE_DS9REGIONS="false"
+CONVERT_DS9REGIONS_TO_WCS="false"
+DS9REGION_WCSTYPE="0"
 
 for item in $*
 do
@@ -402,6 +408,18 @@ do
 		--save-segmentedmap*)
     	SAVE_SEGMENTED_MAP="true"
     ;;
+		--save-regions*)
+    	SAVE_DS9REGIONS="true"
+    ;;
+		
+
+		--convertregionstowcs*)
+			CONVERT_DS9REGIONS_TO_WCS="true"
+		;;
+		--regionwcs=*)
+			DS9REGION_WCSTYPE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+		;;
+
 		--bmaj=*)
     	BMAJ=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
@@ -917,30 +935,33 @@ generate_config(){
     echo '//============================='
     echo '//==      OUTPUT             =='
     echo '//============================='
-    echo 'isInteractiveRun = false                          | Is interactive run (graph plots enabled) (T/F)'
-    echo "outputFile = $outputfile                          | Output filename (.root)"
-    echo "ds9RegionFile = $ds9region_file					          | DS9 region file (.reg) where to store source catalog"	
-		echo "ds9FitRegionFile = $ds9fitregion_file					    | DS9 region file (.reg) where to store fitted source catalog"
-    echo 'DS9RegionFormat = 2                               | DS9 region format (1=ellipse, 2=polygon)'
-    echo 'inputMapFITSFile = 	input_map.fits				        | Output filename where to store input map in FITS format (.fits)'
-    echo 'residualMapFITSFile = residual_map.fits		        | Output filename where to store residual map in FITS format (.fits)'
-    echo 'saliencyMapFITSFile = saliency_map.fits		        | Output filename where to store saliency map in FITS format (.fits)'
-    echo 'bkgMapFITSFile = bkg_map.fits							        | Output filename where to store bkg map in FITS format (.fits)'
-		echo 'noiseMapFITSFile = noise_map.fits					        | Output filename where to store noise map in FITS format (.fits)'
-    echo 'significanceMapFITSFile = significance_map.fits	  | Output filename where to store significance map in FITS format (.fits)' 
-    echo 'saveToFile = true																	| Save results & maps to output ROOT file (T/F)'
-    echo 'saveToFITSFile = false														| Save results to output FITS file(s) (T/F)'
-    echo 'saveConfig = true																	| Save config options to ROOT file (T/F)'
-		echo 'saveSources = true																| Save sources to ROOT file (T/F)'
-		echo "saveInputMap = $SAVE_INPUT_MAP										| Save input map to ROOT file (T/F)"
-		echo "saveBkgMap = $SAVE_BKG_MAP												| Save bkg map to ROOT file (T/F)"
-    echo "saveNoiseMap = $SAVE_RMS_MAP											| Save noise map to ROOT file (T/F)"
-    echo "saveResidualMap = $SAVE_RESIDUAL_MAP  						| Save residual map to ROOT file (T/F)"
-    echo "saveSignificanceMap = $SAVE_SIGNIFICANCE_MAP  		| Save significance map to ROOT file (T/F)"
-    echo "saveSaliencyMap = $SAVE_SALIENCY_MAP							| Save saliency map to ROOT file (T/F)"
-    echo "saveSegmentedMap = $SAVE_SEGMENTED_MAP            | Save segmented map computed in extended source search to ROOT file (T/F)"
-    echo 'saveEdgenessMap = false                           | Save edgeness map computed in extended source search to ROOT file (T/F)'
-    echo 'saveCurvatureMap = false                          | Save curvature map to ROOT file (T/F)'
+    echo 'isInteractiveRun = false                            | Is interactive run (graph plots enabled) (T/F)'
+    echo "outputFile = $outputfile                            | Output filename (.root)"
+    echo "ds9RegionFile = $ds9region_file					            | DS9 region file (.reg) where to store source catalog"	
+		echo "ds9FitRegionFile = $ds9fitregion_file					      | DS9 region file (.reg) where to store fitted source catalog"
+    echo 'DS9RegionFormat = 2                                 | DS9 region format (1=ellipse, 2=polygon)'
+		echo "convertDS9RegionsToWCS = $CONVERT_DS9REGIONS_TO_WCS | Convert DS9 regions (contours & ellipses) to WCS (default=false)"
+		echo "ds9WCSType = $DS9REGION_WCSTYPE                     | DS9 region WCS output format (0=J2000,1=B1950,2=GAL) (default=0)"
+    echo 'inputMapFITSFile = 	input_map.fits				          | Output filename where to store input map in FITS format (.fits)'
+    echo 'residualMapFITSFile = residual_map.fits		          | Output filename where to store residual map in FITS format (.fits)'
+    echo 'saliencyMapFITSFile = saliency_map.fits		          | Output filename where to store saliency map in FITS format (.fits)'
+    echo 'bkgMapFITSFile = bkg_map.fits							          | Output filename where to store bkg map in FITS format (.fits)'
+		echo 'noiseMapFITSFile = noise_map.fits					          | Output filename where to store noise map in FITS format (.fits)'
+    echo 'significanceMapFITSFile = significance_map.fits	    | Output filename where to store significance map in FITS format (.fits)' 
+    echo 'saveToFile = true																	  | Save results & maps to output ROOT file (T/F)'
+    echo 'saveToFITSFile = false														  | Save results to output FITS file(s) (T/F)'
+		echo "saveDS9Region = $SAVE_DS9REGIONS									  | Save DS9 region files (T/F) (default=T)"
+    echo 'saveConfig = true																	  | Save config options to ROOT file (T/F)'
+		echo 'saveSources = true																  | Save sources to ROOT file (T/F)'
+		echo "saveInputMap = $SAVE_INPUT_MAP										  | Save input map to ROOT file (T/F)"
+		echo "saveBkgMap = $SAVE_BKG_MAP												  | Save bkg map to ROOT file (T/F)"
+    echo "saveNoiseMap = $SAVE_RMS_MAP											  | Save noise map to ROOT file (T/F)"
+    echo "saveResidualMap = $SAVE_RESIDUAL_MAP  						  | Save residual map to ROOT file (T/F)"
+    echo "saveSignificanceMap = $SAVE_SIGNIFICANCE_MAP  		  | Save significance map to ROOT file (T/F)"
+    echo "saveSaliencyMap = $SAVE_SALIENCY_MAP							  | Save saliency map to ROOT file (T/F)"
+    echo "saveSegmentedMap = $SAVE_SEGMENTED_MAP              | Save segmented map computed in extended source search to ROOT file (T/F)"
+    echo 'saveEdgenessMap = false                             | Save edgeness map computed in extended source search to ROOT file (T/F)'
+    echo 'saveCurvatureMap = false                            | Save curvature map to ROOT file (T/F)'
     echo '###'
     echo '###'
 		echo '//==========================='
