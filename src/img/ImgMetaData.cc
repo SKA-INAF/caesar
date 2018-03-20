@@ -109,6 +109,10 @@ WorldCoor* ImgMetaData::GetWorldCoord(int coordSystem){
 		flag = (char*)("FK4");
 	else if(coordSystem==-1 && m_wcsType!="")					
 		flag = (char*)(m_wcsType.c_str());
+	else{
+		ERROR_LOG("Invalid coord system type ("<<coordSystem<<") specified, will not build WCS!");
+		return nullptr;
+	}
 			
 	if(strcmp(flag,"")!=0) {
 		wcsoutinit (wcs,flag);
