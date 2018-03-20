@@ -401,6 +401,10 @@ if(BUILD_APPS)
 	add_executable(SkyModelConvolverExe ${Task_SkyModelConvolver_SRCS})
 	target_link_libraries(SkyModelConvolverExe Caesar ${LINKED_LIBS})
 	set_target_properties(SkyModelConvolverExe PROPERTIES OUTPUT_NAME SkyModelConvolver)
+
+	add_executable(SourceMatchFinderExe ${Task_SourceMatchFinder_SRCS})
+	target_link_libraries(SourceMatchFinderExe Caesar ${LINKED_LIBS})
+	set_target_properties(SourceMatchFinderExe PROPERTIES OUTPUT_NAME SourceMatchFinder)
 	
 	if(ENABLE_MPI AND MPI_FOUND)
 		include_directories(${MPI_CXX_INCLUDE_PATH})
@@ -523,6 +527,7 @@ if(BUILD_APPS)
 		ROOT2FITS
 		CorrelateSourceCatalogs
 		SkyModelConvolver
+		SourceMatchFinder
 	)
 	if(ENABLE_MPI)
 		list(APPEND EXE_FILES FindSourceMPI)
