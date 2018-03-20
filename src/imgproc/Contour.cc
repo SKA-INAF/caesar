@@ -191,7 +191,7 @@ void Contour::Init(){
 
 }//close Init()
 
-TGraph* Contour::GetGraph(){
+TGraph* Contour::GetGraph(bool addLastPoint){
 
 	//Check number of contour pts
 	int nContourPts= m_Points.size();
@@ -204,7 +204,7 @@ TGraph* Contour::GetGraph(){
 	for(int i=0;i<nContourPts;i++){
 		ContourGraph->SetPoint(i,m_Points[i].X(),m_Points[i].Y());
 	}
-	ContourGraph->SetPoint(nContourPts,m_Points[0].X(),m_Points[0].Y());//Add another point as OpenCV does not close the contour
+	if(addLastPoint) ContourGraph->SetPoint(nContourPts,m_Points[0].X(),m_Points[0].Y());//Add another point as OpenCV does not close the contour
 
 	return ContourGraph;
 
@@ -308,9 +308,8 @@ int Contour::ComputeParameters(){
 
 }//close ComputeParameters()
 
-//void Contour::ComputeShapeParams(){
-void Contour::ComputeShapeParams(std::vector<cv::Point2f>const & points){
-
+void Contour::ComputeShapeParams(std::vector<cv::Point2f>const & points)
+{
 	/*
 	//Copy points to cv::Point list
 	std::vector<cv::Point2f> points;
@@ -374,7 +373,6 @@ void Contour::ComputeMomentParams(std::vector<cv::Point2f>const & points){
 }//close ComputeMomentParams()
 
 
-//void Contour::ComputeMoments(){
 void Contour::ComputeMoments(std::vector<cv::Point2f>const & points){
 	
 	//Copy points to cv::Point list

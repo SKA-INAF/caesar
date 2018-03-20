@@ -2652,7 +2652,7 @@ bool SFinder::IsFittableSource(Source* aSource)
 		double nBeams= 0;
 		if(beamArea>0) nBeams= NPix/beamArea;
 		if(nBeams>m_nBeamsMaxToFit) {
-			INFO_LOG("Source "<<aSource->GetName()<<" not fittable as nBeams="<<nBeams<<">"<<m_nBeamsMaxToFit);
+			INFO_LOG("Source "<<aSource->GetName()<<" not fittable as a whole (nBeams="<<nBeams<<">"<<m_nBeamsMaxToFit<<")");
 			return false;
 		}
 	}
@@ -2706,6 +2706,7 @@ int SFinder::FitSources(std::vector<Source*>& sources){
 		bool isFittable= IsFittableSource(sources[i]);
 		if(isFittable) {
 			//Fit mother source
+			INFO_LOG("[PROC "<<m_procId<<"] - Source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") fittable as a whole...");
 			if(sources[i]->Fit(fitOptions)<0) {
 				WARN_LOG("[PROC "<<m_procId<<"] - Failed to fit source no. "<<i+1<<" (name="<<sources[i]->GetName()<<"), skip to next...");
 				continue;
@@ -2717,9 +2718,17 @@ int SFinder::FitSources(std::vector<Source*>& sources){
 			INFO_LOG("Source "<<sources[i]->GetName()<<" not fittable as a whole (extended or large compact), fitting nested components individually (#"<<nestedSources.size()<<" components present) ...");
 			
 			for(size_t j=0;j<nestedSources.size();j++){
-				INFO_LOG("Fitting nested source no. "<<j+1<<" (name="<<nestedSources[j]->GetName()<<") of source no. "<<i+1<<" (name="<<sources[i]->GetName()<<")");
-				if(nestedSources[j] && nestedSources[j]->Fit(fitOptions)<0){
-					WARN_LOG("Failed to fit nested source no. "<<j<<" of source no. "<<i<<" (name="<<sources[i]->GetName()<<"), skip to next nested...");
+				if(!nestedSources[j]) continue;
+				bool isFittable_nested= IsFittableSource(nestedSources[j]);
+				if(isFittable_nested){
+					INFO_LOG("Fitting nested source no. "<<j+1<<" (name="<<nestedSources[j]->GetName()<<") of source no. "<<i+1<<" (name="<<sources[i]->GetName()<<")...");
+					if(nestedSources[j]->Fit(fitOptions)<0){
+						WARN_LOG("Failed to fit nested source no. "<<j<<" of source no. "<<i<<" (name="<<sources[i]->GetName()<<"), skip to next nested...");
+						continue;
+					}
+				}//close if
+				else{
+					INFO_LOG("Nested source no. "<<j+1<<" (name="<<nestedSources[j]->GetName()<<") of source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") not fittable as a whole, no fit performed...");
 					continue;
 				}
 			}//end loop nested sources

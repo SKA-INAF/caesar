@@ -470,7 +470,7 @@ class Blob : public TNamed {
 		/**
 		* \brief Generate an image from source pixel
 		*/
-		Image* GetImage(ImgType mode,int pixMargin=1);
+		Image* GetImage(ImgType mode,int pixMargin=1,bool useWCS=false,int coordSyst=-1);
 
 		//================================================
 		//==         CONTOURS
@@ -495,12 +495,12 @@ class Blob : public TNamed {
 		/**
 		* \brief Return contours converted in WCS 
 		*/
-		std::vector<Contour*> GetWCSContours(WorldCoor* wcs=0,int coordSystem=-1,int pixOffset=0);
+		std::vector<Contour*> GetWCSContours(WorldCoor* wcs=0,int coordSystem=-1,int pixOffset=0,bool computePars=false);
 		
 		/**
 		* \brief Return contour with index and convert to WCS
 		*/
-		Contour* GetWCSContour(int index,WorldCoor* wcs=0,int coordSystem=-1);
+		Contour* GetWCSContour(int index,WorldCoor* wcs=0,int coordSystem=-1,int pixOffset=0,bool computePars=false);
 
 
 

@@ -1275,8 +1275,8 @@ int Source::FindComponentPeaks(std::vector<TVector2>& peaks,double peakZThr,int 
 			double Zpeak_sourcebkg= 0;
 			if(rmsMean!=0) Zpeak_imgbkg= (Speak-bkgMean)/rmsMean;
 			if(Smad!=0) Zpeak_sourcebkg= (Speak-Smedian)/Smad;
-			//if(Zpeak_imgbkg<peakZThr) {
-			if(Zpeak_sourcebkg<peakZThr) {
+			if(Zpeak_imgbkg<peakZThr) {
+			//if(Zpeak_sourcebkg<peakZThr) {
 				INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak_imgbkg="<<Zpeak_imgbkg<<", Zpeak_sourcebkg="<<Zpeak_sourcebkg<<"<"<<peakZThr<<")");
 				continue;
 			}

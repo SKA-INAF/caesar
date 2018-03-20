@@ -113,6 +113,13 @@ struct SourceFitOptions {
 	bool useFluxZCut;
 	double fluxZThrMin;
 
+	//- Fit data bin error (if true set bin errors to pixel noise rms, otherwise to 1)
+	bool setBinErrorsToMapRMS;
+
+	//- Fit minimization options
+	double fitFcnTolerance;
+	int fitMaxIters;
+
 	//Default constructor
 	SourceFitOptions() 
 	{
@@ -141,6 +148,10 @@ struct SourceFitOptions {
 		peakMaxKernelSize= 7;
 		peakKernelMultiplicityThr= 1;
 		peakShiftTolerance= 2;
+		setBinErrorsToMapRMS= true;
+		
+		fitFcnTolerance= 1.e-6;
+		fitMaxIters= 5000;
 	}//close constructor
 };//close SourceFitOptions
 
@@ -381,9 +392,39 @@ class SourceFitPars : public TObject {
 		* \brief Get component flux density
 		*/
 		double GetComponentFluxDensity(int componentId){
-			if(componentId<0 || componentId>=nComponents) return -999;
+			if(componentId<0 || componentId>=nComponents) {
+				WARN_LOG("Component "<<componentId<<" does not exist, returning zero flux!");
+				return 0;
+			}
 			return pars[componentId].GetFluxDensity();
 		}
+
+		/**
+		* \brief Get component flux density error
+		*/
+		double GetComponentFluxDensityErr(int componentId){
+			if(componentId<0 || componentId>=nComponents){
+				WARN_LOG("Component "<<componentId<<" does not exist, returning zero error flux!");
+				return 0;
+			}
+			//Get component flux density deriv matrix
+			TMatrixD D;
+			if(GetComponentFluxDerivMatrix(D,componentId)<0){
+				WARN_LOG("Failed to compute component flux derivative matrix, returning zero error flux!");
+				return 0;
+			}
+
+			TMatrixD D_t= TMatrixD(TMatrixD::kTransposed,D);
+			TMatrixD VarMatrix= D*fitCovarianceMatrix*D_t;
+			double Var= VarMatrix(0,0);
+			if(Var<0){
+				WARN_LOG("Flux density variance for component "<<componentId<<" is negative (this should not occur, check for bugs or numerical roundoff errors!)");
+				return 0;
+			}
+			double Err= sqrt(Var);
+			return Err;			
+
+		}//close GetComponentFluxDensityErr()
 
 		/**
 		* \brief Set chi2 
@@ -422,8 +463,6 @@ class SourceFitPars : public TObject {
 		* \brief Get Minimizer Status 
 		*/
 		int GetMinimizerStatus(){return minimizer_status;}
-
-		
 
 		/**
 		* \brief Set number of free pars 
@@ -492,6 +531,155 @@ class SourceFitPars : public TObject {
 		* \brief Set residual max
 		*/
 		void SetResidualMax(double value){residualMax=value;}
+		/**
+		* \brief Set fit covariance matrix
+		*/
+		int SetCovarianceMatrix(double* errMatrixValues,int ndim){
+			if(!errMatrixValues || ndim<=0) return -1;
+			fitCovarianceMatrix.ResizeTo(ndim,ndim);
+			fitCovarianceMatrix.Zero();
+			try{
+				for(int i=0;i<ndim;i++){
+					for(int j=0;j<ndim;j++){
+						int index= i*ndim+j;
+						fitCovarianceMatrix(i,j)= errMatrixValues[index];
+					}//end loop dim
+				}//end loop dim
+			}//close try block
+			catch(...){
+				ERROR_LOG("C++ exception occurred while filling fit covariance matrix (hint: array size and given dim are different?");
+				fitCovarianceMatrix.ResizeTo(0,0);
+				return 0;
+			}
+			return 0;
+		}//close SetCovarianceMatrix()
+
+		/**
+		* \brief Get fit covariance matrix
+		*/	
+		TMatrixD& GetCovarianceMatrix(){return fitCovarianceMatrix;}
+
+		/**
+		* \brief Print fit covariance matrix
+		*/
+		void PrintCovarianceMatrix(){
+			fitCovarianceMatrix.Print();
+		}
+
+		/**
+		* \brief Get flux density derivative matrix
+		*/	
+		TMatrixD& GetFluxDensityDerivMatrix(){return fluxDensityDerivMatrix;}
+
+		/**
+		* \brief Print flux density derivative matrix
+		*/
+		void PrintFluxDensityDerivMatrix(){
+			fluxDensityDerivMatrix.Print();
+		}
+
+		/**
+		* \brief Compute flux density derivative matrix
+		*/
+		int ComputeFluxDensityDerivMatrix(){
+			//Check size
+			if(npars_free<=0 || pars.empty()) {
+				WARN_LOG("Cannot compute derivative matrix as no fit pars are stored and/or number of free pars is not initialized!");
+				return -1;
+			}
+
+			//Init matrix to 1 x Nfree_pars
+			fluxDensityDerivMatrix.ResizeTo(1,npars_free);
+			fluxDensityDerivMatrix.Zero();
+
+			//Fill matrix 
+			//NB: consider the cases in which sigma/offset/theta are fixed
+			int parCounter= 0;
+			for(int i=0;i<nComponents;i++){
+				//Retrieve fitted pars for this component
+				double A= pars[i].GetParValue("A");
+				double sigmaX= pars[i].GetParValue("sigmaX");
+				double sigmaY= pars[i].GetParValue("sigmaY");
+
+				//Fill derivative wrt to amplitude
+				//deriv= 2 pi sigmaX sigmaY
+				double deriv_ampl= 2.*TMath::Pi()*sigmaX*sigmaY;
+				fluxDensityDerivMatrix(0,parCounter)= deriv_ampl;
+				parCounter++;
+
+				//Fill derivative wrt to centroids
+				//deriv= 0 (for both x & y)
+				fluxDensityDerivMatrix(0,parCounter)= 0;
+				fluxDensityDerivMatrix(0,parCounter+1)= 0;
+				parCounter+= 2;
+
+				//Fill derivative wrt to sigmas (if not fixed)
+				//deriv_x= 2 pi A sigma_y
+				//deriv_y= 2 pi A sigma_x
+				if(!sigmaFixed){
+					double deriv_sigmaX= 2.*TMath::Pi()*A*sigmaY;
+					double deriv_sigmaY= 2.*TMath::Pi()*A*sigmaX;
+					fluxDensityDerivMatrix(0,parCounter)= deriv_sigmaX;
+					fluxDensityDerivMatrix(0,parCounter+1)= deriv_sigmaY;
+					parCounter+= 2;
+				}
+
+				//Fill derivative wrt to theta (if not fixed)
+				//deriv_theta= 0;
+				if(!thetaFixed){
+					fluxDensityDerivMatrix(0,parCounter)= 0;
+					parCounter++;
+				}
+
+			}//end loop components	
+
+			//Fill deriv wrt to offset (if not fixed)
+			//deriv_offset= 0;
+			if(!offsetFixed){
+				fluxDensityDerivMatrix(0,parCounter)= 0;
+			}
+	
+			return 0;
+		}//close ComputeFluxDensityDerivMatrix()
+		
+		/**
+		* \brief Compute flux density
+		*/
+		void ComputeFluxDensity(){
+			//Summing up flux for all components
+			fluxDensity= 0;
+			for(int i=0;i<nComponents;i++){
+				double componentFluxDensity= pars[i].GetFluxDensity();
+				fluxDensity+= componentFluxDensity;
+			}//end loop components
+		}//close ComputeFluxDensity()
+
+		/**
+		* \brief Compute flux density error
+		*/
+		int ComputeFluxDensityError(){
+			//Do some checks on covariance & deriv matrix
+			fluxDensityErr= 0;
+			int nRows= fitCovarianceMatrix.GetNrows();
+			int nCols= fluxDensityDerivMatrix.GetNcols();
+			if(nCols<=0 || nRows<=0 || nRows!=nCols){
+				WARN_LOG("Fit covariance and/or deriv matrix were not computed or have invalid dimensions!");
+				return -1;
+			}
+	
+			//Compute fluxDensityVariance= D x CovMatrix x D^t  (D=deriv matrix)
+			TMatrixD fluxDensityDerivMatrix_t= TMatrixD(TMatrixD::kTransposed,fluxDensityDerivMatrix);
+			//TMatrixD fluxDensityVarianceMatrix= TMatrixD(fluxDensityDerivMatrix,TMatrixD::kAtBA,fitCovarianceMatrix);
+			TMatrixD fluxDensityVarianceMatrix= fluxDensityDerivMatrix*fitCovarianceMatrix*fluxDensityDerivMatrix_t;
+			double fluxDensityVariance= fluxDensityVarianceMatrix(0,0);
+			if(fluxDensityVariance<0){
+				WARN_LOG("Flux density variance is negative (this should not occur, check for bugs or numerical roundoff errors!)");
+				return -1;
+			}
+			fluxDensityErr= sqrt(fluxDensityVariance);		
+			
+			return 0;
+		}//close ComputeFluxDensityError()
 
 		/**
 		* \brief Print
@@ -500,8 +688,10 @@ class SourceFitPars : public TObject {
 			cout<<"*** FIT RESULTS ***"<<endl;
 			cout<<"status="<<status<<" (minimizer status="<<minimizer_status<<")"<<endl;
 			cout<<"chi2="<<chi2<<", ndf="<<ndof<<", redchi2="<<chi2/ndof<<endl;
+			cout<<"fluxDensity="<<fluxDensity<<" +- "<<fluxDensityErr<<endl;
 			for(int i=0;i<nComponents;i++){
 				cout<<"--> Component "<<i+1<<endl;
+				cout<<"fluxDensity="<<GetComponentFluxDensity(i)<<" +- "<<GetComponentFluxDensityErr(i)<<endl;
 				cout<<"A="<<pars[i].GetParValue("A")<<" +- "<<pars[i].GetParError("A")<<endl;
 				cout<<"(x0,y0)=("<<	pars[i].GetParValue("x0")<<","<<pars[i].GetParValue("y0")<<") err("<<pars[i].GetParError("x0")<<","<<pars[i].GetParError("y0")<<")"<<endl;
 				cout<<"(sigmaX,sigmaY)=("<<	pars[i].GetParValue("sigmaX")<<","<<pars[i].GetParValue("sigmaY")<<") err("<<pars[i].GetParError("sigmaX")<<","<<pars[i].GetParError("sigmaY")<<")"<<endl;
@@ -509,6 +699,72 @@ class SourceFitPars : public TObject {
 			}
 			cout<<"****************"<<endl;
 		}
+
+		/**
+		* \brief Set theta fixed
+		*/
+		void SetThetaFixed(bool choice){thetaFixed=choice;}
+		/**
+		* \brief Is theta fixed?
+		*/
+		bool IsThetaFixed(){return thetaFixed;}
+		/**
+		* \brief Set theta fixed
+		*/
+		void SetSigmaFixed(bool choice){sigmaFixed=choice;}
+		/**
+		* \brief Is sigma fixed?
+		*/
+		bool IsSigmaFixed(){return sigmaFixed;}
+		/**
+		* \brief Set offset fixed
+		*/
+		void SetOffsetFixed(bool choice){offsetFixed=choice;}
+		/**
+		* \brief Is offset fixed?
+		*/
+		bool IsOffsetFixed(){return offsetFixed;}
+
+		/**
+		* \brief Get number of free parameters per component
+		*/
+		int GetFreeParsPerComponent(){
+			int nFreeParsPerComponent= 3;//Ampl + centroids
+			if(!sigmaFixed) nFreeParsPerComponent+= 2;//sigmas
+			if(!thetaFixed) nFreeParsPerComponent++;
+			return nFreeParsPerComponent;
+		}
+
+	protected:
+
+		/**
+		* \brief Get component flux derivative matrix
+		*/
+		int GetComponentFluxDerivMatrix(TMatrixD& D,int componentId){
+			//Keep only selected component
+			int nFreeParsPerComponent= GetFreeParsPerComponent();
+			int start_index= componentId*nFreeParsPerComponent;
+			int last_index= start_index + nFreeParsPerComponent-1;
+			int nCols= fluxDensityDerivMatrix.GetNcols(); 
+			if(nCols<=last_index){
+				WARN_LOG("Trying to access to an not-existing element (index="<<last_index<<") of derivative matrix (dim="<<nCols<<") (hint: derivative matrix not initialized)!");	
+				return -1;
+			}
+			INFO_LOG("nFreeParsPerComponent="<<nFreeParsPerComponent<<" start_index="<<start_index<<", last_index="<<last_index);
+
+			//Init to flux derivative matrix
+			D.ResizeTo(1,nCols);
+			D.Zero();
+			for(int i=start_index;i<=last_index;i++){
+				D(0,i)= fluxDensityDerivMatrix(0,i);
+			}
+
+			cout<<"*** DERIV MATRIX COMPONENT "<<componentId<<" ***"<<endl;
+			D.Print();
+
+			return 0;
+
+		}//close GetComponentFluxDerivMatrix()
 
 	private:
 
@@ -532,10 +788,14 @@ class SourceFitPars : public TObject {
 			residualMin= 0;
 			residualMax= 0;
 			pars.clear();
+			thetaFixed= false;
+			offsetFixed= false;
+			sigmaFixed= false;	
+			fluxDensity= 0;
+			fluxDensityErr= 0;
 		}
 
 		
-
 	private:
 
 		int nComponents;
@@ -554,10 +814,18 @@ class SourceFitPars : public TObject {
 		double residualMin;	
 		double residualMax;
 		std::vector<SourceComponentPars> pars;
+		TMatrixD fitCovarianceMatrix;
+		TMatrixD fluxDensityDerivMatrix;
+		bool thetaFixed;
+		bool offsetFixed;
+		bool sigmaFixed;
+		double fluxDensity;
+		double fluxDensityErr;
 
 	ClassDef(SourceFitPars,1)
 
 };
+
 
 
 //========================================
@@ -586,6 +854,20 @@ class SourceFitter : public TObject {
 			eFitConverged= 3,
 			eFitConvergedWithWarns= 4
 		};
+
+		/**
+		* \brief Source fit data
+		*/
+		struct FitData {
+			FitData(double _x,double _y,double _S,double _Serr)
+				: x(_x),y(_y),S(_S),Serr(_Serr)
+			{}
+			double x;
+			double y;
+			double S;
+			double Serr;
+		};
+
 
 	public:
 
@@ -627,6 +909,10 @@ class SourceFitter : public TObject {
 		* \brief Perform fit using given initial fit components pars
 		*/
 		int DoFit(Source* aSource,SourceFitOptions& fitOptions,std::vector< std::vector<double> >& fitPars_start);
+		/**
+		* \brief Perform fit using given initial fit components pars
+		*/
+		int DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::vector< std::vector<double> >& fitPars_start);
 
 		/**
 		* \brief Init data
@@ -637,15 +923,21 @@ class SourceFitter : public TObject {
 		*/
 		int CheckFitOptions(SourceFitOptions& fitOptions);
 
+		/**
+		* \brief Chi2 fit function 
+		*/
+		static void Chi2Fcn(int& nPar,double* grad,double& fval,double* p,int iflag);
+
 	private:
 	
 		static int m_NFitComponents;
 		static int m_fitStatus;
 		static SourceFitPars m_sourceFitPars;
-
+		
 		static TH2D* m_fluxMapHisto;
-		double m_bkgMean;
-		double m_rmsMean;
+		static std::vector<FitData> m_fitData;
+		static double m_bkgMean;
+		static double m_rmsMean;
 		
 	ClassDef(SourceFitter,1)
 

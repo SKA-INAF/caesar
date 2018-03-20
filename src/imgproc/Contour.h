@@ -28,8 +28,6 @@
 #ifndef _CONTOUR_h
 #define _CONTOUR_h 1
 
-
-
 #include <Logger.h>
 
 #include <TGraph.h>
@@ -56,6 +54,9 @@
 #include <algorithm>
 #include <map>
 #include <complex>
+#include <functional>
+#include <utility>
+
 
 
 using namespace std;
@@ -81,6 +82,42 @@ struct ContourPointMatcher {
 };
 
 
+struct ContourPointCounterClockWiseSorter{
+	
+	ContourPointCounterClockWiseSorter(TVector2 _centroid)
+		: centroid(_centroid)
+	{}
+
+	bool operator()(const TVector2& p1,const TVector2& p2) const {
+		//Compute polar angles and compare
+		double theta1= (p1-centroid).Phi()*TMath::RadToDeg();
+		double theta2= (p2-centroid).Phi()*TMath::RadToDeg();
+		//double x1= p1.X();
+		//double x2= p2.X();
+		//double y1= -p1.Y();
+		//double y2= -p2.Y();
+		return theta1<theta2;
+		//return std::tie(theta1,x1,y1) < std::tie(theta2,x2,y2);
+	}
+
+	TVector2 centroid;
+
+};//close struct
+
+struct ContourPointComparator {
+
+	ContourPointComparator(TVector2& pnt)
+		: m_point(pnt)
+	{}
+
+	//Comparator method	
+	bool operator()(const TVector2& obj) const {
+		return (obj.X()==m_point.X() && obj.Y()==m_point.Y());
+	}
+
+	private:
+		TVector2 m_point;
+};//close struct
 
 class Contour : public TObject {
 
@@ -158,6 +195,21 @@ class Contour : public TObject {
 		void AddPoint(TVector2 p){
 			m_Points.push_back(p);
 		}
+
+		/**
+		* \brief Sort points counter-clockwise
+		*/
+		int SortPointsCounterClockWise(){
+			if(!HasParameters){
+				if(ComputeParameters()<0){
+					WARN_LOG("Failed to compute contour parameters!");
+					return -1;
+				}
+			}
+			std::sort(m_Points.begin(),m_Points.end(), ContourPointCounterClockWiseSorter(Centroid));
+			return 0;
+		}
+
 		/**
 		* \brief Reset contour
 		*/
@@ -169,7 +221,7 @@ class Contour : public TObject {
 		/**
 		* \brief Return a graph object with contour points
 		*/
-		TGraph* GetGraph();
+		TGraph* GetGraph(bool addLastPoint=true);
 		/**
 		* \brief Return a polyline object with bounding box
 		*/	
@@ -187,7 +239,6 @@ class Contour : public TObject {
 		/**
 		* \brief Compute shape parameters
 		*/
-		//void ComputeShapeParams();
 		void ComputeShapeParams(std::vector<cv::Point2f>const & points);
 
 		/**
@@ -219,6 +270,7 @@ class Contour : public TObject {
 		*/
 		void ComputeBendingEnergy();
 
+		
 		/**
 		* \brief Dump
 		*/
@@ -266,14 +318,12 @@ class Contour : public TObject {
 		/**
 		* \brief Compute moments
 		*/
-		//void ComputeMoments();
 		void ComputeMoments(std::vector<cv::Point2f>const & points);
+		
 		/**
 		* \brief Compute eccentricity
 		*/
-		void ComputeEccentricity();
-		
-		
+		void ComputeEccentricity();		
 
 		/**
 		* \brief Get complex contour point representation
@@ -290,9 +340,6 @@ class Contour : public TObject {
 			}
 			return U;
 		}
-
-		
-
 
 		/**
 		* \brief Ellipse fitter

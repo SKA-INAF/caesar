@@ -25,8 +25,8 @@
 * @date 20/01/2015
 */
 
-#ifndef Pixel_h
-#define Pixel_h 1
+#ifndef _PIXEL_h
+#define _PIXEL_h 1
 
 #include <TObject.h>
 
