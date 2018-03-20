@@ -28,11 +28,27 @@
 
 #include <MathUtils.h>
 #include <CodeUtils.h>
+#include <EllipseUtils.h>
+#include <Contour.h>
 #include <Logger.h>
 
+//ROOT headers
 #include <TMath.h>
+#include <TEllipse.h>
+#include <TGraph.h>
 
+//BOOST headers
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/point_xy.hpp>
+#include <boost/geometry/geometries/polygon.hpp>
+#include <boost/geometry/io/wkt/wkt.hpp>
+#include <boost/foreach.hpp>
+#include <boost/geometry/geometries/adapted/c_array.hpp>
+#include <boost/scoped_array.hpp>
+
+//linterp header
 #include <linterp.h>
+
 
 #include <iomanip>
 #include <iostream>
@@ -44,6 +60,7 @@
 #include <math.h>
 #include <time.h>
 #include <ctime>
+#include <deque>
 
 using namespace std;
 
@@ -455,6 +472,304 @@ std::vector<double> MathUtils::GetContourCurvature(std::vector< std::complex<dou
 	return curvature;
 
 }//close GetContourCurvature()
+
+
+int MathUtils::ComputeEllipseOverlapArea(double& overlapArea,double& err,int& rtn,TEllipse* ellipse1, TEllipse* ellipse2,int method,Contour* overlapContour)
+{
+	//Init area
+	overlapArea= 0;
+
+	//Check inputs
+	if(!ellipse1 || !ellipse2) {
+		ERROR_LOG("Null ptr to input ellipses given!");
+		return -1;
+	}
+	
+	//Get ellipse params
+	double Theta_1= ellipse1->GetTheta();
+	double R1_1= ellipse1->GetR1();
+	double R2_1= ellipse1->GetR2(); 
+	double Cx_1= ellipse1->GetX1();
+	double Cy_1= ellipse1->GetY1();
+	double Area_1= TMath::Pi()*R1_1*R2_1;
+
+	double Theta_2= ellipse2->GetTheta();
+	double R1_2= ellipse2->GetR1();
+	double R2_2= ellipse2->GetR2(); 
+	double Cx_2= ellipse2->GetX1();
+	double Cy_2= ellipse2->GetY1(); 
+	double Area_2= TMath::Pi()*R1_2*R2_2;
+
+	double x[4], y[4];
+  int nroots= 0;
+	
+	//Compute precise ellipse overlap area
+	overlapArea= EllipseUtils::ellipse_ellipse_overlap (
+			Theta_1, R1_1, R2_1, Cx_1, Cy_1, 
+			Theta_2, R1_2, R2_2, Cx_2, Cy_2,
+			x,y,&nroots, &rtn, method
+	);
+	if(overlapArea<0){
+		WARN_LOG("Ellipse overlap computation failed with status "<<rtn<<"!");	
+		return -1;
+	}
+
+	//Convert ellipse in polygons and find polygon overlapping areas
+	polygon_2d poly, poly2;
+	if(Ellipse2Polygon(poly,Cx_1, Cy_1,R1_1,R2_1,Theta_1)<0){
+		ERROR_LOG("Failed to convert first ellipse to polygon!");
+		return -1;
+	}
+	if(Ellipse2Polygon(poly2,Cx_2,Cy_2,R1_2,R2_2,Theta_2)<0){
+		ERROR_LOG("Failed to convert second ellipse to polygon!");
+		return -1;
+	}
+
+	//Compute overlapping area between the two polygons
+	double overlapArea_poly = 0;
+	polygon_2d overlap_poly;
+	if(ComputePolygonOverlapArea(overlapArea_poly,overlap_poly,poly,poly2)<0){
+		ERROR_LOG("Failed to compute overlapping area between the two polygonized ellipses!");
+		return -1;
+	}
+
+	//Estimate errors between precise and approximate calculations
+	double eps = 0.0001;
+	err = (fabs(overlapArea_poly)<eps)? 0.0 : fabs(overlapArea_poly-overlapArea)/overlapArea_poly;
+
+	//If graph given fill it with overlap area points
+	if(overlapContour){
+		//overlapAreaGraph->Set(0);
+		for(int i=0; i<nroots; i++) {
+			double theta= -Theta_1*TMath::DegToRad();	
+			double Xroot= x[i]*cos(theta) + y[i]*sin(theta) + Cx_1;
+			double Yroot= -x[i]*sin(theta) + y[i]*cos(theta) + Cy_1;
+			//overlapAreaGraph->SetPoint(i,Xroot,Yroot);
+			overlapContour->AddPoint(TVector2(Xroot,Yroot));
+		}
+		/*
+  	overlapAreaGraph->SetMarkerColor(kBlue-6);
+		overlapAreaGraph->SetMarkerStyle(24);
+		overlapAreaGraph->SetMarkerSize(1.3);
+		overlapAreaGraph->SetFillColor(kBlue-6);
+		overlapAreaGraph->SetLineColor(kBlue-6);
+		*/
+		//Sort contour points counter clockwise
+		overlapContour->SortPointsCounterClockWise();
+	
+	}//close if
+
+	return 0;
+
+}//close ComputeEllipseOverlapArea()
+
+double MathUtils::ComputePolygonArea(polygon_2d& poly)
+{
+	double area = boost::geometry::area(poly);
+	return area;
+
+}//close ComputePolygonArea()
+
+int MathUtils::ComputeContourArea(double& area,Contour* contour)
+{
+	//Init area
+	area= -1;
+
+	//Check contour
+	if(!contour){
+		ERROR_LOG("Null ptr to contour given!");
+		return -1;
+	}
+	
+	//Transform contour in polygon
+	polygon_2d poly2d;
+	if(Contour2Polygon(poly2d,contour)<0){
+		WARN_LOG("Failed to convert contour to polygon!");
+		return -1;
+	}
+
+	//Compute polygon area
+	area= ComputePolygonArea(poly2d);
+
+	return 0;
+
+}//close ComputePolygonArea()
+
+
+int MathUtils::ComputeContourOverlapArea(double& overlapArea,Contour* contour,Contour* contour2,Contour* overlapContour)
+{
+	//Init area 
+	overlapArea= -1;
+	
+	//Convert contours to polygons
+	polygon_2d poly, poly2;
+	if(Contour2Polygon(poly,contour)<0){
+		ERROR_LOG("Failed to convert first contour to polygon!");
+		return -1;
+	}
+	if(Contour2Polygon(poly2,contour2)<0){
+		ERROR_LOG("Failed to convert second contour to polygon!");
+		return -1;
+	}
+
+	//Compute overlap area between polygons
+	polygon_2d overlap_poly;
+	if(ComputePolygonOverlapArea(overlapArea,overlap_poly,poly,poly2)<0){
+		ERROR_LOG("Failed to compute polygon overlap area!");
+		return -1;
+	}
+
+	//If overlap contour given fill it
+	if(overlapContour){
+		std::vector<point_xy> const& points = overlap_poly.outer();
+		std::vector<TVector2> points_noduplicates;
+		int pos= -1;
+		for (auto point : points) {
+    	double x= point.x();
+			double y= point.y();
+			TVector2 pnt(x,y);
+			std::vector<TVector2>::iterator it= std::find_if(points_noduplicates.begin(),points_noduplicates.end(),ContourPointComparator(pnt));
+			if(it==points_noduplicates.end() || points_noduplicates.empty()){
+				overlapContour->AddPoint(TVector2(x,y));
+				points_noduplicates.push_back(pnt);
+			}
+    }//end loop polygon points
+		
+		//Compute contour pars (need centroid)
+		int status= overlapContour->ComputeParameters();
+		if(status<0){
+			WARN_LOG("Failed to compute overlap contour pars");
+		}	
+		else{
+			//Sort contour points counter-clockwise
+			overlapContour->SortPointsCounterClockWise();
+		}
+
+	}//close if
+
+	return 0;
+
+}//close ComputeContourOverlapArea()
+
+int MathUtils::ComputePolygonOverlapArea(double& overlapArea,polygon_2d& overlap_poly,polygon_2d& poly, polygon_2d& poly2)
+{
+	//Init overlap area
+	overlapArea = 0.;  
+
+	//Find polygon intersection  
+  std::deque<polygon_2d> output;
+  bool ret = boost::geometry::intersection(poly, poly2, output);
+  if(!ret) {
+  	WARN_LOG("Polygons not intersecting or could not calculate the overlap, returning -1");
+		overlapArea= -1;
+    return 0;
+  }
+    
+	//Compute overlap area
+	//BOOST_FOREACH(polygon_2d const& p, output) {
+	BOOST_FOREACH(overlap_poly, output) {
+ 		//overlapArea = boost::geometry::area(p);
+		//INFO_LOG("Polygon intersection: "<<boost::geometry::wkt(p));
+		overlapArea = boost::geometry::area(overlap_poly);
+		INFO_LOG("Polygon intersection: "<<boost::geometry::wkt(overlap_poly));
+  }
+
+	//Correct overlap polygon
+  boost::geometry::correct(overlap_poly);
+  INFO_LOG("Polygon intersection: "<<boost::geometry::wkt(overlap_poly));
+
+	return 0;
+
+}//close ComputePolygonOverlapArea()
+
+int MathUtils::Contour2Polygon(polygon_2d& poly,Contour* contour)
+{
+	//Check given contour
+	if(!contour){
+		WARN_LOG("Null ptr to contour given!");
+		return -1;	
+	}
+	
+	//Get contour points
+	std::vector<TVector2> contourPoints= contour->GetPoints();
+
+	//Loop over contour pointd and convert to polygon
+	for(size_t i=0;i<contourPoints.size();i++){
+		double x= contourPoints[i].X();
+		double y= contourPoints[i].Y();
+		boost::geometry::append(poly, boost::geometry::make<point_2d>(x,y));
+	}//end loop points
+
+	//Correct polygon
+  boost::geometry::correct(poly);
+	INFO_LOG("Polygon: "<<boost::geometry::wkt(poly));
+
+	return 0;
+
+}//close Contour2Polygon()
+
+int MathUtils::Ellipse2Polygon(polygon_2d& poly,double xc, double yc, double a, double b, double theta, int n)
+{
+  //Check n
+	if(!n) {
+ 		ERROR_LOG("n should be >0");
+    return -1;
+  }
+
+	double w = theta*TMath::DegToRad();//convert theta to radians
+
+	//Initialize polygon points
+  double coor[n*2+1][2];		
+	const std::size_t points_size = n*2+1;
+	boost::scoped_array<point_xy> points(new point_xy[points_size]); 
+
+	//Loop over n points and fill polygon
+  double x= 0;
+	double y= 0;
+	double t = 0;
+  double step = TMath::Pi()/n;
+  double sinphi = sin(w);
+  double cosphi = cos(w);
+  for(int i=0; i<2*n+1; i++) {   
+  	x = xc + a*cos(t)*cosphi - b*sin(t)*sinphi;
+    y = yc + a*cos(t)*sinphi + b*sin(t)*cosphi;
+    if(fabs(x) < 1e-4) x = 0;
+    if(fabs(y) < 1e-4) y = 0;
+
+    coor[i][0] = x;
+    coor[i][1] = y;
+		points[i]= point_xy(x,y);
+    t += step;
+  }//end loop points
+
+	//Fill polygon
+  boost::geometry::assign_points(poly,std::make_pair(&points[0], &points[0] + points_size));
+
+	//Correct polygon
+  boost::geometry::correct(poly);
+    
+	return 0;
+
+}//close Ellipse2Polygon()
+
+int MathUtils::Ellipse2Polygon(polygon_2d& poly,TEllipse* ellipse, int n)
+{
+	//Check ellipse
+	if(!ellipse) {
+ 		ERROR_LOG("Null ptr to ellipse given!");
+    return -1;
+  }
+
+	//Get ellipse pars
+	double Cx= ellipse->GetX1();
+	double Cy= ellipse->GetY1();
+	double theta= ellipse->GetTheta();
+	double R1= ellipse->GetR1();
+	double R2= ellipse->GetR2(); 
+	
+	return Ellipse2Polygon(poly,Cx,Cy,R1,R2,theta,n);
+
+}//close Ellipse2Polygon()
 
 
 }//close namespace

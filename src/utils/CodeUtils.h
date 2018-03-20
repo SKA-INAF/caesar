@@ -224,7 +224,6 @@ class CodeUtils : public TObject {
 				return true;
 			}//close FindItem()
 
-
 		/**
 		* \brief Delete selected items from a vector
 		*/

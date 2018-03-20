@@ -36,11 +36,19 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-
+//ROOT headers
 #include <TObject.h>
 #include <TMath.h>
 #include <TMatrixD.h>
+#include <TGraph.h>
+#include <TEllipse.h>
 
+//Boost headers
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/point_xy.hpp>
+#include <boost/geometry/geometries/polygon.hpp>
+
+//C++ headers
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
@@ -62,6 +70,7 @@ using namespace std;
 
 namespace Caesar {
 
+class Contour;
 
 class MathUtils : public TObject {
 
@@ -77,6 +86,10 @@ class MathUtils : public TObject {
    	virtual ~MathUtils();
 
 		
+		typedef boost::geometry::model::d2::point_xy<double,boost::geometry::cs::cartesian> point_2d;
+		typedef boost::geometry::model::d2::point_xy<double> point_xy;
+		typedef boost::geometry::model::polygon<point_2d> polygon_2d;	
+
 	public:
 
 		/**
@@ -183,6 +196,58 @@ class MathUtils : public TObject {
 			return fluxDensity;
 		}
 
+		/**
+		* \brief Compute ellipse area
+		*/
+		static double ComputeEllipseArea(TEllipse* ellipse){
+			if(!ellipse) return -1;
+			double r1= ellipse->GetR1();
+			double r2= ellipse->GetR2();
+			double A= TMath::Pi()*r1*r2;
+			return A;
+		}
+		
+		/**
+		* \brief Compute overlap area between two ellipses
+		*/
+		static int ComputeEllipseOverlapArea(double& overlapArea,double& err,int& rtn,TEllipse* ellipse1, TEllipse* ellipse2,int method=1,Contour* overlapContour=0);
+
+		/**
+		* \brief Compute polygon area
+		*/
+		static double ComputePolygonArea(polygon_2d& poly);
+
+		/**
+		* \brief Compute contour area
+		*/
+		static int ComputeContourArea(double& area,Contour* contour);
+
+		/**
+		* \brief Compute contour overlap area
+		*/
+		static int ComputeContourOverlapArea(double& overlapArea,Contour* contour,Contour* contour2,Contour* overlapContour=0);
+
+		/**
+		* \brief Compute overlap area between two polygons (in BOOST format)
+		*/
+		static int ComputePolygonOverlapArea(double& overlapArea,polygon_2d& overlap_poly,polygon_2d& poly, polygon_2d& poly2);
+
+		/**
+		* \brief Convert contour to polygon (in BOOST format)
+		*/
+		static int Contour2Polygon(polygon_2d& poly,Contour* contour);
+
+		/**
+		* \brief Convert an ellipse to polygon (in BOOST format)
+		*/
+		static int Ellipse2Polygon(polygon_2d& poly,double Cx, double Cy, double R1, double R2, double theta, int n=20);
+
+		/**
+		* \brief Convert a TEllipse to polygon (in BOOST format)
+		*/
+		static int Ellipse2Polygon(polygon_2d& poly,TEllipse* ellipse, int n);
+
+		
 	private:
 	
 		ClassDef(MathUtils,1)

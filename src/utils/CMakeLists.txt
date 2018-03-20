@@ -3,8 +3,8 @@ set(INC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 ## GET SOURCES and HEADERS
-file(GLOB_RECURSE THIS_SRCS ${SRC_DIR}/*.cc)
-file(GLOB_RECURSE THIS_HEADERS ${INC_DIR}/*.h)
+file(GLOB THIS_SRCS ${SRC_DIR}/*.cc)
+file(GLOB THIS_HEADERS ${INC_DIR}/*.h)
 set(THIS_DICT_HEADERS ${THIS_DICT_HEADERS} 
 	SysUtils.h 
 	AstroUtils.h 
@@ -12,6 +12,7 @@ set(THIS_DICT_HEADERS ${THIS_DICT_HEADERS}
 	CodeUtils.h 
 	MathUtils.h 
 	GraphicsUtils.h 
+	EllipseUtils.h
 	Option.h 
 	ConfigParser.h 
 	Logger.h
@@ -26,6 +27,7 @@ set(THIS_DICT_SRCS ${THIS_DICT_SRCS}
 	${SRC_DIR}/CodeUtils.cc 
 	${SRC_DIR}/MathUtils.cc 
 	${SRC_DIR}/GraphicsUtils.cc 
+	${SRC_DIR}/EllipseUtils.cc 
 	${SRC_DIR}/Option.cc 	
 	${SRC_DIR}/ConfigParser.cc 
 	${SRC_DIR}/Logger.cc
