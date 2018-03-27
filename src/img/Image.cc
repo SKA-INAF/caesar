@@ -2997,7 +2997,6 @@ double Image::FindValleyThreshold(int nbins,bool smooth){
 }//close FindValleyThreshold()
 
 
-//double Image::FindCumulativeSumThr(double threshold,bool skipNegativePixels)
 double Image::FindCumulativeSumThr(double threshold,bool useRange,double minThr,double maxThr)
 {
 	//Check if image has pixels
