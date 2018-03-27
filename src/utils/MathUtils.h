@@ -102,6 +102,25 @@ class MathUtils : public TObject {
 		);
 
 		/**
+		* \brief Return 2D grid partition given x & y range and step sizes
+		*/
+		static int Compute2DFloatGrid(
+			std::vector<float>& ix_min,std::vector<float>& ix_max,
+			std::vector<float>& iy_min,std::vector<float>& iy_max,
+			float xmin,float xmax,float xstep,float ymin,float ymax,float ystep
+		);
+
+		/**
+		* \brief Return 2D grid axis bin given grid parameters
+		*/
+		static int FindGrid2DAxisBin(float x,long int nx,float xmin,float xmax,float xstep);
+
+		/**
+		* \brief Return 2D grid global bin given grid parameters
+		*/
+		static long int FindGrid2DBin(float x,float y,long int nx,float xmin,float xmax,float xstep,long int ny,float ymin,float ymax,float ystep);
+
+		/**
 		* \brief Perform bilinear interpolation on regular grid
 		*/
 		static int BiLinearInterpolation(
@@ -225,7 +244,7 @@ class MathUtils : public TObject {
 		/**
 		* \brief Compute contour overlap area
 		*/
-		static int ComputeContourOverlapArea(double& overlapArea,Contour* contour,Contour* contour2,Contour* overlapContour=0);
+		static int ComputeContourOverlapArea(double& overlapArea,int& overlapFlag,Contour* contour,Contour* contour2,Contour* overlapContour=0);
 
 		/**
 		* \brief Compute overlap area between two polygons (in BOOST format)

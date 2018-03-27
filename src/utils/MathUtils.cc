@@ -31,6 +31,7 @@
 #include <EllipseUtils.h>
 #include <Contour.h>
 #include <Logger.h>
+#include <Consts.h>
 
 //ROOT headers
 #include <TMath.h>
@@ -133,6 +134,69 @@ int MathUtils::Compute2DGrid(std::vector<long int>& ix_min,std::vector<long int>
 
 }//close Compute2DGrid()
 
+
+int MathUtils::FindGrid2DAxisBin(float x,long int nx,float xmin,float xmax,float xstep)
+{
+	if(x<xmin || x>xmax) return -1;
+	long int index= static_cast<long int>(nx*(x-xmin)/(nx*xstep) );
+
+	return index;
+
+}//close FindGrid2DAxisBin()
+
+
+long int MathUtils::FindGrid2DBin(float x,float y,long int nx,float xmin,float xmax,float xstep,long int ny,float ymin,float ymax,float ystep)
+{
+	//Find x index
+	long int binX= FindGrid2DAxisBin(x,nx,xmin,xmax,xstep);
+	if(binX<0) return -1;
+
+	//Find y index
+	long int binY= FindGrid2DAxisBin(y,ny,ymin,ymax,ystep);
+	if(binY<0) return -1;
+
+	//Find global bin
+	long int binId= binX + binY*nx;
+
+	return binId;
+
+}//close FindTileIndex()
+
+int MathUtils::Compute2DFloatGrid(std::vector<float>& ix_min,std::vector<float>& ix_max,std::vector<float>& iy_min,std::vector<float>& iy_max,float xmin,float xmax,float xstep,float ymin,float ymax,float ystep)
+{
+	long int nTilesX= static_cast<long int>(std::ceil(fabs(xmax-xmin)/xstep));
+	long int nTilesY= static_cast<long int>(std::ceil(fabs(ymax-ymin)/ystep));
+	float TileSizeX= xstep;
+	float TileSizeY= ystep;	
+
+	ix_min.clear();
+	ix_max.clear();
+	iy_min.clear();
+	iy_max.clear();
+
+	float y= ymin;
+	for(int j=0;j<nTilesY;j++){
+		float offset_y= fabs(std::min(ystep,ymax-y));
+		float tile_ymin= y;
+		float tile_ymax= y + offset_y;
+		iy_min.push_back(tile_ymin);
+		iy_max.push_back(tile_ymax);
+		y+= offset_y;
+	}//end loop tile y
+
+	float x= xmin;
+	for(int i=0;i<nTilesX;i++){
+		float offset_x= fabs(std::min(xstep,xmax-x));
+		float tile_xmin= x;
+		float tile_xmax= x + offset_x;
+		ix_min.push_back(tile_xmin);
+		ix_max.push_back(tile_xmax);
+		x+= offset_x;
+	}//end loop tile y
+
+	return 0;
+
+}//close Compute2DGrid()
 
 int MathUtils::BiLinearInterpolation(std::vector<double>const& sampled_gridX, std::vector<double>const& sampled_gridY,std::vector<double>const& sampledZ,std::vector<double>const& interp_gridX,std::vector<double>const& interp_gridY,std::vector<double>& interpZ){
 
@@ -596,10 +660,11 @@ int MathUtils::ComputeContourArea(double& area,Contour* contour)
 }//close ComputePolygonArea()
 
 
-int MathUtils::ComputeContourOverlapArea(double& overlapArea,Contour* contour,Contour* contour2,Contour* overlapContour)
+int MathUtils::ComputeContourOverlapArea(double& overlapArea,int& overlapFlag,Contour* contour,Contour* contour2,Contour* overlapContour)
 {
 	//Init area 
 	overlapArea= -1;
+	overlapFlag= eCONT_NOT_OVERLAPPING;
 	
 	//Convert contours to polygons
 	polygon_2d poly, poly2;
@@ -616,11 +681,35 @@ int MathUtils::ComputeContourOverlapArea(double& overlapArea,Contour* contour,Co
 	polygon_2d overlap_poly;
 	if(ComputePolygonOverlapArea(overlapArea,overlap_poly,poly,poly2)<0){
 		ERROR_LOG("Failed to compute polygon overlap area!");
+		overlapFlag= eCONT_OVERLAP_FAILED;
 		return -1;
 	}
 
+	//Compute overlap flags
+	if(overlapArea>0){
+		//Set overlapping flag
+		overlapFlag= eCONT_OVERLAPPING;
+
+		//Check if contour are one inside the other
+		bool isFirstInsideSecond= boost::geometry::within(poly, poly2);
+		bool isSecondInsideFirst= false;
+		if(isFirstInsideSecond) {
+			overlapFlag= eCONT1_INSIDE_CONT2;
+		}
+		else{
+			isSecondInsideFirst= boost::geometry::within(poly2, poly);
+			if(isSecondInsideFirst) overlapFlag= eCONT2_INSIDE_CONT1;
+		}
+		DEBUG_LOG("Contour 1 inside 2? "<<isFirstInsideSecond<<", Contour 2 inside 1? "<<isSecondInsideFirst);
+	}
+	else{
+		//Set non-overlapping contours
+		overlapFlag= eCONT_NOT_OVERLAPPING;
+	}
+
+	
 	//If overlap contour given fill it
-	if(overlapContour){
+	if(overlapContour && overlapFlag!=eCONT_NOT_OVERLAPPING){
 		std::vector<point_xy> const& points = overlap_poly.outer();
 		std::vector<TVector2> points_noduplicates;
 		int pos= -1;
@@ -644,9 +733,9 @@ int MathUtils::ComputeContourOverlapArea(double& overlapArea,Contour* contour,Co
 			//Sort contour points counter-clockwise
 			overlapContour->SortPointsCounterClockWise();
 		}
-
 	}//close if
 
+	
 	return 0;
 
 }//close ComputeContourOverlapArea()
@@ -662,21 +751,22 @@ int MathUtils::ComputePolygonOverlapArea(double& overlapArea,polygon_2d& overlap
   if(!ret) {
   	WARN_LOG("Polygons not intersecting or could not calculate the overlap, returning -1");
 		overlapArea= -1;
-    return 0;
-  }
-    
-	//Compute overlap area
-	//BOOST_FOREACH(polygon_2d const& p, output) {
-	BOOST_FOREACH(overlap_poly, output) {
- 		//overlapArea = boost::geometry::area(p);
-		//INFO_LOG("Polygon intersection: "<<boost::geometry::wkt(p));
-		overlapArea = boost::geometry::area(overlap_poly);
-		INFO_LOG("Polygon intersection: "<<boost::geometry::wkt(overlap_poly));
+    return -1;
   }
 
+	//Compute overlap area
+	BOOST_FOREACH(overlap_poly, output) {
+ 		overlapArea = boost::geometry::area(overlap_poly);
+		DEBUG_LOG("Polygon intersection: "<<boost::geometry::wkt(overlap_poly));
+  }
+
+	//Check number of points
+	size_t npoints= boost::geometry::num_points(overlap_poly);
+	DEBUG_LOG("#"<<npoints<<" in polygon intersection");
+  
 	//Correct overlap polygon
   boost::geometry::correct(overlap_poly);
-  INFO_LOG("Polygon intersection: "<<boost::geometry::wkt(overlap_poly));
+  DEBUG_LOG("Polygon intersection: "<<boost::geometry::wkt(overlap_poly));
 
 	return 0;
 
@@ -702,7 +792,7 @@ int MathUtils::Contour2Polygon(polygon_2d& poly,Contour* contour)
 
 	//Correct polygon
   boost::geometry::correct(poly);
-	INFO_LOG("Polygon: "<<boost::geometry::wkt(poly));
+	DEBUG_LOG("Polygon: "<<boost::geometry::wkt(poly));
 
 	return 0;
 

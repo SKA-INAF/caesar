@@ -95,6 +95,8 @@ int AstroUtils::PixelToWCSCoords(double& xpos, double& ypos,WorldCoor* wcs,doubl
 
 int AstroUtils::PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,double& xpos, double& ypos) {
 
+	//## NB: ix & iy shall be the pixel coordinates (image matrix coordinates).
+	//## When a tile is read in FITS the header keywords (crpix) are modified accordingly so you need to pass the new matrix coordinates (not the (x,y) corresponding to full image) 
 	//Check pixel values in input
 	if(!image){
 		ERROR_LOG("Null image ptr given!");
@@ -298,7 +300,7 @@ TEllipse* AstroUtils::PixelToWCSEllipse(TEllipse* ellipse,WorldCoor* wcs,int pix
 	//Correct ellipse minor axis
 	semiminor_wcs*= fabs(cos(dtheta_wcs*TMath::DegToRad()));
 
-	INFO_LOG("(x,y,sx,sy,theta)=("<<std::setprecision(8)<<x<<","<<y<<","<<sx<<","<<sy<<","<<theta<<"), (x1,y1)=("<<x1<<","<<y1<<"), (x2,y2)=("<<x2<<","<<y2<<"), (x1_wcs,y1_wcs)=("<<x1_wcs<<","<<y1_wcs<<"), (x2_wcs,y2_wcs)=("<<x2_wcs<<","<<y2_wcs<<"), (x_wcs,y_wcs,a,b,theta)=("<<x_wcs<<","<<y_wcs<<","<<semimajor_wcs<<","<<semiminor_wcs<<","<<theta_wcs<<"), theta2_wcs="<<theta2_wcs<<", dtheta_wcs="<<dtheta_wcs);
+	DEBUG_LOG("(x,y,sx,sy,theta)=("<<std::setprecision(8)<<x<<","<<y<<","<<sx<<","<<sy<<","<<theta<<"), (x1,y1)=("<<x1<<","<<y1<<"), (x2,y2)=("<<x2<<","<<y2<<"), (x1_wcs,y1_wcs)=("<<x1_wcs<<","<<y1_wcs<<"), (x2_wcs,y2_wcs)=("<<x2_wcs<<","<<y2_wcs<<"), (x_wcs,y_wcs,a,b,theta)=("<<x_wcs<<","<<y_wcs<<","<<semimajor_wcs<<","<<semiminor_wcs<<","<<theta_wcs<<"), theta2_wcs="<<theta2_wcs<<", dtheta_wcs="<<dtheta_wcs);
 
 	TEllipse* ellipse_wcs= new TEllipse(x_wcs,y_wcs,semimajor_wcs,semiminor_wcs,0.,360.,theta_wcs);
 	ellipse_wcs->SetLineWidth(2);

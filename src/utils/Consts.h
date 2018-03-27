@@ -144,6 +144,14 @@ enum MorphOperation {
 	eMORPH_DILATION= 6
 };
 
+enum ContourOverlapFlag {
+	eCONT_OVERLAP_FAILED=-1,
+	eCONT_NOT_OVERLAPPING=0,
+	eCONT_OVERLAPPING=1,
+	eCONT1_INSIDE_CONT2=2,
+	eCONT2_INSIDE_CONT1=3
+};
+
 #ifdef __MAKECINT__
 #pragma link C++ enum WCSType+;
 #pragma link C++ enum ImgFilters+;
