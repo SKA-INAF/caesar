@@ -427,6 +427,17 @@ class SourceFitPars : public TObject {
 		}//close GetComponentFluxDensityErr()
 
 		/**
+		* \brief Get flux density
+		*/
+		double GetFluxDensity(){return fluxDensity;}
+
+		/**
+		* \brief Get flux density error
+		*/
+		double GetFluxDensityErr(){return fluxDensityErr;}
+
+
+		/**
 		* \brief Set chi2 
 		*/
 		void SetChi2(double value){chi2=value;}
@@ -822,7 +833,7 @@ class SourceFitPars : public TObject {
 		double fluxDensity;
 		double fluxDensityErr;
 
-	ClassDef(SourceFitPars,1)
+	ClassDef(SourceFitPars,2)
 
 };
 

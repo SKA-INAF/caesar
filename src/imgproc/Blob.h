@@ -135,11 +135,19 @@ class Blob : public TNamed {
 		/**
 		* \brief Set image metadata
 		*/
-		int SetImageMetaData(ImgMetaData* data){
+		int SetImageMetaData(ImgMetaData* data,double crpix1Offset=0,double crpix2Offset=0)
+		{
+			//################################################################################
+			//## With tile image the crpix keyword is shifted in image coordinates (ix,iy). 
+			//## Source mostly uses original phys coordinates (x,y) referred to original image, 
+			//## so we allow for shifting the crpix val, otherwise skycoordinates will be shifted
+			//################################################################################
 			if(!data) return -1;
 			CodeUtils::DeletePtr<ImgMetaData>(m_imgMetaData);//delete existing
 			m_imgMetaData= new ImgMetaData;
 			*m_imgMetaData = *data;
+			m_imgMetaData->Cx+= crpix1Offset;
+			m_imgMetaData->Cy+= crpix2Offset;
 			return 0;
 		}
 

@@ -17,6 +17,7 @@ set(
 	Blob.h
 	BlobFinder.h
 	Source.h
+	SourceCube.h
 	SFinder.h	
 	Contour.h
 	ChanVeseSegmenter.h
@@ -35,6 +36,7 @@ set(
 	${SRC_DIR}/Region.cc	
 	${SRC_DIR}/Blob.cc
 	${SRC_DIR}/Source.cc
+	${SRC_DIR}/SourceCube.cc		
 	${SRC_DIR}/BlobFinder.cc
 	${SRC_DIR}/SFinder.cc
 	${SRC_DIR}/Contour.cc

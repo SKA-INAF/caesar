@@ -469,6 +469,26 @@ class Source : public Blob {
 		* \brief Get fit pars
 		*/
 		SourceFitPars& GetFitPars(){return m_fitPars;}
+
+		/**
+		* \brief Get integrated flux density
+		*/
+		int GetFluxDensity(double& fluxDensity){
+			fluxDensity= 0;
+			if(!m_HasFitInfo) return -1;
+			fluxDensity= m_fitPars.GetFluxDensity();
+			return 0;
+		}
+
+		/**
+		* \brief Get integrated flux density error
+		*/
+		int GetFluxDensityErr(double& fluxDensityErr){
+			fluxDensityErr= 0;
+			if(!m_HasFitInfo) return -1;
+			fluxDensityErr= m_fitPars.GetFluxDensityErr();
+			return 0;
+		}
 	
 		/**
 		* \brief Get fit ellipses

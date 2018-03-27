@@ -265,7 +265,7 @@ int BlobFinder::FindBlobs(Image* inputImg,std::vector<T*>& blobs,Image* floodImg
 		aBlob->ComputeMorphologyParams();
 
 		//## Adding image metadata to image (needed for WCS)
-		aBlob->SetImageMetaData(metadata);
+		aBlob->SetImageMetaData(metadata,Xmin,Ymin);
 
 		//## Add blob to list
 		blobs.push_back(aBlob);
