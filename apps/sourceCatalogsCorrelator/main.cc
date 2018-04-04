@@ -513,12 +513,15 @@ bool FindPointSourceMatch(int source_true_index)
 
 
 	//## Search for extended source associations by matching pixels
-	SourcePosMatchPars match_info;
-	bool foundSource= source_true->FindSourceMatchByPos(match_info,sources_rec,matchPosThr);
+	//SourcePosMatchPars match_info;
+	std::vector<SourcePosMatchPars> match_info_list;
+	//bool foundSource= source_true->FindSourceMatchByPos(match_info,sources_rec,matchPosThr);
+	bool foundSource= source_true->FindSourceMatchByPos(match_info_list,sources_rec,matchPosThr);
 
 	//## Store tree info
 	if(foundSource){
 		SourceFoundFlag= 1;	
+		SourcePosMatchPars match_info= match_info_list[0];//in case of multiple match pick the first (they are sorted by posDiff)
 
 		long int match_source_index= match_info.index;
 		int componentIndex= match_info.fitComponentIndex;
@@ -595,28 +598,37 @@ bool FindPointSourceMatch(int source_true_index)
 
 		INFO_LOG("True source "<<SourceName<<" (index="<<source_true_index<<", X0="<<X0<<", Y0="<<Y0<<", N="<<NPix<<") reconstructed by source "<<SourceName_rec<<" (index="<<match_source_index<<", X0="<<X0_rec<<", Y0="<<Y0_rec<<", N="<<NPix_rec<<"), NMatchingPixels="<<MatchFraction*NPix<<" f="<<MatchFraction<<" f_rec="<<MatchFraction_rec<<" (t="<<matchOverlapThr<<"), posDiff="<<posDiff<<" (posThr="<<matchPosThr<<")");
 
-		
+
 		//## Store rec-true association map
-		//## NB: Find if this rec source was already associated to other true sources
-		MatchingSourceInfo info(match_source_index,componentIndex,nestedIndex);
-		std::map<MatchingSourceInfo,std::vector<int>>::iterator it= RecSourceAssociationMap.find(info);
-		if(RecSourceAssociationMap.empty() || it==RecSourceAssociationMap.end()){//item not found
-			INFO_LOG("Match rec source (name="<<SourceName_rec<<", index="<<match_source_index<<", nestedIndex="<<nestedIndex<<", componentIndex="<<componentIndex<<") not found in map, adding it...");
-			RecSourceAssociationMap[info].push_back(source_true_index);
-		}
-		else{
-			//Find if true source was already associated to this source
-			std::vector<int>::iterator vIt= std::find(RecSourceAssociationMap[info].begin(),RecSourceAssociationMap[info].end(),source_true_index);
-			bool itemAlreadyPresent= (
-				!RecSourceAssociationMap[info].empty() && 
-				vIt!=RecSourceAssociationMap[info].end()
-			);
-			INFO_LOG("Match rec source (name="<<SourceName_rec<<", index="<<match_source_index<<", nestedIndex="<<nestedIndex<<", componentIndex="<<componentIndex<<") found in map, appending to it...");
-			if(!itemAlreadyPresent){
+		//## NB: Find if this rec source was already associated to other true sources	
+		//## Use all matched found previously	
+		for(size_t k=0;k<match_info_list.size();k++){		
+			
+			long int match_source_index= match_info_list[k].index;
+			int componentIndex= match_info_list[k].fitComponentIndex;
+			int nestedIndex= match_info_list[k].nestedIndex;
+			MatchingSourceInfo info(match_source_index,componentIndex,nestedIndex);
+
+			std::map<MatchingSourceInfo,std::vector<int>>::iterator it= RecSourceAssociationMap.find(info);
+			if(RecSourceAssociationMap.empty() || it==RecSourceAssociationMap.end()){//item not found
+				INFO_LOG("Match rec source (name="<<SourceName_rec<<", index="<<match_source_index<<", nestedIndex="<<nestedIndex<<", componentIndex="<<componentIndex<<") not found in map, adding it...");
 				RecSourceAssociationMap[info].push_back(source_true_index);
 			}
-		}
+			else{
+				//Find if true source was already associated to this source
+				std::vector<int>::iterator vIt= std::find(RecSourceAssociationMap[info].begin(),RecSourceAssociationMap[info].end(),source_true_index);
+				bool itemAlreadyPresent= (
+					!RecSourceAssociationMap[info].empty() && 
+					vIt!=RecSourceAssociationMap[info].end()
+				);
+				INFO_LOG("Match rec source (name="<<SourceName_rec<<", index="<<match_source_index<<", nestedIndex="<<nestedIndex<<", componentIndex="<<componentIndex<<") found in map, appending to it...");
+				if(!itemAlreadyPresent){
+					RecSourceAssociationMap[info].push_back(source_true_index);
+				}
+			}//close else
+		}//end loop all matches
 
+	
 	}//close if match found
 	
 
