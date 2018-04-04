@@ -31,9 +31,14 @@
 #include <Blob.h>
 #include <Image.h>
 #include <Contour.h>
+#include <GraphicsUtils.h>
 
 #include <TObject.h>
 #include <TMatrixD.h>
+#include <TPad.h>
+#include <TSystem.h>
+#include <TAxis.h>
+#include <TExec.h>
 
 #include <iomanip>
 #include <iostream>
@@ -168,6 +173,123 @@ void Source::Init(){
 	m_HasFitInfo= false;
 
 }//close Init()
+
+
+int Source::Draw(int pixMargin,ImgType imgType,bool drawImg,bool drawContours,bool drawNested,bool drawFitComponents,int lineColor,int lineStyle,bool useWCS,int coordSyst)
+{
+	
+	//Draw image
+	if(drawImg){
+		//Get source image
+		Image* simg= GetImage(imgType,pixMargin);
+		if(!simg){
+			WARN_LOG("Failed to get image from source!");
+			return -1;
+		}
+
+		//Get metadata info
+		std::string units= "";
+		TString freq= "";
+		if(m_imgMetaData){
+			units= m_imgMetaData->BUnit;
+			freq= Form("%1.2f %s",m_imgMetaData->Freq,(m_imgMetaData->FreqUnit).c_str());
+		}
+
+		//Get histo from image
+		TH2D* htemp= simg->GetHisto2D(std::string(this->GetName()));
+		htemp->SetStats(0);
+		htemp->GetXaxis()->SetTitle("X");
+		htemp->GetYaxis()->SetTitle("Y");
+		htemp->GetZaxis()->SetTitle(units.c_str());
+		htemp->GetZaxis()->SetTitleSize(0.05);
+		htemp->GetZaxis()->SetTitleOffset(0.9);
+		htemp->Draw();
+		gPad->Update();
+		if(useWCS) htemp->Draw("COLAZ");
+		else htemp->Draw("COLZ");
+
+		//Append Caesar image to current pad
+		simg->AppendPad();
+
+		//Draw main source info
+		TPaveText* sourceMainInfoText = new TPaveText(0.4,0.15,0.8,0.3,"NDC");
+		sourceMainInfoText->AddText(Form("Name: %s, Type: %d, Freq: %s",this->GetName(),Type,freq.Data()));
+		sourceMainInfoText->AddText(Form("NPix: %d, Xmin/Xmax: %1.2f/%1.2f, Ymin/Ymax: %1.2f/%1.2f",NPix,m_Xmin,m_Xmax,m_Ymin,m_Ymax));
+		sourceMainInfoText->AddText(Form("C(%1.2f,%1.2f), Wc(%1.2f,%1.2f)",X0,Y0,m_Sx,m_Sy));
+		sourceMainInfoText->AddText(Form("Stot(mJy): %1.1f, Smin/Smax(mJy): %1.2f/%1.2f",m_S*1.e+3,m_Smin*1.e+3,m_Smax*1.e+3));
+		sourceMainInfoText->SetTextAlign(12);
+		sourceMainInfoText->SetTextSize(0.02);
+		sourceMainInfoText->SetTextFont(52);
+		sourceMainInfoText->SetFillColor(0);
+		sourceMainInfoText->SetBorderSize(1);	
+		sourceMainInfoText->Draw("same");
+		
+		//Set WCS axis	
+		if(useWCS){
+			gPad->Update();
+			TGaxis* xaxis_wcs= new TGaxis;
+			TGaxis* yaxis_wcs= new TGaxis;
+			bool useImageCoords= false;
+			int status= GraphicsUtils::SetWCSAxis(simg,*xaxis_wcs,*yaxis_wcs,coordSyst,useImageCoords);
+			if(status>=0){
+				TExec* ex = new TExec("ex","GraphicsUtils::PadUpdater_PhysCoords()");
+   			htemp->GetListOfFunctions()->Add(ex);
+				xaxis_wcs->Draw("same");
+				yaxis_wcs->Draw("same");
+			}
+			else{
+				WARN_LOG("Failed to set gAxis!");
+			}	
+		}//close if useWCS
+	}//close if draw image
+
+	//Drawing contours?
+	if(drawContours){
+		DEBUG_LOG("#"<<m_Contours.size()<<" contours present for source "<<this->GetName()<<"...");
+		for(size_t i=0;i<m_Contours.size();i++){		
+			TGraph* thisContourGraph= m_Contours[i]->GetGraph();
+			if(thisContourGraph) {
+				thisContourGraph->SetMarkerSize(8);
+				thisContourGraph->SetMarkerSize(0.3);
+				thisContourGraph->SetMarkerColor(lineColor);
+				thisContourGraph->SetLineColor(lineColor);
+				thisContourGraph->SetLineStyle(lineStyle);
+				thisContourGraph->SetLineWidth(2);
+				thisContourGraph->Draw("Lsame");
+			}//close if 
+		}//end loop contours
+	}//close if draw contours
+
+	//Draw fitted components (if any)
+	if(drawFitComponents && m_HasFitInfo){
+		std::vector<TEllipse*> ellipses= m_fitPars.GetFittedEllipses();
+		DEBUG_LOG("#"<<ellipses.size()<<" fitted components present for source "<<this->GetName()<<"...");
+		for(size_t i=0;i<ellipses.size();i++){
+			ellipses[i]->SetLineColor(lineColor);
+			ellipses[i]->SetLineStyle(kDotted);
+			ellipses[i]->SetLineWidth(2);
+			ellipses[i]->SetFillColor(0);
+			ellipses[i]->SetFillStyle(0);
+			ellipses[i]->Draw("lsame");
+		}//end loop fit ellipses
+
+		
+	}//close if
+
+
+	//Drawing nested sources recursively?
+	if(drawNested){
+		bool drawNestedImage= false;
+		for(size_t i=0;i<m_NestedSources.size();i++){
+			if(m_NestedSources[i]) {
+				m_NestedSources[i]->Draw(pixMargin,imgType,drawNestedImage,drawContours,drawNested,drawFitComponents,lineColor+2,lineStyle,useWCS,coordSyst);
+			}
+		}
+	}//close if nested
+	
+	return 0;
+
+}//close Draw()
 
 
 void Source::Draw(bool drawBoundingBox,bool drawEllipse,bool drawNested,int lineColor,int lineStyle){

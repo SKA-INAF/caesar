@@ -688,23 +688,48 @@ int Blob::ComputeMorphologyParams(){
 
 }//close ComputeMorphologyParams()
 
-Image* Blob::GetImage(ImgType mode,int pixMargin,bool useWCS,int coordSyst)
+TH2D* Blob::GetWCSHisto(ImgType mode,int pixMargin,int coordSyst)
 {
 	//If use WCS build it
-	WorldCoor* wcs= 0;
-	if(useWCS) {
-		wcs= GetWCS(coordSyst);
-		if(!wcs){
-			WARN_LOG("Failed to build the WCS from this source!");
-			return nullptr;
-		}
+	WorldCoor* wcs= GetWCS(coordSyst);
+	if(!wcs){
+		WARN_LOG("Failed to build the WCS from this source!");
+		return nullptr;
 	}
+	
+	//Get image
+	Image* blobImg= GetImage(mode,pixMargin);
+	if(!blobImg){
+		WARN_LOG("Failed to get source image!");
+		return nullptr;
+	}
+	
+	//Convert image to WCS
+	//NB: Will need to reverse axis afterwards for plotting
+	TString histoName= Form("SourceImg_%s_mode%d",this->GetName(),mode);
+	bool useImageCoords= false;
+	TH2D* blobHisto= blobImg->GetWCSHisto2D(std::string(histoName),wcs,useImageCoords);
+	if(!blobHisto){
+		ERROR_LOG("Failed to get WCS histo from image!");
+		CodeUtils::DeletePtr<Image>(blobImg);
+		return nullptr;
+	}
+
+	//Clear image
+	CodeUtils::DeletePtr<Image>(blobImg);
+
+	return blobHisto;
+		
+}//close GetWCSImage()
+
+Image* Blob::GetImage(ImgType mode,int pixMargin)
+{
 
 	//Bounding box in (x,y) coordinates
 	double xRange[2]= {m_Xmin,m_Xmax};
 	double yRange[2]= {m_Ymin,m_Ymax};	
-	int boundingBoxX[2];
-	int boundingBoxY[2];
+	double boundingBoxX[2];
+	double boundingBoxY[2];
 	int deltaPix= pixMargin;
 	boundingBoxX[0]= xRange[0]-deltaPix;
 	boundingBoxX[1]= xRange[1]+deltaPix;
@@ -713,87 +738,44 @@ Image* Blob::GetImage(ImgType mode,int pixMargin,bool useWCS,int coordSyst)
 	long int nBoxX= boundingBoxX[1]-boundingBoxX[0]+1;
 	long int nBoxY= boundingBoxY[1]-boundingBoxY[0]+1;
 	
-	//Convert range coordinates in WCS?
-	if(useWCS){
-		double x_wcs, y_wcs;
-		if(AstroUtils::PixelToWCSCoords(x_wcs,y_wcs,wcs,boundingBoxX[0],boundingBoxY[0])<0){
-			WARN_LOG("Failed to convert image range coords to WCS");
-			CodeUtils::DeletePtr<WorldCoor>(wcs);
-			return nullptr;
-		}
-		boundingBoxX[0]= x_wcs;
-		boundingBoxY[0]= y_wcs;
-	}
-
+	
 	//## Initialize image to be filled
 	TString imgName= Form("SourceImg_%s_mode%d",this->GetName(),mode);
 	Image* blobImg= new Image(nBoxX,nBoxY,boundingBoxX[0],boundingBoxY[0],std::string(imgName));
+
 	
 	//## Fill image
-	if(useWCS){
-		for(size_t k=0;k<m_Pixels.size();k++){
-			//Get data
-			double x= m_Pixels[k]->x;
-			double y= m_Pixels[k]->y;
-			double S= m_Pixels[k]->S;
-			double Scurv= m_Pixels[k]->S_curv;
-			double bkg= m_Pixels[k]->bkgLevel;
-			double rms= m_Pixels[k]->noiseLevel;
-			double Z= 0;
-			if(rms!=0) Z= (S-bkg)/rms;		
-			double pull= (S-Median)/MedianRMS;
+	for(size_t k=0;k<m_Pixels.size();k++){
+		//Get data
+		//long int ix= m_Pixels[k]->ix;
+		//long int iy= m_Pixels[k]->iy;
+		double x= m_Pixels[k]->x;
+		double y= m_Pixels[k]->y;
+		double S= m_Pixels[k]->S;
+		double Scurv= m_Pixels[k]->S_curv;
+		double bkg= m_Pixels[k]->bkgLevel;
+		double rms= m_Pixels[k]->noiseLevel;
+		double Z= 0;
+		if(rms!=0) Z= (S-bkg)/rms;		
+		double pull= (S-Median)/MedianRMS;
 				
-			//Convert coordinates
-			double x_wcs, y_wcs;
-			if(AstroUtils::PixelToWCSCoords(x_wcs,y_wcs,wcs,x,y)<0){
-				WARN_LOG("Failed to convert image range coords to WCS");
-				CodeUtils::DeletePtr<WorldCoor>(wcs);
-				return nullptr;
-			}
+		//Fill image
+		if(mode==eBinaryMap) blobImg->Fill(x,y,1);	
+		else if(mode==eFluxMap) blobImg->Fill(x,y,S);
+		else if(mode==eSignificanceMap) blobImg->Fill(x,y,Z);
+		else if(mode==ePullMap) blobImg->Fill(x,y,pull);
+		else if(mode==eCurvatureMap) blobImg->Fill(x,y,Scurv);
+		else if(mode==eMeanFluxMap) blobImg->Fill(x,y,Mean);
+		else if(mode==eBkgMap) blobImg->Fill(x,y,bkg);
+		else if(mode==eNoiseMap) blobImg->Fill(x,y,rms);
+		else continue;
 
-			//Fill image
-			if(mode==eBinaryMap) blobImg->Fill(x_wcs,y_wcs,1);	
-			else if(mode==eFluxMap) blobImg->Fill(x_wcs,y_wcs,S);
-			else if(mode==eSignificanceMap) blobImg->Fill(x_wcs,y_wcs,Z);
-			else if(mode==ePullMap) blobImg->Fill(x_wcs,y_wcs,pull);
-			else if(mode==eCurvatureMap) blobImg->Fill(x_wcs,y_wcs,Scurv);
-			else if(mode==eMeanFluxMap) blobImg->Fill(x_wcs,y_wcs,Mean);
-			else if(mode==eBkgMap) blobImg->Fill(x_wcs,y_wcs,bkg);
-			else if(mode==eNoiseMap) blobImg->Fill(x_wcs,y_wcs,rms);
-			else continue;
-
-		}//end loop pixels
-
-		CodeUtils::DeletePtr<WorldCoor>(wcs);
-
-	}//close if
-	else{
-		for(size_t k=0;k<m_Pixels.size();k++){
-			//Get data
-			double x= m_Pixels[k]->x;
-			double y= m_Pixels[k]->y;
-			double S= m_Pixels[k]->S;
-			double Scurv= m_Pixels[k]->S_curv;
-			double bkg= m_Pixels[k]->bkgLevel;
-			double rms= m_Pixels[k]->noiseLevel;
-			double Z= 0;
-			if(rms!=0) Z= (S-bkg)/rms;		
-			double pull= (S-Median)/MedianRMS;
-				
-			//Fill image
-			if(mode==eBinaryMap) blobImg->Fill(x,y,1);	
-			else if(mode==eFluxMap) blobImg->Fill(x,y,S);
-			else if(mode==eSignificanceMap) blobImg->Fill(x,y,Z);
-			else if(mode==ePullMap) blobImg->Fill(x,y,pull);
-			else if(mode==eCurvatureMap) blobImg->Fill(x,y,Scurv);
-			else if(mode==eMeanFluxMap) blobImg->Fill(x,y,Mean);
-			else if(mode==eBkgMap) blobImg->Fill(x,y,bkg);
-			else if(mode==eNoiseMap) blobImg->Fill(x,y,rms);
-			else continue;
-
-		}//end loop pixels
-	}//close else
-
+	}//end loop pixels
+	
+	//## Copy source metadata to image
+	if(m_imgMetaData){
+		blobImg->CopyMetaData(m_imgMetaData);
+	}
 
 	/*
 	if(mode==eBinaryMap){
@@ -885,6 +867,140 @@ Image* Blob::GetImage(ImgType mode,int pixMargin,bool useWCS,int coordSyst)
 
 }//close GetImage()
 
+
+/*
+Image* Blob::GetImage(ImgType mode,int pixMargin,bool useWCS,int coordSyst)
+{
+	//If use WCS build it
+	WorldCoor* wcs= 0;
+	if(useWCS) {
+		wcs= GetWCS(coordSyst);
+		if(!wcs){
+			WARN_LOG("Failed to build the WCS from this source!");
+			return nullptr;
+		}
+	
+		//Check if metadata are available
+		if(!m_imgMetaData){
+			WARN_LOG("No metadata present (needed to retrieve pixel size)!");
+			return nullptr;
+		}
+	}
+
+	//Bounding box in (x,y) coordinates
+	double xRange[2]= {m_Xmin,m_Xmax};
+	double yRange[2]= {m_Ymin,m_Ymax};	
+	//int boundingBoxX[2];
+	//int boundingBoxY[2];
+	double boundingBoxX[2];
+	double boundingBoxY[2];
+	int deltaPix= pixMargin;
+	boundingBoxX[0]= xRange[0]-deltaPix;
+	boundingBoxX[1]= xRange[1]+deltaPix;
+	boundingBoxY[0]= yRange[0]-deltaPix;
+	boundingBoxY[1]= yRange[1]+deltaPix;
+	long int nBoxX= boundingBoxX[1]-boundingBoxX[0]+1;
+	long int nBoxY= boundingBoxY[1]-boundingBoxY[0]+1;
+	
+	//Convert range coordinates in WCS?
+	if(useWCS){
+		double boundingBoxX_wcs[2];
+		double boundingBoxY_wcs[2];
+		for(int i=0;i<2;i++){
+			if(AstroUtils::PixelToWCSCoords(boundingBoxX_wcs[i],boundingBoxY_wcs[i],wcs,boundingBoxX[i],boundingBoxY[i])<0){
+				WARN_LOG("Failed to convert image range coords to WCS");
+				CodeUtils::DeletePtr<WorldCoor>(wcs);
+				return nullptr;
+			}
+			INFO_LOG("boundingBox wcs("<<boundingBoxX_wcs[i]<<","<<boundingBoxY_wcs[i]<<")");
+		}
+		boundingBoxX[0]= std::min(boundingBoxX_wcs[0],boundingBoxX_wcs[1]);	
+		boundingBoxX[1]= std::max(boundingBoxX_wcs[0],boundingBoxX_wcs[1]);
+		boundingBoxY[0]= std::min(boundingBoxY_wcs[0],boundingBoxY_wcs[1]);	
+		boundingBoxY[1]= std::max(boundingBoxY_wcs[0],boundingBoxY_wcs[1]);
+
+		double dX= fabs(m_imgMetaData->dX);//deg
+		double dY= fabs(m_imgMetaData->dY);//deg
+		nBoxX= std::ceil(fabs(boundingBoxX[1]-boundingBoxX[0])/dX);
+		nBoxY= std::ceil(fabs(boundingBoxY[1]-boundingBoxY[0])/dY);
+		INFO_LOG("bounding box x("<<boundingBoxX[0]<<","<<boundingBoxX[1]<<"), y("<<boundingBoxY[0]<<","<<boundingBoxY[1]<<"), nBoxX="<<nBoxX<<", nBoxY="<<nBoxY);		
+	}//close if useWCS
+
+	//## Initialize image to be filled
+	TString imgName= Form("SourceImg_%s_mode%d",this->GetName(),mode);
+	Image* blobImg= new Image(nBoxX,nBoxY,boundingBoxX[0],boundingBoxY[0],std::string(imgName));
+	
+	//## Fill image
+	if(useWCS){
+		for(size_t k=0;k<m_Pixels.size();k++){
+			//Get data
+			double x= m_Pixels[k]->x;
+			double y= m_Pixels[k]->y;
+			double S= m_Pixels[k]->S;
+			double Scurv= m_Pixels[k]->S_curv;
+			double bkg= m_Pixels[k]->bkgLevel;
+			double rms= m_Pixels[k]->noiseLevel;
+			double Z= 0;
+			if(rms!=0) Z= (S-bkg)/rms;		
+			double pull= (S-Median)/MedianRMS;
+				
+			//Convert coordinates
+			double x_wcs, y_wcs;
+			if(AstroUtils::PixelToWCSCoords(x_wcs,y_wcs,wcs,x,y)<0){
+				WARN_LOG("Failed to convert image range coords to WCS");
+				CodeUtils::DeletePtr<WorldCoor>(wcs);
+				return nullptr;
+			}
+
+			//Fill image
+			if(mode==eBinaryMap) blobImg->Fill(x_wcs,y_wcs,1);	
+			else if(mode==eFluxMap) blobImg->Fill(x_wcs,y_wcs,S);
+			else if(mode==eSignificanceMap) blobImg->Fill(x_wcs,y_wcs,Z);
+			else if(mode==ePullMap) blobImg->Fill(x_wcs,y_wcs,pull);
+			else if(mode==eCurvatureMap) blobImg->Fill(x_wcs,y_wcs,Scurv);
+			else if(mode==eMeanFluxMap) blobImg->Fill(x_wcs,y_wcs,Mean);
+			else if(mode==eBkgMap) blobImg->Fill(x_wcs,y_wcs,bkg);
+			else if(mode==eNoiseMap) blobImg->Fill(x_wcs,y_wcs,rms);
+			else continue;
+
+		}//end loop pixels
+
+		CodeUtils::DeletePtr<WorldCoor>(wcs);
+
+	}//close if
+	else{
+		for(size_t k=0;k<m_Pixels.size();k++){
+			//Get data
+			double x= m_Pixels[k]->x;
+			double y= m_Pixels[k]->y;
+			double S= m_Pixels[k]->S;
+			double Scurv= m_Pixels[k]->S_curv;
+			double bkg= m_Pixels[k]->bkgLevel;
+			double rms= m_Pixels[k]->noiseLevel;
+			double Z= 0;
+			if(rms!=0) Z= (S-bkg)/rms;		
+			double pull= (S-Median)/MedianRMS;
+				
+			//Fill image
+			if(mode==eBinaryMap) blobImg->Fill(x,y,1);	
+			else if(mode==eFluxMap) blobImg->Fill(x,y,S);
+			else if(mode==eSignificanceMap) blobImg->Fill(x,y,Z);
+			else if(mode==ePullMap) blobImg->Fill(x,y,pull);
+			else if(mode==eCurvatureMap) blobImg->Fill(x,y,Scurv);
+			else if(mode==eMeanFluxMap) blobImg->Fill(x,y,Mean);
+			else if(mode==eBkgMap) blobImg->Fill(x,y,bkg);
+			else if(mode==eNoiseMap) blobImg->Fill(x,y,rms);
+			else continue;
+
+		}//end loop pixels
+	}//close else
+
+
+	
+	return blobImg;
+
+}//close GetImage()
+*/
 
 
 int Blob::ComputeZernikeMoments(int order){

@@ -40,6 +40,7 @@
 #include <TEllipse.h>
 #include <TFitResultPtr.h>
 #include <Fit/FitResult.h>
+#include <TVirtualFitter.h>
 
 #include <cstdlib>
 #include <iomanip>
@@ -150,8 +151,9 @@ struct SourceFitOptions {
 		peakShiftTolerance= 2;
 		setBinErrorsToMapRMS= true;
 		
-		fitFcnTolerance= 1.e-6;
-		fitMaxIters= 5000;
+		//fitFcnTolerance= 1.e-6;
+		fitFcnTolerance= 1.e-5;
+		fitMaxIters= 100000;
 	}//close constructor
 };//close SourceFitOptions
 
@@ -298,10 +300,79 @@ class SourceFitPars : public TObject {
 		}	
 
 		/**
+		* \brief Copy constructor
+		*/
+		SourceFitPars(const SourceFitPars& sourceFitPars){
+			((SourceFitPars&)sourceFitPars).Copy(*this);
+		}
+
+		/**
 		* \brief Class destructor: free allocated memory
 		*/		
 		virtual ~SourceFitPars() {}
 		
+		
+		/**
+		* \brief Assignment Operator
+		*/
+		SourceFitPars& operator=(const SourceFitPars& sourceFitPars){
+			// Operator =
+ 		 	if (this != &sourceFitPars) ((SourceFitPars&)sourceFitPars).Copy(*this);
+  		return *this;
+		}
+
+		/**
+		* \brief Copy method
+		*/
+		void Copy(TObject& obj) const {
+			// Copy this source to source obj	
+  		((SourceFitPars&)obj).nComponents = nComponents;
+			((SourceFitPars&)obj).chi2 = chi2;	
+			((SourceFitPars&)obj).ndof = ndof;	
+			((SourceFitPars&)obj).npars_free = npars_free;	
+			((SourceFitPars&)obj).nfit_points = nfit_points;	
+			((SourceFitPars&)obj).status = status;	
+			((SourceFitPars&)obj).minimizer_status = minimizer_status;	
+			((SourceFitPars&)obj).offset = offset;	
+			((SourceFitPars&)obj).offset_err = offset_err;	
+			((SourceFitPars&)obj).residualMean = residualMean;	
+			((SourceFitPars&)obj).residualRMS = residualRMS;	
+			((SourceFitPars&)obj).residualMedian = residualMedian;	
+			((SourceFitPars&)obj).residualMAD = residualMAD;	
+			((SourceFitPars&)obj).residualMin = residualMin;	
+			((SourceFitPars&)obj).residualMax = residualMax;	
+
+			((SourceFitPars&)obj).pars = pars;	
+			((SourceFitPars&)obj).thetaFixed = thetaFixed;	
+			((SourceFitPars&)obj).offsetFixed = offsetFixed;	
+			((SourceFitPars&)obj).sigmaFixed = sigmaFixed;	
+			((SourceFitPars&)obj).fluxDensity = fluxDensity;	
+			((SourceFitPars&)obj).fluxDensityErr = fluxDensityErr;	
+		
+			//Copy matrix
+			int nRows= fitCovarianceMatrix.GetNrows();
+			int nCols= fitCovarianceMatrix.GetNcols();
+			((SourceFitPars&)obj).fitCovarianceMatrix.ResizeTo(nRows,nCols);
+			for(int i=0;i<nRows;i++){
+				for(int j=0;j<nCols;j++){
+					double w= fitCovarianceMatrix(i,j);
+					(((SourceFitPars&)obj).fitCovarianceMatrix)(i,j)= w;
+				}
+			}
+		
+			nRows= fluxDensityDerivMatrix.GetNrows();
+			nCols= fluxDensityDerivMatrix.GetNcols();
+			((SourceFitPars&)obj).fluxDensityDerivMatrix.ResizeTo(nRows,nCols);
+			for(int i=0;i<nRows;i++){
+				for(int j=0;j<nCols;j++){
+					double w= fluxDensityDerivMatrix(i,j);
+					(((SourceFitPars&)obj).fluxDensityDerivMatrix)(i,j)= w;
+				}
+			}
+		
+		}//close Copy()
+
+
 	public:
 		/**
 		* \brief Set offset par value 
@@ -422,6 +493,10 @@ class SourceFitPars : public TObject {
 				return 0;
 			}
 			double Err= sqrt(Var);
+
+			//Convert to Jy
+			Err/= 1.e+3;
+
 			return Err;			
 
 		}//close GetComponentFluxDensityErr()
@@ -609,6 +684,7 @@ class SourceFitPars : public TObject {
 			for(int i=0;i<nComponents;i++){
 				//Retrieve fitted pars for this component
 				double A= pars[i].GetParValue("A");
+				A*= 1.e+3;//convert to mJy
 				double sigmaX= pars[i].GetParValue("sigmaX");
 				double sigmaY= pars[i].GetParValue("sigmaY");
 
@@ -687,7 +763,10 @@ class SourceFitPars : public TObject {
 				WARN_LOG("Flux density variance is negative (this should not occur, check for bugs or numerical roundoff errors!)");
 				return -1;
 			}
-			fluxDensityErr= sqrt(fluxDensityVariance);		
+			fluxDensityErr= sqrt(fluxDensityVariance);
+
+			//Convert back to Jy
+			fluxDensityErr/= 1.e+3;
 			
 			return 0;
 		}//close ComputeFluxDensityError()
@@ -913,13 +992,18 @@ class SourceFitter : public TObject {
 		*/
 		bool HasFitParsAtLimit(const ROOT::Fit::FitResult& fitRes);
 		/**
+		* \brief Returns list of parameters at limits
+		*/
+		int GetParsAtLimits(std::vector<int>& parsAtLimits,TVirtualFitter* fitter);
+
+		/**
 		* \brief Estimate fit components
 		*/
 		int EstimateFitComponents(std::vector<std::vector<double>>& fitPars_start,Source* aSource,SourceFitOptions& fitOptions);
 		/**
 		* \brief Perform fit using given initial fit components pars
 		*/
-		int DoFit(Source* aSource,SourceFitOptions& fitOptions,std::vector< std::vector<double> >& fitPars_start);
+		//int DoFit(Source* aSource,SourceFitOptions& fitOptions,std::vector< std::vector<double> >& fitPars_start);
 		/**
 		* \brief Perform fit using given initial fit components pars
 		*/
@@ -949,6 +1033,8 @@ class SourceFitter : public TObject {
 		static std::vector<FitData> m_fitData;
 		static double m_bkgMean;
 		static double m_rmsMean;
+		static double m_sourceX0;
+		static double m_sourceY0;
 		
 	ClassDef(SourceFitter,1)
 

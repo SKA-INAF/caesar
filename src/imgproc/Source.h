@@ -301,6 +301,10 @@ class Source : public Blob {
 		* \brief Draw contours
 		*/
 		void Draw(bool drawBoundingBox=false,bool drawFittedEllipse=false,bool drawNested=false,int lineColor=kBlack,int lineStyle=kSolid);
+		/**
+		* \brief Draw source
+		*/
+		int Draw(int pixMargin=0,ImgType imgType=eFluxMap,bool drawImage=true,bool drawContours=true,bool drawNested=true,bool drawFitComponents=true,int lineColor=kBlack,int lineStyle=kSolid,bool useWCS=false,int coordSyst=0);
 
 		/**
 		* \brief Get DS9 region info
@@ -487,6 +491,34 @@ class Source : public Blob {
 			fluxDensityErr= 0;
 			if(!m_HasFitInfo) return -1;
 			fluxDensityErr= m_fitPars.GetFluxDensityErr();
+			return 0;
+		}
+
+		/**
+		* \brief Get integrated flux density error on components according to Condon (1997) formula 14
+		*/
+		int GetCondonComponentFluxDensityErr(std::vector<double>& fluxDensityErrList){
+			fluxDensityErrList.clear();
+			if(!m_HasFitInfo) return -1;
+			if(!m_imgMetaData) return -1;
+			int nComponents= m_fitPars.GetNComponents();
+			double rmsAvg= m_bkgRMSSum/NPix;
+			double dx= fabs(m_imgMetaData->dX);
+ 			double dy= fabs(m_imgMetaData->dY);
+			INFO_LOG("rmsAvg="<<rmsAvg<<", dx="<<dx<<", dy="<<dy);
+ 
+			for(int k=0;k<nComponents;k++){
+				double A= m_fitPars.GetParValue(k,"A");
+				double sigmaX= m_fitPars.GetParValue(k,"sigmaX");
+				double sigmaY= m_fitPars.GetParValue(k,"sigmaY");
+				double SNR= A/rmsAvg;
+				double I= m_fitPars.GetComponentFluxDensity(k);
+				double IRelErr= sqrt(2./(TMath::Pi()*sigmaX*sigmaY))/SNR;
+				//double IVar= 2.*I*I*dx*dy*rmsAvg*rmsAvg/(TMath::Pi()*sigmaX*sigmaY*A*A);
+				double IErr= IRelErr*I;
+				INFO_LOG("A="<<A<<", sigmaX="<<sigmaX<<", sigmaY="<<sigmaY<<", SNR="<<SNR<<", I="<<I<<", IRelErr="<<IRelErr<<", IErr="<<IErr);
+				fluxDensityErrList.push_back(IErr);
+			}//end loop components
 			return 0;
 		}
 	

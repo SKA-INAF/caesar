@@ -478,7 +478,13 @@ class Blob : public TNamed {
 		/**
 		* \brief Generate an image from source pixel
 		*/
-		Image* GetImage(ImgType mode,int pixMargin=1,bool useWCS=false,int coordSyst=-1);
+		//Image* GetImage(ImgType mode,int pixMargin=1,bool useWCS=false,int coordSyst=-1);
+		Image* GetImage(ImgType mode,int pixMargin=1);	
+
+		/**
+		* \brief Generate an image from source pixel
+		*/
+		TH2D* GetWCSHisto(ImgType mode,int pixMargin=1,int coordSyst=-1);
 
 		//================================================
 		//==         CONTOURS

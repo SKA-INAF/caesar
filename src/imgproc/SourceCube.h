@@ -31,7 +31,8 @@
 #include <Logger.h>
 
 #include <TObject.h>
-#include <TMatrixD.h>
+#include <TCanvas.h>
+#include <TGraphAsymmErrors.h>
 
 #include <cstdlib>
 #include <iomanip>
@@ -124,7 +125,17 @@ class SourceCube : public TNamed {
 				
 			return 0;
 		}
-	
+
+		/**
+		* \brief Draw source images
+		*/
+		int DoSourceImagePlot(bool useWCS=true,int coordSyst=0);
+
+		/**
+		* \brief Draw source SEDs
+		*/
+		int DoSourceSEDs();	
+
 	private:
 		
 		/**
@@ -140,7 +151,17 @@ class SourceCube : public TNamed {
 		//- List of component matches in cube
 		std::vector<std::vector<std::pair<size_t,size_t>>> m_componentIndexes; 	
 
-	ClassDef(SourceCube,1)
+		//- Canvas with source plots	
+		TCanvas* m_sourcePlot;
+
+		//- Graph with source SED
+		TGraphAsymmErrors* m_sourceSED;
+		std::vector<TGraphAsymmErrors*> m_sourceComponentSED;
+
+		//- Canvas with SED plot
+		TCanvas* m_sourceSEDPlot;
+
+	ClassDef(SourceCube,3)
 
 
 };//close class SourceCube
