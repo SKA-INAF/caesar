@@ -1042,7 +1042,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	
 	//## Set start fit pars
 	int par_counter= 0;
-	std::string parNamePrefix[nComponentPars]= {"A","x0","y0","sigmaX","sigmaY","theta"};
+	std::string parNamePrefix[]= {"A","x0","y0","sigmaX","sigmaY","theta"};
 	std::vector<std::vector<double>> parLimits_min;
 	std::vector<std::vector<double>> parLimits_max;
 
