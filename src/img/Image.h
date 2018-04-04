@@ -933,6 +933,10 @@ class Image : public TNamed {
 		* \brief Export to ROOT TH2
 		*/
 		TH2D* GetHisto2D(std::string histoname="");
+		/**
+		* \brief Export to ROOT TH2 converted to WCS
+		*/
+		TH2D* GetWCSHisto2D(std::string histoname="",WorldCoor* wcs=0,bool useImageCoord=true);
 
 		/**
 		* \brief Convert image to OpenCV mat float image

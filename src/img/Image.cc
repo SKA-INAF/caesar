@@ -3133,6 +3133,122 @@ TH2D* Image::GetHisto2D(std::string histoname){
 
 }//close GetHisto2D()
 
+TH2D* Image::GetWCSHisto2D(std::string histoname,WorldCoor* wcs,bool useImageCoord)
+{
+	//Check if image is not empty
+	if(m_pixels.empty() || m_Nx<=0 || m_Ny<=0){
+		WARN_LOG("Image is empty or has no data/size stored, returning nullptr!");
+		return nullptr;
+	}
+
+	//Check WCS
+	if(!wcs){
+		WARN_LOG("No WCS given!");
+		return nullptr;
+	}
+
+	//Compute bin x & y min values and convert to WCS
+	std::vector<double> x_min;
+	std::vector<double> y_min;
+	for(long int i=0;i<m_Nx;i++){
+		double x= i;
+		double y= 0;
+
+		//If using phys coords add xmin/ymin
+		if(!useImageCoord){
+			x+= m_Xmin;
+			y+= m_Ymin;
+		}	
+		
+		//Take pix low edge
+		x-= 0.5;
+		y-= 0.5;
+
+		//Convert to WCS coords
+		double x_wcs, y_wcs;
+		if(AstroUtils::PixelToWCSCoords(x_wcs,y_wcs,wcs,x,y)<0){
+			WARN_LOG("Failed to convert x axis coords to WCS");
+			return nullptr;
+		} 	
+		x_min.push_back(x_wcs);
+		
+	}//end loop x axis
+	
+	for(long int i=0;i<m_Ny;i++){
+		double x= 0;
+		double y= i;
+
+		//If using phys coords add xmin/ymin
+		if(!useImageCoord){
+			x+= m_Xmin;
+			y+= m_Ymin;
+		}	
+		
+		//Take pix low edge
+		x-= 0.5;
+		y-= 0.5;
+
+		//Convert to WCS coords
+		double x_wcs, y_wcs;
+		if(AstroUtils::PixelToWCSCoords(x_wcs,y_wcs,wcs,x,y)<0){
+			WARN_LOG("Failed to convert y axis coords to WCS");
+			return nullptr;
+		} 	
+		y_min.push_back(y_wcs);
+		
+	}//end loop y axis
+
+	//Sort axis ascending
+	std::sort(x_min.begin(),x_min.end());
+	std::sort(y_min.begin(),y_min.end());
+	
+	//Create histo 2D with variable bin width
+	std::string hname= m_name;
+	if(histoname!="") hname= histoname;
+	int nBinsX= (int)(x_min.size()-1);
+	int nBinsY= (int)(y_min.size()-1);
+	TH2D* histo= new TH2D(hname.c_str(),hname.c_str(),nBinsX,x_min.data(),nBinsY,y_min.data());
+	histo->Sumw2();	
+	
+	//Fill histo
+	if(useImageCoord){
+		for(long int j=0;j<m_Ny;j++){
+			double y= j;
+			for(long int i=0;i<m_Nx;i++){
+				double x= i;
+				long int gBin= this->GetBin(i,j);
+				double w= m_pixels[gBin];
+				double x_wcs, y_wcs;
+				if(AstroUtils::PixelToWCSCoords(x_wcs,y_wcs,wcs,x,y)<0){
+					WARN_LOG("Failed to convert bin ("<<x<<","<<y<<") coords to WCS!");
+					return nullptr;
+				}
+				histo->Fill(x,y,w);
+			}//end loop x
+		}//end loop y
+	}//close if
+	else{
+		for(long int j=0;j<m_Ny;j++){
+			double y= this->GetY(j);
+			for(long int i=0;i<m_Nx;i++){
+				double x= this->GetX(i); 
+				long int gBin= this->GetBin(i,j);
+				double w= m_pixels[gBin];
+				double x_wcs, y_wcs;
+				if(AstroUtils::PixelToWCSCoords(x_wcs,y_wcs,wcs,x,y)<0){
+					WARN_LOG("Failed to convert bin ("<<x<<","<<y<<") coords to WCS!");
+					return nullptr;
+				}
+				histo->Fill(x,y,w);
+			}//end loop x
+		}//end loop y
+	}//close else
+
+	return histo;
+
+}//close GetWCSHisto2D()
+
+
 TMatrixD* Image::GetMatrix(){
 
 	//Allocate matrix
