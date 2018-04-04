@@ -93,7 +93,7 @@ int AstroUtils::PixelToWCSCoords(double& xpos, double& ypos,WorldCoor* wcs,doubl
 }//close PixelToWCSCoords()
 
 
-int AstroUtils::PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,double& xpos, double& ypos) {
+int AstroUtils::PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,double& xpos, double& ypos,bool useImageCoords) {
 
 	//## NB: ix & iy shall be the pixel coordinates (image matrix coordinates).
 	//## When a tile is read in FITS the header keywords (crpix) are modified accordingly so you need to pass the new matrix coordinates (not the (x,y) corresponding to full image) 
@@ -108,8 +108,8 @@ int AstroUtils::PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,d
 	double ymin= image->GetYmin();
 	double xmax= image->GetXmax();
 	double ymax= image->GetYmax();
-
-	if(ix<xmin || iy<ymin || ix>xmax || iy>ymax ){
+	
+	if(useImageCoords && (ix<xmin || iy<ymin || ix>xmax || iy>ymax) ){
 		ERROR_LOG("Invalid pix range selected (ix="<<ix<<", iy="<<iy<<")");
 		return -1;	
 	}
@@ -129,7 +129,7 @@ int AstroUtils::PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,d
 
 
 
-int AstroUtils::PixelToWCSCoords(Caesar::Image* image,double ix,double iy,double& xpos, double& ypos,int coordSystem) {
+int AstroUtils::PixelToWCSCoords(Caesar::Image* image,double ix,double iy,double& xpos, double& ypos,int coordSystem,bool useImageCoords) {
 
 	//Check pixel values in input
 	if(!image){
@@ -143,7 +143,7 @@ int AstroUtils::PixelToWCSCoords(Caesar::Image* image,double ix,double iy,double
 	double xmax= image->GetXmax();
 	double ymax= image->GetYmax();
 
-	if(ix<xmin || iy<ymin || ix>xmax || iy>ymax ){
+	if(useImageCoords && (ix<xmin || iy<ymin || ix>xmax || iy>ymax) ){
 		ERROR_LOG("Invalid pix range selected (ix="<<ix<<", iy="<<iy<<")");
 		return -1;	
 	}

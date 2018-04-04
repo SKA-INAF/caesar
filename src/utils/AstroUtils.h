@@ -84,11 +84,11 @@ class AstroUtils : public TObject {
 		/**
 		* \brief Get WCS coordinates corresponding to image coordinates
 		*/
-		static int PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,double& xpos, double& ypos);
+		static int PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,double& xpos, double& ypos,bool useImageCoords=true);
 		/**
 		* \brief Get WCS coordinates corresponding to image coordinates
 		*/
-		static int PixelToWCSCoords(Caesar::Image* image,double ix,double iy,double& xpos, double& ypos,int coordSystem=-1);
+		static int PixelToWCSCoords(Caesar::Image* image,double ix,double iy,double& xpos, double& ypos,int coordSystem=-1,bool useImageCoords=true);
 		
 		/**
 		* \brief Get beam area from BMAJ, BMIN 

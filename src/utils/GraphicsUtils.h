@@ -85,7 +85,7 @@ class GraphicsUtils : public TObject {
 		/**
 		* \brief Set WCS axis
 		*/
-		static int SetWCSAxis(Image* img,TGaxis& xaxis,TGaxis& yaxis,int coordSystem=-1);
+		static int SetWCSAxis(Image* img,TGaxis& xaxis,TGaxis& yaxis,int coordSystem=-1,bool useImageCoords=true);
 
 		/**
 		* \brief Set WCS proj grid
@@ -100,9 +100,13 @@ class GraphicsUtils : public TObject {
 		*/
 		static int PadUpdater();
 		/**
+		* \brief Update pad (version without image coordinates)
+		*/
+		static int PadUpdater_PhysCoords();
+		/**
 		* \brief Update ROOT canvas gaxis
 		*/
-		static int UpdateGAxis();
+		static int UpdateGAxis(bool useImageCoords=true);
 
 
 	private:

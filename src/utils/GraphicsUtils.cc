@@ -257,8 +257,9 @@ int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::
 }//close SetWCSProjGrid()
 
 
-int GraphicsUtils::SetWCSAxis(Image* img,TGaxis& xaxis_wcs,TGaxis& yaxis_wcs,int coordSystem){
-
+int GraphicsUtils::SetWCSAxis(Image* img,TGaxis& xaxis_wcs,TGaxis& yaxis_wcs,int coordSystem,bool useImageCoords)
+{
+	//Check input image
 	if(!img) {
 		ERROR_LOG("Null ptr to image given!");
 		return -1;
@@ -269,7 +270,7 @@ int GraphicsUtils::SetWCSAxis(Image* img,TGaxis& xaxis_wcs,TGaxis& yaxis_wcs,int
 	double xmax= gPad->GetUxmax();
 	double ymin= gPad->GetUymin();
 	double ymax= gPad->GetUymax();
-	DEBUG_LOG("xmin/xmax="<<xmin<<"/"<<xmax<<" ymin/ymax="<<ymin<<"/"<<ymax);
+	INFO_LOG("xmin/xmax="<<xmin<<"/"<<xmax<<" ymin/ymax="<<ymin<<"/"<<ymax);
 
 	//Get image WCS
 	if(!img->HasMetaData()){
@@ -287,13 +288,13 @@ int GraphicsUtils::SetWCSAxis(Image* img,TGaxis& xaxis_wcs,TGaxis& yaxis_wcs,int
 	//Get range coord in WCS
 	DEBUG_LOG("Set pixel2wcs coords...");
 	double xmin_wcs, xmax_wcs, ymin_wcs, ymax_wcs;	
-	AstroUtils::PixelToWCSCoords(img,wcs,xmin,ymin,xmin_wcs,ymin_wcs); 
-	AstroUtils::PixelToWCSCoords(img,wcs,xmax,ymin,xmax_wcs,ymin_wcs);
-	AstroUtils::PixelToWCSCoords(img,wcs,xmin,ymax,xmin_wcs,ymax_wcs);		
-	double minx_wcs= min(xmin_wcs, xmax_wcs); 
-	double maxx_wcs= max(xmin_wcs, xmax_wcs); 
-	double miny_wcs= min(ymin_wcs, ymax_wcs); 
-	double maxy_wcs= max(ymin_wcs, ymax_wcs);
+	AstroUtils::PixelToWCSCoords(img,wcs,xmin,ymin,xmin_wcs,ymin_wcs,useImageCoords); 
+	AstroUtils::PixelToWCSCoords(img,wcs,xmax,ymin,xmax_wcs,ymin_wcs,useImageCoords);
+	AstroUtils::PixelToWCSCoords(img,wcs,xmin,ymax,xmin_wcs,ymax_wcs,useImageCoords);		
+	double minx_wcs= std::min(xmin_wcs, xmax_wcs); 
+	double maxx_wcs= std::max(xmin_wcs, xmax_wcs); 
+	double miny_wcs= std::min(ymin_wcs, ymax_wcs); 
+	double maxy_wcs= std::max(ymin_wcs, ymax_wcs);
 
 	TF1* fcn= (TF1*)gROOT->GetFunction("invertXFcn");
 	if(!fcn){
@@ -332,8 +333,8 @@ int GraphicsUtils::SetWCSAxis(Image* img,TGaxis& xaxis_wcs,TGaxis& yaxis_wcs,int
 	xaxis_wcs.SetWmax(maxx_wcs);
 	
 	if(wcsType=="FK5" || wcsType=="FK4"){
-		//xaxis_wcs.SetTitle("#alpha (deg)");
-		xaxis_wcs.SetTitle("Right Ascension (deg)");
+		xaxis_wcs.SetTitle("#alpha (deg)");
+		//xaxis_wcs.SetTitle("Right Ascension (deg)");
 
 		//Invert axis
 		xaxis_wcs.SetFunction("invertXFcn");
@@ -364,8 +365,8 @@ int GraphicsUtils::SetWCSAxis(Image* img,TGaxis& xaxis_wcs,TGaxis& yaxis_wcs,int
 	yaxis_wcs.SetNdivisions(510);
 	yaxis_wcs.SetOption("-");
 	if(wcsType=="FK5" || wcsType=="FK4"){
-		//yaxis_wcs.SetTitle("#delta (deg)");
-		yaxis_wcs.SetTitle("Declination (deg)");
+		yaxis_wcs.SetTitle("#delta (deg)");
+		//yaxis_wcs.SetTitle("Declination (deg)");
 	}	
 	else if(wcsType=="GALACTIC"){
 		yaxis_wcs.SetTitle("b (deg)");
@@ -401,12 +402,31 @@ int GraphicsUtils::PadUpdater(){
 
 }//close PadUpdater()
 
-Image* GraphicsUtils::FindImageFromPad(){
+int GraphicsUtils::PadUpdater_PhysCoords(){
 
-	//## Find image 
+	//## Check pad	
+	if(!gPad){
+		ERROR_LOG("No pad available!");
+		return -1;
+	}
+
+	//## Update gaxis if any
+	bool useImageCoords= false;
+	if(UpdateGAxis(useImageCoords)<0){
+		WARN_LOG("Failed to update gAxis for current pad!");
+	}
+
+	return 0;
+
+}//close PadUpdater_PhysCoords()
+
+
+Image* GraphicsUtils::FindImageFromPad()
+{
+	//## Find image from pad primitives
 	TList* primitiveList= gPad->GetListOfPrimitives();
 	if(!primitiveList){
-		cerr<<"GraphicsUtils::FindImageFromPad(): WARN: Cannot retrieve the list of primitives!"<<endl;
+		WARN_LOG("Cannot retrieve the list of primitives!");
 		return 0;
 	}
 
@@ -426,41 +446,8 @@ Image* GraphicsUtils::FindImageFromPad(){
 }//close FindImageFromPad()
 
 
-int GraphicsUtils::UpdateGAxis(){
-
-	/*
-	//## Check pad	
-	if(!gPad){
-		cerr<<"GraphicsUtils::UpdateGAxis(): WARN: No pad available!"<<endl;
-		return -1;
-	}
-
-	//## Retrieve current pad event and check it is an "axis" change event
-	int event = gPad->GetEvent();
-  int px = gPad->GetEventX();
-  int py = gPad->GetEventY();
-	//cout<<"GraphicsUtils::UpdateGAxis(): INFO: event="<<event<<endl;
-	//...
-	//...
-
-	//## Find image 
-	Caesar::Image* img= 0;
-	TString imgName= "";
-	TList* primitiveList= gPad->GetListOfPrimitives();
-	if(!primitiveList){
-		cerr<<"GraphicsUtils::UpdateGAxis(): WARN: Cannot retrieve the list of primitives!"<<endl;
-		return -1;
-	}
-
-	for(int i=0;i<primitiveList->GetSize();i++){
-  	TObject* obj = (TObject*)primitiveList->At(i);
-  	if(obj->ClassName() == std::string("Caesar::Image") ){
-    	img = (Caesar::Image*)obj;
-    	imgName = img->GetName();
-  	}
-	}//end loop primitives
-	*/
-
+int GraphicsUtils::UpdateGAxis(bool useImageCoords)
+{
 	//## Find gaxis
 	TGaxis* xaxis_wcs= (TGaxis*)gPad->FindObject("xaxis_wcs");
 	TGaxis* yaxis_wcs= (TGaxis*)gPad->FindObject("yaxis_wcs");
@@ -488,16 +475,6 @@ int GraphicsUtils::UpdateGAxis(){
 		return -1;
 	}	
 
-
-	/*
-	//## Set gaxis
-	int status= SetWCSAxis(img,*xaxis,*yaxis);
-	if(status<0){
-		cerr<<"GraphicsUtils::UpdateGAxis(): WARN: Failed to update current gaxis!"<<endl;
-		return -1;
-	}
-	*/
-
 	//Get image ranges
 	double xmin= gPad->GetUxmin();
 	double xmax= gPad->GetUxmax();
@@ -506,11 +483,11 @@ int GraphicsUtils::UpdateGAxis(){
 	DEBUG_LOG("xmin/xmax="<<xmin<<"/"<<xmax<<" ymin/ymax="<<ymin<<"/"<<ymax);
 
 	//Get range coord in WCS
-	DEBUG_LOG("Find pixel2wcs coords crrespnding to new range...");
+	DEBUG_LOG("Find pixel2wcs coords corresponding to new range...");
 	double xmin_wcs, xmax_wcs, ymin_wcs, ymax_wcs;	
-	AstroUtils::PixelToWCSCoords(img,wcs,xmin,ymin,xmin_wcs,ymin_wcs); 
-	AstroUtils::PixelToWCSCoords(img,wcs,xmax,ymin,xmax_wcs,ymin_wcs);
-	AstroUtils::PixelToWCSCoords(img,wcs,xmin,ymax,xmin_wcs,ymax_wcs);		
+	AstroUtils::PixelToWCSCoords(img,wcs,xmin,ymin,xmin_wcs,ymin_wcs,useImageCoords); 
+	AstroUtils::PixelToWCSCoords(img,wcs,xmax,ymin,xmax_wcs,ymin_wcs,useImageCoords);
+	AstroUtils::PixelToWCSCoords(img,wcs,xmin,ymax,xmin_wcs,ymax_wcs,useImageCoords);		
 	double minx_wcs= min(xmin_wcs, xmax_wcs); 
 	double maxx_wcs= max(xmin_wcs, xmax_wcs); 
 	double miny_wcs= min(ymin_wcs, ymax_wcs); 
