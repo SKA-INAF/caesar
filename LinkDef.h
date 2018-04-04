@@ -237,6 +237,10 @@
 #pragma link C++ class vector<Caesar::Contour*>+;
 #pragma link C++ struct ContourPointMatcher+;
 
+#pragma link C++ class Caesar::SourceCube+;
+#pragma link C++ class Caesar::vector<SourceCube>+;
+#pragma link C++ class Caesar::vector<SourceCube*>+;
+
 //slic generator
 #pragma link C++ class Caesar::SLICData+;
 #pragma link C++ class Caesar::SLICContourData+;
