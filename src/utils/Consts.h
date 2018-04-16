@@ -152,17 +152,32 @@ enum ContourOverlapFlag {
 	eCONT2_INSIDE_CONT1=3
 };
 
+enum FitMinimizer {
+	eMIGRAD= 1,
+	eHESS= 2,
+	eMINOS= 3,
+	eSIMPLEX= 4,	
+	eMINIMIZE= 5
+};
+
 #ifdef __MAKECINT__
 #pragma link C++ enum WCSType+;
 #pragma link C++ enum ImgFilters+;
 #pragma link C++ enum ImgType+;
 #pragma link C++ enum ImgSmoothFilter+;
 #pragma link C++ enum SegmAlgo+;
+#pragma link C++ enum BlobMaskMethod+;
 #pragma link C++ enum BkgEstimator+;
 #pragma link C++ enum BkgMethod+;
 #pragma link C++ enum ColorPaletteStyle+;
 #pragma link C++ enum FileType+;
 #pragma link C++ enum SLICEdgeModel+;
+#pragma link C++ enum activeContourMethod+;
+#pragma link C++ enum DS9RegionFormat+;
+#pragma link C++ enum MorphStructElement+;
+#pragma link C++ enum MorphOperation+;
+#pragma link C++ enum ContourOverlapFlag+;
+#pragma link C++ enum FitMinimizer+;
 #endif
 
 //====================================

@@ -298,6 +298,7 @@ cv::Mat MathUtils::GetConvolution(cv::Mat I, cv::Mat kernel){
 	//Apply convolution
 	cv::Mat dst;
 	filter2D(I, dst, I.depth(), kernel_flipped, anchor, cv::BORDER_CONSTANT);
+	//filter2D(I, dst, I.depth(), kernel_flipped, anchor, cv::BORDER_DEFAULT);
 
 	return dst;
 
@@ -314,6 +315,7 @@ cv::Mat MathUtils::GetConvolution2(cv::Mat I, cv::Mat kernel){
 	for(int i=0;i<nrows;i++){//loop rows
 		for(int j=0;j<ncols;j++){//loop cols
 
+			double w= 0;
 			for(int k=0;k<nrows_kernel;k++){//start loops on filter box rows
 				int index_x= i-k+nrows_kernel/2;
 				int mirror_index_x= GetMirrorIndex(index_x,nrows);
@@ -324,9 +326,13 @@ cv::Mat MathUtils::GetConvolution2(cv::Mat I, cv::Mat kernel){
 
 					double K= kernel.at<double>(k,l);
 					double f= I.at<double>(mirror_index_x,mirror_index_y);	
-					dst.at<double>(i,j)= K*f;
+					//dst.at<double>(i,j)= K*f;
+					if(std::isnormal(f)) w+= K*f;
 				}//end loop kernel cols
 			}//end loop kernel rows
+
+			dst.at<double>(i,j)= w;
+
 		}//end loop y
 	}//end loop x
 
