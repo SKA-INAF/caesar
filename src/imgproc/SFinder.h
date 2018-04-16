@@ -471,9 +471,10 @@ class SFinder : public TObject {
 		double m_fitFcnTolerance;
 		long int m_fitMaxIters;
 		bool m_fitImproveConvergence;
-		int m_fitNRetries;
+		long int m_fitNRetries;
 		bool m_fitDoFinalMinimizerStep;
 		int m_fitFinalMinimizer;
+		bool m_fitUseNestedAsComponents;
 
 		//Saliency computation
 		Image* m_SaliencyImg;

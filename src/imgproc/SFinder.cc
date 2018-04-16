@@ -560,6 +560,7 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(fitNRetries,m_fitNRetries);
 	GET_OPTION_VALUE(fitDoFinalMinimizerStep,m_fitDoFinalMinimizerStep);
 	GET_OPTION_VALUE(fitFinalMinimizer,m_fitFinalMinimizer);
+	GET_OPTION_VALUE(fitUseNestedAsComponents,m_fitUseNestedAsComponents);
 
 	if(m_peakMinKernelSize>m_peakMaxKernelSize){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Invalid peak kernel size option given (hint: min kernel must be larger or equal to max kernel size)!");
@@ -2713,6 +2714,7 @@ int SFinder::FitSources(std::vector<Source*>& sources){
 	fitOptions.fitNRetries= m_fitNRetries;
 	fitOptions.fitDoFinalMinimizerStep= m_fitDoFinalMinimizerStep;
 	fitOptions.fitFinalMinimizer= m_fitFinalMinimizer;
+	fitOptions.useNestedAsComponents= m_fitUseNestedAsComponents;
 	
 	//## NB: Convert scale pars in pixels assuming they represent multiple of beam width (Bmin)	
 	double pixSize= fabs(std::min(m_pixSizeX,m_pixSizeY));

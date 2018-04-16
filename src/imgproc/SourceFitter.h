@@ -67,13 +67,64 @@ class Image;
 class Source;
 
 struct SourceFitOptions {
+
+	public:
+
+	//Default constructor
+	SourceFitOptions() 
+	{
+    bmaj= 5;//pix
+    bmin= 5;//pix
+		bpa= 0;
+		nMaxComponents= 3;
+		limitCentroidInFit= true;
+		fixBkg= true;
+		limitBkgInFit= true;
+		useEstimatedBkgLevel= true;
+		fixedBkgLevel= 0;
+		limitAmplInFit= true;
+		amplLimit= 0.2;
+		limitSigmaInFit= true;
+		sigmaLimit= 0.2;
+		fixSigmaInPreFit= false;
+		fixSigma= false;
+		fixTheta= false;
+		limitThetaInFit= true;
+		thetaLimit= 5;//deg
+		useFluxZCut= false;
+		fluxZThrMin= 2.5;//in nsigmas
+		peakZThrMin= 0;//in nsigmas
+		peakMinKernelSize= 3;
+		peakMaxKernelSize= 7;
+		peakKernelMultiplicityThr= 1;
+		peakShiftTolerance= 2;
+		setBinErrorsToMapRMS= true;
+		
+		scaleMin= 3;
+		scaleMax= 3;
+		scaleStep= 1;
+		minBlobSize= 5;
+		blobMapThrFactor= 0;
+		blobMapKernelFactor= 6; 
+		useNestedAsComponents= false;
+
+		fitFcnTolerance= 1.e-5;//1.e-6
+		fitMaxIters= 100000;
+		fitImproveConvergence= true;
+		fitNRetries= 1000;
+		fitDoFinalMinimizerStep= true;
+		fitFinalMinimizer= eHESS;
+	}//close constructor
+
+	public:
 	//- Blob start fit pars
 	double bmaj;//in pixels
 	double bmin;//in pixels
 	double bpa;//in degrees
 
-	//- Max number of components to be fitted
+	//- Max number of components to be fitted & options
 	int nMaxComponents;
+	bool useNestedAsComponents;
 
 	//- Number of matching peaks across kernels (-1=peak detected in all kernels, ...) and distance tolerance
 	int peakKernelMultiplicityThr;
@@ -133,50 +184,7 @@ struct SourceFitOptions {
 	bool fitDoFinalMinimizerStep;
 	int fitFinalMinimizer;
 
-	//Default constructor
-	SourceFitOptions() 
-	{
-    bmaj= 5;//pix
-    bmin= 5;//pix
-		bpa= 0;
-		nMaxComponents= 3;
-		limitCentroidInFit= true;
-		fixBkg= true;
-		limitBkgInFit= true;
-		useEstimatedBkgLevel= true;
-		fixedBkgLevel= 0;
-		limitAmplInFit= true;
-		amplLimit= 0.2;
-		limitSigmaInFit= true;
-		sigmaLimit= 0.2;
-		fixSigmaInPreFit= false;
-		fixSigma= false;
-		fixTheta= false;
-		limitThetaInFit= true;
-		thetaLimit= 5;//deg
-		useFluxZCut= false;
-		fluxZThrMin= 2.5;//in nsigmas
-		peakZThrMin= 0;//in nsigmas
-		peakMinKernelSize= 3;
-		peakMaxKernelSize= 7;
-		peakKernelMultiplicityThr= 1;
-		peakShiftTolerance= 2;
-		setBinErrorsToMapRMS= true;
-		
-		scaleMin= 3;
-		scaleMax= 3;
-		scaleStep= 1;
-		minBlobSize= 5;
-		blobMapThrFactor= 0;
-		blobMapKernelFactor= 6; 
-
-		fitFcnTolerance= 1.e-5;//1.e-6
-		fitMaxIters= 100000;
-		fitImproveConvergence= true;
-		fitNRetries= 1000;
-		fitDoFinalMinimizerStep= true;
-		fitFinalMinimizer= eHESS;
-	}//close constructor
+	
 };//close SourceFitOptions
 
 

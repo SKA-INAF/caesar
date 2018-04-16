@@ -1490,6 +1490,13 @@ int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std:
 		return -1;
 	}
 
+	if(peakPoints.empty()){
+		INFO_LOG("No components found in source (name="<<this->GetName()<<")");	
+		CodeUtils::DeletePtr<Image>(sourceImg);
+		CodeUtils::DeletePtrCollection<Source>(sources);
+		return 0;
+	}
+
 	//Select components by peak flux (skip peaks at boundary or faint peaks)
 	INFO_LOG("#"<<peakPoints.size()<<" peaks found in source (name="<<this->GetName()<<"), apply selection...");	
 	std::vector<ImgPeak> peakPoints_selected;

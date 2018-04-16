@@ -966,6 +966,11 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 			return -1;		
 		}
 		INFO_LOG("#"<<peakPoints.size()<<" peaks found @ scale "<<sigma<<" ...");
+	
+		//Skip to next scale if no peaks found at this scale
+		if(peakPoints.empty()){
+			continue;
+		}
 		
 		//## Select peaks (skip peaks at boundary or faint peaks)
 		std::vector<PeakInfo> peaks_scale;
@@ -998,6 +1003,12 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 		
 	}//end loop scales
 
+	//## Return if no peaks found
+	if(peaks.empty()){	
+		WARN_LOG("No peaks found at all searched scales (NB: this is strange, better check)!");
+		CodeUtils::DeletePtrCollection<Image>(filterMaps);	
+		return 0;
+	}
 
 	//## Select peak scale according to max peak across scales
 	std::vector<PeakInfo> peaks_best;

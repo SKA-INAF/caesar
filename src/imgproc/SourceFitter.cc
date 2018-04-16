@@ -273,7 +273,7 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 	std::vector<Source*> nestedSources= aSource->GetNestedSources();
 	int nComponents= static_cast<int>(nestedSources.size());
 
-	if(nComponents==0){
+	if(nComponents==0 || !fitOptions.useNestedAsComponents){
 		//Get centroid & peak
 		double meanX= aSource->GetSx();
 		double meanY= aSource->GetSy();
@@ -345,14 +345,6 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 			for(size_t i=0;i<peaks.size();i++){
 				double x= peaks[i].x;
 				double y= peaks[i].y;
-				/*
-				long int gbin= m_fluxMapHisto->FindBin(x,y);
-				if(m_fluxMapHisto->IsBinOverflow(gbin) || m_fluxMapHisto->IsBinUnderflow(gbin)){
-					WARN_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
-					return -1;
-				}
-				double Speak= m_fluxMapHisto->GetBinContent(gbin);
-				*/
 				double Speak= peaks[i].S;
 				double sigmaX= fitOptions.bmaj/GausSigma2FWHM;
 				double sigmaY= fitOptions.bmin/GausSigma2FWHM;
@@ -457,7 +449,6 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 			StatsUtils::GetEllipseParsFromCovMatrix(sigmaX,sigmaY,theta,sigmaX_sample,sigmaY_sample,covXY_sample);
 
 			//Estimate number of components from detected peaks
-			//std::vector<TVector2> peaks;
 			std::vector<ImgPeak> peaks;
 			int status= nestedSource->FindComponentPeaks(
 				peaks,
@@ -478,29 +469,18 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 			}			
 			if(peaks.size()<=1){
 				fitPars_start.push_back( std::vector<double>() );	
-				/*
-				fitPars_start[componentCounter].push_back(Smax);
-				fitPars_start[componentCounter].push_back(meanX);
-				fitPars_start[componentCounter].push_back(meanY);
-				fitPars_start[componentCounter].push_back(sigmaX);
-				fitPars_start[componentCounter].push_back(sigmaY);
-				fitPars_start[componentCounter].push_back(theta);
-				*/
 				fitPars_start[componentCounter].push_back(Smax*1.e+3);//converted to mJy
 				fitPars_start[componentCounter].push_back(meanX-m_sourceX0);//normalized to centroid
 				fitPars_start[componentCounter].push_back(meanY-m_sourceY0);//normalized to centroid
 				fitPars_start[componentCounter].push_back(sigmaX);
 				fitPars_start[componentCounter].push_back(sigmaY);
 				fitPars_start[componentCounter].push_back(theta*TMath::DegToRad());//converted to rad
-				//fitPars_start[componentCounter].push_back(theta);//converted to rad
 				componentCounter++;
 			}//close if
 
 			else{
 				//Loop over peaks and add component
 				for(size_t j=0;j<peaks.size();j++){
-					//double x= peaks[j].X();
-					//double y= peaks[j].Y();
 					double x= peaks[j].x;
 					double y= peaks[j].y;
 					long int gbin= m_fluxMapHisto->FindBin(x,y);
@@ -514,21 +494,12 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 					double theta= fitOptions.bpa;
 	
 					fitPars_start.push_back( std::vector<double>() );	
-					/*
-					fitPars_start[componentCounter].push_back(Speak);
-					fitPars_start[componentCounter].push_back(x);
-					fitPars_start[componentCounter].push_back(y);
-					fitPars_start[componentCounter].push_back(sigmaX);
-					fitPars_start[componentCounter].push_back(sigmaY);
-					fitPars_start[componentCounter].push_back(theta);
-					*/
 					fitPars_start[componentCounter].push_back(Speak*1.e+3);//converted to mJy
 					fitPars_start[componentCounter].push_back(x-m_sourceX0);//normalized to centroid
 					fitPars_start[componentCounter].push_back(y-m_sourceY0);//normalized to centroid
 					fitPars_start[componentCounter].push_back(sigmaX);
 					fitPars_start[componentCounter].push_back(sigmaY);
 					fitPars_start[componentCounter].push_back(theta*TMath::DegToRad());//converted to rad	
-					//fitPars_start[componentCounter].push_back(theta);//converted to rad
 					componentCounter++;
 				}//end loop peaks
 			}//close else
