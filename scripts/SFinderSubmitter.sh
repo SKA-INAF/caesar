@@ -1047,6 +1047,12 @@ generate_config(){
 		echo "peakKernelMultiplicityThr = $PEAK_KERNEL_MULTIPLICITY_THR  | Requested peak multiplicity across different dilation kernels (-1=peak found in all given kernels,1=only in one kernel, etc)"
 		echo "peakShiftTolerance = $PEAK_SHIFT_TOLERANCE            | Shift tolerance (in pixels) used to compare peaks in different dilation kernels (default=1 pixel)"
 		echo "peakZThrMin = $PEAK_ZTHR_MIN                          | Minimum peak flux significance (in nsigmas above avg source bkg & noise) below which peak is skipped (default=1)"
+		echo "fitFcnTolerance = 1.e-5												        | Fit function minimization tolerance (default=1.e-5)"
+		echo "fitMaxIters = 100000                                  | Fit max number of iterations (default=100000)"
+    echo "fitImproveConvergence = true                          | Try to improve convergence by iterating fit if not converged or converged with pars at limits (default=true)"
+		echo "fitNRetries = 1000                                    | Number of times fit is repeated (with enlarged limits) if improve convergence flag is enabled (default=1000)"
+		echo "fitDoFinalMinimizerStep = true                        | Switch on/off running of final minimizer step after fit convergence with MIGRAD (default=true)"
+		echo "fitFinalMinimizer = 2                                 | Final minimizer (1=MIGRAD,2=HESS,3=MINOS) (default=2)"
 		echo '###'
 		echo '###'
 		echo '//============================================='
