@@ -83,6 +83,14 @@ struct SourceFitOptions {
 	int peakMinKernelSize;
 	int peakMaxKernelSize;
 
+	//- Multiscale blob finder options
+	double scaleMin;
+	double scaleMax;
+	double scaleStep;
+	int minBlobSize;
+	double blobMapThrFactor;
+	int blobMapKernelFactor;
+
 	//- Peak flux significance min threshold (in nsigmas wrt to avg bkg & rms)
 	double peakZThrMin;	
 
@@ -119,7 +127,11 @@ struct SourceFitOptions {
 
 	//- Fit minimization options
 	double fitFcnTolerance;
-	int fitMaxIters;
+	long int fitMaxIters;
+	bool fitImproveConvergence;
+	long int fitNRetries;
+	bool fitDoFinalMinimizerStep;
+	int fitFinalMinimizer;
 
 	//Default constructor
 	SourceFitOptions() 
@@ -151,9 +163,19 @@ struct SourceFitOptions {
 		peakShiftTolerance= 2;
 		setBinErrorsToMapRMS= true;
 		
-		//fitFcnTolerance= 1.e-6;
-		fitFcnTolerance= 1.e-5;
+		scaleMin= 3;
+		scaleMax= 3;
+		scaleStep= 1;
+		minBlobSize= 5;
+		blobMapThrFactor= 0;
+		blobMapKernelFactor= 6; 
+
+		fitFcnTolerance= 1.e-5;//1.e-6
 		fitMaxIters= 100000;
+		fitImproveConvergence= true;
+		fitNRetries= 1000;
+		fitDoFinalMinimizerStep= true;
+		fitFinalMinimizer= eHESS;
 	}//close constructor
 };//close SourceFitOptions
 
@@ -328,8 +350,10 @@ class SourceFitPars : public TObject {
 			// Copy this source to source obj	
   		((SourceFitPars&)obj).nComponents = nComponents;
 			((SourceFitPars&)obj).chi2 = chi2;	
-			((SourceFitPars&)obj).ndof = ndof;	
+			((SourceFitPars&)obj).ndof = ndof;
+			((SourceFitPars&)obj).npars = npars;	
 			((SourceFitPars&)obj).npars_free = npars_free;	
+			((SourceFitPars&)obj).npars_component= npars_component;
 			((SourceFitPars&)obj).nfit_points = nfit_points;	
 			((SourceFitPars&)obj).status = status;	
 			((SourceFitPars&)obj).minimizer_status = minimizer_status;	
@@ -560,12 +584,21 @@ class SourceFitPars : public TObject {
 		int GetNFreePars(){return npars_free;}
 
 		/**
-		* \brief Set number of free pars 
+		* \brief Set total number of pars 
+		*/
+		void SetNPars(int value){npars=value;}
+		/**
+		* \brief Get number of free parameters 
+		*/
+		int GetNPars(){return npars;}
+
+		/**
+		* \brief Set number of fitted data 
 		*/
 		void SetNFitPoints(int value){nfit_points=value;}
 
 		/**
-		* \brief Get number of fit points
+		* \brief Get number of fitted data 
 		*/
 		int GetNFitPoints(){return nfit_points;}
 
@@ -669,13 +702,15 @@ class SourceFitPars : public TObject {
 		*/
 		int ComputeFluxDensityDerivMatrix(){
 			//Check size
-			if(npars_free<=0 || pars.empty()) {
+			//if(npars_free<=0 || pars.empty()) {
+			if(npars<=0 || pars.empty()) {
 				WARN_LOG("Cannot compute derivative matrix as no fit pars are stored and/or number of free pars is not initialized!");
 				return -1;
 			}
 
 			//Init matrix to 1 x Nfree_pars
-			fluxDensityDerivMatrix.ResizeTo(1,npars_free);
+			//fluxDensityDerivMatrix.ResizeTo(1,npars_free);
+			fluxDensityDerivMatrix.ResizeTo(1,npars);
 			fluxDensityDerivMatrix.Zero();
 
 			//Fill matrix 
@@ -756,7 +791,6 @@ class SourceFitPars : public TObject {
 	
 			//Compute fluxDensityVariance= D x CovMatrix x D^t  (D=deriv matrix)
 			TMatrixD fluxDensityDerivMatrix_t= TMatrixD(TMatrixD::kTransposed,fluxDensityDerivMatrix);
-			//TMatrixD fluxDensityVarianceMatrix= TMatrixD(fluxDensityDerivMatrix,TMatrixD::kAtBA,fitCovarianceMatrix);
 			TMatrixD fluxDensityVarianceMatrix= fluxDensityDerivMatrix*fitCovarianceMatrix*fluxDensityDerivMatrix_t;
 			double fluxDensityVariance= fluxDensityVarianceMatrix(0,0);
 			if(fluxDensityVariance<0){
@@ -776,8 +810,8 @@ class SourceFitPars : public TObject {
 		*/
 		void Print(){
 			cout<<"*** FIT RESULTS ***"<<endl;
-			cout<<"status="<<status<<" (minimizer status="<<minimizer_status<<")"<<endl;
-			cout<<"chi2="<<chi2<<", ndf="<<ndof<<", redchi2="<<chi2/ndof<<endl;
+			cout<<"nPars="<<npars<<", nParsFree="<<npars_free<<", fitStatus="<<status<<" (minimizer status="<<minimizer_status<<")"<<endl;
+			cout<<"Chi2="<<chi2<<", ndf="<<ndof<<", Chi2/NDF="<<chi2/ndof<<endl;
 			cout<<"fluxDensity="<<fluxDensity<<" +- "<<fluxDensityErr<<endl;
 			for(int i=0;i<nComponents;i++){
 				cout<<"--> Component "<<i+1<<endl;
@@ -825,23 +859,22 @@ class SourceFitPars : public TObject {
 			return nFreeParsPerComponent;
 		}
 
-	protected:
-
 		/**
 		* \brief Get component flux derivative matrix
 		*/
 		int GetComponentFluxDerivMatrix(TMatrixD& D,int componentId){
 			//Keep only selected component
-			int nFreeParsPerComponent= GetFreeParsPerComponent();
-			int start_index= componentId*nFreeParsPerComponent;
-			int last_index= start_index + nFreeParsPerComponent-1;
+			//int nFreeParsPerComponent= GetFreeParsPerComponent();
+			//int start_index= componentId*nFreeParsPerComponent;
+			//int last_index= start_index + nFreeParsPerComponent-1;
+			int start_index= componentId*npars_component;
+			int last_index= start_index + npars_component-1;
 			int nCols= fluxDensityDerivMatrix.GetNcols(); 
 			if(nCols<=last_index){
 				WARN_LOG("Trying to access to an not-existing element (index="<<last_index<<") of derivative matrix (dim="<<nCols<<") (hint: derivative matrix not initialized)!");	
 				return -1;
 			}
-			INFO_LOG("nFreeParsPerComponent="<<nFreeParsPerComponent<<" start_index="<<start_index<<", last_index="<<last_index);
-
+			
 			//Init to flux derivative matrix
 			D.ResizeTo(1,nCols);
 			D.Zero();
@@ -865,7 +898,9 @@ class SourceFitPars : public TObject {
 			nComponents= 0;
 			chi2= 0;
 			ndof= 0;
-			npars_free= 0;
+			npars= 0;
+			npars_free= 0;	
+			npars_component= 6;
 			nfit_points= 0;
 			status= -1;
 			minimizer_status= -1;
@@ -891,7 +926,9 @@ class SourceFitPars : public TObject {
 		int nComponents;
 		double chi2;
 		double ndof;
+		int npars;
 		int npars_free;
+		int npars_component;
 		int nfit_points;
 		int status;
 		int minimizer_status;

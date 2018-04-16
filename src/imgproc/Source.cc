@@ -177,7 +177,6 @@ void Source::Init(){
 
 int Source::Draw(int pixMargin,ImgType imgType,bool drawImg,bool drawContours,bool drawNested,bool drawFitComponents,int lineColor,int lineStyle,bool useWCS,int coordSyst)
 {
-	
 	//Draw image
 	if(drawImg){
 		//Get source image
@@ -1347,7 +1346,8 @@ int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool
 	
 
 
-int Source::FindComponentPeaks(std::vector<TVector2>& peaks,double peakZThr,int maxPeaks,int peakShiftTolerance,std::vector<int> kernels,int peakKernelMultiplicityThr)
+//int Source::FindComponentPeaks(std::vector<TVector2>& peaks,double peakZThr,int maxPeaks,int peakShiftTolerance,std::vector<int> kernels,int peakKernelMultiplicityThr,bool invertSearch)
+int Source::FindComponentPeaks(std::vector<ImgPeak>& peaks,double peakZThr,int maxPeaks,int peakShiftTolerance,std::vector<int> kernels,int peakKernelMultiplicityThr,bool invertSearch)
 {
 	//Init
 	peaks.clear();
@@ -1360,6 +1360,11 @@ int Source::FindComponentPeaks(std::vector<TVector2>& peaks,double peakZThr,int 
 		return -1;
 	}
 
+	//Invert search (e.g. to search valleys rather than peaks)
+	if(invertSearch){
+		peakSearchMap->Scale(-1);
+	}
+
 	//Get source pars (median, average bkg & noise)
 	double Smedian= this->Median;
 	double Smad= this->MedianRMS;
@@ -1368,7 +1373,8 @@ int Source::FindComponentPeaks(std::vector<TVector2>& peaks,double peakZThr,int 
 
 	//Finding peaks
 	INFO_LOG("Finding peaks in source (id="<<Id<<", name="<<this->GetName()<<")");	
-	std::vector<TVector2> peakPoints;
+	//std::vector<TVector2> peakPoints;
+	std::vector<ImgPeak> peakPoints;
 	bool skipBorders= true;
 	if(peakSearchMap->FindPeaks(peakPoints,kernels,peakShiftTolerance,skipBorders,peakKernelMultiplicityThr)<0){
 		WARN_LOG("Failed to find peaks in source (id="<<Id<<", name="<<this->GetName()<<") image!");
@@ -1378,11 +1384,14 @@ int Source::FindComponentPeaks(std::vector<TVector2>& peaks,double peakZThr,int 
 
 	//Select peaks (skip peaks at boundary or faint peaks)
 	INFO_LOG("#"<<peakPoints.size()<<" peaks found in source (id="<<Id<<", name="<<this->GetName()<<"), apply selection...");	
-	std::vector<TVector2> peakPoints_selected;
+	//std::vector<TVector2> peakPoints_selected;
+	std::vector<ImgPeak> peakPoints_selected;
 	std::vector<double> peakFluxes_selected;
 	for(size_t i=0;i<peakPoints.size();i++){
-		double x= peakPoints[i].X();
-		double y= peakPoints[i].Y();
+		//double x= peakPoints[i].X();
+		//double y= peakPoints[i].Y();
+		double x= peakPoints[i].x;
+		double y= peakPoints[i].y;
 		long int gbin= peakSearchMap->FindBin(x,y);
 		if(gbin<0){
 			WARN_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
@@ -1445,6 +1454,115 @@ int Source::FindComponentPeaks(std::vector<TVector2>& peaks,double peakZThr,int 
 	return 0;
 
 }//close FindComponentPeaks()
+
+
+int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std::vector<ImgPeak>& deblendedPeaks,double peakZThr,int maxPeaks,double sigmaMin,double sigmaMax,double sigmaStep,int minBlobSize,double thrFactor,int kernelFactor)
+{
+	//Init
+	deblendedComponents.clear();
+	deblendedPeaks.clear();
+	
+	//Get source image
+	int pixMargin= 0;
+	Image* sourceImg= this->GetImage(eFluxMap,pixMargin);
+	if(!sourceImg){
+		ERROR_LOG("Failed to get source image!");	
+		return -1;
+	}
+
+	//Get source pars (median, average bkg & noise)
+	double Smedian= this->Median;
+	double Smad= this->MedianRMS;
+	double bkgMean= m_bkgSum/(double)(m_Pixels.size());
+	double rmsMean= m_bkgRMSSum/(double)(m_Pixels.size());
+
+	//Finding blended components
+	std::vector<Source*> sources;
+	std::vector<ImgPeak> peakPoints;
+	int status= sourceImg->FindBlendedSources(
+		sources,peakPoints,
+		sigmaMin,sigmaMax,sigmaStep,
+		minBlobSize,
+		thrFactor,kernelFactor
+	);
+	if(status<0){
+		ERROR_LOG("Failed to find blended components in source "<<this->GetName()<<"!");
+		return -1;
+	}
+
+	//Select components by peak flux (skip peaks at boundary or faint peaks)
+	INFO_LOG("#"<<peakPoints.size()<<" peaks found in source (name="<<this->GetName()<<"), apply selection...");	
+	std::vector<ImgPeak> peakPoints_selected;
+	std::vector<double> peakFluxes_selected;
+	std::vector<Source*> sources_selected;
+	for(size_t i=0;i<peakPoints.size();i++){
+		double x= peakPoints[i].x;
+		double y= peakPoints[i].y;
+		double Speak= peakPoints[i].S;
+
+		//Remove faint peaks in case more than one peak is found
+		if(peakPoints.size()>1){			
+			double Zpeak_imgbkg= 0;	
+			double Zpeak_sourcebkg= 0;
+			if(rmsMean!=0) Zpeak_imgbkg= (Speak-bkgMean)/rmsMean;
+			if(Smad!=0) Zpeak_sourcebkg= (Speak-Smedian)/Smad;
+			if(Zpeak_imgbkg<peakZThr) {
+			//if(Zpeak_sourcebkg<peakZThr) {
+				INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak_imgbkg="<<Zpeak_imgbkg<<", Zpeak_sourcebkg="<<Zpeak_sourcebkg<<"<"<<peakZThr<<")");
+				continue;
+			}
+		}//close if
+
+		//Remove peaks lying on the source contour
+		if(this->HasContours() && this->IsPointOnContour(x,y,0.5)) {
+			INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as lying on source contour...");
+			continue;
+		}
+
+		//Add peak to selected peak
+		peakPoints_selected.push_back(peakPoints[i]);
+		peakFluxes_selected.push_back(Speak);
+		sources_selected.push_back(sources[i]);
+	}//end loop peaks
+
+	//Sort peaks by flux
+	std::vector<size_t> sort_index;//sorting index
+	std::vector<double> peakFluxes_sorted;
+	CodeUtils::sort_descending(peakFluxes_selected,peakFluxes_sorted,sort_index);
+
+	//Select peaks if more than max allowed
+	int nPeaks_selected= static_cast<int>(peakPoints_selected.size());
+	if(nPeaks_selected<=0){
+		WARN_LOG("No components left in source (id="<<Id<<", name="<<this->GetName()<<") after selection!");	
+		CodeUtils::DeletePtr<Image>(sourceImg);
+		CodeUtils::DeletePtrCollection<Source>(sources);
+		return 0;
+	}
+	
+	int nComponents= nPeaks_selected;
+	if(maxPeaks>0) nComponents= std::min(nPeaks_selected,maxPeaks);
+	INFO_LOG("#"<<nComponents<<" components found in source (id="<<Id<<", name="<<this->GetName()<<"), max peaks="<<maxPeaks<<") ...");
+
+	deblendedPeaks.clear();
+	deblendedComponents.clear();
+	Source* aBlendedSource= 0;
+	for(int i=0;i<nComponents;i++){
+		size_t index= sort_index[i];
+		deblendedPeaks.push_back(peakPoints_selected[index]);
+	
+		aBlendedSource= new Source;
+		*aBlendedSource= *(sources_selected[index]);
+		deblendedComponents.push_back(aBlendedSource);
+	}//end loop peaks
+
+
+	//Delete peak map
+	CodeUtils::DeletePtr<Image>(sourceImg);
+	CodeUtils::DeletePtrCollection<Source>(sources);
+
+	return 0;
+
+}//close FindBlendedComponents()
 
 
 }//close namespace

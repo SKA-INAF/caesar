@@ -29,6 +29,7 @@
 #define _BLOB_FINDER_h 1
 
 #include <Consts.h>
+#include <Image.h>
 
 #include <TObject.h>
 #include <TMatrixD.h>
@@ -55,6 +56,7 @@ namespace Caesar {
 
 class Image;
 class ImgBkgData;
+class ImgPeak;
 class Blob;
 class Source;
 
@@ -77,21 +79,12 @@ class BlobFinder : public TObject {
 		*/
 		template <class T>
 		static int FindBlobs(Image* inputImg,std::vector<T*>& blobs,Image* floodImg=0,ImgBkgData* bkgData=0,double seedThr=5,double mergeThr=2.6,int minPixels=10,bool findNegativeExcess=false,bool mergeBelowSeed=false,Image* curvMap=0);
+
 		/**
 		* \brief Flood fill algorithm
 		*/
 		static int FloodFill(Image* img,std::vector<long int>& clusterPixelIds,long int seedPixelId,double floodMinThr,double floodMaxThr);
 		
-		/**
-		* \brief Get multiscale blob mask
-		*/
-		//static Image* GetMultiScaleBlobMask(Image* img,int kernelFactor,double sigmaMin,double sigmaMax,double sigmaStep,int thrModel=2,double thrFactor=1);
-
-		/**
-		* \brief Compute multiscale blob filtered map
-		*/
-		//static Image* ComputeMultiScaleBlobMap(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double thrFactor,int kernelFactor=1,double multiplicityThrFactor=0.7);
-
 		/**
 		* \brief Compute single-scale blob mask using elliptical gaus smoothing + laplacian filter map
 		*/
@@ -100,7 +93,13 @@ class BlobFinder : public TObject {
 		/**
 		* \brief Compute multiscale blob mask using LoG filter maps
 		*/
-		static Image* ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double peakZThr=5,double peakZMergeThr=2.5,int minBlobSize=5,double thrFactor=0,int kernelFactor=1,int bkgEstimator=eMedianBkg,int bkgBox=100,double bkgGridStepSize=20);
+		static Image* ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double peakZThr=5,double peakZMergeThr=2.5,int minBlobSize=5,double thrFactor=0,int kernelFactor=1,bool useLocalBkg=true,int bkgEstimator=eMedianBkg,int bkgBox=100,double bkgGridStepSize=20);
+
+		/**
+		* \brief Compute blob blended components
+		*/
+		static int FindBlendedBlobs(std::vector<Source*>& deblendedBlobs,std::vector<ImgPeak>& deblendedPeaks,Image* img,double sigmaMin,double sigmaMax,double sigmaStep,int minBlobSize=5,double thrFactor=0,int kernelFactor=1);
+
 
 	public:
 		

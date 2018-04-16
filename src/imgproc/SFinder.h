@@ -468,7 +468,12 @@ class SFinder : public TObject {
 		int m_peakKernelMultiplicityThr;
 		int m_peakShiftTolerance;
 		double m_peakZThrMin;
-		
+		double m_fitFcnTolerance;
+		long int m_fitMaxIters;
+		bool m_fitImproveConvergence;
+		int m_fitNRetries;
+		bool m_fitDoFinalMinimizerStep;
+		int m_fitFinalMinimizer;
 
 		//Saliency computation
 		Image* m_SaliencyImg;

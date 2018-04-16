@@ -80,7 +80,7 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 		bool useRange= false;
 		bool forceRecomputing= false;
 		//if( img->ComputeStats(true,false,false)<0 ){
-		if( img->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0 ){	
+		if( img->ComputeStats(computeRobustStats,forceRecomputing,useRange,minThr,maxThr)<0 ){	
 			ERROR_LOG("Failed to compute stats!");
 			return 0;	
 		}

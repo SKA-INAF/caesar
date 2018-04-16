@@ -551,7 +551,8 @@ Image* BlobFinder::ComputeBlobMask(Image* img,double Bmaj,double Bmin,double Bpa
 
 	//Find peaks in curvature map
 	INFO_LOG("Finding peaks in curvature significance map ...");
-	std::vector<TVector2> peakPoints;
+	//std::vector<TVector2> peakPoints;
+	std::vector<ImgPeak> peakPoints;
 	bool skipBorders= true;
 	double peakKernelMultiplicityThr= 1;	
 	int peakShiftTolerance= 2;
@@ -572,8 +573,10 @@ Image* BlobFinder::ComputeBlobMask(Image* img,double Bmaj,double Bmin,double Bpa
 	double floodMaxThr= std::numeric_limits<double>::infinity();
 
 	for(size_t k=0;k<peakPoints.size();k++){
-		double x= peakPoints[k].X();
-		double y= peakPoints[k].Y();
+		//double x= peakPoints[k].X();
+		//double y= peakPoints[k].Y();
+		double x= peakPoints[k].x;
+		double y= peakPoints[k].y;
 		long int seedPixelId= significanceMap->FindBin(x,y);
 		if(seedPixelId<0){
 			ERROR_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
@@ -626,7 +629,7 @@ Image* BlobFinder::ComputeBlobMask(Image* img,double Bmaj,double Bmin,double Bpa
 
 
 
-Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double peakZThr,double peakZMergeThr,int minBlobSize,double thrFactor,int kernelFactor,int bkgEstimator,int bkgBox,double bkgGridStepSize)
+Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double sigmaMax,double sigmaStep,double peakZThr,double peakZMergeThr,int minBlobSize,double thrFactor,int kernelFactor,bool useLocalBkg,int bkgEstimator,int bkgBox,double bkgGridStepSize)
 {
 	//## Check image
 	if(!img){
@@ -687,7 +690,7 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 
 		//Compute bkg map
 		INFO_LOG("Computing bkg map @ scale "<<sigma<<"...");
-		bool useLocalBkg= true;
+		//bool useLocalBkg= true;
 		bool use2ndPass= true;
 		bool skipOutliers= false;
 		bool useRangeInBkg= true;
@@ -720,7 +723,8 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 
 		//Find peaks in filter map
 		INFO_LOG("Finding peaks in significance map @ scale "<<sigma<<" ...");
-		std::vector<TVector2> peakPoints;
+		//std::vector<TVector2> peakPoints;
+		std::vector<ImgPeak> peakPoints;
 		bool skipBorders= true;
 		double peakKernelMultiplicityThr= 1;
 		std::vector<int> kernels {3};
@@ -735,8 +739,10 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 		//## Select peaks (skip peaks at boundary or faint peaks)
 		std::vector<PeakInfo> peaks_scale;
 		for(size_t k=0;k<peakPoints.size();k++){
-			double x= peakPoints[k].X();
-			double y= peakPoints[k].Y();
+			//double x= peakPoints[k].X();
+			//double y= peakPoints[k].Y();
+			double x= peakPoints[k].x;
+			double y= peakPoints[k].y;
 			long int gbin= filterSignificanceMap->FindBin(x,y);
 			if(gbin<0){
 				ERROR_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
@@ -797,20 +803,22 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 		for(size_t i=0;i<connected_indexes.size();i++){
 			
 			double Speak_max= -1.e+99;
-			int bestScaleIndex= 0;
+			//int bestScaleIndex= 0;
+			int index_best= connected_indexes[i][0]; 
 			
 			for(size_t j=1;j<connected_indexes[i].size();j++){
 				int index= connected_indexes[i][j];
 				double Speak= peaks[index].S;
 				if(Speak>Speak_max){
 					Speak_max= Speak;
-					bestScaleIndex= index;
+					//bestScaleIndex= index;
+					index_best= index;
 				}
 			}//end loop items in cluster
 		
-			int scale_best= peaks[bestScaleIndex].scale;
-			long int gbin_best= peaks[bestScaleIndex].gbin;
-			peaks_best.push_back(peaks[bestScaleIndex]);
+			int scale_best= peaks[index_best].scale;
+			long int gbin_best= peaks[index_best].gbin;
+			peaks_best.push_back(peaks[index_best]);
 			peakIds[scale_best].push_back(gbin_best);
 		}//end loop clusters	
 
@@ -848,7 +856,7 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 				continue;
 			}
 			
-			//Check blob size agaist min size required
+			//Check blob size against min size required
 			int nPixInBlob= (int)(clusterPixelIds.size());
 			if(nPixInBlob<minBlobSize){
 				INFO_LOG("Skip blob @ scale "<<i+1<<" (id="<<seedPixelId<<") as below min size threshold (npix="<<nPixInBlob<<"<"<<minBlobSize<<")");
@@ -877,6 +885,280 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 	return blobMask;
 
 }//close ComputeMultiScaleBlobMask()
+
+
+
+int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<ImgPeak>& deblendedPeaks,Image* img,double sigmaMin,double sigmaMax,double sigmaStep,int minBlobSize,double thrFactor,int kernelFactor)
+{
+	//## Init
+	blendedBlobs.clear();
+	deblendedPeaks.clear();
+
+	//## Check image
+	if(!img){
+		ERROR_LOG("Null ptr to given image!");
+		return -1;
+	}
+
+	//## Init scales
+	int nScales= (sigmaMax-sigmaMin)/sigmaStep + 1;	
+	std::vector<Image*> filterMaps;
+	std::vector<double> thresholdLevels;
+	int peakShiftTolerance= 2;
+	struct PeakInfo {
+		long int gbin;
+		long int ix;
+		long int iy;
+		double x;
+		double y;
+		double Speak_img;
+		double S;
+		int scale;
+		
+		PeakInfo(long int _gbin,long int _ix,long int _iy,double _S, int _scale)
+			: gbin(_gbin), ix(_ix), iy(_iy), S(_S), scale(_scale)
+		{}
+	};
+	std::vector<PeakInfo> peaks;
+	
+	for(int i=0;i<nScales;i++){
+		//Set kernel size for this scale
+		double sigma= sigmaMin + i*sigmaStep;
+		int kernelSize= kernelFactor*sigma;	
+		if(kernelSize%2==0) {	
+			kernelSize++;
+		}
+		
+		//Compute LoG filter
+		INFO_LOG("Computing LoG map @ scale "<<sigma<<" (step="<<sigmaStep<<", kernsize="<<kernelSize<<")");
+		bool invert= true;
+		Image* filterMap= img->GetNormLoGImage(kernelSize,sigma,invert);
+		filterMaps.push_back(filterMap);
+	
+		//Compute stats
+		//NB: Skip negative pixels
+		bool useRange= true;
+		double minRangeThr= 0;
+		bool computeRobustStats= true;
+		bool forceRecomputing= true;
+		filterMap->ComputeStats(computeRobustStats,forceRecomputing,useRange,minRangeThr);
+		
+		//Compute threshold levels
+		ImgStats* imgStats= filterMap->GetPixelStats();	
+		double median= imgStats->median;
+		double medianThr= thrFactor*median;
+		double thrLevel= medianThr;
+		thresholdLevels.push_back(thrLevel);
+
+		//Zero-threshold filtered map
+		INFO_LOG("Zero-thresholding LoG map @ scale "<<sigma<<" (thr="<<thrLevel<<") ...");
+		filterMap->ApplyThreshold(thrLevel);
+
+		//Find peaks in filter map
+		INFO_LOG("Finding peaks in significance map @ scale "<<sigma<<" ...");
+		std::vector<ImgPeak> peakPoints;
+		bool skipBorders= true;
+		double peakKernelMultiplicityThr= 1;
+		std::vector<int> kernels {3};
+		if(filterMap->FindPeaks(peakPoints,kernels,peakShiftTolerance,skipBorders,peakKernelMultiplicityThr)<0){
+			ERROR_LOG("Failed to find peaks @ scale "<<sigma<<"!");
+			CodeUtils::DeletePtrCollection<Image>(filterMaps);	
+			return -1;		
+		}
+		INFO_LOG("#"<<peakPoints.size()<<" peaks found @ scale "<<sigma<<" ...");
+		
+		//## Select peaks (skip peaks at boundary or faint peaks)
+		std::vector<PeakInfo> peaks_scale;
+		for(size_t k=0;k<peakPoints.size();k++){
+			double x= peakPoints[k].x;
+			double y= peakPoints[k].y;
+			long int gbin= filterMap->FindBin(x,y);
+			
+			if(gbin<0){
+				ERROR_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
+				CodeUtils::DeletePtrCollection<Image>(filterMaps);	
+				return -1;			
+			}
+			long int ix= filterMap->GetBinX(gbin);
+			long int iy= filterMap->GetBinY(gbin);
+			double Speak= filterMap->GetBinContent(gbin);
+			double Speak_img= img->GetBinContent(gbin);
+			INFO_LOG("Scale no. "<<i+1<<" (scale="<<sigma<<", peak no. "<<k+1<<", S="<<Speak<<", pos("<<x<<","<<y<<"), pixel pos("<<ix<<","<<iy<<")");
+
+
+			//Add peak to selected peak
+			PeakInfo peakInfo(gbin,ix,iy,Speak,(int)(i));
+			peakInfo.x= x;
+			peakInfo.y= y;
+			peakInfo.Speak_img= Speak_img;
+			peaks_scale.push_back(peakInfo);
+		}//end loop peaks
+		peaks.insert(peaks.end(),peaks_scale.begin(),peaks_scale.end());		
+		INFO_LOG("#"<<peaks_scale.size()<<" peaks selected @ scale "<<sigma<<" ...");
+		
+	}//end loop scales
+
+
+	//## Select peak scale according to max peak across scales
+	std::vector<PeakInfo> peaks_best;
+	
+	if(nScales>1){
+
+		// Create graph with "matching/adjacent" peaks
+		Graph linkGraph(peaks.size());
+		for(size_t i=0;i<peaks.size()-1;i++) {
+			for(size_t j=i+1;j<peaks.size();j++) {	
+				long int distX= peaks[i].ix - peaks[j].ix;
+				long int distY= peaks[i].iy - peaks[j].iy;
+				bool areAdjacent= (fabs(distX)<=peakShiftTolerance && fabs(distY)<=peakShiftTolerance);
+				if(!areAdjacent) continue;
+				linkGraph.AddEdge(i,j);
+			}//end loop peaks
+		}//end loop peaks
+	
+		//Find connected peaks
+		std::vector<std::vector<int>> connected_indexes;
+		linkGraph.GetConnectedComponents(connected_indexes);
+
+		//Find best scale according to max peak across scales
+		for(size_t i=0;i<connected_indexes.size();i++){
+			INFO_LOG("Peak no. "<<i+1<<" detected in "<<connected_indexes[i].size()<<" scales...");
+
+			double Speak_max= -1.e+99;
+			//int bestScaleIndex= 0;
+			int index_best= connected_indexes[i][0];
+			
+			for(size_t j=1;j<connected_indexes[i].size();j++){
+				int index= connected_indexes[i][j];
+				double Speak= peaks[index].S;
+				long int ix= peaks[index].ix;
+				long int iy= peaks[index].iy;
+				
+				if(Speak>Speak_max){
+					Speak_max= Speak;
+					//bestScaleIndex= index;
+					index_best= index;
+				}
+				INFO_LOG("Peak no. "<<i+1<<", scale="<<j<<": pos("<<ix<<","<<iy<<")");
+			}//end loop items in cluster
+		
+			int scale_best= peaks[index_best].scale;
+			long int ix_best= peaks[index_best].ix;
+			long int iy_best= peaks[index_best].iy;
+			INFO_LOG("Peak no. "<<i+1<<", best scale="<<scale_best<<": pos("<<ix_best<<","<<iy_best<<")");
+			peaks_best.push_back(peaks[index_best]);
+		}//end loop clusters	
+
+	}//close if
+	else{
+		for(size_t i=0;i<peaks.size();i++) {
+			peaks_best.push_back(peaks[i]);
+		}
+	}//close else
+
+	INFO_LOG("#"<<peaks_best.size()<<" best peaks selected across scales ...");
+
+	
+	//Find blended blobs corresponding to best peaks
+	std::vector<PeakInfo> peaks_final;
+	for(size_t k=0;k<peaks_best.size();k++){
+		int peakScale= peaks_best[k].scale;
+		long int peakIx= peaks_best[k].ix;
+		long int peakIy= peaks_best[k].iy;
+
+		//Create a mask with these peak
+		Image* markerImg= (Image*)filterMaps[peakScale]->GetCloned("",true,true);
+		markerImg->Reset();
+		for(int i=0;i<markerImg->GetNx();i++){
+			for(int j=0;j<markerImg->GetNy();j++){
+				double binContent= img->GetPixelValue(i,j);
+				double w= filterMaps[peakScale]->GetPixelValue(i,j);
+				if(binContent==0 || w==0) markerImg->SetPixelValue(i,j,1);//sure bkg
+				else markerImg->SetPixelValue(i,j,0);//unknown
+			}//end loop bins	
+		}//end loop bins
+			
+		//markerImg->SetPixelValue(peakIx,peakIy,2);//set peak pixel to sure signal	
+		int peakStepSize= 2;
+		for(long int i=peakIx-peakStepSize;i<=peakIx+peakStepSize;i++){
+			for(long int j=peakIy-peakStepSize;j<=peakIy+peakStepSize;j++){
+				bool hasBin= markerImg->HasBin(i,j);
+				if(!hasBin) continue;
+				double binContent= img->GetPixelValue(i,j);
+				if(binContent!=0) markerImg->SetPixelValue(i,j,2);
+			}
+		}
+	
+		//Extract blob mask by watershed transform
+		Image* blobMask= MorphFilter::ComputeWatershedFilter(filterMaps[peakScale],markerImg);
+		if(!blobMask){
+			ERROR_LOG("Failed to extract blob mask for peak component no. "<<k+1<<"!");
+			CodeUtils::DeletePtrCollection<Image>(filterMaps);	
+			CodeUtils::DeletePtr<Image>(markerImg);
+			CodeUtils::DeletePtrCollection<Source>(blendedBlobs);
+			return -1;
+		}
+		
+		//Clear marker image
+		CodeUtils::DeletePtr<Image>(markerImg);
+
+		//Create flood image with mask + peak
+		double peakMaskBinContent= blobMask->GetPixelValue(peakIx,peakIy);
+		if(peakMaskBinContent<=0){
+			WARN_LOG("No blobs extracted around peak "<<k+1<<", skip peak ...");
+			CodeUtils::DeletePtr<Image>(blobMask);
+			continue;
+		}
+		blobMask->SetPixelValue(peakIx,peakIy,peakMaskBinContent+1);
+
+		//Extract blended blob using mask as flood image
+		std::vector<Source*> blobs;
+		double seedThr= 2;
+		double mergeThr= 1;
+		if(FindBlobs(img,blobs,blobMask,nullptr,seedThr,mergeThr,minBlobSize)<0){
+			ERROR_LOG("Failed to find blended blobs from mask!");
+			CodeUtils::DeletePtr<Image>(blobMask);
+			CodeUtils::DeletePtrCollection<Source>(blendedBlobs);
+			return -1;
+		}
+
+		//Clear blob mask
+		CodeUtils::DeletePtr<Image>(blobMask);
+
+		//Check if more than one blob is found
+		//NB: Ideally only 1 blob around desired peak should be found
+		if(blobs.empty()){
+			WARN_LOG("No blended blob found for peak no. "<<k+1<<" (hint: current method was not able to extract blended blob or blob was below npix thr="<<minBlobSize<<"), go to next peak...");
+			continue;
+		}	
+		else if(blobs.size()>1){
+			WARN_LOG("More than one blended blob found for peak no. "<<k+1<<", this should not occur, so skip the peak...");
+			continue;
+		}
+		else{//Add blob to blended blob collection
+			blendedBlobs.push_back(blobs[0]);
+			peaks_final.push_back(peaks_best[k]);
+		}
+		
+	}//end loop best peaks
+
+	INFO_LOG("#"<<blendedBlobs.size()<<" blended blobs found from #"<<peaks_best.size()<<" peaks...");
+
+	for(size_t i=0;i<peaks_final.size();i++){	
+		double x= peaks_final[i].x;
+		double y= peaks_final[i].y;
+		double S= peaks_final[i].Speak_img;
+		long int ix= peaks_final[i].ix;
+		long int iy= peaks_final[i].iy;
+		deblendedPeaks.push_back( ImgPeak(x,y,S,ix,iy) );
+	}
+
+	//## Clear memory 
+	CodeUtils::DeletePtrCollection<Image>(filterMaps);	
+			
+	return 0;
+
+}//close FindBlendedBlobs()
 
 /*
 Image* BlobFinder::GetMultiScaleBlobMask(Image* img,int kernelFactor,double sigmaMin,double sigmaMax,double sigmaStep,int thrModel,double thrFactor){

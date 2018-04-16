@@ -553,6 +553,13 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(peakKernelMultiplicityThr,m_peakKernelMultiplicityThr);
 	GET_OPTION_VALUE(peakShiftTolerance,m_peakShiftTolerance);	
 	GET_OPTION_VALUE(peakZThrMin,m_peakZThrMin);
+	
+	GET_OPTION_VALUE(fitFcnTolerance,m_fitFcnTolerance);
+	GET_OPTION_VALUE(fitMaxIters,m_fitMaxIters);
+	GET_OPTION_VALUE(fitImproveConvergence,m_fitImproveConvergence);
+	GET_OPTION_VALUE(fitNRetries,m_fitNRetries);
+	GET_OPTION_VALUE(fitDoFinalMinimizerStep,m_fitDoFinalMinimizerStep);
+	GET_OPTION_VALUE(fitFinalMinimizer,m_fitFinalMinimizer);
 
 	if(m_peakMinKernelSize>m_peakMaxKernelSize){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Invalid peak kernel size option given (hint: min kernel must be larger or equal to max kernel size)!");
@@ -2007,7 +2014,7 @@ Image* SFinder::ComputeBlobMaskImage(Image* inputImg)
 			sigmaMin,sigmaMax,sigmaStep,
 			m_nestedBlobPeakZThr,m_nestedBlobPeakZMergeThr,m_NMinPix,
 			m_NestedBlobThrFactor,m_nestedBlobKernFactor,
-			m_BkgEstimator,boxSize,gridSize
+			m_UseLocalBkg,m_BkgEstimator,boxSize,gridSize
 		);
 	}//close else if
 	else{
@@ -2699,6 +2706,27 @@ int SFinder::FitSources(std::vector<Source*>& sources){
 	fitOptions.peakZThrMin= m_peakZThrMin;
 	fitOptions.peakKernelMultiplicityThr= m_peakKernelMultiplicityThr;
 	fitOptions.peakShiftTolerance= m_peakShiftTolerance;
+
+	fitOptions.fitFcnTolerance= m_fitFcnTolerance;
+	fitOptions.fitMaxIters= m_fitMaxIters;
+	fitOptions.fitImproveConvergence= m_fitImproveConvergence;
+	fitOptions.fitNRetries= m_fitNRetries;
+	fitOptions.fitDoFinalMinimizerStep= m_fitDoFinalMinimizerStep;
+	fitOptions.fitFinalMinimizer= m_fitFinalMinimizer;
+	
+	//## NB: Convert scale pars in pixels assuming they represent multiple of beam width (Bmin)	
+	double pixSize= fabs(std::min(m_pixSizeX,m_pixSizeY));
+	double beamWidth= fabs(std::min(m_beamBmaj,m_beamBmin));
+	double beamPixSize= beamWidth/pixSize;
+	double sigmaMin= m_nestedBlobMinScale*beamPixSize/GausSigma2FWHM;//convert from FWHM to sigma
+	double sigmaMax= m_nestedBlobMaxScale*beamPixSize/GausSigma2FWHM;//convert from FWHM to sigma
+	double sigmaStep= m_nestedBlobScaleStep;	
+	fitOptions.scaleMin= sigmaMin;
+	fitOptions.scaleMax= sigmaMax;
+	fitOptions.scaleStep= sigmaStep;
+	fitOptions.minBlobSize= m_NMinPix;
+	fitOptions.blobMapThrFactor= m_NestedBlobThrFactor;
+	fitOptions.blobMapKernelFactor= m_nestedBlobKernFactor; 
 
 	for(size_t i=0;i<sources.size();i++){
 

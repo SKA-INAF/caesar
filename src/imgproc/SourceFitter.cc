@@ -293,19 +293,37 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 		double theta= StatsUtils::GetGaus2DThetaPar(sigmaX_sample,sigmaY_sample,covXY_sample);		
 		StatsUtils::GetEllipseParsFromCovMatrix(sigmaX,sigmaY,theta,sigmaX_sample,sigmaY_sample,covXY_sample);
 
-		//Estimate number of components from detected peaks
-		std::vector<TVector2> peaks;
-		int status= aSource->FindComponentPeaks(
-			peaks,
-			fitOptions.peakZThrMin, fitOptions.nMaxComponents,
-			fitOptions.peakShiftTolerance,
-			kernels,fitOptions.peakKernelMultiplicityThr
-		);
-		if(status<0){
-			WARN_LOG("Failed to find component peaks in source (id="<<aSource->Id<<", name="<<aSource->GetName()<<")!");
-			return -1;
-		}
+		//NB: Try to extract blended blobs to estimate component pars. 
+		//    If this fails estimate number of components from detected peaks and assuming beam pars
+		std::vector<Source*> deblendedBlobs;
+		std::vector<ImgPeak> peaks;
+		bool useDeblendedBlobPars= false;
 
+		int status= aSource->FindBlendedComponents(	
+			deblendedBlobs,peaks,
+			fitOptions.peakZThrMin, fitOptions.nMaxComponents,
+			fitOptions.scaleMin,fitOptions.scaleMax,fitOptions.scaleStep,
+			fitOptions.minBlobSize,fitOptions.blobMapThrFactor,fitOptions.blobMapKernelFactor
+		);
+		if(status==0){
+			INFO_LOG("#"<<deblendedBlobs.size()<<" blended component found in source "<<aSource->GetName()<<" ...");
+			useDeblendedBlobPars= true;
+		}//close if
+		else{
+			WARN_LOG("Failed to find blended blobs in source "<<aSource->GetName()<<", will estimate component peaks only and assume beam pars ...");
+			status= aSource->FindComponentPeaks(
+				peaks,
+				fitOptions.peakZThrMin, fitOptions.nMaxComponents,
+				fitOptions.peakShiftTolerance,
+				kernels,fitOptions.peakKernelMultiplicityThr
+			);
+			if(status<0){
+				ERROR_LOG("Failed to find component peaks in source (name="<<aSource->GetName()<<")!");
+				return -1;
+			}
+		}//close else
+
+	
 		//NB: If only one peak found initialize fit component to the entire source
 		//otherwise use peaks found as centroid start values and beam as gaussian sigma pars
 		if(peaks.empty()){
@@ -314,52 +332,56 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 		}
 		if(peaks.size()==1){
 			fitPars_start.push_back( std::vector<double>() );
-			/*
-			fitPars_start[0].push_back(Smax);
-			fitPars_start[0].push_back(meanX);
-			fitPars_start[0].push_back(meanY);
-			fitPars_start[0].push_back(sigmaX);
-			fitPars_start[0].push_back(sigmaY);
-			fitPars_start[0].push_back(theta);
-			*/
+			
 			fitPars_start[0].push_back(Smax*1.e+3);//converted in mJy
 			fitPars_start[0].push_back(meanX-m_sourceX0);//normalized to centroid
 			fitPars_start[0].push_back(meanY-m_sourceY0);//normalized to centroid
 			fitPars_start[0].push_back(sigmaX);
 			fitPars_start[0].push_back(sigmaY);
 			fitPars_start[0].push_back(theta*TMath::DegToRad());//converted to rad
-			//fitPars_start[0].push_back(theta);//converted to rad
+			
 		}
 		else{
 			for(size_t i=0;i<peaks.size();i++){
-				double x= peaks[i].X();
-				double y= peaks[i].Y();
+				double x= peaks[i].x;
+				double y= peaks[i].y;
+				/*
 				long int gbin= m_fluxMapHisto->FindBin(x,y);
 				if(m_fluxMapHisto->IsBinOverflow(gbin) || m_fluxMapHisto->IsBinUnderflow(gbin)){
 					WARN_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
 					return -1;
 				}
 				double Speak= m_fluxMapHisto->GetBinContent(gbin);
+				*/
+				double Speak= peaks[i].S;
 				double sigmaX= fitOptions.bmaj/GausSigma2FWHM;
 				double sigmaY= fitOptions.bmin/GausSigma2FWHM;
 				double theta= fitOptions.bpa;
+					
+				if(useDeblendedBlobPars && deblendedBlobs[i]){
+					INFO_LOG("Computing pars of blended component no. "<<i+1<<" for source "<<aSource->GetName()<<" ...");
+					double sigmaX_sample_blended= 0;
+					double sigmaY_sample_blended= 0;
+					double covXY_sample_blended= 0;
+					if(deblendedBlobs[i]->GetSampleStdDev(sigmaX_sample_blended,sigmaY_sample_blended,covXY_sample_blended)==0){
+						sigmaX= sigmaX_sample_blended;
+						sigmaY= sigmaY_sample_blended;
+						theta= StatsUtils::GetGaus2DThetaPar(sigmaX_sample_blended,sigmaY_sample_blended,covXY_sample_blended);		
+						StatsUtils::GetEllipseParsFromCovMatrix(sigmaX,sigmaY,theta,sigmaX_sample_blended,sigmaY_sample_blended,covXY_sample_blended);
+					}
+					else{
+						WARN_LOG("Failed to stddev pars of blended component no. "<<i+1<<" for source "<<aSource->GetName()<<", will use beam info...");
+					}
+				}//close if use deblended blob pars
 
 				fitPars_start.push_back( std::vector<double>() );
-				/*
-				fitPars_start[i].push_back(Speak);
-				fitPars_start[i].push_back(x);
-				fitPars_start[i].push_back(y);
-				fitPars_start[i].push_back(sigmaX);
-				fitPars_start[i].push_back(sigmaY);
-				fitPars_start[i].push_back(theta);
-				*/
 				fitPars_start[i].push_back(Speak*1.e+3);//converted in mJy
 				fitPars_start[i].push_back(x-m_sourceX0);//normalized to centroid
 				fitPars_start[i].push_back(y-m_sourceY0);//normalized to centroid
 				fitPars_start[i].push_back(sigmaX);
 				fitPars_start[i].push_back(sigmaY);
 				fitPars_start[i].push_back(theta*TMath::DegToRad());//converted to rad
-				//fitPars_start[i].push_back(theta);//converted to rad
+				
 			}//end loop peaks
 		}//close else
 		
@@ -435,7 +457,8 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 			StatsUtils::GetEllipseParsFromCovMatrix(sigmaX,sigmaY,theta,sigmaX_sample,sigmaY_sample,covXY_sample);
 
 			//Estimate number of components from detected peaks
-			std::vector<TVector2> peaks;
+			//std::vector<TVector2> peaks;
+			std::vector<ImgPeak> peaks;
 			int status= nestedSource->FindComponentPeaks(
 				peaks,
 				fitOptions.peakZThrMin, fitOptions.nMaxComponents,
@@ -476,8 +499,10 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 			else{
 				//Loop over peaks and add component
 				for(size_t j=0;j<peaks.size();j++){
-					double x= peaks[j].X();
-					double y= peaks[j].Y();
+					//double x= peaks[j].X();
+					//double y= peaks[j].Y();
+					double x= peaks[j].x;
+					double y= peaks[j].y;
 					long int gbin= m_fluxMapHisto->FindBin(x,y);
 					if(m_fluxMapHisto->IsBinOverflow(gbin) || m_fluxMapHisto->IsBinUnderflow(gbin)){
 						WARN_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
@@ -1329,15 +1354,23 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	//If any pars is at limit try to release it and fit again
 	bool stopFit= false;
 	int fitStatus= 0;	
-	int niters_fit= 0;
-	int niters_fit_max= 1000;
+	long int niters_fit= 0;
+	long int niters_fit_max= fitOptions.fitNRetries;
 	std::string defaultMinimizer= "MINIMIZE";//"MIGRAD"
 	std::string minimizer= defaultMinimizer;
 	std::string fallbackMinimizer= "SIMPLEX";
 	std::string finalMinimizer= "HESS";
+	if(fitOptions.fitFinalMinimizer==eHESS) finalMinimizer= "HESS";
+	else if(fitOptions.fitFinalMinimizer==eMINOS) finalMinimizer= "MINOS";
+	else {
+		WARN_LOG("Invalid or redundant final minimizer step selected ("<<fitOptions.fitFinalMinimizer<<"), selected "<<finalMinimizer<<" by default (hint: you should choose HESS or MINOS)");
+	}
+	
+
+	INFO_LOG("Start fit procedure with minimizer "<<minimizer<<" (final minimizer="<<finalMinimizer<<", nretries="<<niters_fit_max<<")");
 	while(!stopFit){
 		//Perform minimization
-		INFO_LOG("Fitting source "<<aSource->GetName()<<" (#"<<niters_fit<<" iter cycle)...");
+		INFO_LOG("Fitting source "<<aSource->GetName()<<" (#"<<niters_fit<<" iter cycle, minimizer="<<minimizer<<")...");
 		fitStatus= minuit->ExecuteCommand(minimizer.c_str(),arglist,2);
 		bool fitConverged= (fitStatus==0);
 			
@@ -1367,7 +1400,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 					INFO_LOG("Fit converged without parameters at limits but with a simpler minimizer, switch back to default minimizer and fit again...");
 					minimizer= defaultMinimizer;
 				}
-				else if(minimizer==defaultMinimizer){//Run another fit iteration with HESS for better error estimate
+				else if(minimizer==defaultMinimizer && fitOptions.fitDoFinalMinimizerStep){//Run another fit iteration with HESS/MINOS for better error estimate
 					INFO_LOG("Fit converged without parameters at limits, switching to final minimizer for better error estimation and fit again...");
 					minimizer= finalMinimizer;
 				}
@@ -1402,7 +1435,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 			}//end loop pars
 		}//close if
 
-		if(niters_fit>niters_fit_max) {	
+		if(niters_fit>niters_fit_max || !fitOptions.fitImproveConvergence) {	
 			WARN_LOG("Maximum number of fitting cycles reached ("<<niters_fit_max<<"), will stop fitting!");
 			break;
 		}
@@ -1410,14 +1443,16 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 			
 	}//end loop fit
 
-	INFO_LOG("SOurce fit ended with status code "<<m_fitStatus<<" ...");
+	INFO_LOG("Source fit ended with status code "<<m_fitStatus<<" ...");
 
 	//==============================================
 	//==             FIT RESULTS
 	//==============================================
 	
-	//Retrieve covariance matrix
+	//Retrieve covariance matrix and print its eigenvalues
 	double* errMatrixValues= minuit->GetCovarianceMatrix();
+	minuit->ExecuteCommand("SHOw COVar",arglist,2);
+	minuit->ExecuteCommand("SHOw EIGenvalues",arglist,2);
 
 	//Retrieve fitted component parameters
 	m_sourceFitPars.SetNComponents(m_NFitComponents);
@@ -1508,13 +1543,15 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
   int nvpar, nparx;
   minuit->GetStats(Chi2,edm,errdef,nvpar,nparx);
 	int NFreePars= nvpar;
+	int NPars= nparx;
 	int NFittedBins= (int)(m_fitData.size());
 	double NDF= NFittedBins-NFreePars;
 
-	INFO_LOG("Source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") fit info: status="<<fitStatus<<" fitterStatus="<<m_fitStatus<<" (hasParsAtLimits? "<<hasParsAtLimits<<"), NDF="<<NDF<<", Chi2="<<Chi2<<", NFreePars="<<NFreePars<<" NFittedBins="<<NFittedBins);
+	INFO_LOG("Source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") fit info: status="<<fitStatus<<" fitterStatus="<<m_fitStatus<<" (hasParsAtLimits? "<<hasParsAtLimits<<"), NDF="<<NDF<<", Chi2="<<Chi2<<", NPars="<<NPars<<", NFreePars="<<NFreePars<<" NFittedBins="<<NFittedBins);
 
 	m_sourceFitPars.SetChi2(Chi2);
 	m_sourceFitPars.SetNDF(NDF);
+	m_sourceFitPars.SetNPars(NPars);
 	m_sourceFitPars.SetNFreePars(NFreePars);
 	m_sourceFitPars.SetNFitPoints(NFittedBins);
 	m_sourceFitPars.SetStatus(m_fitStatus);
@@ -1524,8 +1561,21 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	//==============================================
 	//==       FIT COVARIANCE & DERIVATIVE MATRIX
 	//==============================================
+	//NB: Check for NAN values in covariance matrix. Replace with 0 (TO BE INVESTIGATED)
+	//for(int i=0;i<NFreePars*NFreePars;i++){
+	for(int i=0;i<NPars*NPars;i++){
+		if(std::isnan(errMatrixValues[i])){
+			errMatrixValues[i]= 0.;
+		}
+	}
+	for(int i=0;i<NFreePars;i++){
+		INFO_LOG("Par no. "<<i<<" variance="<<minuit->GetCovarianceMatrixElement(i,i));
+	}
+	
+
 	//Set covariance matrix
-	if(m_sourceFitPars.SetCovarianceMatrix(errMatrixValues,NFreePars)<0){
+	//if(m_sourceFitPars.SetCovarianceMatrix(errMatrixValues,NFreePars)<0){
+	if(m_sourceFitPars.SetCovarianceMatrix(errMatrixValues,NPars)<0){
 		WARN_LOG("Failed to set covariance matrix (cannot retrieve it from fitter or array size issue), not able to compute flux density errors later!");
 	}
 	else{
