@@ -1025,6 +1025,7 @@ generate_config(){
 		echo '//=================================='
 		echo "fitSources = $FIT_SOURCES                             | Deblend point-like sources with multi-component gaus fit (T/F)"
 		echo "nBeamsMaxToFit = $FIT_MAX_NBEAMS							 				| Maximum number of beams in compact source for fitting (if above thr fitting not performed)"
+		echo "fitUseNestedAsComponents = false                      | If true use nested sources (if any) to estimate fitted components, otherwise estimate blended blobs (default=false)"
 		echo "fitMaxNComponents = $FIT_MAX_COMPONENTS               | Maximum number of components fitted in a blob"
 		echo "fitWithCentroidLimits = $FIT_WITH_POS_LIMITS          | Use limits when fitting gaussian centroid (T/F)"
 		echo "fitWithBkgLimits = $FIT_WITH_BKG_LIMITS			          | Use limits when fitting bkg offset (T/F)"
