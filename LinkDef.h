@@ -17,6 +17,8 @@
 #pragma link C++ class vector<Caesar::Image>+;
 #pragma link C++ class vector<Caesar::Image*>+;
 #pragma link C++ class Caesar::ImgRange+;
+#pragma link C++ class Caesar::ImgPeak+;
+#pragma link C++ class Caesar::ImgBkgPars+;
 //================
 
 //== UTILS CLASSES ==
