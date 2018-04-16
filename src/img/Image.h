@@ -83,6 +83,134 @@ namespace cv {
 
 namespace Caesar{
 
+//Forward declarations
+class Source;
+
+
+class ImgBkgPars : public TObject {
+
+	public:
+		/** 
+		\brief Constructor
+ 		*/
+		ImgBkgPars(){
+			Init();
+		}
+
+		/** 
+		\brief Destructor
+ 		*/
+		virtual ~ImgBkgPars(){}
+
+	public:
+
+		/** 
+		\brief Turn on/off local bkg
+ 		*/
+		void SetLocalBkg(bool choice){computeLocalBkg=choice;}
+
+		/** 
+		\brief Turn on/off local bkg
+ 		*/
+		void SetDataRange(double minVal=-std::numeric_limits<double>::infinity(),double maxVal=std::numeric_limits<double>::infinity()){
+			useRange= true;
+			minThr= minVal;
+			maxThr= maxVal;
+		}
+
+	protected:
+		/** 
+		\brief Initialize pars
+ 		*/
+		void Init(){
+			estimator= eMedianBkg;
+			computeLocalBkg= true;
+			boxSizeX= 100;
+			boxSizeY= 100; 
+			gridStepSizeX= 10;
+			gridStepSizeY= 10; 
+			use2ndPass= true;
+			skipOutliers= false;
+			seedThr= 5;
+			mergeThr= 2.6;
+			minPixels= 10;
+			useRange= false;
+			minThr= -std::numeric_limits<double>::infinity();
+			maxThr= std::numeric_limits<double>::infinity();
+		}
+
+	public:
+		//- Bkg parameters
+		int estimator;
+		bool computeLocalBkg;
+		int boxSizeX; 
+		int boxSizeY;
+		double gridStepSizeX;
+		double gridStepSizeY;
+		bool use2ndPass;
+		bool skipOutliers;
+		double seedThr;
+		double mergeThr;
+		int minPixels;
+		bool useRange;
+		double minThr;
+		double maxThr;
+
+	ClassDef(ImgBkgPars,1)
+
+};//close ImgBkgPars()
+#ifdef __MAKECINT__
+#pragma link C++ class ImgBkgPars+;
+#endif
+
+class ImgPeak : public TObject {
+
+	public:
+		/** 
+		\brief Constructor
+ 		*/
+		ImgPeak(){
+			Init();
+		}
+		
+		/** 
+		\brief Parametric Constructor
+ 		*/
+		ImgPeak(double _x,double _y,double _S,long int _ix,long int _iy)
+			: x(_x), y(_y), S(_S), ix(_ix), iy(_iy)
+		{}
+
+		/** 
+		\brief Destructor
+ 		*/
+		virtual ~ImgPeak(){}
+
+	protected:
+		/** 
+		\brief Initialize pars
+ 		*/
+		void Init(){
+			x= 0;
+			y= 0;
+			S= 0;
+			ix= -1;
+			iy= -1;	
+		}
+
+	public:
+		double x;
+		double y;	
+		double S;
+		long int ix;
+		long int iy;
+
+	ClassDef(ImgPeak,1)
+
+};//close ImgPeak()
+
+#ifdef __MAKECINT__
+#pragma link C++ class ImgPeak+;
+#endif
 
 class ImgRange : public TObject {
 
@@ -629,6 +757,13 @@ class Image : public TNamed {
 		*/
 		Image* GetTile(long int ix_min,long int ix_max,long int iy_min,long int iy_max,std::string imgname="");
 		/**
+		* \brief Get tile pixels
+		*/
+		//int GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false);
+		int GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity());
+
+		
+		/**
 		* \brief Read image from an image file
 		*/
 		int ReadFile(std::string filename,bool invert=false);
@@ -741,9 +876,14 @@ class Image : public TNamed {
 		//==       BKG METHODS
 		//================================
 		/**
-		* \brief Compute local bkg
+		* \brief Compute image bkg
 		*/
 		ImgBkgData* ComputeBkg(int estimator=eMedianBkg,bool computeLocalBkg=true,int boxSizeX=100,int boxSizeY=100, double gridStepSizeX=10, double gridStepSizeY=10, bool use2ndPass=true,bool skipOutliers=false,double seedThr=5,double mergeThr=2.6,int minPixels=10,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity());
+		/**
+		* \brief Compute image bkg (version with bkg parameter class argument)
+		*/
+		ImgBkgData* ComputeBkg(ImgBkgPars pars);
+
 		/**
 		* \brief Compute significance map
 		*/
@@ -812,6 +952,11 @@ class Image : public TNamed {
 		int FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkgData* bkgData=0,int minPixels=5,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5,long int nPixThrToSearchNested=0);
 
 		/**
+		* \brief Find blended sources
+		*/
+	  int FindBlendedSources(std::vector<Source*>& deblendedSources,std::vector<ImgPeak>& deblendedPeaks,double sigmaMin,double sigmaMax,double sigmaStep,int minBlobSize=5,double thrFactor=0,int kernelFactor=1);
+
+		/**
 		* \brief Find extended sources with ChanVese method
 		*/
 		int FindExtendedSource_CV(std::vector<Source*>&,Image* initSegmImg=0,ImgBkgData* bkgData=0,int minPixels=10,bool findNegativeExcess=false,double dt=0.1,double h=1,double lambda1=1.0,double lambda2=2.0,double mu=0.5,double nu=0,double p=1,int niters=1000);
@@ -849,7 +994,8 @@ class Image : public TNamed {
 		/**
 		* \brief Find image peaks
 		*/
-		int FindPeaks(std::vector<TVector2>& peakPoints,std::vector<int> kernelSizes={3,5,7},int peakShiftTolerance=1,bool skipBorders=true,int multiplicityThr=-1);
+		//int FindPeaks(std::vector<TVector2>& peakPoints,std::vector<int> kernelSizes={3,5,7},int peakShiftTolerance=1,bool skipBorders=true,int multiplicityThr=-1);
+		int FindPeaks(std::vector<ImgPeak>& peakPoints,std::vector<int> kernelSizes={3,5,7},int peakShiftTolerance=1,bool skipBorders=true,int multiplicityThr=-1);
 
 		/**
 		* \brief Find graph with image peaks
@@ -926,6 +1072,39 @@ class Image : public TNamed {
 		*/
 		Image* GetBeamConvolvedImage(double bmaj,double bmin,double bpa,int nsigmas=5,double scale=1);	
 
+		/**
+		* \brief Get dilated filtered image
+		*/
+		Image* GetMorphDilatedImage(int kernSize=3,int niters=1);
+		/**
+		* \brief Get eroded filtered image
+		*/
+		Image* GetMorphErodedImage(int kernSize=3,int niters=1);
+		/**
+		* \brief Get tophat filtered image
+		*/
+		Image* GetMorphTopHatImage(int kernSize=3,int niters=1);
+		/**
+		* \brief Get morph closing filtered image
+		*/
+		Image* GetMorphClosingImage(int kernSize=3,int niters=1);
+		/**
+		* \brief Get morph opening filtered image
+		*/
+		Image* GetMorphOpeningImage(int kernSize=3,int niters=1);
+		/**
+		* \brief Get morph gradient filtered image
+		*/
+		Image* GetMorphGradientImage(int kernSize=3,int niters=1);
+		/**
+		* \brief Get morph reco filtered image
+		*/
+		Image* GetMorphRecoImage(double baseline,int kernSize=3,double tol=1.e-6);
+		/**
+		* \brief Get H-dome image
+		*/
+		Image* GetHDomeImage(double baseline,int kernSize=3);
+		
 		//=========================================
 		//==   CONVERT METHODS
 		//=========================================
@@ -948,7 +1127,10 @@ class Image : public TNamed {
 		*/
 		TMatrixD* GetMatrix();
 		
-
+		/**
+		* \brief Get numpy pixel array string 
+		*/
+		std::string GetPixelNumpyArrayStr();
 		
 		//==================================
 		//==    DRAW METHODS             ===
@@ -1008,12 +1190,6 @@ class Image : public TNamed {
 			m_MetaData= 0;
 			m_HasMetaData= false;
 		}
-
-		/**
-		* \brief Get tile pixels
-		*/
-		//int GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false);
-		int GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity());
 
 		
 	protected:

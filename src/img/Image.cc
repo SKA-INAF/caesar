@@ -114,6 +114,9 @@ using namespace std;
 
 ClassImp(Caesar::Image)
 ClassImp(Caesar::ImgRange)
+ClassImp(Caesar::ImgPeak)
+ClassImp(Caesar::ImgBkgPars)
+
 
 namespace Caesar {
 
@@ -1453,6 +1456,26 @@ ImgBkgData* Image::ComputeBkg(int estimator,bool computeLocalBkg,int boxSizeX,in
 }//close ComputeBkg()
 
 
+ImgBkgData* Image::ComputeBkg(ImgBkgPars pars){
+	
+	//## Compute bkg data
+	DEBUG_LOG("Using grid bkg method...");
+	ImgBkgData* bkgData= BkgFinder::FindBkg(
+		this,pars.estimator,
+		pars.computeLocalBkg, pars.boxSizeX, pars.boxSizeY, pars.gridStepSizeX, pars.gridStepSizeY,
+		pars.use2ndPass,
+		pars.skipOutliers,pars.seedThr,pars.mergeThr,pars.minPixels,
+		pars.useRange,pars.minThr,pars.maxThr
+	);	
+	if(!bkgData){
+		ERROR_LOG("Computation of local background failed for this image!");
+		return 0;
+	}
+	return bkgData;
+	
+}//close ComputeBkg()
+
+
 Image* Image::GetSignificanceMap(ImgBkgData* bkgData,bool useLocalBkg){
 
 	//Check image
@@ -2092,6 +2115,27 @@ int Image::FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkg
 }//close FindNestedSources()
 
 
+int Image::FindBlendedSources(std::vector<Source*>& deblendedSources,std::vector<ImgPeak>& deblendedPeaks,double sigmaMin,double sigmaMax,double sigmaStep,int minBlobSize,double thrFactor,int kernelFactor)
+{
+	//Find blended sources
+	int status= BlobFinder::FindBlendedBlobs(
+		deblendedSources,deblendedPeaks,
+		this,
+		sigmaMin,sigmaMax,sigmaStep,
+		minBlobSize,
+		thrFactor,kernelFactor
+	);
+
+	if(status<0){
+		ERROR_LOG("Failed to find blended sources inside image!");
+		return -1;
+	}
+
+	return 0;
+
+}//close FindBlendedSources()
+
+
 int Image::FindExtendedSource_CV(std::vector<Source*>& sources,Image* initSegmImg,ImgBkgData* bkgData,int minPixels,bool findNegativeExcess,double dt,double h,double lambda1,double lambda2,double mu,double nu,double p,int niters){
 
 	//## Compute segmented image
@@ -2614,8 +2658,15 @@ Image* Image::GetMultiResoSaliencyMap(int resoMin,int resoMax,int resoStep,doubl
 
 }//close GetMultiResoSaliencyMap()
 
-
+/*
 int Image::FindPeaks(std::vector<TVector2>& peakPoints,std::vector<int> kernelSizes, int peakShiftTolerance,bool skipBorders,int multiplicityThr)
+{
+	return MorphFilter::FindPeaks(peakPoints,this,kernelSizes,peakShiftTolerance,skipBorders,multiplicityThr);
+
+}//close FindPeaks()
+*/
+
+int Image::FindPeaks(std::vector<ImgPeak>& peakPoints,std::vector<int> kernelSizes, int peakShiftTolerance,bool skipBorders,int multiplicityThr)
 {
 	return MorphFilter::FindPeaks(peakPoints,this,kernelSizes,peakShiftTolerance,skipBorders,multiplicityThr);
 
@@ -2624,7 +2675,8 @@ int Image::FindPeaks(std::vector<TVector2>& peakPoints,std::vector<int> kernelSi
 TGraph* Image::ComputePeakGraph(std::vector<int> kernelSizes,int peakShiftTolerance,bool skipBorders,int multiplicityThr)
 {
 	//Find peaks in image
-	std::vector<TVector2> peakPoints;
+	//std::vector<TVector2> peakPoints;
+	std::vector<ImgPeak> peakPoints;
 	if(this->FindPeaks(peakPoints,kernelSizes,peakShiftTolerance,skipBorders,multiplicityThr)<0){
 		ERROR_LOG("Failed to find peaks in image!");
 		return nullptr;
@@ -2633,13 +2685,61 @@ TGraph* Image::ComputePeakGraph(std::vector<int> kernelSizes,int peakShiftTolera
 	//Fill peak graph
 	TGraph* peakGraph= new TGraph(peakPoints.size());
 	for(size_t i=0;i<peakPoints.size();i++){
-		peakGraph->SetPoint(i,peakPoints[i].X(),peakPoints[i].Y());
+		//peakGraph->SetPoint(i,peakPoints[i].X(),peakPoints[i].Y());
+		peakGraph->SetPoint(i,peakPoints[i].x,peakPoints[i].y);
 	}
 
 	return peakGraph;
 
 }//close ComputePeakGraph()
 
+Image* Image::GetMorphDilatedImage(int kernSize,int niters)
+{
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_DILATION,kernSize,eMORPH_RECT,niters);
+
+}//close GetMorphDilatedImage()
+
+Image* Image::GetMorphErodedImage(int kernSize,int niters)
+{
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_EROSION,kernSize,eMORPH_RECT,niters);
+
+}//close GetMorphErodedImage()
+
+Image* Image::GetMorphClosingImage(int kernSize,int niters)
+{
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_CLOSING,kernSize,eMORPH_RECT,niters);
+
+}//close GetMorphClosingImage()
+
+Image* Image::GetMorphOpeningImage(int kernSize,int niters)
+{
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_OPENING,kernSize,eMORPH_RECT,niters);
+
+}//close GetMorphOpeningImage()
+
+Image* Image::GetMorphTopHatImage(int kernSize,int niters)
+{
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_TOPHAT,kernSize,eMORPH_RECT,niters);
+
+}//close GetMorphTopHatImage()
+
+Image* Image::GetMorphGradientImage(int kernSize,int niters)
+{
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_GRADIENT,kernSize,eMORPH_RECT,niters);
+
+}//close GetMorphGradientImage()
+
+Image* Image::GetMorphRecoImage(double baseline,int kernSize,double tol)
+{
+	return MorphFilter::ComputeMorphRecoFilter(this,baseline,kernSize,tol);
+
+}//close GetMorphRecoImage()
+
+Image* Image::GetHDomeImage(double baseline,int kernSize)
+{
+	return MorphFilter::ComputeHDomeFilter(this,baseline,kernSize);
+
+}//close GetHDomeImage()
 
 int Image::Add(Image* img,double c,bool computeStats)
 {
@@ -2913,6 +3013,11 @@ double Image::FindValleyThreshold(int nbins,bool smooth){
 
 	//## Get pixel histo (invert to find peaks corresponding to valley in original histo)
 	TH1D* histo= this->GetPixelHisto(nbins);
+	if(!histo){
+		ERROR_LOG("Failed to get pixel histo (hint: check if image stats were computed)!");
+		return 0;
+	}
+
 	if(smooth) histo->Smooth(1);
 	histo->Scale(-1);
 	double sMin= histo->GetMinimum();
@@ -3270,7 +3375,52 @@ TMatrixD* Image::GetMatrix(){
 
 	return M;
 
-}//close Img::GetMatrix()
+}//close Image::GetMatrix()
+
+
+std::string Image::GetPixelNumpyArrayStr()
+{
+	std::stringstream ss;
+	ss<<"[";
+
+	long int nRows = m_Ny;
+  long int nCols = m_Nx;
+
+	for(long int i=0;i<nRows;++i) {		
+		long int rowId= i;
+		long int iy= m_Ny-1-rowId;
+  	
+		ss<<"[";
+    for (long int j=0;j<nCols;++j){
+			int colId= j;
+			int ix= colId;
+			double w= this->GetPixelValue(ix,iy);
+    	if(j==m_Ny-1) ss<<w;
+			else ss<<w<<",";
+    }//end loop cols
+		if(i==m_Nx-1) ss<<"]";
+		else ss<<"],";
+  }//end loop rows
+
+	/*
+	for(long int i=0;i<m_Nx;i++){//rows
+		ss<<"[";
+		for(long int j=0;j<m_Ny;j++){//columns
+			double w= this->GetPixelValue(i,j);
+			long int rowId= j;
+			long int colId= i;
+			if(j==m_Ny-1) ss<<w;
+			else ss<<w<<",";
+		}//end loop cols
+		if(i==m_Nx-1) ss<<"]";
+		else ss<<"],";
+	}//end loop rows
+	*/
+	ss<<"]";
+
+	return ss.str();
+
+}//close GetPixelNumpyArrayStr()
 
 cv::Mat Image::GetOpenCVMat(std::string encoding){
 
@@ -3281,6 +3431,7 @@ cv::Mat Image::GetOpenCVMat(std::string encoding){
 	cv::Mat mat;
 	if(encoding=="64") mat= cv::Mat::zeros(Ny,Nx,CV_64FC1);
 	else if(encoding=="32") mat= cv::Mat::zeros(Ny,Nx,CV_32FC1);
+	else if(encoding=="32I") mat= cv::Mat::zeros(Ny,Nx,CV_32SC1);
 	else{
 		WARN_LOG("Invalid encoding selected, using default 64bit encoding");
 		mat= cv::Mat::zeros(Ny,Nx,CV_64FC1);
@@ -3290,20 +3441,70 @@ cv::Mat Image::GetOpenCVMat(std::string encoding){
 	long int nRows = mat.rows;
   long int nCols = mat.cols;
 	
-	#ifdef OPENMP_ENABLED
-	#pragma omp parallel for
-	#endif
-	for(long int i=0;i<nRows;++i) {
-		long int rowId= i;
-		long int iy= Ny-1-rowId;
-  	double* p = mat.ptr<double>(i);
-    for (long int j=0;j<nCols;++j){
-			int colId= j;
-			int ix= colId;
-			double w= this->GetPixelValue(ix,iy);
-    	p[j] = w;
-    }
-  }
+	if(encoding=="64"){
+		#ifdef OPENMP_ENABLED
+		#pragma omp parallel for
+		#endif
+		for(long int i=0;i<nRows;++i) {
+			long int rowId= i;
+			long int iy= Ny-1-rowId;
+  		double* p = mat.ptr<double>(i);
+    	for (long int j=0;j<nCols;++j){
+				int colId= j;
+				int ix= colId;
+				double w= this->GetPixelValue(ix,iy);
+    		p[j] = w;
+    	}//end loop cols
+  	}//end loop rows
+	}//close if
+	else if(encoding=="32"){
+		#ifdef OPENMP_ENABLED
+		#pragma omp parallel for
+		#endif
+		for(long int i=0;i<nRows;++i) {
+			long int rowId= i;
+			long int iy= Ny-1-rowId;
+  		float* p = mat.ptr<float>(i);
+    	for (long int j=0;j<nCols;++j){
+				int colId= j;
+				int ix= colId;
+				float w= this->GetPixelValue(ix,iy);
+    		p[j] = w;
+    	}//end loop cols
+  	}//end loop rows
+	}//close else if
+	else if(encoding=="32I"){
+		#ifdef OPENMP_ENABLED
+		#pragma omp parallel for
+		#endif
+		for(long int i=0;i<nRows;++i) {
+			long int rowId= i;
+			long int iy= Ny-1-rowId;
+  		int* p = mat.ptr<int>(i);
+    	for (long int j=0;j<nCols;++j){
+				int colId= j;
+				int ix= colId;
+				int w= static_cast<int>(this->GetPixelValue(ix,iy));
+    		p[j] = w;
+    	}//end loop cols
+  	}//end loop rows
+	}//close else if
+	else{
+		#ifdef OPENMP_ENABLED
+		#pragma omp parallel for
+		#endif
+		for(long int i=0;i<nRows;++i) {
+			long int rowId= i;
+			long int iy= Ny-1-rowId;
+  		double* p = mat.ptr<double>(i);
+    	for (long int j=0;j<nCols;++j){
+				int colId= j;
+				int ix= colId;
+				double w= this->GetPixelValue(ix,iy);
+    		p[j] = w;
+    	}//end loop cols
+  	}//end loop rows
+	}//close else
 
 	return mat;
 
