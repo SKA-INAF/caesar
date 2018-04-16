@@ -66,6 +66,8 @@ Image* LoGFilter::GetLoGFilter(Image* image){
 		ERROR_LOG("Null prt to given image!");
 		return 0;
 	}
+	long int Nx= image->GetNx();
+	long int Ny= image->GetNy();
 
 	//## Init kernels
 	cv::Mat kernel= BuildStandardKernel();
@@ -77,10 +79,33 @@ Image* LoGFilter::GetLoGFilter(Image* image){
 	cv::Mat filteredMat= Caesar::MathUtils::GetConvolution(I,kernel);	
 
 	//## Convert OpenCV mat list to Img
-	TString imgName= Form("%s_NormLoG",image->GetName().c_str());
+	TString imgName= Form("%s_LoG",image->GetName().c_str());
 	Image* filteredImg= image->GetCloned(std::string(imgName),true,true);
 	filteredImg->Reset();
 	filteredImg->FillFromMat(filteredMat);
+
+	//## If original image has empty pixels reproduce them in filtered image
+	int recomputeStats= 0;	
+	#ifdef OPENMP_ENABLED
+	#pragma omp parallel reduction(+: recomputeStats)
+	#pragma omp for collapse(2) 
+	#endif
+	for(long int i=0;i<Nx;i++) {
+			for(long int j=0;j<Ny;j++){
+				double binContent= image->GetPixelValue(i,j);
+				if(!std::isnormal(binContent)){
+					filteredImg->SetPixelValue(i,j,0);
+					recomputeStats++;
+				}
+    	}//end loop cols
+  }//end loop rows
+	
+	
+
+	//## Recompute stats if requested
+	if(recomputeStats>0){
+		filteredImg->ComputeStats(true,true);
+	}
 
 	return filteredImg;
 
@@ -94,6 +119,8 @@ Image* LoGFilter::GetNormLoGFilter(Image* image,int size,double scale){
 		ERROR_LOG("Null prt to given image!");
 		return 0;
 	}
+	long int Nx= image->GetNx();
+	long int Ny= image->GetNy();
 
 	//## Init kernels
 	cv::Mat kernel= BuildKernel(size,scale);
@@ -109,6 +136,27 @@ Image* LoGFilter::GetNormLoGFilter(Image* image,int size,double scale){
 	Image* filteredImg= image->GetCloned(std::string(imgName),true,true);
 	filteredImg->Reset();
 	filteredImg->FillFromMat(filteredMat);
+
+	//## If original image has empty pixels reproduce them in filtered image
+	int recomputeStats= 0;
+	#ifdef OPENMP_ENABLED
+	#pragma omp parallel reduction(+: recomputeStats)
+	#pragma omp for collapse(2) 
+	#endif
+	for(long int i=0;i<Nx;i++) {
+		for(long int j=0;j<Ny;j++){
+			double binContent= image->GetPixelValue(i,j);
+			if(!std::isnormal(binContent)){
+				filteredImg->SetPixelValue(i,j,0);
+				recomputeStats++;
+			}
+    }//end loop cols
+  }//end loop rows
+
+	//## Recompute stats if requested
+	if(recomputeStats>0){
+		filteredImg->ComputeStats(true,true);
+	}
 
 	return filteredImg;
 

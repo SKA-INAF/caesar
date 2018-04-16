@@ -28,6 +28,8 @@
 #ifndef _MORPH_FILTER_h
 #define _MORPH_FILTER_h 1
 
+#include <Consts.h>
+
 //ROOT
 #include <TObject.h>
 #include <TVector2.h>
@@ -58,6 +60,8 @@ class Source;
 class ImgBkgData;
 class Img;
 class Image;
+class ImgPeak;
+class Contour;
 
 class MorphFilter : public TObject {
 
@@ -78,9 +82,46 @@ class MorphFilter : public TObject {
 	public:
 			
 		/**
+		* \brief Compute Watershed filter
+		*/
+		static Image* ComputeWatershedFilter(Image* img,Image* markerImg);
+	
+		/**
+		* \brief Compute Watershed filter map and get contours 
+		*/
+		static Image* ComputeWatershedFilter(std::vector<Contour*>& contours,Image* img,Image* markerImg);
+
+		/**
+		* \brief Compute H-dome filter
+		*/
+		static Image* ComputeHDomeFilter(Image* img,double baseline,int kernSize=3);
+
+		/**
+		* \brief Compute H-dome filter
+		*/
+		//static Image* ComputeHDomeFilter(Image* img,int kernSize=3);
+
+		/**
+		* \brief Apply image reconstruction filter to image and return filtered image
+		*/
+		static Image* ComputeMorphRecoFilter(Image* img,double baseline,int kernSize=3,double tol=1.e-6);
+
+		/**
+		* \brief Apply morph filter to image and return filtered image
+		*/
+		static Image* ComputeMorphRecoFilter(Image* img,Image* marker_img,int kernSize=3,double tol=1.e-6);
+
+		/**
+		* \brief Apply morph filter to image and return filtered image
+		*/
+		static Image* ComputeMorphFilter(Image* img,int morphOp,int kernSize=3,int structElementType=eMORPH_RECT,int niters=1);
+
+		/**
 		* \brief Find peaks in image by combining local peaks found with different dilation kernel sizes
 		*/
-		static int FindPeaks(std::vector<TVector2>& peakPoints,Image* img,std::vector<int> kernelSizes={3,5},int peakShiftTolerance=1,bool skipBorders=true,int peakKernelMultiplicityThr=-1);
+		//static int FindPeaks(std::vector<TVector2>& peakPoints,Image* img,std::vector<int> kernelSizes={3,5},int peakShiftTolerance=1,bool skipBorders=true,int peakKernelMultiplicityThr=-1);
+		
+		static int FindPeaks(std::vector<ImgPeak>& peakPoints,Image* img,std::vector<int> kernelSizes={3,5},int peakShiftTolerance=1,bool skipBorders=true,int peakKernelMultiplicityThr=-1);
 
 		/**
 		* \brief Dilate image with specified kernel

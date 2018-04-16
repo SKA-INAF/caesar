@@ -34,6 +34,7 @@
 #include <BkgData.h>
 #include <Logger.h>
 #include <Graph.h>
+#include <Contour.h>
 
 #include <rtnorm.h>
 
@@ -67,7 +68,458 @@ MorphFilter::~MorphFilter(){
 
 }//close destructor
 
+Image* MorphFilter::ComputeWatershedFilter(std::vector<Contour*>& contours,Image* img,Image* markerImg)
+{
+	//## Init
+	contours.clear();
 
+	//## Compute watershed filter map
+	Image* morphImg= ComputeWatershedFilter(img,markerImg);
+	if(!morphImg){
+		ERROR_LOG("Failed to compute Watershed filter map!");
+		return nullptr;
+	}
+
+	//## Get image data
+	long int Nx= img->GetNx();
+	long int Ny= img->GetNy();
+	double Xmin= img->GetXmin();
+	double Ymin= img->GetYmin();
+	
+	//## Fill binary map to compute contours
+	//cv::Mat mark = cv::Mat::zeros(markers.size(), CV_8UC1);
+ 	cv::Mat mark = cv::Mat::zeros(Ny,Nx,CV_8UC1);
+
+	for(long int j=0;j<Ny;j++){
+		long int rowId= Ny-1-j;
+		for(int i=0;i<Nx;i++){
+			long int colId= i;
+			double binContent= img->GetPixelValue(i,j);
+			if(binContent==0) continue;
+			double w= morphImg->GetPixelValue(i,j);
+			if(w>1) mark.at<uchar>(rowId, colId, 0) = 1;
+		}//end loop x
+	}//end loop y
+
+	//## Compute contours
+	std::vector<std::vector<cv::Point>> markerContours; // Vector for storing contour
+  std::vector<cv::Vec4i> hierarchy;
+	cv::findContours(mark, markerContours, hierarchy,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_NONE, cv::Point(0,0) );
+
+	Contour* aContour= 0;
+
+	for(size_t i=0; i<markerContours.size(); i++){ // iterate through each contour
+		int nContourPts= (int)markerContours[i].size();
+		if(nContourPts<=0) continue;
+
+		//Create and fill contour
+		aContour= new Contour;
+
+		for(int j=0;j<nContourPts;j++){
+			int contx= markerContours[i][j].x;
+			int conty= markerContours[i][j].y;
+			long int rowId= Ny-1-conty;
+			//long int colId= Nx-1-contx;
+			long int colId= contx;
+			long int x= colId + Xmin;
+			long int y= rowId + Ymin;
+
+			//double x= img->GetX(contx);
+			//double y= img->GetY(conty);
+			aContour->AddPoint(TVector2(x,y));
+		}//end loop points in contour
+		
+		//Compute contour parameters
+		if(aContour->ComputeParameters()<0){
+			WARN_LOG("One/more failures occurred while computing contour no. "<<i<<"!");
+		}
+
+		//Compute fitted ellipse
+		if(aContour->ComputeFittedEllipse()<0){
+			WARN_LOG("Ellipse fitting to contour no. "<<i<<" failed!");
+		}
+		
+		//Add contour to the list
+		contours.push_back(aContour);	
+
+	}//end loop contours
+
+	return morphImg;
+
+}//close ComputeWatershedFilter()
+
+
+Image* MorphFilter::ComputeWatershedFilter(Image* img,Image* markerImg)
+{
+	//Check input images
+	if(!img || !markerImg){
+		ERROR_LOG("Null ptr given to image and/or marker image!");
+		return nullptr;
+	}
+
+	//Check input image have same dimensions
+	long int Nx= img->GetNx();
+	long int Ny= img->GetNy();
+	long int Nx_marker= markerImg->GetNx();
+	long int Ny_marker= markerImg->GetNy();
+	if(Nx!=Nx_marker || Ny!=Ny_marker){
+		ERROR_LOG("Input image and given marker image have different dimensions!");
+		return nullptr;
+	}
+	double Xmin= img->GetXmin();
+	double Ymin= img->GetYmin();
+	
+	// Convert images to OpenCV format
+	cv::Mat mat= img->GetOpenCVMat("32");
+	cv::Mat mat_col;	
+	cv::Mat src;
+	cv::cvtColor(mat,mat_col,CV_GRAY2BGR);
+	mat_col.convertTo(src,CV_8UC3); 
+	
+	cv::Mat mat_markers = markerImg->GetOpenCVMat("32I");
+	cv::Mat markers;
+	mat_markers.convertTo(markers,CV_32SC1); 
+	long int nRows = mat.rows;
+  long int nCols = mat.cols;
+
+	// Perform the watershed algorithm
+	cv::watershed(src, markers);
+
+	// Create the result image
+	Image* morphImg= (Image*)img->GetCloned("",true,true);
+	morphImg->Reset();
+
+	for(long int j=0;j<Ny;j++){
+		long int rowId= Ny-1-j;
+		for(int i=0;i<Nx;i++){
+			long int colId= i;
+			double binContent= img->GetPixelValue(i,j);
+			if(binContent==0) continue;
+			int clusterId = markers.at<int>(rowId,colId);
+			if (clusterId>1) {
+				//morphImg->FillPixel(i,j,clusterId);
+				morphImg->FillPixel(i,j,1);
+			}
+			else{	
+				morphImg->FillPixel(i,j,0);
+			}
+		}//end loop x
+	}//end loop y
+
+	return morphImg;
+
+}//close ComputeWatershedFilter()
+
+
+Image* MorphFilter::ComputeHDomeFilter(Image* img,double baseline,int kernSize)
+{
+	//Compute image morph reconstruction
+	Image* morphRecoImg= ComputeMorphRecoFilter(img,baseline,kernSize);
+	if(!morphRecoImg){
+		ERROR_LOG("Failed to compute morph reco filter map!");
+		return nullptr;
+	}
+	
+	//Subtract morph reco from input map to get blob mask
+	Image* blobMask= (Image*)img->GetCloned("",true,true);
+	blobMask->Add(morphRecoImg,-1);
+
+	//Clear morphRecoImg
+	CodeUtils::DeletePtr<Image>(morphRecoImg);
+
+	return blobMask;
+
+}//close ComputeHDomeFilter()
+
+/*
+Image* MorphFilter::ComputeHDomeFilter(Image* img,int kernSize)
+{
+	//Check image
+	if(!img){
+		ERROR_LOG("Null ptr to input image given!");
+		return nullptr;
+	}
+
+	//Compute pixel histo image valley threshold
+	if(!img->HasStats()){
+		img->ComputeStats(true);
+	}
+	double Smin= img->GetMinimum();
+	double Smax= img->GetMaximum();
+	double valleyThr1D= img->FindValleyThreshold();
+
+	//Copy input image and invert it to find valleys
+	Image* tmpMap= (Image*)img->GetCloned("",true,true);
+	tmpMap->Scale(-1);
+
+	//Normalize image
+	int normmin= 1;
+	int normmax= 256;
+	bool skipEmptyBins= true;
+	Image* searchMap= tmpMap->GetNormalizedImage("LINEAR",normmin,normmax,skipEmptyBins);
+	
+	//Clear tmp map
+	CodeUtils::DeletePtr<Image>(tmpMap);
+
+	//Find valleys
+	std::vector<TVector2> valleyPoints;
+	int peakShiftTolerance= 2;
+	bool skipBorders= true;
+	int peakKernelMultiplicityThr= 1;
+	if(FindPeaks(valleyPoints,searchMap,{kernSize},peakShiftTolerance,skipBorders,peakKernelMultiplicityThr)<0){
+		WARN_LOG("Failed to find valleys in input map!");	
+		CodeUtils::DeletePtr<Image>(searchMap);
+		return nullptr;
+	}
+
+	//Clear search map
+	CodeUtils::DeletePtr<Image>(searchMap);
+
+	//Initialize baseline thr to 1D valley thr. If 2D valleys are found get the smaller one
+	double baseline= valleyThr1D;
+	if(valleyPoints.empty()){
+		WARN_LOG("No valley points found, setting baseline to 1D valley thr ("<<valleyThr1D<<") ...");
+	}
+	else{
+
+		//Get flux corresponding to each 2D valley point
+		std::vector<double> valleyThrList;
+		for(size_t i=0;i<valleyPoints.size();i++){
+			double x= valleyPoints[i].X();
+			double y= valleyPoints[i].Y();
+			long int gbin= img->FindBin(x,y);
+			if(gbin<0){
+				WARN_LOG("Failed to find gbin of valley point ("<<x<<","<<y<<"), this should not occur!");
+				return nullptr;
+			}
+			double S= img->GetBinContent(gbin);
+			if(std::isnormal(S) && S!=Smin){
+				valleyThrList.push_back(S);
+			}
+		}//end loop
+
+		if(!valleyThrList.empty()){
+			//Sort valley thr descending and set baseline thr to smaller value
+			std::sort(valleyThrList.begin(),valleyThrList.end());
+			baseline= valleyThrList[0];
+			INFO_LOG("Setting baseline to smaller valley point ("<<baseline<<") ...");
+		}
+		else{
+			WARN_LOG("No good valley points found, setting baseline to 1D valley thr ("<<valleyThr1D<<") ...");
+		}
+
+	}//close else
+
+	//Compute image morph reconstruction
+	Image* morphRecoImg= ComputeMorphRecoFilter(img,baseline,kernSize);
+	if(!morphRecoImg){
+		ERROR_LOG("Failed to compute morph reco filter map!");
+		return nullptr;
+	}
+	
+	//Subtract morph reco from input map to get blob mask
+	Image* blobMask= (Image*)img->GetCloned("",true,true);
+	blobMask->Add(morphRecoImg,-1);
+
+	//Clear morphRecoImg
+	CodeUtils::DeletePtr<Image>(morphRecoImg);
+
+	return blobMask;
+
+}//close ComputeHDomeFilter()
+*/
+
+Image* MorphFilter::ComputeMorphRecoFilter(Image* img,Image* markerImg,int kernSize,double tol)
+{
+	//Check input image
+	if(!img || !markerImg){
+		ERROR_LOG("Null ptr to input image given!");
+		return nullptr;
+	}
+
+	//Check input image have same dimensions
+	long int Nx= img->GetNx();
+	long int Ny= img->GetNy();
+	long int Nx_marker= markerImg->GetNx();
+	long int Ny_marker= markerImg->GetNy();
+	if(Nx!=Nx_marker || Ny!=Ny_marker){
+		ERROR_LOG("Input image and given marker image have different dimensions!");
+		return nullptr;
+	}
+	
+	//Check kern size
+	if(kernSize%2==0){
+		WARN_LOG("Given kern size is even, adding +1 to make it odd...");
+		kernSize++;
+	}
+
+	// Convert images to OpenCV format
+	cv::Mat mask= img->GetOpenCVMat("64");	
+	cv::Mat marker = markerImg->GetOpenCVMat("64");
+	long int nRows = mask.rows;
+  long int nCols = mask.cols;
+
+	//## Init dilation kernel
+	cv::Size kernel_size(kernSize,kernSize);
+	cv::Mat element= cv::getStructuringElement(cv::MORPH_RECT, kernel_size, cv::Point(-1,-1));
+	
+	//## Perform morphological reconstruction (i.e., geodesic dilation until stability)
+	cv::Mat rec = marker;
+	cv::Mat rec_old= cv::Mat::zeros(nRows,nCols,CV_64FC1);
+	double eps= cv::sum(rec - rec_old)[0];
+	int iter_counter= 0;
+	int max_iters= 100;
+	DEBUG_LOG("Start eps="<<eps);
+
+	while(eps>tol){
+		//Retain output of previous iteration
+   	rec_old = rec;
+	
+		//Perform dilation
+		int iterations= 1;
+		cv::Mat rec_dilated;
+		cv::dilate(rec, rec_dilated, element, cv::Point(-1,-1),iterations,cv::BORDER_CONSTANT);
+   	rec = rec_dilated;
+		
+		//Restrict the dilated values using the mask
+		for(long int i=0;i<nRows;++i) {
+  		double* pixels_rec = rec.ptr<double>(i);
+			double* pixels_mask = mask.ptr<double>(i);
+    	for (long int j=0;j<nCols;++j){
+    		if(pixels_rec[j]>pixels_mask[j]){
+					pixels_rec[j]= pixels_mask[j];
+				}
+    	}//end loop cols
+  	}//end loop rows
+
+		//Update eps
+		eps= cv::sum(rec - rec_old)[0];
+		iter_counter++;
+		if(iter_counter>=max_iters) break;
+	}//end while loop
+
+	DEBUG_LOG("Image reconstruction completed in #"<<iter_counter<<" iterations...");
+
+	//## Convert back to image 
+	Image* morphImg= (Image*)img->GetCloned("",true,true);
+	morphImg->Reset();
+
+	for(long int j=0;j<Ny;j++){
+		long int rowId= Ny-1-j;
+		for(int i=0;i<Nx;i++){
+			long int colId= i;
+			double binContent= img->GetPixelValue(i,j);
+			if(binContent==0) continue;
+			double w= rec.at<double>(rowId,colId);			
+			morphImg->FillPixel(i,j,w);
+		}//end loop x
+	}//end loop y
+
+	return morphImg;
+	
+}//close ComputeMorphRecoFilter()
+
+Image* MorphFilter::ComputeMorphRecoFilter(Image* img,double baseline,int kernSize,double tol)
+{
+	//Check input image
+	if(!img){
+		ERROR_LOG("Null ptr to input image given!");
+		return nullptr;
+	}
+	long int Nx= img->GetNx();
+	long int Ny= img->GetNy();
+
+	//Check baseline is positive
+	if(baseline<=0){
+		ERROR_LOG("Given baseline value is <=0 (hint: it must be >0)!");
+		return nullptr;
+	}
+	
+	//Create marker image
+	Image* markerImg= (Image*)img->GetCloned("",true,true);
+	markerImg->Reset();
+	for(int i=0;i<Nx;i++){
+		for(long int j=0;j<Ny;j++){
+			double w= img->GetPixelValue(i,j);
+			double w_marker= w-baseline;
+			markerImg->FillPixel(i,j,w_marker);
+		}//end loop bins y
+	}//end loop bins x
+
+	//Compute morph filter
+	return ComputeMorphRecoFilter(img,markerImg,kernSize,tol);
+	
+}//close ComputeMorphRecoFilter()
+
+
+Image* MorphFilter::ComputeMorphFilter(Image* img,int morphOp,int KernSize,int structElementType,int niters) 
+{
+	//Check input image
+	if(!img){
+		ERROR_LOG("Null ptr to input image given!");
+		return nullptr;
+	}
+	
+	//Check kern size
+	if(KernSize%2==0){
+		WARN_LOG("Given kern size is even, adding +1 to make it odd...");
+		KernSize++;
+	}
+
+	//## Convert image to OpenCV format
+	long int Nx= img->GetNx();
+	long int Ny= img->GetNy();
+	cv::Mat mat= img->GetOpenCVMat("64");
+
+	//## Init struct element
+	int ptSize= -1;//(KernSize-1)/2;
+	cv::Size kernel_size(KernSize,KernSize);
+	cv::Mat element;
+	if(structElementType==eMORPH_RECT) element= cv::getStructuringElement(cv::MORPH_RECT, kernel_size, cv::Point(ptSize,ptSize));
+	else if(structElementType==eMORPH_ELLIPSE) element= cv::getStructuringElement(cv::MORPH_ELLIPSE, kernel_size, cv::Point(ptSize,ptSize));
+	else if(structElementType==eMORPH_CROSS) element= cv::getStructuringElement(cv::MORPH_CROSS, kernel_size, cv::Point(ptSize,ptSize));	
+	else element= cv::getStructuringElement(cv::MORPH_RECT, kernel_size, cv::Point(ptSize,ptSize));
+	
+	//## Morphology operation
+	//MORPH_OPEN - an opening operation
+	//MORPH_CLOSE - a closing operation
+	//MORPH_GRADIENT - a morphological gradient
+	//MORPH_TOPHAT - “top hat”
+	//MORPH_BLACKHAT - “black hat”
+	cv::Mat mat_morph;
+	if(morphOp==eMORPH_OPENING) cv::morphologyEx(mat, mat_morph, cv::MORPH_OPEN, element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);	
+	else if(morphOp==eMORPH_CLOSING) cv::morphologyEx(mat, mat_morph, cv::MORPH_CLOSE, element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);	
+	else if(morphOp==eMORPH_GRADIENT) cv::morphologyEx(mat, mat_morph, cv::MORPH_GRADIENT, element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);	
+	else if(morphOp==eMORPH_TOPHAT) cv::morphologyEx(mat, mat_morph, cv::MORPH_TOPHAT, element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);	
+	else if(morphOp==eMORPH_BLACKHAT) cv::morphologyEx(mat, mat_morph, cv::MORPH_BLACKHAT, element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);	
+	else if(morphOp==eMORPH_EROSION) cv::erode(mat,mat_morph,element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);
+	else if(morphOp==eMORPH_DILATION) cv::dilate(mat,mat_morph,element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);
+	else{
+		ERROR_LOG("Invalid morph operation given ("<<morphOp<<")!");
+		return nullptr;
+	}
+
+
+	//## Convert back to image 
+	Image* morphImg= (Image*)img->GetCloned("",true,true);
+	morphImg->Reset();
+
+	for(long int j=0;j<Ny;j++){
+		long int rowId= Ny-1-j;
+		for(int i=0;i<Nx;i++){
+			long int colId= i;
+			double binContent= img->GetPixelValue(i,j);
+			if(binContent==0) continue;
+			double w= mat_morph.at<double>(rowId,colId);			
+			morphImg->FillPixel(i,j,w);
+		}//end loop x
+	}//end loop y
+
+	return morphImg;
+
+}//close ComputeTopHatFilter()
+
+/*
 int MorphFilter::FindPeaks(std::vector<TVector2>& peakPoints,Image* img,std::vector<int> kernelSizes,int peakShiftTolerance,bool skipBorders,int peakKernelMultiplicityThr)
 {
 	//Check input image
@@ -195,8 +647,150 @@ int MorphFilter::FindPeaks(std::vector<TVector2>& peakPoints,Image* img,std::vec
 	return 0;
 
 }//close FindPeaks()
+*/
 
 
+int MorphFilter::FindPeaks(std::vector<ImgPeak>& peakPoints,Image* img,std::vector<int> kernelSizes,int peakShiftTolerance,bool skipBorders,int peakKernelMultiplicityThr)
+{
+	//Check input image
+	if(!img){
+		ERROR_LOG("Null ptr to input image given!");
+		return -1;
+	}
+
+	//Check multiplicity thr
+	int nKernels= static_cast<int>(kernelSizes.size());
+	if(peakKernelMultiplicityThr==-1){
+		peakKernelMultiplicityThr= nKernels;
+	}
+	if(peakKernelMultiplicityThr>nKernels){
+		WARN_LOG("Multiplicy thr ("<<peakKernelMultiplicityThr<<") larger than nkernels ("<<nKernels<<"), set it to "<<nKernels<<"...");
+		peakKernelMultiplicityThr= nKernels;
+	}
+	if(peakKernelMultiplicityThr==0 || (peakKernelMultiplicityThr<0 && peakKernelMultiplicityThr!=-1)){
+		ERROR_LOG("Invalid multiplicity thr ("<<peakKernelMultiplicityThr<<") given!");
+		return -1;
+	}
+
+	//Init data
+	peakPoints.clear();
+	struct PeakData{
+		float x;
+		float y;
+		int id;
+		PeakData(float _x,float _y,float _id): x(_x), y(_y), id(_id) {}
+	};
+	std::vector<PeakData> peaks;
+
+	//## Find peaks with different kernel sizes
+	bool hasPeaks= true;
+	for(int k=0;k<nKernels;k++){
+
+		//Find peaks for this kernel
+		std::vector<long int> peakPixelIds;
+		Image* dilatedImg= MorphFilter::Dilate(peakPixelIds,img,kernelSizes[k],skipBorders);
+		if(!dilatedImg){
+			ERROR_LOG("Failed to compute dilated image for kernel no. "<<k<<" (size="<<kernelSizes[k]<<")!");
+			return -1;
+		}
+		delete dilatedImg;
+		dilatedImg= 0;		
+		
+		//Stop if no peaks are detected
+		if(peakPixelIds.empty()){
+			hasPeaks= false;
+			break;
+		}
+		INFO_LOG("#"<<peakPixelIds.size()<<" peak pixels found with kernel no. "<<k<<" (size="<<kernelSizes[k]<<")!");
+
+		//Store peak points for current kernel
+		for(size_t j=0;j<peakPixelIds.size();j++){
+			long int gBin= peakPixelIds[j];
+			long int binX= img->GetBinX(gBin); 
+			long int binY= img->GetBinY(gBin); 
+			double x= img->GetX(binX);
+			double y= img->GetY(binY);
+			peaks.push_back(PeakData(x,y,k));
+		}//end loop peak points
+
+	}//end loop kernels
+
+	if(!hasPeaks) {
+		DEBUG_LOG("No peaks detected in one or all dilated kernel runs.");
+		return 0;
+	}
+
+	//## Create graph with "matching/adjacent" peaks
+	Graph linkGraph(peaks.size());
+	for(size_t i=0;i<peaks.size()-1;i++) {
+		for(size_t j=i+1;j<peaks.size();j++) {	
+			float distX= peaks[i].x - peaks[j].x;
+			float distY= peaks[i].y - peaks[j].y;
+			bool areAdjacent= (fabs(distX)<=peakShiftTolerance && fabs(distY)<=peakShiftTolerance);
+			if(!areAdjacent) continue;
+			linkGraph.AddEdge(i,j);
+		}
+	}
+	
+	//Find connected peaks
+	std::vector<std::vector<int>> connected_indexes;
+	linkGraph.GetConnectedComponents(connected_indexes);
+
+	
+	//Match peaks found with different kernels (given a tolerance)
+	int npeaks= 0;
+	
+	for(size_t i=0;i<connected_indexes.size();i++){
+		std::set<int> id_list;
+
+		for(size_t j=0;j<connected_indexes[i].size();j++){
+			int index= connected_indexes[i][j];
+			id_list.insert(peaks[index].id);
+		}//end loop items in cluster
+		
+		//Check multiplicity
+		int multiplicity= static_cast<int>(id_list.size());
+		if( multiplicity<peakKernelMultiplicityThr ) {
+			DEBUG_LOG("Skip peak group no. "<<i+1<<" as below multiplicity thr ("<<multiplicity<<"<"<<peakKernelMultiplicityThr<<")");
+			continue;
+		}
+
+		//Compute peak mean and fill final peaks list
+		TVector2 peakMean(0,0);
+		for(size_t j=0;j<connected_indexes[i].size();j++){
+			int index= connected_indexes[i][j];
+			peakMean+= TVector2(peaks[index].x,peaks[index].y);
+		}
+		peakMean*= 1./(float)(connected_indexes[i].size());
+
+		//Find image bin x y
+		double x= peakMean.X();
+		double y= peakMean.Y();
+		long int gBin= img->FindBin(x,y);	
+		if(gBin<0){
+			WARN_LOG("Cannot find image bin corresponding to peak("<<x<<","<<y<<")");
+			continue;
+		}
+		long int ix= img->GetBinX(gBin);
+		long int iy= img->GetBinY(gBin);
+		double S= img->GetPixelValue(ix,iy);
+		
+		
+		peakPoints.push_back(ImgPeak(x,y,S,ix,iy));
+		DEBUG_LOG("Peak no. "<<npeaks+1<<" C("<<peakMean.X()<<","<<peakMean.Y()<<")");
+		npeaks++;	
+
+	}//end loop clusters
+
+	if(npeaks<=0){
+		WARN_LOG("No matching peaks across the three dilate kernels detected!");
+		return 0;
+	}
+	INFO_LOG("#"<<npeaks<<" peaks detected!");
+
+	return 0;
+
+}//close FindPeaks()
 
 
 Image* MorphFilter::Dilate(std::vector<long int>& peakPixelIds,Image* img,int KernSize,bool skipBorders)
@@ -244,9 +838,10 @@ Image* MorphFilter::Dilate(std::vector<long int>& peakPixelIds,Image* img,int Ke
 
 			float mat_comparison= (float)mat_cmp.at<unsigned char>(rowId,colId);
 			bool borderCheck= (!skipBorders || (skipBorders && i>0 && j>0 && i<Nx-1 && j<Ny-1) );
+			bool peakFound= (mat_comparison==255 && borderCheck && std::isnormal(binContent));
 
-			if( mat_comparison==255 && borderCheck && std::isnormal(binContent) ){
-				//INFO_LOG("Found local maximum pixel ("<<i<<","<<j<<"), check surrounding pixel to confirm...");
+			if(peakFound){
+				DEBUG_LOG("Found local maximum pixel ("<<i<<","<<j<<"), check surrounding pixel to confirm...");
 
 				//## Check surrounding pixels (do not tag as peak if the surrounding 3x3 is flat)
 				bool isFlatArea= true;

@@ -175,6 +175,7 @@ Image* GradientFilter::GetLaplaceFilter(Image* image)
 	
 	//## Compute convolution
 	cv::Mat filteredMat= Caesar::MathUtils::GetConvolution(I,kernel);	
+	//cv::Mat filteredMat= Caesar::MathUtils::GetConvolution2(I,kernel);	
 
 	//## Convert OpenCV mat list to Img
 	TString imgName= Form("%s_Lapl",image->GetName().c_str());
