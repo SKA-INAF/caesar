@@ -346,6 +346,8 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(fitDoFinalMinimizerStep,bool,true,false,true);
 		REGISTER_OPTION(fitFinalMinimizer,int,2,0,6);
 		REGISTER_OPTION(fitUseNestedAsComponents,bool,false,false,true);	
+		REGISTER_OPTION(fitChi2RegPar,double,0,-0.001,1.001);
+		
 		
 		//===================================
 		//==  Chan-Vese algorithm options  ==

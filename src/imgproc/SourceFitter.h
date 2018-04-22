@@ -111,7 +111,7 @@ struct SourceFitOptions {
 		blobMapThrFactor= 0;
 		blobMapKernelFactor= 6; 
 		useNestedAsComponents= false;
-
+	
 		fitFcnTolerance= 1.e-5;//1.e-6
 		fitMaxIters= 100000;
 		fitImproveConvergence= true;
@@ -130,7 +130,7 @@ struct SourceFitOptions {
 	//- Max number of components to be fitted & options
 	int nMaxComponents;
 	bool useNestedAsComponents;
-
+	
 	//- Number of matching peaks across kernels (-1=peak detected in all kernels, ...) and distance tolerance
 	int peakKernelMultiplicityThr;
 	int peakShiftTolerance;

@@ -311,6 +311,7 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 		double theta= StatsUtils::GetGaus2DThetaPar(sigmaX_sample,sigmaY_sample,covXY_sample);		
 		StatsUtils::GetEllipseParsFromCovMatrix(sigmaX,sigmaY,theta,sigmaX_sample,sigmaY_sample,covXY_sample);
 
+
 		//NB: Try to extract blended blobs to estimate component pars. 
 		//    If this fails estimate number of components from detected peaks and assuming beam pars
 		std::vector<Source*> deblendedBlobs;
