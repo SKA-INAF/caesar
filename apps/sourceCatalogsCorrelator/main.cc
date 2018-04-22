@@ -500,6 +500,7 @@ bool FindPointSourceMatch(int source_true_index)
 	sigmaX_fit= -1;
 	sigmaY_fit= -1;
 	offset_fit= -1;
+	theta_fit= -1;
 	fluxDensity_fit= -1;
 	residualMin_fit= -1;
 	residualMax_fit= -1;
@@ -576,6 +577,7 @@ bool FindPointSourceMatch(int source_true_index)
 			S_fit= fitPars.GetParValue(componentIndex,"A");
 			sigmaX_fit= fitPars.GetParValue(componentIndex,"sigmaX");
 			sigmaY_fit= fitPars.GetParValue(componentIndex,"sigmaY");
+			theta_fit= fitPars.GetParValue(componentIndex,"theta");
 			offset_fit= fitPars.GetOffsetPar();
 			fluxDensity_fit= fitPars.GetComponentFluxDensity(componentIndex);
 			residualMin_fit= fitPars.GetResidualMin();
@@ -956,6 +958,9 @@ int FindPointSourceRealAndFakeSources(int source_rec_index)
 		fluxDensity_rec/= beamArea_rec;
 	}
 	HasFitInfo= source_rec->HasFitInfo();
+	sigmaX_fit= -1;
+	sigmaY_fit= -1;
+	theta_fit= -1;
 
 	//Init association info
 	nTrueMatchedSources= 0;
@@ -972,6 +977,9 @@ int FindPointSourceRealAndFakeSources(int source_rec_index)
 			Y0_rec= fitPars.GetParValue(k,"y0");
 			Smax_rec= fitPars.GetParValue(k,"A");
 			fluxDensity_rec= fitPars.GetComponentFluxDensity(k);
+			sigmaX_fit= fitPars.GetParValue(k,"sigmaX");
+			sigmaY_fit= fitPars.GetParValue(k,"sigmaY");
+			theta_fit= fitPars.GetParValue(k,"theta");
 			if(correctFlux){
 				//Smax_rec/= beamArea_rec;
 				fluxDensity_rec/= beamArea_rec;
@@ -1029,7 +1037,6 @@ int FindPointSourceRealAndFakeSources(int source_rec_index)
 		recSourceInfo->Fill();	
 
 	}//close !hasFitInfo
-
 
 	return 0;
 
@@ -1186,6 +1193,9 @@ void Init(){
 	recSourceInfo->Branch("X0_rec",&X0_rec,"X0_rec/D");
 	recSourceInfo->Branch("Y0_rec",&Y0_rec,"Y0_rec/D");
 	recSourceInfo->Branch("Smax_rec",&Smax_rec,"Smax_rec/D");	
+	recSourceInfo->Branch("sigmaX_fit",&sigmaX_fit,"sigmaX_fit/D");
+	recSourceInfo->Branch("sigmaY_fit",&sigmaY_fit,"sigmaY_fit/D");
+	recSourceInfo->Branch("theta_fit",&theta_fit,"theta_fit/D");	
 	recSourceInfo->Branch("fluxDensity_rec",&fluxDensity_rec,"fluxDensity_rec/D");	
 	recSourceInfo->Branch("beamArea_rec",&beamArea_rec,"beamArea_rec/D");	
 	recSourceInfo->Branch("nTrueMatchedSources",&nTrueMatchedSources,"nTrueMatchedSources/I");
