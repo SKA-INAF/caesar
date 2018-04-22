@@ -76,18 +76,22 @@ struct SourceFitOptions {
     bmaj= 5;//pix
     bmin= 5;//pix
 		bpa= 0;
-		nMaxComponents= 3;
+		nMaxComponents= 3;	
+		fixCentroidInPreFit= false;
 		limitCentroidInFit= true;
+		centroidLimit= 0.2;
 		fixBkg= true;
 		limitBkgInFit= true;
 		useEstimatedBkgLevel= true;
 		fixedBkgLevel= 0;
+		fixAmplInPreFit= false;
 		limitAmplInFit= true;
 		amplLimit= 0.2;
 		limitSigmaInFit= true;
 		sigmaLimit= 0.2;
-		fixSigmaInPreFit= false;
+		fixSigmaInPreFit= true;
 		fixSigma= false;
+		fixThetaInPreFit= true;
 		fixTheta= false;
 		limitThetaInFit= true;
 		thetaLimit= 5;//deg
@@ -114,6 +118,7 @@ struct SourceFitOptions {
 		fitNRetries= 1000;
 		fitDoFinalMinimizerStep= true;
 		fitFinalMinimizer= eHESS;
+		chi2RegPar= 0.1;
 	}//close constructor
 
 	public:
@@ -147,6 +152,8 @@ struct SourceFitOptions {
 
 	//- Centroid options
 	bool limitCentroidInFit;
+	double centroidLimit;//in pixels
+	bool fixCentroidInPreFit;
 
 	//- Bkg options
 	bool fixBkg;
@@ -157,14 +164,16 @@ struct SourceFitOptions {
 	//- Amplitude fit par range (example +-20% around source peak)
 	bool limitAmplInFit;
 	double amplLimit;
+	bool fixAmplInPreFit;
 
-	//- Sigma fit par range (example +-20% around source peak)
+	//- Sigma fit par range
 	bool fixSigmaInPreFit;
 	bool fixSigma;	
 	bool limitSigmaInFit;
 	double sigmaLimit;
 
 	//- Theta 
+	bool fixThetaInPreFit;
 	bool fixTheta;
 	bool limitThetaInFit;
 	double thetaLimit;//in deg
@@ -183,7 +192,7 @@ struct SourceFitOptions {
 	long int fitNRetries;
 	bool fitDoFinalMinimizerStep;
 	int fitFinalMinimizer;
-
+	double chi2RegPar;
 	
 };//close SourceFitOptions
 
@@ -890,8 +899,8 @@ class SourceFitPars : public TObject {
 				D(0,i)= fluxDensityDerivMatrix(0,i);
 			}
 
-			cout<<"*** DERIV MATRIX COMPONENT "<<componentId<<" ***"<<endl;
-			D.Print();
+			//cout<<"*** DERIV MATRIX COMPONENT "<<componentId<<" ***"<<endl;
+			//D.Print();
 
 			return 0;
 
@@ -1076,6 +1085,8 @@ class SourceFitter : public TObject {
 		
 		static TH2D* m_fluxMapHisto;
 		static std::vector<FitData> m_fitData;
+		static std::vector<FitData> m_fitHaloData;
+		static double m_chi2RegPar;
 		static double m_bkgMean;
 		static double m_rmsMean;
 		static double m_sourceX0;

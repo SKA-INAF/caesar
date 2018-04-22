@@ -545,7 +545,7 @@ class Source : public Blob {
 		/**
 		* \brief Find blended source components
 		*/
-		int FindBlendedComponents(std::vector<Source*>& deblendedComponents,std::vector<ImgPeak>& deblendedPeaks,double peakZThr=0,int maxPeaks=-1,double sigmaMin=3,double sigmaMax=3,double sigmaStep=1,int minBlobSize=5,double thrFactor=0,int kernelFactor=1);
+		int FindBlendedComponents(std::vector<Source*>& deblendedComponents,std::vector<ImgPeak>& deblendedPeaks,double peakZThr=0,int maxPeaks=-1,double sigmaMin=3,double sigmaMax=3,double sigmaStep=1,int minBlobSize=5,double thrFactor=0,int kernelFactor=1,int pixMargin=10);
 
 	protected:
 		/**

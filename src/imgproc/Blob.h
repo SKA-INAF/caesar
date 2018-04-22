@@ -215,6 +215,19 @@ class Blob : public TNamed {
 			return seedPixelIndexes;
 		}//close GetSeedPixelIndexes()
 
+		/**
+		* \brief Mark pixels with significance within given thresholds as halo pixels
+		*/
+		void MarkHaloPixels(double ZThr){
+			for(size_t i=0;i<m_Pixels.size();i++){
+				double bkg= m_Pixels[i]->bkgLevel;
+				double rms= m_Pixels[i]->noiseLevel;
+				double S= m_Pixels[i]->S;
+				if(bkg!=0 && rms!=0 && fabs((S-bkg)/rms)<ZThr ) {
+					m_Pixels[i]->type= Pixel::eHalo;
+				}
+			}//end pixel loop
+		}//close MarkHaloPixels()
 		
 		//================================================
 		//==         BLOB PARAMETERS 
@@ -478,8 +491,7 @@ class Blob : public TNamed {
 		/**
 		* \brief Generate an image from source pixel
 		*/
-		//Image* GetImage(ImgType mode,int pixMargin=1,bool useWCS=false,int coordSyst=-1);
-		Image* GetImage(ImgType mode,int pixMargin=1);	
+		Image* GetImage(ImgType mode,int pixMargin=1,bool includeHaloPixels=false);	
 
 		/**
 		* \brief Generate an image from source pixel

@@ -955,7 +955,7 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 		filterMap->ApplyThreshold(thrLevel);
 
 		//Find peaks in filter map
-		INFO_LOG("Finding peaks in significance map @ scale "<<sigma<<" ...");
+		INFO_LOG("Finding peaks in LoG map @ scale "<<sigma<<" ...");
 		std::vector<ImgPeak> peakPoints;
 		bool skipBorders= true;
 		double peakKernelMultiplicityThr= 1;

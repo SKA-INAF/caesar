@@ -1346,7 +1346,6 @@ int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool
 	
 
 
-//int Source::FindComponentPeaks(std::vector<TVector2>& peaks,double peakZThr,int maxPeaks,int peakShiftTolerance,std::vector<int> kernels,int peakKernelMultiplicityThr,bool invertSearch)
 int Source::FindComponentPeaks(std::vector<ImgPeak>& peaks,double peakZThr,int maxPeaks,int peakShiftTolerance,std::vector<int> kernels,int peakKernelMultiplicityThr,bool invertSearch)
 {
 	//Init
@@ -1456,14 +1455,14 @@ int Source::FindComponentPeaks(std::vector<ImgPeak>& peaks,double peakZThr,int m
 }//close FindComponentPeaks()
 
 
-int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std::vector<ImgPeak>& deblendedPeaks,double peakZThr,int maxPeaks,double sigmaMin,double sigmaMax,double sigmaStep,int minBlobSize,double thrFactor,int kernelFactor)
+int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std::vector<ImgPeak>& deblendedPeaks,double peakZThr,int maxPeaks,double sigmaMin,double sigmaMax,double sigmaStep,int minBlobSize,double thrFactor,int kernelFactor,int pixMargin)
 {
 	//Init
 	deblendedComponents.clear();
 	deblendedPeaks.clear();
 	
 	//Get source image
-	int pixMargin= 0;
+	//int pixMargin= 10;//NB: If set to 0 some peaks could be lost
 	Image* sourceImg= this->GetImage(eFluxMap,pixMargin);
 	if(!sourceImg){
 		ERROR_LOG("Failed to get source image!");	

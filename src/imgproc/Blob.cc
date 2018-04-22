@@ -722,7 +722,7 @@ TH2D* Blob::GetWCSHisto(ImgType mode,int pixMargin,int coordSyst)
 		
 }//close GetWCSImage()
 
-Image* Blob::GetImage(ImgType mode,int pixMargin)
+Image* Blob::GetImage(ImgType mode,int pixMargin,bool includeHaloPixels)
 {
 
 	//Bounding box in (x,y) coordinates
@@ -749,6 +749,9 @@ Image* Blob::GetImage(ImgType mode,int pixMargin)
 		//Get data
 		//long int ix= m_Pixels[k]->ix;
 		//long int iy= m_Pixels[k]->iy;
+		int pixType= m_Pixels[k]->type;
+		if(pixType==Pixel::eHalo && !includeHaloPixels) continue;
+
 		double x= m_Pixels[k]->x;
 		double y= m_Pixels[k]->y;
 		double S= m_Pixels[k]->S;
