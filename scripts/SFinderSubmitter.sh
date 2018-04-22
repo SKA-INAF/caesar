@@ -1065,6 +1065,7 @@ generate_config(){
 		echo "fitNRetries = 1000                                    | Number of times fit is repeated (with enlarged limits) if improve convergence flag is enabled (default=1000)"
 		echo "fitDoFinalMinimizerStep = true                        | Switch on/off running of final minimizer step after fit convergence with MIGRAD (default=true)"
 		echo "fitFinalMinimizer = 2                                 | Final minimizer (1=MIGRAD,2=HESS,3=MINOS) (default=2)"
+		echo "fitChi2RegPar = 1															 				| Chi2 regularization par chi2=chi2_signal + regpar*chi2_bkg (default=1)"
 		echo '###'
 		echo '###'
 		echo '//============================================='
