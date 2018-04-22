@@ -125,6 +125,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--fitsources - Fit compact point-like sources found (default=false)"
 	echo "--fit-maxnbeams=[FIT_MAX_NBEAMS] - Maximum number of beams for fitting if compact source (default=20)"
 	echo "--fit-maxcomponents=[FIT_MAX_COMPONENTS] - Maximum number of components fitted in a blob (default=3)"	
+	echo "--fit-usenestedascomponents - Initialize fit components to nested sources found in source (default=no)"
 	echo "--fit-freebkg - Fit with bkg offset parameter free to vary (default=fixed)"
 	echo "--fit-estimatedbkg - Set bkg par starting value to estimated bkg (average over source pixels) (default=use fixed bkg start value)"
 	echo "--fit-bkg=[FIT_BKG] - Bkg par starting value (NB: ineffective when -fit-estimatedbkg is enabled) (default=0)"
@@ -143,6 +144,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--fit-peakmultiplicitythr=[PEAK_KERNEL_MULTIPLICITY_THR] - Requested peak multiplicity across different dilation kernels (-1=peak found in all given kernels,1=only in one kernel, etc) (default=1)"
 	echo "--fit-peakshifttol=[PEAK_SHIFT_TOLERANCE] - Shift tolerance (in pixels) used to compare peaks in different dilation kernels (default=2 pixels)"
 	echo "--fit-peakzthrmin=[PEAK_ZTHR_MIN] - Minimum peak flux significance (in nsigmas above avg source bkg & noise) below which peak is skipped (default=1)"
+	echo "--fit-noimproveconvergence - Do not use iterative fitting to try to achieve fit convergence (default=use)"
 	echo ""
 
 	echo "=== SFINDER SMOOTHING FILTER OPTIONS ==="
@@ -314,6 +316,8 @@ PEAK_MAX_KERN_SIZE="7"
 PEAK_KERNEL_MULTIPLICITY_THR="1"
 PEAK_SHIFT_TOLERANCE="2"
 PEAK_ZTHR_MIN="1"
+FIT_USE_NESTED_AS_COMPONENTS="false"
+FIT_IMPROVE_CONVERGENCE="true"
 
 WTSCALE_MIN="3"
 WTSCALE_MAX="6"
@@ -654,6 +658,9 @@ do
 		--fit-maxcomponents=*)
     	FIT_MAX_COMPONENTS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
+		--fit-usenestedascomponents*)
+			FIT_USE_NESTED_AS_COMPONENTS="true"
+		;;
 		--fit-freebkg*)
     	FIT_WITH_FIXED_BKG="false"
     ;;
@@ -708,6 +715,10 @@ do
 		--fit-peakzthrmin=*)
     	PEAK_ZTHR_MIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
+
+		--fit-noimproveconvergence*)
+			FIT_IMPROVE_CONVERGENCE="false"
+		;;
 	
 		## SALIENCY FILTER OPTIONS
 		--saliency-nooptimalthr*)
@@ -1025,7 +1036,7 @@ generate_config(){
 		echo '//=================================='
 		echo "fitSources = $FIT_SOURCES                             | Deblend point-like sources with multi-component gaus fit (T/F)"
 		echo "nBeamsMaxToFit = $FIT_MAX_NBEAMS							 				| Maximum number of beams in compact source for fitting (if above thr fitting not performed)"
-		echo "fitUseNestedAsComponents = false                      | If true use nested sources (if any) to estimate fitted components, otherwise estimate blended blobs (default=false)"
+		echo "fitUseNestedAsComponents = $FIT_USE_NESTED_AS_COMPONENTS  | If true use nested sources (if any) to estimate fitted components, otherwise estimate blended blobs (default=false)"
 		echo "fitMaxNComponents = $FIT_MAX_COMPONENTS               | Maximum number of components fitted in a blob"
 		echo "fitWithCentroidLimits = $FIT_WITH_POS_LIMITS          | Use limits when fitting gaussian centroid (T/F)"
 		echo "fitWithBkgLimits = $FIT_WITH_BKG_LIMITS			          | Use limits when fitting bkg offset (T/F)"
@@ -1050,7 +1061,7 @@ generate_config(){
 		echo "peakZThrMin = $PEAK_ZTHR_MIN                          | Minimum peak flux significance (in nsigmas above avg source bkg & noise) below which peak is skipped (default=1)"
 		echo "fitFcnTolerance = 1.e-5												        | Fit function minimization tolerance (default=1.e-5)"
 		echo "fitMaxIters = 100000                                  | Fit max number of iterations (default=100000)"
-    echo "fitImproveConvergence = true                          | Try to improve convergence by iterating fit if not converged or converged with pars at limits (default=true)"
+    echo "fitImproveConvergence = $FIT_IMPROVE_CONVERGENCE      | Try to improve convergence by iterating fit if not converged or converged with pars at limits (default=true)"
 		echo "fitNRetries = 1000                                    | Number of times fit is repeated (with enlarged limits) if improve convergence flag is enabled (default=1000)"
 		echo "fitDoFinalMinimizerStep = true                        | Switch on/off running of final minimizer step after fit convergence with MIGRAD (default=true)"
 		echo "fitFinalMinimizer = 2                                 | Final minimizer (1=MIGRAD,2=HESS,3=MINOS) (default=2)"
