@@ -314,17 +314,21 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(nBeamsMaxToFit,double,20,0,100000);
 		REGISTER_OPTION(fitMaxNComponents,int,3,0,100);		
 		REGISTER_OPTION(fitWithCentroidLimits,bool,true,false,true);
+		REGISTER_OPTION(fixCentroidInPreFit,bool,false,false,true);
+		REGISTER_OPTION(fitCentroidLimit,double,3,0,1000);
 		REGISTER_OPTION(fitWithFixedBkg,bool,true,false,true);
 		REGISTER_OPTION(fitWithBkgLimits,bool,true,false,true);
 		REGISTER_OPTION(fitUseEstimatedBkgLevel,bool,true,false,true);
 		REGISTER_OPTION(fitBkgLevel,double,0.,-1.e+6,1.e+6);
 		REGISTER_OPTION(fitWithAmplLimits,bool,true,false,true);
+		REGISTER_OPTION(fixAmplInPreFit,bool,false,false,true);
 		REGISTER_OPTION(fitAmplLimit,double,0.3,0,2);
 		REGISTER_OPTION(fitWithSigmaLimits,bool,true,false,true);
 		REGISTER_OPTION(fixSigmaInPreFit,bool,true,false,true);
 		REGISTER_OPTION(fitSigmaLimit,double,0.3,0,2);
 		REGISTER_OPTION(fitWithFixedSigma,bool,false,false,true);
 		REGISTER_OPTION(fitWithThetaLimits,bool,true,false,true);
+		REGISTER_OPTION(fixThetaInPreFit,bool,true,false,true);
 		REGISTER_OPTION(fitWithFixedTheta,bool,false,false,true);
 		REGISTER_OPTION(fitThetaLimit,double,5,0,360);
 		REGISTER_OPTION(useFluxZCutInFit,bool,false,false,true);
@@ -341,7 +345,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(fitNRetries,long int,1000,0,100000);
 		REGISTER_OPTION(fitDoFinalMinimizerStep,bool,true,false,true);
 		REGISTER_OPTION(fitFinalMinimizer,int,2,0,6);
-			
+		REGISTER_OPTION(fitUseNestedAsComponents,bool,false,false,true);	
 		
 		//===================================
 		//==  Chan-Vese algorithm options  ==

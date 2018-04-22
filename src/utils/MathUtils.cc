@@ -297,6 +297,7 @@ cv::Mat MathUtils::GetConvolution(cv::Mat I, cv::Mat kernel){
 
 	//Apply convolution
 	cv::Mat dst;
+	//filter2D(I, dst, I.depth(), kernel_flipped, anchor, cv::BORDER_REPLICATE);
 	filter2D(I, dst, I.depth(), kernel_flipped, anchor, cv::BORDER_CONSTANT);
 	//filter2D(I, dst, I.depth(), kernel_flipped, anchor, cv::BORDER_DEFAULT);
 
@@ -866,6 +867,28 @@ int MathUtils::Ellipse2Polygon(polygon_2d& poly,TEllipse* ellipse, int n)
 	return Ellipse2Polygon(poly,Cx,Cy,R1,R2,theta,n);
 
 }//close Ellipse2Polygon()
+
+double MathUtils::ComputeEllipseEccentricity(TEllipse* ellipse)
+{
+	//Check ellipse
+	if(!ellipse) {
+		ERROR_LOG("Null ptr to given ellipse!");
+		return -1;
+	}
+
+	//Compute eccentricity
+	double r1= ellipse->GetR1();
+	double r2= ellipse->GetR2();
+	double b= std::max(r1,r2);//semi-major axis
+	double a= std::min(r1,r2);//semi-minor axis
+	double a2= a*a;
+	double b2= b*b;
+	double e= 1-a2/b2; 
+
+	return e;
+
+}//close GetEllipseEccentricity()
+
 
 
 }//close namespace

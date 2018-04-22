@@ -266,6 +266,11 @@ class MathUtils : public TObject {
 		*/
 		static int Ellipse2Polygon(polygon_2d& poly,TEllipse* ellipse, int n);
 
+		/**
+		* \brief Get ellipse eccentricity
+		*/
+		static double ComputeEllipseEccentricity(TEllipse* ellipse);
+
 		
 	private:
 	
