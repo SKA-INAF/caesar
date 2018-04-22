@@ -100,8 +100,6 @@ Image* LoGFilter::GetLoGFilter(Image* image){
     	}//end loop cols
   }//end loop rows
 	
-	
-
 	//## Recompute stats if requested
 	if(recomputeStats>0){
 		filteredImg->ComputeStats(true,true);
