@@ -30,16 +30,25 @@ std::vector<std::string> FileNames;
 //## Beam & map info
 double bkgLevel_true= 10.e-6;
 double noiseLevel_true= 400.e-6;
-double Bmaj= 13.3;//arcsec
-double Bmin= 8.4;//arcsec
+double Bmaj= 13.347706794699599;//arcsec
+double Bmin= 8.35635757446;//arcsec
+double Bpa= 6.416473388670e-01;//deg
 double pixSize= 1;//in arcsec
 double beamArea= 0;
+TEllipse* beamEllipse= 0;
+double beamEllipseEccentricity= 0;
+double beamEllipseArea= 0;
 
 //### Selection cuts
 bool selectResolvedTrueSources= false;
 double mutualTrueSourceDistThr= 20;//in arcsec 
 bool selectFitComponents= true;
 int maxFitComponentsThr= 1;
+bool excludeSourceAtEdge= true;
+double sourceRegionXMin= 200;//in pixels
+double sourceRegionXMax= 2360;//in pixels
+double sourceRegionYMin= 200;//in pixels
+double sourceRegionYMax= 2360;//in pixels
 
 //Draw info
 //std::vector<double> Zbins= {0,1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100,200,300,400,500,600,700,800,900,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000};
@@ -81,6 +90,9 @@ TGraphAsymmErrors* FluxDensityAccuracyGraph_compact= 0;
 TGraphAsymmErrors* FluxDensityAccuracyGraph_compact_fit= 0;
 TGraphAsymmErrors* FluxDensityAccuracyGraph_compact_peak= 0;
 TGraph* FluxDensityAccuracyGraphPoints_compact= 0;
+TGraph* FitEllipseVSBeam_compact_real= 0;
+TGraph* FitEllipseVSBeam_compact_fake= 0;
+
 
 std::vector< std::vector<double> > FluxList_compact;
 std::vector< std::vector<double> > FluxList_compact_fit;
@@ -205,7 +217,12 @@ int DrawSFinderPerformances(std::string _fileName,bool isFileList=false){
 void Init(){
 
 	//Compute map variables
+	double theta_beam= MathUtils::Mod(Bpa+90.,180.);
 	beamArea= AstroUtils::GetBeamAreaInPixels(Bmaj,Bmin,pixSize,pixSize);
+	beamEllipse= new TEllipse(0.,0.,Bmaj/GausSigma2FWHM,Bmin/GausSigma2FWHM,0,360,theta_beam);
+	beamEllipseEccentricity= MathUtils::ComputeEllipseEccentricity(beamEllipse);
+	beamEllipseArea= MathUtils::ComputeEllipseArea(beamEllipse);
+	INFO_LOG("Beam ellipse: bmaj/bmin/bpa="<<Bmaj<<"/"<<Bmin<<"/"<<Bpa<<", a="<<std::min(beamEllipse->GetR1(),beamEllipse->GetR2())<<", b="<<std::max(beamEllipse->GetR1(),beamEllipse->GetR2())<<", theta="<<beamEllipse->GetTheta()<<", A="<<beamEllipseArea<<", E="<<beamEllipseEccentricity);
 	
 	int nBins= (int)(LgFluxBins.size()-1);
 	int nBins_Z= (int)(Zbins.size()-1);
@@ -380,7 +397,16 @@ void Init(){
 	graphName= "FluxDensityAccuracyGraph_ext";
 	FluxDensityAccuracyGraph_ext= new TGraphAsymmErrors;
 	FluxDensityAccuracyGraph_ext->SetName(graphName);
-	
+
+	//- Fit ellipse graph
+	graphName= "FitEllipseVSBeam_compact_real";
+	FitEllipseVSBeam_compact_real= new TGraph;
+	FitEllipseVSBeam_compact_real->SetName(graphName);
+
+	graphName= "FitEllipseVSBeam_compact_fake";
+	FitEllipseVSBeam_compact_fake= new TGraph;
+	FitEllipseVSBeam_compact_fake->SetName(graphName);
+
 }//close Init()
 
 
@@ -1133,6 +1159,23 @@ void Draw(){
 	detectionThrLine_fluxDensityAccuracy_ext->Draw("same");
 	*/
 
+	//===============================================
+	//==          DRAW FIT ELLIPSE VS BEAM PARS
+	//===============================================
+	TCanvas* FitEllipseVSBeamPlot_compact= new TCanvas("FitEllipseVSBeamPlot_compact","FitEllipseVSBeamPlot_compact");
+	FitEllipseVSBeamPlot_compact->cd();
+	
+	FitEllipseVSBeam_compact_real->GetXaxis()->SetTitle("d#theta (deg)");
+	FitEllipseVSBeam_compact_real->GetYaxis()->SetTitle("E_{fit}/E_{beam}");
+	FitEllipseVSBeam_compact_real->SetMarkerStyle(8);
+	FitEllipseVSBeam_compact_real->SetMarkerSize(0.7);
+	FitEllipseVSBeam_compact_real->Draw("AP");
+
+	FitEllipseVSBeam_compact_fake->SetMarkerColor(kRed);
+	FitEllipseVSBeam_compact_fake->SetMarkerStyle(8);
+	FitEllipseVSBeam_compact_fake->SetMarkerSize(0.7);
+	FitEllipseVSBeam_compact_fake->Draw("P");
+
 }//close Draw()
 
 
@@ -1176,7 +1219,11 @@ int AnalyzeData(std::string filename){
  	double Y0_fit;//fitted pos y
 	double S_fit;//fitted peak amplitude	
 	double fluxDensity_fit;//flux density reconstructed using fit pars
-	double offset_fit;//fitted offset
+	double offset_fit;//fitted offset	
+	double sigmaX_fit;//fitted sigmaX
+	double sigmaY_fit;//fitted sigmaY
+	double theta_fit;//fitted theta
+
 
 	int nTrueMatchedSources;
 	std::vector<std::string>* Names_true= 0;
@@ -1226,6 +1273,10 @@ int AnalyzeData(std::string filename){
  	SourceMatchInfo->SetBranchAddress("S_fit",&S_fit);
 	SourceMatchInfo->SetBranchAddress("fluxDensity_fit",&fluxDensity_fit);
 	SourceMatchInfo->SetBranchAddress("offset_fit",&offset_fit);
+	SourceMatchInfo->SetBranchAddress("sigmaX_fit",&sigmaX_fit);
+	SourceMatchInfo->SetBranchAddress("sigmaY_fit",&sigmaY_fit);
+	SourceMatchInfo->SetBranchAddress("theta_fit",&theta_fit);
+
 
 	//Get point/compact source reliability tree
 	TTree* RecSourceInfo= (TTree*)inputFile->Get("RecSourceInfo");
@@ -1236,7 +1287,10 @@ int AnalyzeData(std::string filename){
 
 	RecSourceInfo->SetBranchAddress("name_rec",&Name_rec);
 	RecSourceInfo->SetBranchAddress("type_rec",&Type_rec);	
-	RecSourceInfo->SetBranchAddress("HasFitInfo",&HasFitInfo);	
+	RecSourceInfo->SetBranchAddress("HasFitInfo",&HasFitInfo);
+	RecSourceInfo->SetBranchAddress("sigmaX_fit",&sigmaX_fit);
+	RecSourceInfo->SetBranchAddress("sigmaY_fit",&sigmaY_fit);
+	RecSourceInfo->SetBranchAddress("theta_fit",&theta_fit);	
 	RecSourceInfo->SetBranchAddress("X0_rec",&X0_rec);
 	RecSourceInfo->SetBranchAddress("Y0_rec",&Y0_rec);
 	RecSourceInfo->SetBranchAddress("Smax_rec",&Smax_rec);
@@ -1334,6 +1388,9 @@ int AnalyzeData(std::string filename){
 	//Loop over source entries
 	INFO_LOG("Loop over source entries");
 	int nTrueSources= 0;
+	int nFitSources= 0;
+	TEllipse* fitEllipse= new TEllipse(0,0,1,1,0,360,0);
+
 	for(int i=0;i<SourceMatchInfo->GetEntries();i++){
 		SourceMatchInfo->GetEntry(i);		
 
@@ -1411,6 +1468,22 @@ int AnalyzeData(std::string filename){
 			yPosTruePullList_compact[gBin-1].push_back(yOffset_true);
 			FluxDensityPullList_compact[gBin-1].push_back(FluxPull);
 
+			//Fill fit ellipse pars
+			double ellMaj= std::max(sigmaX_fit,sigmaY_fit);
+			double ellMin= std::min(sigmaX_fit,sigmaY_fit);
+			double ellAngle= MathUtils::Mod(theta_fit,180.);
+			if(sigmaY_fit>sigmaX_fit) ellAngle= MathUtils::Mod(theta_fit-90.,180.);
+			fitEllipse->SetR1(ellMaj);
+			fitEllipse->SetR2(ellMin);
+			fitEllipse->SetTheta(ellAngle);
+			double ellipseArea= MathUtils::ComputeEllipseArea(fitEllipse);
+			double ellipseEccentricity= MathUtils::ComputeEllipseEccentricity(fitEllipse);
+			double dTheta= fitEllipse->GetTheta()-beamEllipse->GetTheta();	
+			//double dTheta= theta_fit-(bpa);
+			FitEllipseVSBeam_compact_real->SetPoint(nFitSources,dTheta,ellipseEccentricity/beamEllipseEccentricity);
+			INFO_LOG("FitEllipse (sigmaX/sigmaY/theta="<<sigmaX_fit<<"/"<<sigmaY_fit<<"/"<<theta_fit<<", A="<<ellipseArea<<", E="<<ellipseEccentricity<<", R1="<<fitEllipse->GetR1()<<", R2="<<fitEllipse->GetR2()<<", theta="<<fitEllipse->GetTheta()<<"), A/A_beam="<<ellipseArea/beamEllipseArea<<", E/E_beam="<<ellipseEccentricity/beamEllipseEccentricity<<", dTheta(deg)="<<dTheta);
+			nFitSources++;
+
 			//INFO_LOG("S="<<S<<" fluxDensity_true="<<fluxDensity_true<<", lgFlux_true="<<lgFlux_true<<", AvgBkg="<<AvgBkg<<", AvgRMS="<<AvgRMS<<", Z_true="<<Z_true<<", fluxDensity_fit="<<fluxDensity_fit<<", FluxPull="<<FluxPull);
 				
 		}//close if has fit info
@@ -1434,12 +1507,20 @@ int AnalyzeData(std::string filename){
 	//===    COMPUTE COMPACT SOURCE FINDING RELIABILITY
 	//============================================================	
 	//## Loop over rec sources
+	nFitSources= 0;
 	for(int i=0;i<RecSourceInfo->GetEntries();i++){
 		RecSourceInfo->GetEntry(i);
 		
 		//Skip if not compact source
 		bool isPointSource= (Type_rec==Source::ePointLike);
 		if(!isPointSource) continue;
+
+		//Skip if source is at edge?	
+		bool atEdgeX= (X0_rec<sourceRegionXMin || X0_rec>sourceRegionXMax);
+		bool atEdgeY= (Y0_rec<sourceRegionYMin || Y0_rec>sourceRegionYMax);
+		bool atEdge= (atEdgeX || atEdgeY);
+		if(excludeSourceAtEdge && atEdge) continue;
+
 
 		//Fill rec info
 		double lgFlux_rec= log10(fluxDensity_rec/beamArea_rec);
@@ -1450,8 +1531,25 @@ int AnalyzeData(std::string filename){
 
 		//Fill true info
 		if(nTrueMatchedSources>0){
-			NTrueSourceHisto_reliability_compact->Fill(lgFlux_rec);	
+			NTrueSourceHisto_reliability_compact->Fill(lgFlux_rec,1);	
 			NTrueSourceVSSignificanceHisto_reliability_compact->Fill(Z_rec,1);
+		}
+		else{
+			//Fill fit ellipse pars
+			double ellMaj= std::max(sigmaX_fit,sigmaY_fit);
+			double ellMin= std::min(sigmaX_fit,sigmaY_fit);
+			double ellAngle= MathUtils::Mod(theta_fit,180.);
+			if(sigmaY_fit>sigmaX_fit) ellAngle= MathUtils::Mod(theta_fit-90.,180.);
+			fitEllipse->SetR1(ellMaj);
+			fitEllipse->SetR2(ellMin);
+			fitEllipse->SetTheta(ellAngle);
+			double ellipseArea= MathUtils::ComputeEllipseArea(fitEllipse);
+			double ellipseEccentricity= MathUtils::ComputeEllipseEccentricity(fitEllipse);
+			double dTheta= fitEllipse->GetTheta()-beamEllipse->GetTheta();	
+			//double dTheta= theta_fit-(bpa);
+			FitEllipseVSBeam_compact_fake->SetPoint(nFitSources,dTheta,ellipseEccentricity/beamEllipseEccentricity);
+			INFO_LOG("FALSE SOURCE: FitEllipse (sigmaX/sigmaY/theta="<<sigmaX_fit<<"/"<<sigmaY_fit<<"/"<<theta_fit<<", A="<<ellipseArea<<", E="<<ellipseEccentricity<<", R1="<<fitEllipse->GetR1()<<", R2="<<fitEllipse->GetR2()<<", theta="<<fitEllipse->GetTheta()<<"), A/A_beam="<<ellipseArea/beamEllipseArea<<", E/E_beam="<<ellipseEccentricity/beamEllipseEccentricity<<", dTheta(deg)="<<dTheta);
+			nFitSources++;
 		}
 
 	}//end loop rec sources
