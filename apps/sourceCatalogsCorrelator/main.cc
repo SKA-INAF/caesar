@@ -860,6 +860,9 @@ int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex)
 		fluxDensity_rec/= beamArea_rec;
 	}
 	HasFitInfo= source_rec->HasFitInfo();
+	sigmaX_fit= -1;
+	sigmaY_fit= -1;
+	theta_fit= -1;
 
 	//Init association info
 	nTrueMatchedSources= 0;
@@ -875,7 +878,10 @@ int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex)
 			SourceType_rec= Source::ePointLike;
 			X0_rec= fitPars.GetParValue(k,"x0");	
 			Y0_rec= fitPars.GetParValue(k,"y0");
-			Smax_rec= fitPars.GetParValue(k,"A");
+			Smax_rec= fitPars.GetParValue(k,"A");	
+			sigmaX_fit= fitPars.GetParValue(k,"sigmaX");
+			sigmaY_fit= fitPars.GetParValue(k,"sigmaY");
+			theta_fit= fitPars.GetParValue(k,"theta");
 			fluxDensity_rec= fitPars.GetComponentFluxDensity(k);
 			if(correctFlux){
 				//Smax_rec/= beamArea_rec;
