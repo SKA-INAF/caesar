@@ -23,6 +23,7 @@
 
 //== UTILS CLASSES ==
 #pragma link C++ class Caesar::FileInfo+;
+#pragma link C++ class Caesar::ProcMemInfo+;
 #pragma link C++ class Caesar::SysUtils+;
 #pragma link C++ class Caesar::AstroUtils+;
 #pragma link C++ class Caesar::CodeUtils+;
