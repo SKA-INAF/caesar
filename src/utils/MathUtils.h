@@ -29,6 +29,8 @@
 #ifndef _MATH_UTILS_h
 #define _MATH_UTILS_h 1
 
+#include <Logger.h>
+
 //OpenCV
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
@@ -270,6 +272,53 @@ class MathUtils : public TObject {
 		* \brief Get ellipse eccentricity
 		*/
 		static double ComputeEllipseEccentricity(TEllipse* ellipse);
+
+		/**
+		* \brief Get ellipse eccentricity
+		*/
+		template<typename T>
+		static T Mod(T x, T y)
+		{
+			//Check if given type is not a float/double
+			if(std::numeric_limits<T>::is_exact){
+				WARN_LOG("Mod function requires float/double arguments, will return 0!");
+				return 0;
+			}
+
+    	if (0 == y) return x;
+
+    	double m= x - y * std::floor(x/y);
+
+    	// handle boundary cases resulting from floating-point limited accuracy:
+    	if (y > 0)              // modulo range: [0..y)
+    	{
+      	if (m>=y)           // Mod(-1e-16             , 360.    ): m= 360.
+        	return 0;
+
+        if (m<0 )
+        {
+        	if (y+m == y)
+          	return 0  ; // just in case...
+          else
+            return y+m; // Mod(106.81415022205296 , _TWO_PI ): m= -1.421e-14 
+        }
+    	}//close if y>0
+    	else                    // modulo range: (y..0]
+    	{
+      	if (m<=y)           // Mod(1e-16              , -360.   ): m= -360.
+        	return 0;
+
+        if (m>0 )
+        {
+        	if (y+m == y)
+          	return 0  ; // just in case...
+          else
+            return y+m; // Mod(-106.81415022205296, -_TWO_PI): m= 1.421e-14 
+        }
+    	}//close else
+
+    	return m;
+ 		}//close Mod function
 
 		
 	private:

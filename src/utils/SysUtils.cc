@@ -258,6 +258,65 @@ bool SysUtils::IsMPIInitialized(){
 
 }//close IsMPIInitialized()
 
+int SysUtils::GetProcMemoryInfo(ProcMemInfo& info)
+{
+	//Stores each word in status file
+	char buffer[1024] = "";
+	unsigned long currRealMem= 0;
+	unsigned long peakRealMem= 0;
+	unsigned long currVirtMem= 0;
+	unsigned long peakVirtMem= 0;
+	
+	//Open linux file contains this process info
+	FILE* file= fopen("/proc/self/status", "r");
+	if (file == NULL) {
+		ERROR_LOG("File /proc/self/status not found!");
+		return -1;
+	}
+
+	//Read the entire file, recording mems in kB
+	while (fscanf(file, " %1023s", buffer) == 1) 	
+	{		
+		int read_status= 0;
+		if (strcmp(buffer, "VmRSS:") == 0) {
+			read_status= fscanf(file, " %lu", &currRealMem);
+		}
+		else if (strcmp(buffer, "VmHWM:") == 0) {
+			read_status= fscanf(file, " %lu", &peakRealMem);
+		}
+		else if (strcmp(buffer, "VmSize:") == 0) {
+			read_status= fscanf(file, " %lu", &currVirtMem);
+		}
+		else if (strcmp(buffer, "VmPeak:") == 0) {
+			read_status= fscanf(file, " %lu", &peakVirtMem);
+		}
+		else{//not interested in this field
+			continue;
+		}
+
+		//Check read was succesful
+		if(read_status!=1){
+			ERROR_LOG("Failed to read memory field from file /proc/self/status!");
+			return -1;
+		}
+    
+	}//end loop
+
+	//Close file
+	fclose(file);
+
+	//Set proc mem field
+	info.realMem= currRealMem;
+	info.realPeakMem= peakRealMem;	
+	info.virtMem= currVirtMem;
+	info.virtPeakMem= peakVirtMem;
+
+	return 0;
+
+}//close GetProcMemoryInfo()
+
+
+
 }//close namespace
 
 

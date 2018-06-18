@@ -52,6 +52,9 @@ using namespace std;
 
 namespace Caesar {
 
+//====================================================
+//==          CLASS: FileInfo
+//====================================================
 class FileInfo : public TObject {
 
 	public:
@@ -100,8 +103,72 @@ class FileInfo : public TObject {
 #ifdef __MAKECINT__
 #pragma link C++ class FileInfo+;
 #endif	
-	
 
+//====================================================
+//==          CLASS: ProcMemInfo
+//====================================================
+class ProcMemInfo : public TObject {
+
+	public:
+		/** 
+		\brief ProcMemInfo constructor
+ 		*/
+		ProcMemInfo() {
+			realMem= 0;
+			realPeakMem= 0;		
+			virtMem= 0;
+			virtPeakMem= 0;
+		}
+		/** 
+		\brief ProcMemInfo destructor
+ 		*/
+		virtual ~ProcMemInfo(){};
+
+	public:
+		/** 
+		\brief Get process mem info in printable string form
+ 		*/
+		std::string GetPrintable() {
+			std::stringstream ss;
+			ss<<"ProcMemInfo: ";
+			ss<<"Real Mem (kB): "<<realMem<<", ";
+			ss<<"Real Peak Mem (kB): "<<realPeakMem<<", ";
+			ss<<"Virt Mem (kB): "<<virtMem<<", ";
+			ss<<"Virt Peak Mem (kB): "<<virtPeakMem<<", ";
+			return ss.str();
+		}
+
+		/** 
+		\brief Print process mem info
+ 		*/
+		void Print(){
+			cout <<"*** PROC MEM INFO ***"<<endl;
+			cout << "Real Mem (kB): "<<realMem<<endl;
+			cout << "Real Peak Mem (kB): "<<realPeakMem<<endl;
+			cout << "Virt Mem (kB): "<<virtMem<<endl;
+			cout << "Virt Peak Mem (kB): "<< virtPeakMem<<endl;
+			cout <<"***********************"<<endl;
+		}
+
+		
+	public: 
+		size_t realMem;
+		size_t realPeakMem;
+		size_t virtMem;
+		size_t virtPeakMem;
+
+	ClassDef(ProcMemInfo,1)
+
+};//close class ProcMemInfo
+	
+#ifdef __MAKECINT__
+#pragma link C++ class ProcMemInfo+;
+#endif
+
+
+//====================================================
+//==          CLASS: SysUtils
+//====================================================
 class SysUtils : public TObject {
 
   public:
@@ -202,6 +269,11 @@ class SysUtils : public TObject {
 		* \brief Is MPI run initialized (return 0 if MPI is disabled at build)
 		*/
 		static bool IsMPIInitialized();
+
+		/**
+		* \brief Get process used virtual memory
+		*/
+		static int GetProcMemoryInfo(ProcMemInfo& info);
 
 	private:
 	
