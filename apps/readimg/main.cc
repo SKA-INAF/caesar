@@ -100,6 +100,11 @@ double dt_read= 0;
 double nx= 0;
 double ny= 0;
 double NThreads= 0;
+double virtMem= 0;
+double realMem= 0;
+double virtPeakMem= 0;
+double realPeakMem= 0;
+
 
 //Functions
 int ParseOptions(int argc, char *argv[]);
@@ -130,7 +135,7 @@ int main(int argc, char *argv[]){
 	}
 	
 	//## Open output file
-	if(OpenOutputFile()<0){
+	if(saveToFile && OpenOutputFile()<0){
 		ERROR_LOG("Failed to open output file!");
 		Clear();
 		return -1;	
@@ -163,6 +168,20 @@ int main(int argc, char *argv[]){
 	auto t1_stats = chrono::steady_clock::now();
 	dt_stats= chrono::duration <double, milli> (t1_stats-t0_stats).count();
 	
+	//=======================
+	//== Read memory usage
+	//=======================
+	ProcMemInfo memInfo;
+	if(SysUtils::GetProcMemoryInfo(memInfo)<0){
+		ERROR_LOG("Failed to read process memory info!");		
+		Clear();
+		return -1;
+	}	
+	
+	virtMem= memInfo.virtMem;
+	realMem= memInfo.realMem;
+	virtPeakMem= memInfo.virtPeakMem;
+	realPeakMem= memInfo.realPeakMem;
 	
 	//=======================
 	//== Fill stats
@@ -195,6 +214,10 @@ int main(int argc, char *argv[]){
 	INFO_LOG("dt_read(ms)= "<<dt_read<<" ["<<dt_read/dt*100.<<"%]");
 	INFO_LOG("dt_stats(ms)= "<<dt_stats<<" ["<<dt_stats/dt*100.<<"%]");
 	INFO_LOG("dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]");
+	INFO_LOG("real mem(kB)= "<<realMem);
+	INFO_LOG("real mem peak(kB)= "<<realPeakMem);
+	INFO_LOG("virt mem(kB)= "<<virtMem);
+	INFO_LOG("virt mem peak(kB)= "<<virtPeakMem);
 	INFO_LOG("===========================");
 	
 	
@@ -460,7 +483,11 @@ int OpenOutputFile(){
 		PerfInfo->SetBranchAddress("NThreads",&NThreads);	
 		PerfInfo->SetBranchAddress("dt_init",&dt_init);
 		PerfInfo->SetBranchAddress("dt_read",&dt_read);
-		PerfInfo->SetBranchAddress("dt_stats",&dt_stats);
+		PerfInfo->SetBranchAddress("dt_stats",&dt_stats);	
+		PerfInfo->SetBranchAddress("virtMem",&virtMem);
+		PerfInfo->SetBranchAddress("realMem",&realMem);
+		PerfInfo->SetBranchAddress("virtPeakMem",&virtPeakMem);
+		PerfInfo->SetBranchAddress("realPeakMem",&realPeakMem);
 	}
 	else{//create the TTree as not existing in file
 		PerfInfo= new TTree("PerfInfo","PerfInfo");
@@ -471,6 +498,10 @@ int OpenOutputFile(){
 		PerfInfo->Branch("dt_init",&dt_init,"dt_init/D");
 		PerfInfo->Branch("dt_read",&dt_read,"dt_read/D");
 		PerfInfo->Branch("dt_stats",&dt_stats,"dt_stats/D");
+		PerfInfo->Branch("virtMem",&virtMem,"virtMem/D");
+		PerfInfo->Branch("realMem",&realMem,"realMem/D");
+		PerfInfo->Branch("virtPeakMem",&virtPeakMem,"virtPeakMem/D");
+		PerfInfo->Branch("realPeakMem",&realPeakMem,"realPeakMem/D");
 	}
 
 	return 0;
