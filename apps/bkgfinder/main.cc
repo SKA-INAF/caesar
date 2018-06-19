@@ -57,6 +57,9 @@ void Usage(char* exeName){
 	cout<<"-S, --skipblobs \t If given, skip blobs using a flood-fill algorithm (default=no)"<<endl;
 	cout<<"-T, --seedthr \t Seed threshold in flood-fill algorithm in nsigmas significance (typical value=5)"<<endl;
 	cout<<"-t, --mergethr \t Merge threshold in flood-fill algorithm in nsigmas significance (typical value=2.6)"<<endl;
+	cout<<"-m, --minnpixels \t Minimum number of pixels in a blob (typical value=5)"<<endl;
+	cout<<"-n, --nthreads \t Number of threads to be used for reading (-1=all available threads)"<<endl;
+	cout<<"-p, --parallel \t Use parallel std algorithms for median "<<endl;
 	cout<<"-v, --verbosity \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG)"<<endl;
 	cout<<"=============================="<<endl;
 }//close Usage()
@@ -76,7 +79,9 @@ static const struct option options_tab[] = {
 	{ "skipblobs", no_argument, 0, 'S'},
 	{ "seedthr", required_argument, 0, 'T'},
 	{ "mergethr", required_argument, 0, 't'},
-	{ "minnpixels", required_argument, 0, 'n'},
+	{ "minnpixels", required_argument, 0, 'm'},
+	{ "nthreads", required_argument, 0, 'n' },
+	{ "parallel", no_argument, 0, 'p' },
   {(char*)0, (int)0, (int*)0, (int)0}
 };
 
@@ -89,12 +94,14 @@ bool use2ndPass= false;
 bool skipOutliers= false;
 double seedThr= 5;
 double mergeThr= 2.6;
-int minPixels= 10;
+int minPixels= 5;
 bool writeToFITS= false;
 double boxSize= 0;
 double gridSize= 0;
 int bkgEstimator= 0;
 Caesar::BkgEstimator estimator;
+int nthreads= -1;
+bool useParallelVersion= false;
 
 //Globar vars
 TFile* outputFile= 0;
@@ -104,9 +111,7 @@ std::string outputFileName_bkg= "";
 std::string outputFileName_noise= "";
 std::string outputFileName_significance= "";
 std::string imageName= "img";
-//Caesar::Img* inputImg= 0;
 Caesar::Image* inputImg= 0;
-//Caesar::BkgData* bkgData= 0;
 Caesar::ImgBkgData* bkgData= 0;
 Caesar::FileInfo info;
 
@@ -189,6 +194,8 @@ int main(int argc, char *argv[]){
 	auto t1_bkg = chrono::steady_clock::now();
 	double dt_bkg= chrono::duration <double, milli> (t1_bkg-t0_bkg).count();
 
+	
+	
 	//=======================
 	//== Save to file
 	//=======================
@@ -208,6 +215,16 @@ int main(int argc, char *argv[]){
 	auto t1 = chrono::steady_clock::now();
 	double dt= chrono::duration <double, milli> (t1-t0).count();
 
+	//=======================
+	//== Read memory usage
+	//=======================
+	ProcMemInfo memInfo;
+	if(SysUtils::GetProcMemoryInfo(memInfo)<0){
+		ERROR_LOG("Failed to read process memory info!");		
+		Clear();
+		return -1;
+	}	
+
 	INFO_LOG("===========================");
 	INFO_LOG("===   PERFORMANCE INFO  ===");
 	INFO_LOG("===========================");
@@ -216,6 +233,10 @@ int main(int argc, char *argv[]){
 	INFO_LOG("dt_stats(ms)= "<<dt_stats<<" ["<<dt_stats/dt*100.<<"%]");
 	INFO_LOG("dt_bkg(ms)= "<<dt_bkg<<" ["<<dt_bkg/dt*100.<<"%]");
 	INFO_LOG("dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]");
+	INFO_LOG("real mem(kB)= "<<memInfo.realMem);
+	INFO_LOG("real mem peak(kB)= "<<memInfo.realPeakMem);
+	INFO_LOG("virt mem(kB)= "<<memInfo.virtMem);
+	INFO_LOG("virt mem peak(kB)= "<<memInfo.virtPeakMem);
 	INFO_LOG("===========================");
 	
 	
@@ -231,9 +252,6 @@ void Save(){
 	//=======================
 	//== Output 
 	//=======================
-	//Caesar::Img* BkgMap= bkgData->BkgMap;
-	//Caesar::Img* NoiseMap= bkgData->NoiseMap;
-	//Caesar::Img* SignificanceMap= 0;
 	Caesar::Image* BkgMap= bkgData->BkgMap;
 	Caesar::Image* NoiseMap= bkgData->NoiseMap;
 	Caesar::Image* SignificanceMap= 0;
@@ -274,7 +292,7 @@ int ParseOptions(int argc, char *argv[])
 	//## Parse options
 	int c = 0;
   int option_index = 0;
-	while((c = getopt_long(argc, argv, "hfsi:o::b:g:e:I::v:PST:t:n:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hfsi:o::b:g:e:I::v:PST:t:m:n:p",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -352,11 +370,21 @@ int ParseOptions(int argc, char *argv[])
 				mergeThr= atof(optarg);
 				break;	
 			}	
-			case 'n':	
+			case 'm':	
 			{
 				minPixels= atoi(optarg);
 				break;	
 			}
+			case 'n':	
+			{
+				nthreads= atoi(optarg);	
+				break;	
+			}
+			case 'p':	
+			{
+				useParallelVersion= true;				
+				break;	
+			}	
 			default:
 			{
       	Usage(argv[0]);	
@@ -368,6 +396,9 @@ int ParseOptions(int argc, char *argv[])
 	//## Set logging level
 	std::string sloglevel= GetStringLogLevel(verbosity);
 	LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
+	
+	//## Set number of threads
+	if(nthreads>0) SysUtils::SetOMPThreads(nthreads);
 	
 	//## Set bkg estimator
 	estimator= Caesar::eMedianBkg;
@@ -387,6 +418,25 @@ int ParseOptions(int argc, char *argv[])
 		ERROR_LOG("Invalid bkg estimator specified!");
 		return -1;
 	}
+
+	//## Print options
+	INFO_LOG("========= OPTIONS ============");
+	INFO_LOG("input file: "<<inputFileName);
+	INFO_LOG("image name: "<<imageName);
+	INFO_LOG("output file: "<<outputFileName);
+	INFO_LOG("boxSize: "<<boxSize);
+	INFO_LOG("gridSize: "<<gridSize);
+	INFO_LOG("bkgEstimator: "<<bkgEstimator);	
+	INFO_LOG("computeSignificance? "<<computeSignificance);
+	INFO_LOG("use2ndPass? "<<use2ndPass);
+	INFO_LOG("skipOutliers? "<<skipOutliers);
+	INFO_LOG("seedThr: "<<seedThr);
+	INFO_LOG("mergeThr: "<<mergeThr);
+	INFO_LOG("minPixels: "<<minPixels);
+	INFO_LOG("nthreads: "<<nthreads<<" (NThreads="<<SysUtils::GetOMPMaxThreads()<<")");
+	INFO_LOG("useParallelAlgo? "<<useParallelVersion);	
+	INFO_LOG("===============================");
+	
 	
 	return 0;
 
@@ -400,7 +450,7 @@ std::string GetStringLogLevel(int verbosity){
 	else if(verbosity==2) slevel= "ERROR";
 	else if(verbosity==3) slevel= "WARN";
 	else if(verbosity==4) slevel= "INFO";
-	else if(verbosity>5) slevel= "DEBUG";
+	else if(verbosity>=5) slevel= "DEBUG";
 	else slevel= "OFF";
 
 	return slevel;
@@ -462,7 +512,6 @@ int ReadImage(){
 			ERROR_LOG("Cannot open input file "<<inputFileName<<"!");
 			return -1;
 		}
-		//inputImg=  (Caesar::Img*)inputFile->Get(imageName.c_str());
 		inputImg=  (Caesar::Image*)inputFile->Get(imageName.c_str());
 		if(!inputImg){
 			ERROR_LOG("Cannot get image from input file "<<inputFileName<<"!");
@@ -473,9 +522,6 @@ int ReadImage(){
 	//--> FITS reading
 	if(file_extension==".fits"){// Read image from FITS file
 		INFO_LOG("Reading FITS input file "<<inputFileName<<"...");
-		//inputImg= new Caesar::Img; 
-		//inputImg->SetNameTitle(imageName.c_str(),imageName.c_str());
-
 		inputImg= new Caesar::Image;
 		inputImg->SetName(imageName);
 		if(inputImg->ReadFITS(inputFileName)<0){
@@ -500,7 +546,9 @@ int ComputeStats(){
 	bool computeRobustStats= true;
 	bool useRange= false;
 	bool forceRecomputing= false;
-	if(inputImg->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0){
+	double minThr= -std::numeric_limits<double>::infinity();
+	double maxThr= std::numeric_limits<double>::infinity();
+	if(inputImg->ComputeStats(computeRobustStats,forceRecomputing,useRange,minThr,maxThr,useParallelVersion)<0){
 		ERROR_LOG("Stats computing failed!");
 		return -1;
 	}
@@ -516,24 +564,18 @@ int ComputeBkg(){
 	INFO_LOG("Starting background finder ...");
 	
 	//Check grid & box size
-	//int Nx= inputImg->GetNbinsX();
-	//int Ny= inputImg->GetNbinsY();
 	long int Nx= inputImg->GetNx();
 	long int Ny= inputImg->GetNy();
 	if(boxSize>=min(Nx,Ny) || gridSize>=min(Nx,Ny) ){
 		ERROR_LOG("Box/grid size are too large compared to image size ("<<Nx<<","<<Ny<<")");
-		//inputImg->Delete();
 		return -1;
 	}
 
 	//Compute bkg & noise maps
 	bool computeLocalBkg= true;
-	
-	//bkgData= inputImg->ComputeBkg(estimator,true,boxSize,boxSize,gridSize,gridSize,use2ndPass,skipOutliers,seedThr,mergeThr,minPixels);
 	bkgData= inputImg->ComputeBkg(estimator,computeLocalBkg,boxSize,boxSize,gridSize,gridSize,use2ndPass,skipOutliers,seedThr,mergeThr,minPixels);
 	if(!bkgData){
 		ERROR_LOG("Failed to compute bkg data!");
-		//inputImg->Delete();
 		return -1;
 	}
 
