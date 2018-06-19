@@ -302,6 +302,11 @@ int ParseOptions(int argc, char *argv[])
 				saveToFile= true;				
 				break;	
 			}
+			case 'v':	
+			{
+				verbosity= atoi(optarg);	
+				break;	
+			}
 			default:
 			{
       	Usage(argv[0]);	
