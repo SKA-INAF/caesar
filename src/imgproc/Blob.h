@@ -170,7 +170,7 @@ class Blob : public TNamed {
 		/**
 		* \brief Get number of pixels
 		*/
-		int GetNPixels(){return static_cast<int>(m_Pixels.size());}
+		long int GetNPixels(){return static_cast<long int>(m_Pixels.size());}
 
 		/**
 		* \brief Get pixel collection
