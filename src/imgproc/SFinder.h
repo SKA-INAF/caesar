@@ -277,7 +277,6 @@ class SFinder : public TObject {
 		/**
 		* \brief Merge task sources
 		*/
-		//int MergeTaskSources(TaskData* taskData);
 		int MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* taskData);
 
 	public:
@@ -320,13 +319,18 @@ class SFinder : public TObject {
 		TTree* m_PerfTree;
 		double totTime;
 		double initTime;
+		double imageStatsTime;
+		double imageBkgTime;
 		double readImageTime;
+		double blobMaskTime;
+		double blobFindingTime;
 		double compactSourceTime;
 		double sourceSelectionTime;
 		double imgResidualTime;
 		double extendedSourceTime;
 		double sourceFitTime;
 		double saveTime;
+		double virtMemPeak;
 
 		//Source
 		Source* m_Source;

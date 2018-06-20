@@ -277,12 +277,17 @@ void SFinder::InitOptions()
 	totTime= 0;
 	initTime= 0;
 	readImageTime= 0;
+	imageStatsTime= 0;
+	imageBkgTime= 0;	
+	blobMaskTime= 0;
+	blobFindingTime= 0;
 	compactSourceTime= 0;
 	sourceSelectionTime= 0;
 	imgResidualTime= 0;
 	extendedSourceTime= 0;
 	sourceFitTime= 0;	
 	saveTime= 0;
+	virtMemPeak= 0;
 
 	//Extended source finder
 	m_EdgeImg= 0;
@@ -352,12 +357,17 @@ int SFinder::Init(){
 		m_PerfTree->Branch("tot",&totTime,"tot/D");
 		m_PerfTree->Branch("init",&initTime,"init/D");
 		m_PerfTree->Branch("read",&readImageTime,"read/D");
+		m_PerfTree->Branch("stats",&imageStatsTime,"stats/D");
+		m_PerfTree->Branch("bkg",&imageBkgTime,"bkg/D");
+		m_PerfTree->Branch("blobmask",&blobMaskTime,"blobmask/D");
+		m_PerfTree->Branch("blobfinder",&blobFindingTime,"blobfinder/D");
 		m_PerfTree->Branch("sfinder",&compactSourceTime,"sfinder/D");
 		m_PerfTree->Branch("sselector",&sourceSelectionTime,"sselector/D");
 		m_PerfTree->Branch("imgres",&imgResidualTime,"imgres/D");
 		m_PerfTree->Branch("extsfinder",&extendedSourceTime,"extsfinder/D");
 		m_PerfTree->Branch("sfit",&sourceFitTime,"sfit/D");
 		//m_PerfTree->Branch("save",&saveTime,"save/D");
+		m_PerfTree->Branch("virtMemPeak",&virtMemPeak,"virtMemPeak/D");
 
 	}//close if saveToFile
 
@@ -924,6 +934,27 @@ int SFinder::Run(){
 	totTime= chrono::duration <double, milli> (t1-t0).count();
 
 	//============================
+	//== Compute used memory peak
+	//============================
+	ProcMemInfo memInfo;
+	if(SysUtils::GetProcMemoryInfo(memInfo)<0){
+		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to read process memory info!");		
+		virtMemPeak= -1;
+	}	
+
+	//Compute max peak virt memory across all processors
+	#ifdef MPI_ENABLED
+	if(m_mpiEnabled) {	
+		double virtMemPeak_max= -1;
+		MPI_Reduce(&virtMemPeak, &virtMemPeak_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
+		if (m_procId == MASTER_ID) {
+			virtMemPeak= virtMemPeak_max;
+			INFO_LOG("[PROC "<<m_procId<<"] - Max virtual memory peak across all processor is "<<virtMemPeak<<" kB");
+		}
+	}
+	#endif
+
+	//============================
 	//== Save to file
 	//============================
 	if(m_saveToFile && m_procId==MASTER_ID) {
@@ -936,6 +967,7 @@ int SFinder::Run(){
 	#ifdef MPI_ENABLED
 	if(m_mpiEnabled) MPI_Barrier(MPI_COMM_WORLD);
 	#endif	
+
 
 	//===============================
 	//== Print performance stats
@@ -1081,6 +1113,7 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	*/
 
 	//## Compute blob mask
+	auto t0_blobmask = chrono::steady_clock::now();	
 	if(!m_blobMask && m_SearchNestedSources){
 		INFO_LOG("[PROC "<<m_procId<<"] - Computing multi-scale blob mask...");
 		m_blobMask= ComputeBlobMaskImage(inputImg);
@@ -1090,7 +1123,9 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 			return nullptr;
 		}
 	}
-
+	auto t1_blobmask = chrono::steady_clock::now();	
+	blobMaskTime+= chrono::duration <double, milli> (t1_blobmask-t0_blobmask).count();
+	
 
 	//## Iterate source finding subtracting sources found at each iteration
 	std::vector<Source*> sources;
@@ -1134,6 +1169,7 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 
 		//## Find compact sources
 		INFO_LOG("[PROC "<<m_procId<<"] - Finding compact sources at iter no. "<<k+1<<" ...");
+		auto t0_blobfind = chrono::steady_clock::now();	
 		std::vector<Source*> sources_iter;
 		bool searchNested= false;
 		int status= img->FindCompactSource(
@@ -1151,6 +1187,9 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 			curvMap
 		);
 		*/
+		auto t1_blobfind = chrono::steady_clock::now();	
+		blobFindingTime+= chrono::duration <double, milli> (t1_blobfind-t0_blobfind).count();
+		
 
 		if(status<0) {
 			ERROR_LOG("[PROC "<<m_procId<<"] - Compact source finding failed!");
@@ -1208,6 +1247,7 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	//Merge sources found at each iterations
 	//NB: First compute the mask and then use it in flood-fill for final source collection
 	INFO_LOG("[PROC "<<m_procId<<"] - Merging compact sources found at each iteration cycle (#"<<sources.size()<<" sources in list after #"<<iterations_done<<" iterations) ...");
+	t0_blobmask = chrono::steady_clock::now();	
 	bool isBinary= true;
 	bool invert= false;
 	Image* segmMap= inputImg->GetSourceMask(sources,isBinary,invert);
@@ -1217,7 +1257,10 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		CodeUtils::DeletePtrCollection(sources);
 		return nullptr;
 	}
+	t1_blobmask = chrono::steady_clock::now();	
+	blobMaskTime+= chrono::duration <double, milli> (t1_blobmask-t0_blobmask).count();
 
+	auto t0_blobfind = chrono::steady_clock::now();	
 	std::vector<Source*> sources_merged;
 	double seedThr_binary= 0.5;//dummy values (>0)
 	double mergeThr_binary= 0.4;//dummy values (>0)
@@ -1236,7 +1279,9 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		seedThr_binary,mergeThr_binary,m_NMinPix,
 		m_SearchNestedSources,m_blobMask,m_minNestedMotherDist, m_maxMatchingPixFraction,nPixThrToSearchNested
 	);
-
+	auto t1_blobfind = chrono::steady_clock::now();	
+	blobFindingTime+= chrono::duration <double, milli> (t1_blobfind-t0_blobfind).count();
+	
 
 	//Clearup data
 	CodeUtils::DeletePtr<Image>(img);
@@ -2689,7 +2734,7 @@ int SFinder::FitSources(std::vector<Source*>& sources){
 	SourceFitOptions fitOptions;	
 	fitOptions.bmaj= fabs(m_beamBmaj/m_pixSizeX);//converted in pixels
 	fitOptions.bmin= fabs(m_beamBmin/m_pixSizeY);//converted in pixels
-	fitOptions.bpa= m_beamBpa;
+	fitOptions.bpa= m_beamBpa + 90.;//beam pos angle is computed from North. We are assuming angles computed from x axis.
 	fitOptions.nMaxComponents= m_fitMaxNComponents;
 	fitOptions.limitCentroidInFit= m_fitWithCentroidLimits;
 	fitOptions.fixCentroidInPreFit= m_fixCentroidInPreFit;
@@ -2740,6 +2785,9 @@ int SFinder::FitSources(std::vector<Source*>& sources){
 	fitOptions.blobMapThrFactor= m_NestedBlobThrFactor;
 	fitOptions.blobMapKernelFactor= m_nestedBlobKernFactor; 
 
+	#ifdef OPENMP_ENABLED
+	#pragma omp parallel for
+	#endif
 	for(size_t i=0;i<sources.size();i++){
 
 		//If source is non-fittable fit only nested components individually, otherwise perform a joint fit
@@ -2878,14 +2926,16 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 
 	//## Compute stats
 	INFO_LOG("[PROC "<<m_procId<<"] - Computing image stats...");
+	auto t0_stats = chrono::steady_clock::now();	
 	bool computeRobustStats= true;
-	//bool skipNegativePix= false;
 	bool forceRecomputing= false;
-	//if(img->ComputeStats(computeRobustStats,skipNegativePix,forceRecomputing)<0){
 	if(img->ComputeStats(computeRobustStats,forceRecomputing,useRange,minThr,maxThr)<0){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Stats computing failed!");
 		return nullptr;
 	}
+	auto t1_stats = chrono::steady_clock::now();	
+	imageStatsTime+= chrono::duration <double, milli> (t1_stats-t0_stats).count();
+		
 	img->LogStats("INFO");
 
 	//## Set local bkg grid/box
@@ -2946,6 +2996,7 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 	INFO_LOG("[PROC "<<m_procId<<"] - Setting grid size to ("<<gridSizeX<<","<<gridSizeY<<") pixels ...");
 
 	//## Compute Bkg
+	auto t0_bkg = chrono::steady_clock::now();	
 	ImgBkgData* bkgData= img->ComputeBkg (
 		m_BkgEstimator,
 		m_UseLocalBkg,boxSizeX,boxSizeY,gridSizeX,gridSizeY,
@@ -2953,7 +3004,9 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 		m_SkipOutliersInLocalBkg,m_SeedThr,m_MergeThr,m_NMinPix,
 		useRange,minThr,maxThr
 	);
-
+	auto t1_bkg = chrono::steady_clock::now();	
+	imageBkgTime+= chrono::duration <double, milli> (t1_bkg-t0_bkg).count();
+	
 	if(!bkgData) {
 		ERROR_LOG("[PROC "<<m_procId<<"] - Bkg computing failed!");
 		return nullptr;
@@ -3186,12 +3239,17 @@ void SFinder::PrintPerformanceStats()
 	INFO_LOG("tot (ms)= "<<totTime);
 	INFO_LOG("init (ms)= "<<initTime<<" ["<<initTime/totTime*100.<<"%]");
 	INFO_LOG("read image (ms)= "<<readImageTime<<" ["<<readImageTime/totTime*100.<<"%]");
+	INFO_LOG("image stats(ms)= "<<imageStatsTime<<" ["<<imageStatsTime/totTime*100.<<"%]");
+	INFO_LOG("image bkg(ms)= "<<imageBkgTime<<" ["<<imageBkgTime/totTime*100.<<"%]");
+	INFO_LOG("blob mask (ms)= "<<blobMaskTime<<" ["<<blobMaskTime/totTime*100.<<"%]");
+	INFO_LOG("blob finding (ms)= "<<blobFindingTime<<" ["<<blobFindingTime/totTime*100.<<"%]");
 	INFO_LOG("source finding (ms)= "<<compactSourceTime<<" ["<<compactSourceTime/totTime*100.<<"%]");
 	INFO_LOG("source selection (ms)= "<<sourceSelectionTime<<" ["<<sourceSelectionTime/totTime*100.<<"%]");
 	INFO_LOG("img residual (ms)= "<<imgResidualTime<<" ["<<imgResidualTime/totTime*100.<<"%]");
 	INFO_LOG("ext source finding (ms)= "<<extendedSourceTime<<" ["<<extendedSourceTime/totTime*100.<<"%]");
 	INFO_LOG("source fitting (ms)= "<<sourceFitTime<<" ["<<sourceFitTime/totTime*100.<<"%]");
 	INFO_LOG("save (ms)= "<<saveTime<<" ["<<saveTime/totTime*100.<<"%]");
+	INFO_LOG("virtMemPeak (kB)= "<<virtMemPeak);
 	INFO_LOG("===========================");
 
 }//close PrintPerformanceStats()
@@ -3482,6 +3540,10 @@ int SFinder::GatherTaskDataFromWorkers()
 	INFO_LOG("[PROC "<<m_procId<<"] - Summing up and averaging he elapsed cpu timers across workers...");
 	double initTime_sum;
 	double readImageTime_sum;
+	double imageStatsTime_sum;
+	double imageBkgTime_sum;
+	double blobMaskTime_sum;
+	double blobFindingTime_sum;	
 	double compactSourceTime_sum;
 	double sourceSelectionTime_sum;
 	double imgResidualTime_sum;
@@ -3496,21 +3558,29 @@ int SFinder::GatherTaskDataFromWorkers()
 	*/
 	MPI_Reduce(&initTime, &initTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
 	MPI_Reduce(&readImageTime, &readImageTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&imageStatsTime, &imageStatsTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&imageBkgTime, &imageBkgTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&blobMaskTime, &blobMaskTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&blobFindingTime, &blobFindingTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
 	MPI_Reduce(&compactSourceTime, &compactSourceTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
 	MPI_Reduce(&imgResidualTime, &imgResidualTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
 	MPI_Reduce(&sourceSelectionTime, &sourceSelectionTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
 	MPI_Reduce(&extendedSourceTime, &extendedSourceTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
 	
-	INFO_LOG("[PROC "<<m_procId<<"] - CPU times (ms): {init="<<initTime<<", read="<<readImageTime<<", sourcefind="<<compactSourceTime<<", residual="<<imgResidualTime<<", sourcesel="<<sourceSelectionTime<<", extsourcefind="<<extendedSourceTime<<"}");
+	INFO_LOG("[PROC "<<m_procId<<"] - CPU times (ms): {init="<<initTime<<", read="<<readImageTime<<", stats="<<imageStatsTime<<", bkg="<<imageBkgTime<<", blobmask="<<blobMaskTime<<", blobfind="<<blobFindingTime<<", sourcefind="<<compactSourceTime<<", residual="<<imgResidualTime<<", sourcesel="<<sourceSelectionTime<<", extsourcefind="<<extendedSourceTime<<"}");
 
 	if (m_procId == MASTER_ID) {
 		initTime= initTime_sum;
 		readImageTime= readImageTime_sum;
+		imageStatsTime= imageStatsTime_sum;
+		imageBkgTime= imageBkgTime_sum;
+		blobFindingTime= blobFindingTime_sum;
+		blobMaskTime= blobMaskTime_sum;
 		compactSourceTime= compactSourceTime_sum;
 		sourceSelectionTime= sourceSelectionTime_sum;
 		imgResidualTime= imgResidualTime_sum;
 		extendedSourceTime= extendedSourceTime_sum;
-		INFO_LOG("[PROC "<<m_procId<<"] - Cumulative cpu times (ms): {init="<<initTime<<", read="<<readImageTime<<", sourcefind="<<compactSourceTime<<", residual="<<imgResidualTime<<", sourcesel="<<sourceSelectionTime<<", extsourcefind="<<extendedSourceTime);
+		INFO_LOG("[PROC "<<m_procId<<"] - Cumulative cpu times (ms): {init="<<initTime<<", read="<<readImageTime<<", stats="<<imageStatsTime<<", bkg="<<imageBkgTime<<", blobmask="<<blobMaskTime<<", blobfind="<<blobFindingTime<<", sourcefind="<<compactSourceTime<<", residual="<<imgResidualTime<<", sourcesel="<<sourceSelectionTime<<", extsourcefind="<<extendedSourceTime);
 	}
 
 	//## Merge all sources found by workers in a unique collection
