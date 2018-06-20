@@ -208,13 +208,9 @@
 //bkg finder
 #pragma link C++ class Caesar::BkgSampleData+;
 #pragma link C++ class vector<Caesar::BkgSampleData>+;
-//#pragma link C++ class Caesar::BkgData+;
 #pragma link C++ class Caesar::ImgBkgData+;
 #pragma link C++ class Caesar::BkgFinder+;
-//#pragma link C++ function Caesar::BlobFinder::FindBlob<Blob>(Caesar::Img*,std::vector<Blob*>&,Caesar::Img*,Caesar::BkgData*,double,double,int,bool,bool);
-//#pragma link C++ function Caesar::BlobFinder::FindBlob<Source>(Caesar::Img*,std::vector<Source*>&,Caesar::Img*,Caesar::BkgData*,double,double,int,bool,bool);
-#pragma link C++ function Caesar::BlobFinder::FindBlob<Blob>(Caesar::Img*,std::vector<Blob*>&,Caesar::Image*,Caesar::ImgBkgData*,double,double,int,bool,bool);
-#pragma link C++ function Caesar::BlobFinder::FindBlob<Source>(Caesar::Img*,std::vector<Source*>&,Caesar::Image*,Caesar::ImgBkgData*,double,double,int,bool,bool);
+
 
 //data class
 #pragma link C++ class Caesar::Pixel+;
@@ -256,6 +252,16 @@
 
 //blob/source finder
 #pragma link C++ class Caesar::BlobFinder+;
+#pragma link C++ function Caesar::BlobFinder::FindBlobsST<Blob>(Caesar::Img*,std::vector<Blob*>&,Caesar::Image*,Caesar::ImgBkgData*,double,double,int,bool,bool,Caesar::Image*);
+#pragma link C++ function Caesar::BlobFinder::FindBlobsST<Source>(Caesar::Img*,std::vector<Source*>&,Caesar::Image*,Caesar::ImgBkgData*,double,double,int,bool,bool,Caesar::Image*);
+#pragma link C++ function Caesar::BlobFinder::FindBlobs<Blob>(Caesar::Img*,std::vector<Blob*>&,Caesar::Image*,Caesar::ImgBkgData*,double,double,int,bool,bool,Caesar::Image*);
+#pragma link C++ function Caesar::BlobFinder::FindBlobs<Source>(Caesar::Img*,std::vector<Source*>&,Caesar::Image*,Caesar::ImgBkgData*,double,double,int,bool,bool,Caesar::Image*);
+
+#ifdef OPENMP_ENABLED
+#pragma link C++ function Caesar::BlobFinder::FindBlobsMT<Blob>(Caesar::Img*,std::vector<Blob*>&,Caesar::Image*,Caesar::ImgBkgData*,double,double,int,bool,bool,Caesar::Image*);
+#pragma link C++ function Caesar::BlobFinder::FindBlobsMT<Source>(Caesar::Img*,std::vector<Source*>&,Caesar::Image*,Caesar::ImgBkgData*,double,double,int,bool,bool,Caesar::Image*);
+#endif
+
 #pragma link C++ class Caesar::SFinder+;
 //======================
 
