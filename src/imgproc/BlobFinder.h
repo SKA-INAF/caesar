@@ -81,6 +81,19 @@ class BlobFinder : public TObject {
 		static int FindBlobs(Image* inputImg,std::vector<T*>& blobs,Image* floodImg=0,ImgBkgData* bkgData=0,double seedThr=5,double mergeThr=2.6,int minPixels=10,bool findNegativeExcess=false,bool mergeBelowSeed=false,Image* curvMap=0);
 
 		/**
+		* \brief Find blobs (multithreaded version)
+		*/
+		template <class T>
+		static int FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodImg=0,ImgBkgData* bkgData=0,double seedThr=5,double mergeThr=2.6,int minPixels=10,bool findNegativeExcess=false,bool mergeBelowSeed=false,Image* curvMap=0);
+		
+
+		/**
+		* \brief Find blobs (single-thread version)
+		*/
+		template <class T>
+		static int FindBlobsST(Image* inputImg,std::vector<T*>& blobs,Image* floodImg=0,ImgBkgData* bkgData=0,double seedThr=5,double mergeThr=2.6,int minPixels=10,bool findNegativeExcess=false,bool mergeBelowSeed=false,Image* curvMap=0);
+
+		/**
 		* \brief Flood fill algorithm
 		*/
 		static int FloodFill(Image* img,std::vector<long int>& clusterPixelIds,long int seedPixelId,double floodMinThr,double floodMaxThr);
@@ -111,8 +124,16 @@ class BlobFinder : public TObject {
 
 #ifdef __MAKECINT__
 #pragma link C++ class BlobFinder+;
-#pragma link C++ function FindBlob<Blob>(Caesar::Image*,std::vector<Blob*>&,Caesar::Image*,Caesar::ImgBkgData*,double,double,int,bool,bool);
-#pragma link C++ function FindBlob<Source>(Caesar::Image*,std::vector<Source*>&,Caesar::Image*,Caesar::ImgBkgData*,double,double,int,bool,bool);
+#pragma link C++ function BlobFinder::FindBlobs<Blob>(Caesar::Image*,std::vector<Blob*>&,Caesar::Image*,Caesar::ImgBkgData*,double,double,int,bool,bool,Caesar::Image*);
+#pragma link C++ function BlobFinder::FindBlobs<Source>(Caesar::Image*,std::vector<Source*>&,Caesar::Image*,Caesar::ImgBkgData*,double,double,int,bool,bool,Caesar::Image*);
+#pragma link C++ function BlobFinder::FindBlobsST<Blob>(Caesar::Image*,std::vector<Blob*>&,Caesar::Image*,Caesar::ImgBkgData*,double,double,int,bool,bool,Caesar::Image*);
+#pragma link C++ function BlobFinder::FindBlobsST<Source>(Caesar::Image*,std::vector<Source*>&,Caesar::Image*,Caesar::ImgBkgData*,double,double,int,bool,bool,Caesar::Image*);
+
+#ifdef OPENMP_ENABLED
+#pragma link C++ function BlobFinder::FindBlobsMT<Blob>(Caesar::Image*,std::vector<Blob*>&,Caesar::Image*,Caesar::ImgBkgData*,double,double,int,bool,bool,Caesar::Image*);
+#pragma link C++ function BlobFinder::FindBlobsMT<Source>(Caesar::Image*,std::vector<Source*>&,Caesar::Image*,Caesar::ImgBkgData*,double,double,int,bool,bool,Caesar::Image*);
+#endif
+
 #endif
 
 }//close namespace

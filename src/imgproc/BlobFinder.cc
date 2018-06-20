@@ -50,6 +50,7 @@
 #include <time.h>
 #include <ctime>
 #include <queue>
+#include <chrono>
 
 using namespace std;
 
@@ -67,9 +68,415 @@ BlobFinder::~BlobFinder(){
 
 }//close destructor
 
+#ifdef OPENMP_ENABLED
+template <class T>
+int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodImg,ImgBkgData* bkgData,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,Image* curvMap)
+{
+	//Start timer		
+	auto start = chrono::steady_clock::now();
+
+	//## Check input img
+	if(!inputImg){
+		ERROR_LOG("Null ptr to given input image!");
+		return -1;
+	}
+
+	//Get metadata if available
+	ImgMetaData* metadata= inputImg->GetMetaData();
+
+	//Set img range data
+	long int Nx= inputImg->GetNx();
+	long int Ny= inputImg->GetNy();
+	long int Ntot= Nx*Ny;
+	float Xmin= inputImg->GetXmin();
+	float Ymin= inputImg->GetYmin();
+	float Xmax= inputImg->GetXmax();
+	float Ymax= inputImg->GetYmax();
+	DEBUG_LOG("Image size ("<<Nx<<","<<Ny<<"), Image range(x["<<Xmin<<","<<Xmax<<") y["<<Ymin<<","<<Ymax<<"])");
+
+	//## Check if the flood map is provided otherwise set to the input map
+	//## NB: In source search it should be the significance map
+	//## NB2: It could be used to fill blobs in the input map, conditional to another map (i.e. a binary mask)
+	if(!floodImg) floodImg= inputImg;
+
+	//## Check if bkg data are provided and if local bkg is available
+	//## If local bkg is available use it, otherwise use global bkg
+	bool hasBkgData= false;
+	bool hasLocalBkg= false;
+	if(bkgData){
+		hasBkgData= true;
+		hasLocalBkg= bkgData->HasLocalBkg();
+	}
+
+	//## Check curvature data 
+	if(curvMap && !curvMap->HasSameBinning(inputImg)){
+		ERROR_LOG("Given curvature map has different bnnning wrt input map!");
+		return -1;
+	}
+
+	//## Set flood threshold
+	//Example: merge=4, seed=5  [4,5] o [4,+inf]
+	// merge=-4 seed=-5         [-5,-4] o [-inf,-4]            [-inf,4]
+	double floodMinThr= mergeThr;
+	double floodMaxThr= std::numeric_limits<double>::infinity();
+	double floodMinThr_inv= -std::numeric_limits<double>::infinity();
+	double floodMaxThr_inv= -mergeThr;
+	if(mergeBelowSeed) {
+		floodMaxThr= seedThr;
+		floodMinThr_inv= seedThr;
+	}
+
+	DEBUG_LOG("Flood thr("<<floodMinThr<<","<<floodMaxThr<<") Flood inv thr("<<floodMinThr_inv<<","<<floodMaxThr_inv<<")");
+	
+	//## Start blob search (a tile per thread)
+	std::vector<T*> blobs_t;	
+	std::vector< std::vector<T*> > blobs_per_tile;
+	std::vector< std::vector<long int> > pixelSeeds_edge;
+	std::vector<long int> tileIy_min;	
+	std::vector<long int> tileIy_max;	
+	
+
+	#pragma omp parallel private(blobs_t) //reduction(merge: blobs_per_tile)
+	{
+		//Initialize data structures		
+		int thread_id= omp_get_thread_num();
+		int nthreads= SysUtils::GetOMPThreads();
+		long int tileSize= std::round(Ny/nthreads);
+	
+		#pragma omp single
+   	{
+			//Compute image tile partition along y direction
+			for(int i=0;i<nthreads;i++) {
+				blobs_per_tile.push_back( std::vector<T*>() );
+				pixelSeeds_edge.push_back( std::vector<long int>() );
+
+				long int iy_min= i*tileSize;
+				long int iy_max= iy_min + tileSize;
+				if(iy_max>Ny) iy_max= Ny; 
+				tileIy_min.push_back(iy_min);
+				tileIy_max.push_back(iy_max);
+			}//end loop threads
+
+			DEBUG_LOG("thread_id="<<thread_id<<", nthreads="<<nthreads<<", tileSize="<<tileSize);
+			for(size_t i=0;i<tileIy_min.size();i++){
+				DEBUG_LOG("tile no. "<<i+1<<", iy=["<<tileIy_min[i]<<","<<tileIy_max[i]<<"]");
+			}
+   	}//close single section
+
+	
+		//Search blobs in each tile
+		std::vector<bool> isAddedInCluster_t(Ntot,false);
+		std::vector<long int> pixelSeeds;
+		T* aBlob_t= 0;
+		Pixel* aPixel_t= 0;
+		long int nBlobs_t= 0;
+		DEBUG_LOG("Searching blobs in thread id "<<thread_id<<" iy=["<<tileIy_min[thread_id]<<","<<tileIy_max[thread_id]<<"]");
+
+		#pragma omp task	
+		{
+		for(long int j=tileIy_min[thread_id];j<tileIy_max[thread_id];j++){	
+			
+			for(long int i=0;i<Nx;i++){
+				//Skip if pixel is below seed thr
+				long int seedPixelId= inputImg->GetBin(i,j);	
+				double Z= floodImg->GetPixelValue(i,j);
+				bool isNegativeExcessSeed= false;
+				if(fabs(Z)<seedThr) continue;//no seed pixel
+				if(Z<0) isNegativeExcessSeed= true;
+				
+				//Check if this seed bin has been already assigned to a cluster	
+				if(isAddedInCluster_t[seedPixelId]) {
+					DEBUG_LOG("Skip pixel seed "<<seedPixelId<<" as was already assigned to a previous blob...");		
+					continue;
+				}
+		
+				//Skip negative excess seed if not requested
+				if(!findNegativeExcess && isNegativeExcessSeed) {
+					DEBUG_LOG("Skip negative excess pixel seed "<<seedPixelId<<"...");
+					continue;
+				}
+
+				//Add seed to collection
+				pixelSeeds.push_back(seedPixelId);
+	
+				//Compute flooded pixels
+				DEBUG_LOG("Computing flood-fill around seed pixel "<<seedPixelId<<"...");
+				std::vector<long int> clusterPixelIds;
+				int status= 0;
+				if(isNegativeExcessSeed){
+					status= FloodFill(floodImg,clusterPixelIds,seedPixelId,floodMinThr_inv,floodMaxThr_inv);
+				}
+				else {
+					status= FloodFill(floodImg,clusterPixelIds,seedPixelId,floodMinThr,floodMaxThr);
+				}
+				if(status<0) {
+					WARN_LOG("Flood fill failed, skip seed!");
+					continue;
+				}
+
+				//CReate a blob from flooded pixels
+				nBlobs_t++;
+				TString blobName= Form("S%ld_thread%d",nBlobs_t,thread_id);
+				aBlob_t= new T();
+				aBlob_t->SetId(nBlobs_t);	
+				aBlob_t->SetName(std::string(blobName));
+		
+				bool isBlobAtTileEdge= false;
+				size_t nClusterPixels= clusterPixelIds.size();
+
+				for(size_t l=0;l<nClusterPixels;l++){
+					long int clusterPixelId= clusterPixelIds[l];	
+					if(isAddedInCluster_t[clusterPixelId]) continue;
+					isAddedInCluster_t[clusterPixelId]= true;//do not forget to add to list of taken pixels!
+
+					long int ix= inputImg->GetBinX(clusterPixelId);
+					long int iy= inputImg->GetBinY(clusterPixelId);
+					double S= inputImg->GetPixelValue(clusterPixelId);			
+					double Z= floodImg->GetPixelValue(clusterPixelId);
+					double x= inputImg->GetX(iy);
+					double y= inputImg->GetY(iy);
+					if(iy==tileIy_min[thread_id] || iy==tileIy_max[thread_id]-1){
+						isBlobAtTileEdge= true;
+					}
+					
+					DEBUG_LOG("Adding pixel id="<<clusterPixelId<<", (x,y)=("<<x<<","<<y<<"), (ix,iy)=("<<ix<<","<<iy<<")");
+			
+					aPixel_t= new Pixel;
+					aPixel_t->S= S;
+					if(fabs(Z)>=seedThr) aPixel_t->type= Pixel::eSeed;
+					else aPixel_t->type= Pixel::eNormal;
+					aPixel_t->id= clusterPixelId;
+					aPixel_t->SetPhysCoords(x,y);
+					aPixel_t->SetCoords(ix,iy);
+				
+					//Check if this pixel is at edge, if so mark blob as at edge
+					if( inputImg->IsEdgeBin(ix,iy) ) {
+						aBlob_t->SetEdgeFlag(true);
+					}
+			
+					//Set bkg data if available
+					if(hasBkgData){
+						double bkgLevel= bkgData->gBkg;
+						double noiseLevel= bkgData->gNoise;
+						if(hasLocalBkg){
+							bkgLevel= (bkgData->BkgMap)->GetPixelValue(clusterPixelId);
+							noiseLevel= (bkgData->NoiseMap)->GetPixelValue(clusterPixelId);
+						}
+						aPixel_t->SetBkg(bkgLevel,noiseLevel);
+					}//close if
+
+					//Set curvature data if available
+					if(curvMap) {
+						double Scurv= curvMap->GetPixelValue(clusterPixelId);
+						aPixel_t->SetCurv(Scurv);
+					}
+	
+					aBlob_t->AddPixel(aPixel_t);
+				}//end loop cluster pixels
+
+				//## Check if blobs has pixels or has too few pixels
+				long int nBlobPixels= aBlob_t->GetNPixels();
+				if(nBlobPixels==0 || nBlobPixels<minPixels){//no or too few pixels...delete blob!
+					delete aBlob_t;
+					aBlob_t= 0;
+					continue;
+				}
+	
+				//## If blob is at edge delete and save seed for re-processing
+				if(isBlobAtTileEdge){
+					delete aBlob_t;
+					aBlob_t= 0;
+					pixelSeeds_edge[thread_id].push_back(seedPixelId);
+					continue;			
+				}
+
+				//## Compute stats
+				DEBUG_LOG("Computing blob stats...");
+				aBlob_t->ComputeStats();
+		
+				//## Compute morphology parameters
+				DEBUG_LOG("Computing blob morphology params...");
+				aBlob_t->ComputeMorphologyParams();
+
+				//## Adding image metadata to image (needed for WCS)
+				aBlob_t->SetImageMetaData(metadata,Xmin,Ymin);
+
+				//## Add blob to list
+				blobs_t.push_back(aBlob_t);
+
+			}//end loop x
+		}//end loop y
+
+		blobs_per_tile[thread_id]= blobs_t; 
+	
+		DEBUG_LOG("thread_id="<<thread_id<<": #"<<pixelSeeds.size()<<" seeds found (#"<<pixelSeeds_edge[thread_id].size()<<" at edge), #"<<blobs_t.size()<<" blobs found ...");
+		}//close task
+	
+	}//close parallel section
+
+	//## Process "edge" blobs in a non-parallel way
+	//First reset list
+	std::vector<bool> isAddedInCluster(Ntot,false);
+	long int nBlobs= 0;
+	T* aBlob= 0;
+	Pixel* aPixel= 0;
+
+	//Flood fill around edge seed pixels
+	for(size_t k=0;k<pixelSeeds_edge.size();k++){
+		for(size_t t=0;t<pixelSeeds_edge[k].size();t++){
+			long int seedPixelId= pixelSeeds_edge[k][t];
+			double Z= floodImg->GetPixelValue(seedPixelId);
+			bool isNegativeExcessSeed= false;
+			if(Z<0) isNegativeExcessSeed= true;
+				
+			//Check if this seed bin has been already assigned to a cluster	
+			if(isAddedInCluster[seedPixelId]) {
+				DEBUG_LOG("Skip pixel seed "<<seedPixelId<<" as was already assigned to a previous blob...");		
+				continue;
+			}
+		
+			//Skip negative excess seed if not requested
+			if(!findNegativeExcess && isNegativeExcessSeed) {
+				DEBUG_LOG("Skip negative excess pixel seed "<<seedPixelId<<"...");
+				continue;
+			}
+
+			//Compute flooded pixels
+			DEBUG_LOG("Computing flood-fill around seed pixel "<<seedPixelId<<"...");
+			std::vector<long int> clusterPixelIds;
+			int status= 0;
+			if(isNegativeExcessSeed){
+				status= FloodFill(floodImg,clusterPixelIds,seedPixelId,floodMinThr_inv,floodMaxThr_inv);
+			}
+			else {
+				status= FloodFill(floodImg,clusterPixelIds,seedPixelId,floodMinThr,floodMaxThr);
+			}
+			if(status<0) {
+				WARN_LOG("Flood fill failed, skip seed!");
+				continue;
+			}
+
+			//Create a blob from flooded pixels
+			nBlobs++;
+			TString blobName= Form("S%ld",nBlobs);
+			aBlob= new T();
+			aBlob->SetId(nBlobs);	
+			aBlob->SetName(std::string(blobName));
+		
+			size_t nClusterPixels= clusterPixelIds.size();
+
+			for(size_t l=0;l<nClusterPixels;l++){
+				long int clusterPixelId= clusterPixelIds[l];	
+				if(isAddedInCluster[clusterPixelId]) continue;
+				isAddedInCluster[clusterPixelId]= true;//do not forget to add to list of taken pixels!
+
+				long int ix= inputImg->GetBinX(clusterPixelId);
+				long int iy= inputImg->GetBinY(clusterPixelId);
+				double S= inputImg->GetPixelValue(clusterPixelId);			
+				double Z= floodImg->GetPixelValue(clusterPixelId);
+				double x= inputImg->GetX(iy);
+				double y= inputImg->GetY(iy);	
+				DEBUG_LOG("Adding pixel id="<<clusterPixelId<<", (x,y)=("<<x<<","<<y<<"), (ix,iy)=("<<ix<<","<<iy<<")");
+			
+				aPixel= new Pixel;
+				aPixel->S= S;
+				if(fabs(Z)>=seedThr) aPixel->type= Pixel::eSeed;
+				else aPixel->type= Pixel::eNormal;
+				aPixel->id= clusterPixelId;
+				aPixel->SetPhysCoords(x,y);
+				aPixel->SetCoords(ix,iy);
+				
+				//Check if this pixel is at edge, if so mark blob as at edge
+				if( inputImg->IsEdgeBin(ix,iy) ) {
+					aBlob->SetEdgeFlag(true);
+				}
+			
+				//Set bkg data if available
+				if(hasBkgData){
+					double bkgLevel= bkgData->gBkg;
+					double noiseLevel= bkgData->gNoise;
+					if(hasLocalBkg){
+						bkgLevel= (bkgData->BkgMap)->GetPixelValue(clusterPixelId);
+						noiseLevel= (bkgData->NoiseMap)->GetPixelValue(clusterPixelId);
+					}
+					aPixel->SetBkg(bkgLevel,noiseLevel);
+				}//close if
+
+				//Set curvature data if available
+				if(curvMap) {
+					double Scurv= curvMap->GetPixelValue(clusterPixelId);
+					aPixel->SetCurv(Scurv);
+				}
+	
+				aBlob->AddPixel(aPixel);
+			}//end loop cluster pixels
+
+			//## Check if blobs has pixels or has too few pixels
+			long int nBlobPixels= aBlob->GetNPixels();
+			if(nBlobPixels==0 || nBlobPixels<minPixels){//no or too few pixels...delete blob!
+				delete aBlob;
+				aBlob= 0;
+				continue;
+			}
+
+			//## Compute stats
+			DEBUG_LOG("Computing blob stats...");
+			aBlob->ComputeStats();
+		
+			//## Compute morphology parameters
+			DEBUG_LOG("Computing blob morphology params...");
+			aBlob->ComputeMorphologyParams();
+
+			//## Adding image metadata to image (needed for WCS)
+			aBlob->SetImageMetaData(metadata,Xmin,Ymin);
+			
+			//## Add blob to list
+			blobs.push_back(aBlob);
+
+		}//end loop edge seed pixels in tile
+	}//end loop tiles
+
+	//Append non-edge blobs (rename them)
+	for(size_t k=0;k<blobs_per_tile.size();k++){
+		for(size_t t=0;t<blobs_per_tile[k].size();t++){
+			nBlobs++;
+			TString blobName= Form("S%ld",nBlobs);
+			blobs_per_tile[k][t]->SetId(nBlobs);	
+			blobs_per_tile[k][t]->SetName(std::string(blobName));
+			
+			blobs.push_back(blobs_per_tile[k][t]);
+		}//end loop blobs per tile
+	}//end loop tiles
+
+	DEBUG_LOG("#"<<blobs.size()<<" blobs found!");
+
+	//Stop timer and print
+	auto end = chrono::steady_clock::now();
+	double dt= chrono::duration <double, milli> (end-start).count();
+	DEBUG_LOG("FindBlobsMT completed in "<<dt<<" ms");	
+
+	return 0;
+
+}//close FindBlobsMT()
+
+#else
+template <class T>
+int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodImg,ImgBkgData* bkgData,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,Image* curvMap)
+{
+	return FindBlobs(inputImg,blobs,floodImg,bkgData,seedThr,mergeThr,minPixels,findNegativeExcess,mergeBelowSeed,curvMap);
+}
+#endif
+
+template int BlobFinder::FindBlobsMT<Blob>(Image* img,std::vector<Blob*>& blobs,Image*,ImgBkgData*,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,Image*);
+template int BlobFinder::FindBlobsMT<Source>(Image* img,std::vector<Source*>& blobs,Image*,ImgBkgData*,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,Image*);
+
+
 
 template <class T>
-int BlobFinder::FindBlobs(Image* inputImg,std::vector<T*>& blobs,Image* floodImg,ImgBkgData* bkgData,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,Image* curvMap){
+int BlobFinder::FindBlobsST(Image* inputImg,std::vector<T*>& blobs,Image* floodImg,ImgBkgData* bkgData,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,Image* curvMap)
+{
+	//Start timer		
+	auto start = chrono::steady_clock::now();
 
 	//## Check input img
 	if(!inputImg){
@@ -193,7 +600,6 @@ int BlobFinder::FindBlobs(Image* inputImg,std::vector<T*>& blobs,Image* floodImg
 		nBlobs++;	
 		
 		DEBUG_LOG("Adding new blob (# "<<nBlobs<<") to list...");
-		//TString blobName= Form("%s_blobId%d",inputImg->GetName().c_str(),nBlobs);
 		TString blobName= Form("S%d",nBlobs);
 		aBlob= new T();
 		aBlob->SetId(nBlobs);	
@@ -274,9 +680,34 @@ int BlobFinder::FindBlobs(Image* inputImg,std::vector<T*>& blobs,Image* floodImg
 
 	DEBUG_LOG("#"<<blobs.size()<<" blobs found!");
 
+	//Stop timer and print
+	auto end = chrono::steady_clock::now();
+	double dt= chrono::duration <double, milli> (end-start).count();
+	DEBUG_LOG("FindBlobs completed in "<<dt<<" ms");	
+
 	return 0;
 
-}//close BlobFinder::FindBlobs()
+}//close BlobFinder::FindBlobsST()
+template int BlobFinder::FindBlobsST<Blob>(Image* img,std::vector<Blob*>& blobs,Image*,ImgBkgData*,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,Image*);
+template int BlobFinder::FindBlobsST<Source>(Image* img,std::vector<Source*>& blobs,Image*,ImgBkgData*,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,Image*);
+
+
+template <class T>
+int BlobFinder::FindBlobs(Image* inputImg,std::vector<T*>& blobs,Image* floodImg,ImgBkgData* bkgData,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,Image* curvMap)
+{
+	#ifdef OPENMP_ENABLED
+		int nthreads_max= SysUtils::GetOMPMaxThreads();
+		if(nthreads_max<=1){
+			return FindBlobsST(inputImg,blobs,floodImg,bkgData,seedThr,mergeThr,minPixels,findNegativeExcess,mergeBelowSeed,curvMap);
+		}		
+		else{
+			return FindBlobsMT(inputImg,blobs,floodImg,bkgData,seedThr,mergeThr,minPixels,findNegativeExcess,mergeBelowSeed,curvMap);
+		}
+	#else
+		return FindBlobsST(inputImg,blobs,floodImg,bkgData,seedThr,mergeThr,minPixels,findNegativeExcess,mergeBelowSeed,curvMap);
+	#endif
+
+}//close FindBlobs()
 template int BlobFinder::FindBlobs<Blob>(Image* img,std::vector<Blob*>& blobs,Image*,ImgBkgData*,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,Image*);
 template int BlobFinder::FindBlobs<Source>(Image* img,std::vector<Source*>& blobs,Image*,ImgBkgData*,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,Image*);
 
