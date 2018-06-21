@@ -263,6 +263,9 @@ void SFinder::InitOptions()
 	m_TileMaxY= 0;
 	m_mergeSourcesAtEdge= true;
 	
+	//Stat options
+	m_useParallelMedianAlgo= true;
+
 	//Bkg data
 	m_BkgData= 0;
 	m_SignificanceMap= 0;
@@ -468,6 +471,9 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(saveCurvatureMap,m_saveCurvatureMap);
 	GET_OPTION_VALUE(saveSegmentedMap,m_saveSegmentedMap);
 		
+	//Get stats options
+	GET_OPTION_VALUE(useParallelMedianAlgo,m_useParallelMedianAlgo);
+	
 	//Get bkg options
 	GET_OPTION_VALUE(useLocalBkg,m_UseLocalBkg);
 	GET_OPTION_VALUE(use2ndPassInLocalBkg,m_Use2ndPassInLocalBkg);
@@ -2109,8 +2115,10 @@ Image* SFinder::ComputeLaplacianImage(Image* inputImg){
 	bool computeRobustStats= true;	
 	bool forceRecomputing= false;
 	bool useRange= false;
-	//if(laplImg->ComputeStats(true,false,false)<0){
-	if(laplImg->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0){	
+	double minRange= -std::numeric_limits<double>::infinity();	
+	double maxRange= std::numeric_limits<double>::infinity();
+	
+	if(laplImg->ComputeStats(computeRobustStats,forceRecomputing,useRange,minRange,maxRange,m_useParallelMedianAlgo)<0){	
 		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute Laplacian image stats, returning nullptr!");
 		delete laplImg;
 		laplImg= 0;
@@ -2161,8 +2169,10 @@ Image* SFinder::ComputeEdgeImage(Image* inputImg,int edgeModel){
 	bool computeRobustStats= true;	
 	bool forceRecomputing= false;
 	bool useRange= false;
-	//if(edgeImg->ComputeStats(true,false,false)<0){
-	if(edgeImg->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0){
+	double minRange= -std::numeric_limits<double>::infinity();	
+	double maxRange= std::numeric_limits<double>::infinity();
+	
+	if(edgeImg->ComputeStats(computeRobustStats,forceRecomputing,useRange,minRange,maxRange,m_useParallelMedianAlgo)<0){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute edge image stats, returning nullptr!");
 		delete edgeImg;
 		edgeImg= 0;
@@ -2934,7 +2944,8 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 	auto t0_stats = chrono::steady_clock::now();	
 	bool computeRobustStats= true;
 	bool forceRecomputing= false;
-	if(img->ComputeStats(computeRobustStats,forceRecomputing,useRange,minThr,maxThr)<0){
+
+	if(img->ComputeStats(computeRobustStats,forceRecomputing,useRange,minThr,maxThr,m_useParallelMedianAlgo)<0){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Stats computing failed!");
 		return nullptr;
 	}
@@ -4192,7 +4203,7 @@ int SFinder::MergeSourcesAtEdge()
 	bool computeMorphPars= false;
 	bool computeRobustStats= true;
 	bool forceRecomputing= false;//no need to re-compute moments (already updated in AddPixel())
-
+	
 	m_SourcesMergedAtEdges.clear();
 
 	INFO_LOG("Merging edge sources and adding them to collection...");
@@ -4236,7 +4247,7 @@ int SFinder::MergeSourcesAtEdge()
 		//If at least one was merged recompute stats & pars of merged source
 		if(nMerged>0) {
 			INFO_LOG("Recomputing stats & moments of merged source in merge group "<<i<<" after #"<<nMerged<<" merged source...");
-			if(merged_source->ComputeStats(computeRobustStats,forceRecomputing)<0){
+			if(merged_source->ComputeStats(computeRobustStats,forceRecomputing,m_useParallelMedianAlgo)<0){
 				WARN_LOG("Failed to compute stats for merged source in merge group "<<i<<"...");
 				continue;
 			}

@@ -434,8 +434,8 @@ int Blob::AddPixel(Pixel* aPixel,bool makeCopy){
 
 
 
-int Blob::ComputeStats(bool computeRobustStats,bool forceRecomputing){
-
+int Blob::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool useParallelMedian)
+{
 	//## Compute region stats & shape parameters
 	if(NPix<=0) return -1;
 
@@ -496,10 +496,10 @@ int Blob::ComputeStats(bool computeRobustStats,bool forceRecomputing){
 			SList.push_back(S);
 			SCurvList.push_back(S_curv);
 		}
-		Median= StatsUtils::GetMedianFast<double>(SList);
-		MedianRMS= 1.4826*StatsUtils::GetMADFast(SList,Median);
-		Median_curv= StatsUtils::GetMedianFast<double>(SCurvList);
-		MedianRMS_curv= 1.4826*StatsUtils::GetMADFast(SCurvList,Median);
+		Median= StatsUtils::GetMedianFast<double>(SList,useParallelMedian);
+		MedianRMS= 1.4826*StatsUtils::GetMADFast(SList,Median,useParallelMedian);
+		Median_curv= StatsUtils::GetMedianFast<double>(SCurvList,useParallelMedian);
+		MedianRMS_curv= 1.4826*StatsUtils::GetMADFast(SCurvList,Median,useParallelMedian);
 	}//close if computeRobustStats
 
 	m_HasStats= true;

@@ -235,7 +235,7 @@ class Blob : public TNamed {
 		/**
 		* \brief Compute stats
 		*/
-		int ComputeStats(bool computeRobustStats=true,bool forceRecomputing=false);
+		int ComputeStats(bool computeRobustStats=true,bool forceRecomputing=false,bool useParallelMedian=false);
 
 		/**
 		* \brief Has stats?

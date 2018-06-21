@@ -34,6 +34,7 @@
 #include <Logger.h>
 #include <Graph.h>
 #include <GausFilter.h>
+#include <Contour.h>
 
 #include <TObject.h>
 #include <TMatrixD.h>
@@ -136,7 +137,7 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 	std::vector<long int> tileIy_max;	
 	
 
-	#pragma omp parallel private(blobs_t) //reduction(merge: blobs_per_tile)
+	#pragma omp parallel private(blobs_t) shared(blobs_per_tile) //reduction(merge: blobs_per_tile)
 	{
 		//Initialize data structures		
 		int thread_id= omp_get_thread_num();
@@ -172,8 +173,8 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 		long int nBlobs_t= 0;
 		DEBUG_LOG("Searching blobs in thread id "<<thread_id<<" iy=["<<tileIy_min[thread_id]<<","<<tileIy_max[thread_id]<<"]");
 
-		#pragma omp task	
-		{
+		//#pragma omp task	
+		//{
 		for(long int j=tileIy_min[thread_id];j<tileIy_max[thread_id];j++){	
 			
 			for(long int i=0;i<Nx;i++){
@@ -233,7 +234,7 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 					long int iy= inputImg->GetBinY(clusterPixelId);
 					double S= inputImg->GetPixelValue(clusterPixelId);			
 					double Z= floodImg->GetPixelValue(clusterPixelId);
-					double x= inputImg->GetX(iy);
+					double x= inputImg->GetX(ix);
 					double y= inputImg->GetY(iy);
 					if(iy==tileIy_min[thread_id] || iy==tileIy_max[thread_id]-1){
 						isBlobAtTileEdge= true;
@@ -303,14 +304,18 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 
 				//## Add blob to list
 				blobs_t.push_back(aBlob_t);
-
+				
 			}//end loop x
 		}//end loop y
 
-		blobs_per_tile[thread_id]= blobs_t; 
-	
+		//blobs_per_tile[thread_id]= blobs_t; 
+		#pragma omp critical
+		{
+    	blobs_per_tile[thread_id].insert(blobs_per_tile[thread_id].end(), blobs_t.begin(), blobs_t.end());
+		}
+
 		DEBUG_LOG("thread_id="<<thread_id<<": #"<<pixelSeeds.size()<<" seeds found (#"<<pixelSeeds_edge[thread_id].size()<<" at edge), #"<<blobs_t.size()<<" blobs found ...");
-		}//close task
+		//}//close task
 	
 	}//close parallel section
 
@@ -374,7 +379,7 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 				long int iy= inputImg->GetBinY(clusterPixelId);
 				double S= inputImg->GetPixelValue(clusterPixelId);			
 				double Z= floodImg->GetPixelValue(clusterPixelId);
-				double x= inputImg->GetX(iy);
+				double x= inputImg->GetX(ix);
 				double y= inputImg->GetY(iy);	
 				DEBUG_LOG("Adding pixel id="<<clusterPixelId<<", (x,y)=("<<x<<","<<y<<"), (ix,iy)=("<<ix<<","<<iy<<")");
 			

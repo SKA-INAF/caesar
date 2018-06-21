@@ -371,6 +371,9 @@ class SFinder : public TObject {
 		bool m_mergeExtendedSources;
 		bool m_mergeCompactSources;	
 
+		//Stat computation
+		bool m_useParallelMedianAlgo;
+
 		//Bkg computation
 		ImgBkgData* m_BkgData;
 		Image* m_SignificanceMap;
