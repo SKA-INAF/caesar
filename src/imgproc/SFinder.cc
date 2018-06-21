@@ -937,7 +937,12 @@ int SFinder::Run(){
 	//== Compute used memory peak
 	//============================
 	ProcMemInfo memInfo;
-	if(SysUtils::GetProcMemoryInfo(memInfo)<0){
+	int procMemStatus= SysUtils::GetProcMemoryInfo(memInfo);
+	if(procMemStatus==0){
+		virtMemPeak= memInfo.virtPeakMem;
+		INFO_LOG("[PROC "<<m_procId<<"] - Peak virtual memory (kB)="<<virtMemPeak);		
+	}
+	else{
 		ERROR_LOG("[PROC "<<m_procId<<"] - Failed to read process memory info!");		
 		virtMemPeak= -1;
 	}	

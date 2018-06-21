@@ -1100,12 +1100,10 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 	
 		//Compute stats
 		//NB: Skip negative pixels
-		//bool skipNegativePixels= true;
 		bool useRange= true;
 		double minRangeThr= 0;
 		bool computeRobustStats= true;
 		bool forceRecomputing= true;
-		//filterMap->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
 		filterMap->ComputeStats(computeRobustStats,forceRecomputing,useRange,minRangeThr);
 		
 		//Compute threshold levels
@@ -1121,7 +1119,6 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 
 		//Compute bkg map
 		INFO_LOG("Computing bkg map @ scale "<<sigma<<"...");
-		//bool useLocalBkg= true;
 		bool use2ndPass= true;
 		bool skipOutliers= false;
 		bool useRangeInBkg= true;
@@ -1154,7 +1151,6 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 
 		//Find peaks in filter map
 		INFO_LOG("Finding peaks in significance map @ scale "<<sigma<<" ...");
-		//std::vector<TVector2> peakPoints;
 		std::vector<ImgPeak> peakPoints;
 		bool skipBorders= true;
 		double peakKernelMultiplicityThr= 1;
@@ -1170,8 +1166,6 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 		//## Select peaks (skip peaks at boundary or faint peaks)
 		std::vector<PeakInfo> peaks_scale;
 		for(size_t k=0;k<peakPoints.size();k++){
-			//double x= peakPoints[k].X();
-			//double y= peakPoints[k].Y();
 			double x= peakPoints[k].x;
 			double y= peakPoints[k].y;
 			long int gbin= filterSignificanceMap->FindBin(x,y);
@@ -1272,7 +1266,6 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 
 	for(size_t i=0;i<filterMaps.size();i++){
 		INFO_LOG("Finding blobs across scale no. "<<i+1<<" (#"<<peakIds[i].size()<<" peaks present) ...");		
-		//double floodMinThr= thresholdLevels[i];
 		double floodMinThr= std::max(0.,peakZMergeThr);
 		double floodMaxThr= std::numeric_limits<double>::infinity();
 		
@@ -1281,7 +1274,6 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 			//Find blobs given current seed peak
 			long int seedPixelId= peakIds[i][j];	
 			std::vector<long int> clusterPixelIds;
-			//if(FloodFill(filterMaps[i],clusterPixelIds,seedPixelId,floodMinThr,floodMaxThr)<0){
 			if(FloodFill(filterSignificanceMaps[i],clusterPixelIds,seedPixelId,floodMinThr,floodMaxThr)<0){
 				WARN_LOG("Failed to find blobs by flood-fill @ scale "<<i+1<<" (seed pix="<<seedPixelId<<"), skip to next...");
 				continue;
