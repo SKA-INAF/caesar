@@ -1178,7 +1178,6 @@ class Image : public TNamed {
 		/**
 		* \brief Compute image stats parameters from moments 
 		*/
-		//void ComputeStatsParams(bool computeRobustStats=true,bool skipNegativePixels=false,bool useParallelVersion=false);
 		void ComputeStatsParams(bool computeRobustStats=true,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),bool useParallelVersion=false);
 		
 		/**

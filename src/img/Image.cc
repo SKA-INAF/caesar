@@ -1072,9 +1072,8 @@ int Image::ComputeMoments(bool useRange,double minThr,double maxThr){
 
 
 
-//void Image::ComputeStatsParams(bool computeRobustStats,bool skipNegativePixels,bool useParallelVersion){
-void Image::ComputeStatsParams(bool computeRobustStats,bool useRange,double minThr,double maxThr,bool useParallelVersion){
-
+void Image::ComputeStatsParams(bool computeRobustStats,bool useRange,double minThr,double maxThr,bool useParallelVersion)
+{
 	//## Reset previous stats params (Reset only Stats not moments!)
 	ResetImgStats(false);
 
@@ -1187,7 +1186,6 @@ void Image::ComputeStatsParams(bool computeRobustStats,bool useRange,double minT
 
 
 
-//int Image::ComputeStats(bool computeRobustStats,bool skipNegativePixels,bool forceRecomputing,bool useParallelVersion){
 int Image::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool useRange,double minThr,double maxThr,bool useParallelVersion)
 {
 	//## Start timer
@@ -1203,7 +1201,6 @@ int Image::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool useRa
 
 	//## If recomputing is not requested (i.e. some pixels has been reset by the user, just set the stats params!
 	if(!forceRecomputing){
-		//ComputeStatsParams(computeRobustStats,skipNegativePixels,useParallelVersion);
 		ComputeStatsParams(computeRobustStats,useRange,minThr,maxThr,useParallelVersion);
 		m_HasStats= true;
 		
