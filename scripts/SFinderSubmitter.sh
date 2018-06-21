@@ -178,8 +178,8 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"
 	echo "--addrunindex - Append a run index to submission script (in case of list execution) (default=no)"
 	echo "--outdir=[OUTPUT_DIR] - Output directory where to put run output file (default=pwd)"
-	echo "--nproc=[NPROC] - Number of processors to be used in MPI run (default=1)"
-	echo "--nthreads=[NTHREADS] - Number of threads to be used in OpenMP (default=-1=all available)"
+	echo "--nproc=[NPROC] - Number of MPI processors per node used (NB: mpi tot nproc=nproc x nnodes) (default=1)"
+	echo "--nthreads=[NTHREADS] - Number of threads to be used in OpenMP (default=-1=all available in node)"
 	echo "--hostfile=[HOSTFILE] - Ascii file with list of hosts used by MPI (default=no hostfile used)"
 	echo "--containerrun - Run inside Caesar container"
 	echo "--containerimg=[CONTAINER_IMG] - Singularity container image file (.simg) with CAESAR installed software"
@@ -187,8 +187,11 @@ if [ "$NARGS" -lt 2 ]; then
 
 	echo "=== SFINDER SUBMISSION OPTIONS ==="
 	echo "--submit - Submit the script to the batch system using queue specified"
+	echo "--batchsystem - Name of batch system. Valid choices are {PBS,SLURM} (default=PBS)"
 	echo "--queue=[BATCH_QUEUE] - Name of queue in batch system" 
 	echo "--jobwalltime=[JOB_WALLTIME] - Job wall time in batch system (default=96:00:00)"
+	echo "--jobcpus=[JOB_NCPUS] - Number of cpu per node requested for the job (default=1)"
+	echo "--jobnodes=[JOB_NNODES] - Number of nodes requested for the job (default=1)"
 	echo "--jobmemory=[JOB_MEMORY] - Memory in GB required for the job (default=4)"
 	echo "--jobusergroup=[JOB_USER_GROUP] - Name of job user group batch system (default=empty)" 	
 	echo "=========================="
@@ -200,6 +203,7 @@ fi
 #######################################
 ENV_FILE=""
 SUBMIT=false
+BATCH_SYSTEM="PBS"
 CONTAINER_IMG=""
 RUN_IN_CONTAINER=false
 FILELIST_GIVEN=false
@@ -220,6 +224,8 @@ JOB_WALLTIME="96:00:00"
 JOB_MEMORY="4"
 JOB_USER_GROUP=""
 JOB_USER_GROUP_OPTION=""
+JOB_NNODES="1"
+JOB_NCPUS="1"
 LOG_LEVEL="INFO"
 OUTPUT_DIR=$PWD
 NTHREADS=1
@@ -769,12 +775,21 @@ do
 		--submit*)
     	SUBMIT="true"
     ;;
+		--batchsystem=*)
+    	BATCH_SYSTEM=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
 		--queue=*)
     	BATCH_QUEUE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--jobwalltime=*)
 			JOB_WALLTIME=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
 		;;	
+		--jobcpus=*)
+      JOB_NCPUS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--jobnodes=*)
+      JOB_NNODES=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
 		--jobmemory=*)
 			JOB_MEMORY=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
 		;;
@@ -794,7 +809,7 @@ done
 
 echo ""
 echo "*****  PARSED ARGUMENTS ****"
-echo "SUBMIT? $SUBMIT, QUEUE=$BATCH_QUEUE, JOB_WALLTIME: $JOB_WALLTIME, JOB_MEMORY: $JOB_MEMORY, JOB_USER_GROUP: $JOB_USER_GROUP"
+echo "SUBMIT? $SUBMIT, BATCH_SYSTEM=$BATCH_SYSTEM, QUEUE=$BATCH_QUEUE, JOB_CPU: $JOB_NCPUS, JOB_NODES=$JOB_NNODES, JOB_WALLTIME: $JOB_WALLTIME, JOB_MEMORY: $JOB_MEMORY, JOB_USER_GROUP: $JOB_USER_GROUP"
 echo "RUN_IN_CONTAINER? $RUN_IN_CONTAINER, CONTAINER_IMG=$CONTAINER_IMG"
 echo "ENV_FILE: $ENV_FILE"
 echo "INPUTFILE: $INPUTFILE"
@@ -838,6 +853,16 @@ if [ "$BATCH_QUEUE" = "" ] && [ "$SUBMIT" = true ]; then
   exit 1
 fi
 
+if [ "$BATCH_SYSTEM" = "" ] && [ "$SUBMIT" = true ]; then
+  echo "ERROR: Empty BATCH_SYSTEM argument (hint: you must specify a batch systen if submit option is activated)!"
+  exit 1
+fi
+
+if [ "$BATCH_SYSTEM" != "PBS" ] && [ "$BATCH_SYSTEM" != "SLURM" ]; then
+  echo "ERROR: Unknown/not supported BATCH_SYSTEM argument $BATCH_SYSTEM (hint: PBS/SLURM are supported)!"
+  exit 1
+fi
+
 if [ "$ENV_FILE" = "" ]; then
   echo "ERROR: Empty ENV_FILE arg!"
   exit 1
@@ -853,6 +878,65 @@ if [ "$RUN_IN_CONTAINER" = true ]; then
 	RUN_IN_CONTAINER_FLAG="--containerrun "
 	CONTAINER_IMG_FLAG="--containerimg=$CONTAINER_IMG "	
 fi
+
+BATCH_SUB_CMD="qsub"
+BATCH_QUEUE_NAME_OPTION="-q"
+BATCH_JOB_NAME_DIRECTIVE="#PBS -N"
+BATCH_JOB_OUTFILE_DIRECTIVE="#PBS -o"
+BATCH_JOB_ERRFILE_DIRECTIVE="#PBS -e"
+BATCH_JOB_JOINOUTERR_DIRECTIVE="#PBS -j oe"
+BATCH_JOB_WALLTIME_DIRECTIVE="#PBS -l walltime="
+BATCH_JOB_SHELL_DIRECTIVE="#PBS -S /bin/bash"
+BATCH_JOB_USERGRP_DIRECTIVE="#PBS -A"
+BATCH_JOB_PRIORITY="#PBS -p 1"
+BATCH_JOB_NOREQUEUE_DIRECTIVE="#PBS -r n"
+BATCH_JOB_SCATTER_DIRECTIVE="#PBS -l place=scatter"
+BATCH_JOB_NNODES_DIRECTIVE="#PBS -l select="
+BATCH_JOB_NPROC_DIRECTIVE="#PBS -l mpiprocs="
+BATCH_JOB_MEM_DIRECTIVE="#PBS -l mem="
+BATCH_JOB_NCORE_DIRECTIVE="#PBS -l ncpus="
+if [ "$BATCH_SYSTEM" = "PBS" ]; then
+  BATCH_SUB_CMD="qsub"
+	BATCH_QUEUE_NAME_OPTION="-q"
+	BATCH_JOB_NAME_DIRECTIVE="#PBS -N"
+	BATCH_JOB_OUTFILE_DIRECTIVE="#PBS -o"
+	BATCH_JOB_ERRFILE_DIRECTIVE="#PBS -e"
+	BATCH_JOB_JOINOUTERR_DIRECTIVE="#PBS -j oe"
+	BATCH_JOB_WALLTIME_DIRECTIVE="#PBS -l walltime="
+	BATCH_JOB_SHELL_DIRECTIVE="#PBS -S /bin/bash"
+	BATCH_JOB_USERGRP_DIRECTIVE="#PBS -A"
+	BATCH_JOB_PRIORITY="#PBS -p 1"
+	BATCH_JOB_NOREQUEUE_DIRECTIVE="#PBS -r n"
+	BATCH_JOB_SCATTER_DIRECTIVE="#PBS -l place=scatter"
+	BATCH_JOB_NNODES_DIRECTIVE="#PBS -l select="
+	BATCH_JOB_NPROC_DIRECTIVE="#PBS -l mpiprocs="
+	BATCH_JOB_MEM_DIRECTIVE="#PBS -l mem="
+	BATCH_JOB_NCORE_DIRECTIVE="#PBS -l ncpus="
+elif [ "$BATCH_SYSTEM" = "SLURM" ]; then
+  BATCH_SUB_CMD="sbatch"
+	BATCH_QUEUE_NAME_OPTION="-p"
+	BATCH_JOB_NAME_DIRECTIVE="#SBATCH -J"
+	BATCH_JOB_OUTFILE_DIRECTIVE="#SBATCH -o"
+	BATCH_JOB_ERRFILE_DIRECTIVE="#SBATCH -e"
+	BATCH_JOB_JOINOUTERR_DIRECTIVE="" # There is no such option in SLURM
+	BATCH_JOB_WALLTIME_DIRECTIVE="#SBATCH --time="
+	BATCH_JOB_SHELL_DIRECTIVE="" # Equivalent SLURM directive not found
+	BATCH_JOB_USERGRP_DIRECTIVE="#SBATCH -A"
+	BATCH_JOB_PRIORITY="" # Equivalent SLURM directive not found
+	BATCH_JOB_NOREQUEUE_DIRECTIVE="#SBATCH --no-requeue"
+	BATCH_JOB_SCATTER_DIRECTIVE="#SBATCH --spread-job"
+	BATCH_JOB_NNODES_DIRECTIVE="#SBATCH --nodes="
+	BATCH_JOB_NPROC_DIRECTIVE="#SBATCH --ntasks-per-node="
+	BATCH_JOB_MEM_DIRECTIVE="#SBATCH --mem="
+	BATCH_JOB_NCORE_DIRECTIVE="#SBATCH --ntasks-per-node="
+else 
+	echo "ERROR: Unknown/not supported BATCH_SYSTEM argument $BATCH_SYSTEM (hint: PBS/SLURM are supported)!"
+  exit 1
+fi
+
+## Compute total number of MPI processor to be given to mpirun
+NPROC_TOT=$(($NPROC * $JOB_NNODES))
+
 
 #######################################
 ##     DEFINE & LOAD ENV VARS
@@ -1204,20 +1288,35 @@ generate_exec_script(){
 	local exe=$3
 	local exe_args=$4
 	local logfile=$5
-
+	
 	echo "INFO: Creating sh file $shfile (jobindex=$jobindex, exe=$exe, exe_args=$exe_args)..."
 	( 
 			echo "#!/bin/bash"
-			echo "#PBS -N SFinderJob$jobindex"
-			echo "#PBS -j oe"
-  		echo "#PBS -o $BASEDIR"
-			echo "#PBS -l select=1:ncpus=1:mpiprocs=$NPROC:mem=$JOB_MEMORY"'GB'
-    	echo "#PBS -l walltime=$JOB_WALLTIME"
-			echo "#PBS -l place=scatter"
-    	echo '#PBS -r n'
-      echo '#PBS -S /bin/bash' 
-      echo '#PBS -p 1'
-			echo "$JOB_USER_GROUP_OPTION"
+			#echo "#PBS -N SFinderJob$jobindex"
+			#echo "#PBS -j oe"
+  		#echo "#PBS -o $BASEDIR"
+			#echo "#PBS -l select=1:ncpus=1:mpiprocs=$NPROC:mem=$JOB_MEMORY"'GB'
+    	#echo "#PBS -l walltime=$JOB_WALLTIME"
+			#echo "#PBS -l place=scatter"
+    	#echo '#PBS -r n'
+      #echo '#PBS -S /bin/bash' 
+      #echo '#PBS -p 1'
+			#echo "$JOB_USER_GROUP_OPTION"
+
+			echo "$BATCH_JOB_NAME_DIRECTIVE SFinderJob$jobindex"
+			echo "$BATCH_JOB_OUTFILE_DIRECTIVE"
+			echo "$BATCH_JOB_ERRFILE_DIRECTIVE"
+			echo "$BATCH_JOB_JOINOUTERR_DIRECTIVE"
+			echo "$BATCH_JOB_WALLTIME_DIRECTIVE$JOB_WALLTIME"
+			echo "$BATCH_JOB_SHELL_DIRECTIVE"
+			echo "$BATCH_JOB_USERGRP_DIRECTIVE $JOB_USER_GROUP"
+			echo "$BATCH_JOB_PRIORITY"
+			echo "$BATCH_JOB_NOREQUEUE_DIRECTIVE"
+			echo "$BATCH_JOB_SCATTER_DIRECTIVE"
+			echo "$BATCH_JOB_NNODES_DIRECTIVE$JOB_NNODES"
+			echo "$BATCH_JOB_NPROC_DIRECTIVE$NPROC"
+			echo "$BATCH_JOB_MEM_DIRECTIVE$JOB_MEMORY"'gb'
+			echo "$BATCH_JOB_NCORE_DIRECTIVE$JOB_NCPUS"
 
       echo " "
       echo " "
@@ -1327,12 +1426,12 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		echo "INFO: Creating script file $shfile for input file: $inputfile ..."
 
 		##EXE="$CAESAR_DIR/scripts/RunSFinderMPI.sh"
-		##EXE_ARGS="--nproc=$NPROC --config=$configfile $RUN_IN_CONTAINER_FLAG $CONTAINER_IMG_FLAG"
+		##EXE_ARGS="--nproc=$NPROC_TOT --config=$configfile $RUN_IN_CONTAINER_FLAG $CONTAINER_IMG_FLAG"
 		##if [ "$HOSTFILE_GIVEN" = true ] ; then
 		##	EXE_ARGS="$EXE_ARGS --hostfile=$HOSTFILE"
 		##fi
 
-		CMD="mpirun -np $NPROC "
+		CMD="mpirun -np $NPROC_TOT "
 		if [ "$HOSTFILE_GIVEN" = true ] ; then
 			CMD="$CMD -f $HOSTFILE "
 		fi
@@ -1343,13 +1442,13 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		fi
 		EXE_ARGS="--config=$configfile"
 
-		generate_exec_script "$shfile" "$index" "$EXE" "$EXE_ARGS" "$logfile"
+		generate_exec_script "$shfile" "$index" "$EXE" "$EXE_ARGS" "$logfile" "$BATCH_SYSTEM"
 
 
 		# Submits the job to batch system
 		if [ "$SUBMIT" = true ] ; then
-			echo "INFO: Submitting script $shfile to QUEUE $BATCH_QUEUE ..."
-			qsub -q $BATCH_QUEUE $CURRENTJOBDIR/$shfile
+			echo "INFO: Submitting script $shfile to QUEUE $BATCH_QUEUE using $BATCH_SYSTEM batch system ..."
+			$BATCH_SUB_CMD $BATCH_QUEUE_NAME_OPTION $BATCH_QUEUE $CURRENTJOBDIR/$shfile
 		fi
 
 		(( file_counter= $file_counter + 1 ))
@@ -1395,12 +1494,12 @@ else
 	shfile="Run_$filename_base_noext"'.sh'
 	
 	##EXE="$CAESAR_DIR/scripts/RunSFinderMPI.sh"
-	##EXE_ARGS="--nproc=$NPROC --config=$configfile $RUN_IN_CONTAINER_FLAG $CONTAINER_IMG_FLAG"
+	##EXE_ARGS="--nproc=$NPROC_TOT --config=$configfile $RUN_IN_CONTAINER_FLAG $CONTAINER_IMG_FLAG"
 	##if [ "$HOSTFILE_GIVEN" = true ] ; then
 	##	EXE_ARGS="$EXE_ARGS --hostfile=$HOSTFILE"
 	##fi
 
-	CMD="mpirun -np $NPROC "
+	CMD="mpirun -np $NPROC_TOT "
 	if [ "$HOSTFILE_GIVEN" = true ] ; then
 		CMD="$CMD -f $HOSTFILE "
 	fi
@@ -1414,12 +1513,12 @@ else
 
 	echo "INFO: Creating script file $shfile for input file: $inputfile ..."
 	jobId=" "
-	generate_exec_script "$shfile" "$jobId" "$EXE" "$EXE_ARGS" "$logfile"
+	generate_exec_script "$shfile" "$jobId" "$EXE" "$EXE_ARGS" "$logfile" "$BATCH_SYSTEM"
 
 	# Submits the job to batch system
 	if [ "$SUBMIT" = true ] ; then
-		echo "INFO: Submitting script $shfile to QUEUE $BATCH_QUEUE ..."
-		qsub -q $BATCH_QUEUE $CURRENTJOBDIR/$shfile
+		echo "INFO: Submitting script $shfile to QUEUE $BATCH_QUEUE using $BATCH_SYSTEM batch system ..."
+		$BATCH_SUB_CMD $BATCH_QUEUE_NAME_OPTION $BATCH_QUEUE $CURRENTJOBDIR/$shfile
 	fi
 
 fi
