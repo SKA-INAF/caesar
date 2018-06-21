@@ -213,7 +213,11 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(consoleTarget,std::string,"System.out","","");//only for CONSOLE TARGET (System.out, System.err)
 		REGISTER_OPTION(syslogFacility,std::string,"local6","","");//only for SYSLOG TARGET (local0-7, user, syslog, ...)
 		
-		
+		//===================
+		//==  Stats options  ==
+		//===================
+		REGISTER_OPTION(useParallelMedianAlgo,bool,true,false,true);
+
 		//===================
 		//==  Bkg options  ==
 		//===================
