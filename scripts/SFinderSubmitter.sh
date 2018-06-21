@@ -46,6 +46,10 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--ymax=[YMAX] - Read sub-image of input image up to pixel y=ymax (default=0=read full image)"
 	echo ""
 
+	echo "=== SFINDER STATS OPTIONS ==="
+	echo "--no-parallelmedian - Switch off parallel median algorithm (based on parallel nth-element)"
+	echo ""
+
 	echo "=== SFINDER BKG OPTIONS ==="
 	echo "--bmaj=[BMAJ] - User-supplied beam Bmaj in arcsec (NB: used only when beam info is not available in input map) (default: 10 arcsec)"
 	echo "--bmin=[BMIN] - User-supplied beam Bmin in arcsec (NB: used only when beam info is not available in input map) (default: 5 arcsec)"
@@ -183,6 +187,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--hostfile=[HOSTFILE] - Ascii file with list of hosts used by MPI (default=no hostfile used)"
 	echo "--containerrun - Run inside Caesar container"
 	echo "--containerimg=[CONTAINER_IMG] - Singularity container image file (.simg) with CAESAR installed software"
+	echo "--containeroptions=[CONTAINER_OPTIONS] - Options to be passed to container run (e.g. -B /home/user:/home/user) (default=none)"
 	echo ""
 
 	echo "=== SFINDER SUBMISSION OPTIONS ==="
@@ -205,6 +210,7 @@ ENV_FILE=""
 SUBMIT=false
 BATCH_SYSTEM="PBS"
 CONTAINER_IMG=""
+CONTAINER_OPTIONS=""
 RUN_IN_CONTAINER=false
 FILELIST_GIVEN=false
 INPUTFILE=""
@@ -234,6 +240,7 @@ XMIN=0
 XMAX=0
 YMIN=0
 YMAX=0
+USE_PARALLEL_MEDIAN_ALGO="true"
 USE_LOCAL_BKG="true"
 BKG_ESTIMATOR="2"
 BKG_BOXSIZE="20"
@@ -372,6 +379,9 @@ do
 		--containerrun*)
     	RUN_IN_CONTAINER=true
     ;;
+		--containeroptions=*)
+    	CONTAINER_OPTIONS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
 		--loglevel=*)
     	LOG_LEVEL=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
@@ -465,7 +475,11 @@ do
 			READ_TILE="true"
     ;;
 		
-		
+		## STATS OPTIONS
+		--no-parallelmedian*)
+    	USE_PARALLEL_MEDIAN_ALGO="false"
+    ;;
+
 		## BKG OPTIONS
 		--globalbkg*)
     	USE_LOCAL_BKG="false"
@@ -810,7 +824,7 @@ done
 echo ""
 echo "*****  PARSED ARGUMENTS ****"
 echo "SUBMIT? $SUBMIT, BATCH_SYSTEM=$BATCH_SYSTEM, QUEUE=$BATCH_QUEUE, JOB_CPU: $JOB_NCPUS, JOB_NODES=$JOB_NNODES, JOB_WALLTIME: $JOB_WALLTIME, JOB_MEMORY: $JOB_MEMORY, JOB_USER_GROUP: $JOB_USER_GROUP"
-echo "RUN_IN_CONTAINER? $RUN_IN_CONTAINER, CONTAINER_IMG=$CONTAINER_IMG"
+echo "RUN_IN_CONTAINER? $RUN_IN_CONTAINER, CONTAINER_IMG=$CONTAINER_IMG, CONTAINER_OPTIONS=$CONTAINER_OPTIONS"
 echo "ENV_FILE: $ENV_FILE"
 echo "INPUTFILE: $INPUTFILE"
 echo "FILELIST: $FILELIST, NMAX_PROCESSED_FILES: $NMAX_PROCESSED_FILES"
@@ -821,6 +835,7 @@ echo "NPROC: $NPROC, NTHREADS: $NTHREADS"
 echo "HOSTFILE_GIVEN? $HOSTFILE_GIVEN, HOSTFILE: $HOSTFILE"
 echo "LOG_LEVEL: $LOG_LEVEL"
 echo "OUTPUT_DIR: $OUTPUT_DIR"
+echo "USE_PARALLEL_MEDIAN_ALGO: $USE_PARALLEL_MEDIAN_ALGO"
 echo "BKG BOX: $BKG_BOXSIZE, GRID: $BKG_GRID_SIZE, BKG_ESTIMATOR: $BKG_ESTIMATOR, BKG_USE_2ND_PASS: $BKG_USE_2ND_PASS, BKG_SKIP_OUTLIERS: $BKG_SKIP_OUTLIERS"
 echo "NPIX_MIN: $NPIX_MIN, SEED_THR: $SEED_THR, MERGE_THR: $MERGE_THR, NITERS: $COMPACT_SOURCE_SEARCH_NITERS. SEED_THR_STEP=$SEED_THR_STEP"
 echo "DILATE_NESTED? $DILATE_NESTED, DILATE_BRIGHT_THR: $DILATE_BRIGHT_THR, DILATE_THR: $DILATE_THR, DILATED_SOURCE: $DILATED_SOURCE, DILATE_KERNEL_SIZE: $DILATE_KERNEL_SIZE"
@@ -1058,6 +1073,12 @@ generate_config(){
     echo 'saveEdgenessMap = false                             | Save edgeness map computed in extended source search to ROOT file (T/F)'
     echo 'saveCurvatureMap = false                            | Save curvature map to ROOT file (T/F)'
     echo '###'
+    echo '###'
+		echo '//==========================='
+		echo '//==   STATS OPTIONS         =='
+		echo '//==========================='
+		echo "useParallelMedianAlgo = $USE_PARALLEL_MEDIAN_ALGO   | Use parallel median algo (based on nth_parallel) (default=true) (T/F)"
+		echo '###'
     echo '###'
 		echo '//==========================='
 		echo '//==   BKG OPTIONS         =='
@@ -1436,7 +1457,7 @@ if [ "$FILELIST_GIVEN" = true ]; then
 			CMD="$CMD -f $HOSTFILE "
 		fi
 		if [ "$RUN_IN_CONTAINER" = true ] ; then
-			EXE="$CMD singularity run --app sfinder $CONTAINER_IMG"		
+			EXE="$CMD singularity run $CONTAINER_OPTIONS --app sfinder $CONTAINER_IMG"		
 		else
 			EXE="$CMD $CAESAR_DIR/bin/FindSourceMPI"
 		fi
@@ -1504,7 +1525,7 @@ else
 		CMD="$CMD -f $HOSTFILE "
 	fi
 	if [ "$RUN_IN_CONTAINER" = true ] ; then
-		EXE="$CMD singularity run --app sfinder $CONTAINER_IMG"		
+		EXE="$CMD singularity run $CONTAINER_OPTIONS --app sfinder $CONTAINER_IMG"		
 	else
 		EXE="$CMD $CAESAR_DIR/bin/FindSourceMPI"
 	fi
