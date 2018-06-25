@@ -135,7 +135,11 @@ SourceFitter::SourceFitter()
 //Destructor
 SourceFitter::~SourceFitter()
 {
-	CodeUtils::DeletePtr<TH2D>(m_fluxMapHisto);	
+	//Delete flux map histo
+	if(m_fluxMapHisto){
+		delete m_fluxMapHisto;
+		m_fluxMapHisto= 0;
+	}
 
 }//close destructor
 
