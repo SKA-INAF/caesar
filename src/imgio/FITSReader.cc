@@ -33,7 +33,6 @@
 
 
 #include <TObject.h>
-#include <TFITS.h>
 #include <TMath.h>
 #include <TVectorD.h>
 
