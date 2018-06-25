@@ -237,6 +237,14 @@ class SFinder : public TObject {
 		* \brief Fit sources
 		*/
 		int FitSources(std::vector<Source*>& sources);
+
+		#ifdef MPI_ENABLED
+			/**
+			* \brief Fit sources in parallel using MPI
+			*/
+			//int FitSourcesMPI(std::vector<Source*>& sources);	
+		#endif
+
 		/**
 		* \brief Is fittable source
 		*/
@@ -268,6 +276,11 @@ class SFinder : public TObject {
 		* \brief Find sources at image edges (for MPI run)
 		*/
 		int FindSourcesAtEdge();
+
+		/**
+		* \brief Fit all task sources not found at tile edge (for MPI run)
+		*/
+		int FitTaskSources();
 
 		/**
 		* \brief Merge sources at edge (for MPI run)

@@ -802,6 +802,20 @@ int SFinder::RunTask(TaskData* taskData,bool storeData){
 	}
 
 	//============================
+	//== Fit sources not at edge
+	//============================
+	if(!stopTask){
+		INFO_LOG("[PROC "<<m_procId<<"] - Fitting task sources not located at tile edge ...");
+		auto t0_sfit = chrono::steady_clock::now();
+		if(FitTaskSources()<0){
+			ERROR_LOG("[PROC "<<m_procId<<"] - Fitting sources not at tile edges failed!");
+			status= -1;
+		}
+		auto t1_sfit = chrono::steady_clock::now();	
+		sourceFitTime= chrono::duration <double, milli> (t1_sfit-t0_sfit).count();
+	}
+
+	//============================
 	//== Store & Clear data
 	//============================
 	//## Store data?
@@ -940,7 +954,7 @@ int SFinder::Run(){
 			return -1;
 		}
 		auto t1_sfit = chrono::steady_clock::now();	
-		sourceFitTime= chrono::duration <double, milli> (t1_sfit-t0_sfit).count();
+		sourceFitTime+= chrono::duration <double, milli> (t1_sfit-t0_sfit).count();
 	}
 
 	//Stop timer
@@ -2742,8 +2756,9 @@ bool SFinder::IsFittableSource(Source* aSource)
 
 }//close IsFittableSource()
 
-int SFinder::FitSources(std::vector<Source*>& sources){
 
+int SFinder::FitSources(std::vector<Source*>& sources)
+{
 	//Check given source list
 	if(sources.empty()){
 		WARN_LOG("[PROC "<<m_procId<<"] - Empty source list, nothing to be fitted!");
@@ -2833,6 +2848,10 @@ int SFinder::FitSources(std::vector<Source*>& sources){
 		#pragma omp parallel for if(fitInMultithread)
 	#endif
 	for(size_t i=0;i<sources.size();i++){
+		//Skip if already fitted (e.g. in worker tasks)
+		//NB: If fitting is done in worker tasks only edge merged source are to be fitted at this stage
+		bool hasFitInfo= sources[i]->HasFitInfo();
+		if(hasFitInfo) continue;
 
 		//If source is non-fittable fit only nested components individually, otherwise perform a joint fit
 		bool isFittable= IsFittableSource(sources[i]);
@@ -2872,7 +2891,55 @@ int SFinder::FitSources(std::vector<Source*>& sources){
 
 }//close FitSources()
 
+/*
+#ifdef MPI_ENABLED
+int SFinder::FitSourcesMPI(std::vector<Source*>& sources)
+{
+	
+	//Distribute sources to workers
+	if(m_procId==MASTER_ID){
+		//Check given source list
+		long int nSources= static_cast<long int>(sources.size());
+		if(nSources<=0){
+			WARN_LOG("[PROC "<<m_procId<<"] - Empty source list, nothing to be fitted!");
+			return 0;
+		}
+	
+		//=======================================
+		//==    Send sources to all workers
+		//=======================================
+		//## First encode source collection in protobuf
+		INFO_LOG("[PROC "<<m_procId<<"] - Encoding source collection to buffer...");
+		long int msg_size= 0;
+		
+		char* msg= Serializer::SourceCollectionToCharArray(msg_size,sources);
+		if(!msg){
+			ERROR_LOG("[PROC "<<m_procId<<"] - Failed to encode task data to protobuf!");
+			return -1;
+		}
 
+		//## Send buffer to master processor	
+		INFO_LOG("[PROC "<<m_procId<<"] - Sending task data to master process (msg: "<<msg<<", size="<<msg_size<<")...");
+		MPI_Send((void*)(msg),msg_size, MPI_CHAR, MASTER_ID, MSG_TAG, MPI_COMM_WORLD);
+
+		//## Free buffer
+		if(msg) free(msg);
+		
+	}//close if
+	else {
+		//Receive number of sources
+		
+		//If source list is empty return
+
+		//Fit only a portion of fit sources
+		
+	}//close else
+
+	return 0;
+
+}//close FitSourcesMPI()
+#endif
+*/
 
 Image* SFinder::ReadImage(FileInfo& info,std::string filename,std::string imgname,long int ix_min,long int ix_max,long int iy_min,long int iy_max)
 {
@@ -3593,14 +3660,8 @@ int SFinder::GatherTaskDataFromWorkers()
 	double sourceSelectionTime_sum;
 	double imgResidualTime_sum;
 	double extendedSourceTime_sum;
-	/*
-	MPI_Reduce(&initTime, &initTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, m_WorkerComm);
-	MPI_Reduce(&readImageTime, &readImageTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, m_WorkerComm);
-	MPI_Reduce(&compactSourceTime, &compactSourceTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, m_WorkerComm);
-	MPI_Reduce(&imgResidualTime, &imgResidualTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, m_WorkerComm);
-	MPI_Reduce(&sourceSelectionTime, &sourceSelectionTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, m_WorkerComm);
-	MPI_Reduce(&extendedSourceTime, &extendedSourceTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, m_WorkerComm);
-	*/
+	double sourceFitTime_sum;
+
 	MPI_Reduce(&initTime, &initTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
 	MPI_Reduce(&readImageTime, &readImageTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
 	MPI_Reduce(&imageStatsTime, &imageStatsTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
@@ -3611,8 +3672,9 @@ int SFinder::GatherTaskDataFromWorkers()
 	MPI_Reduce(&imgResidualTime, &imgResidualTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
 	MPI_Reduce(&sourceSelectionTime, &sourceSelectionTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
 	MPI_Reduce(&extendedSourceTime, &extendedSourceTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&sourceFitTime, &sourceFitTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
 	
-	INFO_LOG("[PROC "<<m_procId<<"] - CPU times (ms): {init="<<initTime<<", read="<<readImageTime<<", stats="<<imageStatsTime<<", bkg="<<imageBkgTime<<", blobmask="<<blobMaskTime<<", blobfind="<<blobFindingTime<<", sourcefind="<<compactSourceTime<<", residual="<<imgResidualTime<<", sourcesel="<<sourceSelectionTime<<", extsourcefind="<<extendedSourceTime<<"}");
+	INFO_LOG("[PROC "<<m_procId<<"] - CPU times (ms): {init="<<initTime<<", read="<<readImageTime<<", stats="<<imageStatsTime<<", bkg="<<imageBkgTime<<", blobmask="<<blobMaskTime<<", blobfind="<<blobFindingTime<<", sourcefind="<<compactSourceTime<<", residual="<<imgResidualTime<<", sourcesel="<<sourceSelectionTime<<", extsourcefind="<<extendedSourceTime<<", sourceFitTime="<<sourceFitTime<<"}");
 
 	if (m_procId == MASTER_ID) {
 		initTime= initTime_sum;
@@ -3625,7 +3687,8 @@ int SFinder::GatherTaskDataFromWorkers()
 		sourceSelectionTime= sourceSelectionTime_sum;
 		imgResidualTime= imgResidualTime_sum;
 		extendedSourceTime= extendedSourceTime_sum;
-		INFO_LOG("[PROC "<<m_procId<<"] - Cumulative cpu times (ms): {init="<<initTime<<", read="<<readImageTime<<", stats="<<imageStatsTime<<", bkg="<<imageBkgTime<<", blobmask="<<blobMaskTime<<", blobfind="<<blobFindingTime<<", sourcefind="<<compactSourceTime<<", residual="<<imgResidualTime<<", sourcesel="<<sourceSelectionTime<<", extsourcefind="<<extendedSourceTime);
+		sourceFitTime= sourceFitTime_sum;
+		INFO_LOG("[PROC "<<m_procId<<"] - Cumulative cpu times (ms): {init="<<initTime<<", read="<<readImageTime<<", stats="<<imageStatsTime<<", bkg="<<imageBkgTime<<", blobmask="<<blobMaskTime<<", blobfind="<<blobFindingTime<<", sourcefind="<<compactSourceTime<<", residual="<<imgResidualTime<<", sourcesel="<<sourceSelectionTime<<", extsourcefind="<<extendedSourceTime<<", sourceFitTime="<<sourceFitTime);
 	}
 
 	//## Merge all sources found by workers in a unique collection
@@ -4297,6 +4360,28 @@ int SFinder::MergeSourcesAtEdge()
 
 }//close MergeSourcesAtEdge()
 
+int SFinder::FitTaskSources()
+{
+	//Loop over workers
+	for(size_t i=0;i<m_taskDataPerWorkers.size();i++){
+		if(m_taskDataPerWorkers[i].size()==0) continue;//no tasks present
+
+		//Loop over tasks per worker
+		for(size_t j=0;j<m_taskDataPerWorkers[i].size();j++){
+			INFO_LOG("[PROC "<<m_procId<<"] - Fitting "<<(m_taskDataPerWorkers[i][j]->sources).size()<<" sources (not at tile edge) ...");
+	
+			int status= FitSources( m_taskDataPerWorkers[i][j]->sources );
+			if(status<0){
+				WARN_LOG("[PROC "<<m_procId<<"] - Fit source task (worker="<<i<<", task="<<j<<") failed, go to next task!");
+				continue;
+			}
+
+		}//end loop tasks per worker
+	}//end loop workers
+
+	return 0;
+
+}//close FitTaskSources()
 
 int SFinder::FindSourcesAtEdge()
 {	
@@ -4328,27 +4413,14 @@ int SFinder::FindSourcesAtEdge()
 				float ymin_tile= (m_taskDataPerWorkers[i][j])->iy_min;// + m_ImgYmin;
 				float ymax_tile= (m_taskDataPerWorkers[i][j])->iy_max;// + m_ImgYmin; 
 				bool isAtTileEdge= (m_taskDataPerWorkers[i][j]->sources)[k]->IsAtBoxEdge(xmin_tile,xmax_tile,ymin_tile,ymax_tile);
-				/*
-				long int xmin_tile= (m_taskDataPerWorkers[i][j])->ix_min;
-				long int xmax_tile= (m_taskDataPerWorkers[i][j])->ix_max;
-				long int ymin_tile= (m_taskDataPerWorkers[i][j])->iy_min;
-				long int ymax_tile= (m_taskDataPerWorkers[i][j])->iy_max; 
-				bool isAtTileEdgeX= (xmin_s==xmin_tile || xmax_s==xmax_tile);
-				bool isAtTileEdgeY= (ymin_s==ymin_tile || ymax_s==ymax_tile);
-				bool isAtTileEdge= (isAtTileEdgeX || isAtTileEdgeY);
-				INFO_LOG("[PROC "<<m_procId<<"] - workerId="<<workerId<<", check if compact source no. "<<k<<"(x["<<xmin_s<<","<<xmax_s<<"] y["<<ymin_s<<","<<ymax_s<<"]) is at edge of its tile (x["<<xmin_tile<<","<<xmax_tile<<"] y["<<ymin_tile<<","<<ymax_tile<<"]), isAtTileEdgeX="<<isAtTileEdgeX<<", isAtTileEdgeY="<<isAtTileEdgeY<<", isAtTileEdge="<<isAtTileEdge);
-				*/
-
-
+				
 				if(isAtTileEdge){
 					INFO_LOG("[PROC "<<m_procId<<"] - workerId="<<workerId<<", source no. "<<k<<"(x["<<xmin_s<<","<<xmax_s<<"] y["<<ymin_s<<","<<ymax_s<<"]) is at edge of its tile (x["<<xmin_tile<<","<<xmax_tile<<"] y["<<ymin_tile<<","<<ymax_tile<<"])");
 				}
 
-
 				//Check if source is inside neighbour tile, e.g. is in overlapping area
 				//NB: This is done only if source is not found at tile border previously
 				bool isInOverlapArea= false;
-
 
 				if(!isAtTileEdge){	
 					//DEBUG_LOG("[PROC "<<m_procId<<"] - workerId="<<workerId<<", check if compact source no. "<<k<<"(x["<<xmin_s<<","<<xmax_s<<"] y["<<ymin_s<<","<<ymax_s<<"]) is inside neighbour tile...");
@@ -4367,22 +4439,6 @@ int SFinder::FindSourcesAtEdge()
 							isInOverlapArea= true;
 							break;
 						}
-
-						/*
-						long int xmin= (m_taskDataPerWorkers[neighborWorkerId][neighborTaskId])->ix_min;
-						long int xmax= (m_taskDataPerWorkers[neighborWorkerId][neighborTaskId])->ix_max;
-						long int ymin= (m_taskDataPerWorkers[neighborWorkerId][neighborTaskId])->iy_min;
-						long int ymax= (m_taskDataPerWorkers[neighborWorkerId][neighborTaskId])->iy_max;
-		
-						bool isOverlappingX= ( (xmin_s<=xmax && xmin_s>=xmin) || (xmax_s<=xmax && xmax_s>=xmin) );
-						bool isOverlappingY= ( (ymin_s<=ymax && ymin_s>=ymin) || (ymax_s<=ymax && ymax_s>=ymin) );
-							
-						INFO_LOG("[PROC "<<m_procId<<"] - neighborWorkerId="<<neighborWorkerId<<", neighborTaskId="<<neighborTaskId<<", check if inside neighbor tile no. "<<j<<"(x["<<xmin<<","<<xmax<<"] y["<<ymin<<","<<ymax<<"]), isOverlappingX="<<isOverlappingX<<", isOverlappingY="<<isOverlappingY);
-						if( isOverlappingX && isOverlappingY ){
-							isInOverlapArea= true;
-							break;
-						}
-						*/
 
 					}//end loop neighbors
 				}//close if
