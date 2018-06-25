@@ -41,6 +41,8 @@
 #include <TFitResultPtr.h>
 #include <Fit/FitResult.h>
 #include <TVirtualFitter.h>
+#include <TFitter.h>
+#include <TMinuitMinimizer.h>
 
 #include <cstdlib>
 #include <iomanip>
@@ -70,6 +72,7 @@ struct SourceFitOptions {
 
 	public:
 
+	
 	//Default constructor
 	SourceFitOptions() 
 	{
@@ -112,88 +115,106 @@ struct SourceFitOptions {
 		blobMapKernelFactor= 6; 
 		useNestedAsComponents= false;
 	
-		fitFcnTolerance= 1.e-5;//1.e-6
-		fitMaxIters= 100000;
+		
 		fitImproveConvergence= true;
 		fitNRetries= 1000;
 		fitDoFinalMinimizerStep= true;
 		fitFinalMinimizer= eHESS;
 		chi2RegPar= 0.1;
+
+		//Supported minimizers & algo
+		//  - Minuit: {Migrad,Simplex,Scan,Minimize}
+		//  - Minuit2: {Migrad,Simplex,Combined,Scan,Fumili}
+		//  - GSLMultiMin: {conjugatefr,conjugatepr,bfgs,bfgs2,steepestdescent} NB: No error calculation supported so do not use it
+		//  - GSLMultiFit: {} NB: Requiring a different chi2 function definition, so do not use it
+		fitMinimizer= "Minuit2";
+		fitMinimizerAlgo= "Migrad";
+		fitPrintLevel= 1;
+		fitStrategy= 2;
+		fitFcnTolerance= 1.e-2;//default tolerance used in ROOT
+		fitMaxIters= 100000;
+
 	}//close constructor
 
 	public:
-	//- Blob start fit pars
-	double bmaj;//in pixels
-	double bmin;//in pixels
-	double bpa;//in degrees
+		//- Blob start fit pars
+		double bmaj;//in pixels
+		double bmin;//in pixels
+		double bpa;//in degrees
 
-	//- Max number of components to be fitted & options
-	int nMaxComponents;
-	bool useNestedAsComponents;
+		//- Max number of components to be fitted & options
+		int nMaxComponents;
+		bool useNestedAsComponents;
 	
-	//- Number of matching peaks across kernels (-1=peak detected in all kernels, ...) and distance tolerance
-	int peakKernelMultiplicityThr;
-	int peakShiftTolerance;
+		//- Number of matching peaks across kernels (-1=peak detected in all kernels, ...) and distance tolerance
+		int peakKernelMultiplicityThr;
+		int peakShiftTolerance;
 
-	//- Dilation kernels to be used when finding peaks
-	int peakMinKernelSize;
-	int peakMaxKernelSize;
+		//- Dilation kernels to be used when finding peaks
+		int peakMinKernelSize;
+		int peakMaxKernelSize;
 
-	//- Multiscale blob finder options
-	double scaleMin;
-	double scaleMax;
-	double scaleStep;
-	int minBlobSize;
-	double blobMapThrFactor;
-	int blobMapKernelFactor;
+		//- Multiscale blob finder options
+		double scaleMin;
+		double scaleMax;
+		double scaleStep;
+		int minBlobSize;
+		double blobMapThrFactor;
+		int blobMapKernelFactor;
 
-	//- Peak flux significance min threshold (in nsigmas wrt to avg bkg & rms)
-	double peakZThrMin;	
+		//- Peak flux significance min threshold (in nsigmas wrt to avg bkg & rms)
+		double peakZThrMin;	
 
-	//- Centroid options
-	bool limitCentroidInFit;
-	double centroidLimit;//in pixels
-	bool fixCentroidInPreFit;
+		//- Centroid options
+		bool limitCentroidInFit;
+		double centroidLimit;//in pixels
+		bool fixCentroidInPreFit;
 
-	//- Bkg options
-	bool fixBkg;
-	bool limitBkgInFit;
-	bool useEstimatedBkgLevel;
-	double fixedBkgLevel;
+		//- Bkg options
+		bool fixBkg;
+		bool limitBkgInFit;
+		bool useEstimatedBkgLevel;
+		double fixedBkgLevel;
 		
-	//- Amplitude fit par range (example +-20% around source peak)
-	bool limitAmplInFit;
-	double amplLimit;
-	bool fixAmplInPreFit;
+		//- Amplitude fit par range (example +-20% around source peak)
+		bool limitAmplInFit;
+		double amplLimit;
+		bool fixAmplInPreFit;
 
-	//- Sigma fit par range
-	bool fixSigmaInPreFit;
-	bool fixSigma;	
-	bool limitSigmaInFit;
-	double sigmaLimit;
+		//- Sigma fit par range
+		bool fixSigmaInPreFit;
+		bool fixSigma;	
+		bool limitSigmaInFit;
+		double sigmaLimit;
 
-	//- Theta 
-	bool fixThetaInPreFit;
-	bool fixTheta;
-	bool limitThetaInFit;
-	double thetaLimit;//in deg
+		//- Theta 
+		bool fixThetaInPreFit;
+		bool fixTheta;
+		bool limitThetaInFit;
+		double thetaLimit;//in deg
 
-	//- Flux significance min threshold (in nsigmas above the bkg)
-	bool useFluxZCut;
-	double fluxZThrMin;
+		//- Flux significance min threshold (in nsigmas above the bkg)
+		bool useFluxZCut;
+		double fluxZThrMin;
 
-	//- Fit data bin error (if true set bin errors to pixel noise rms, otherwise to 1)
-	bool setBinErrorsToMapRMS;
+		//- Fit data bin error (if true set bin errors to pixel noise rms, otherwise to 1)
+		bool setBinErrorsToMapRMS;
 
-	//- Fit minimization options
-	double fitFcnTolerance;
-	long int fitMaxIters;
-	bool fitImproveConvergence;
-	long int fitNRetries;
-	bool fitDoFinalMinimizerStep;
-	int fitFinalMinimizer;
-	double chi2RegPar;
-	
+		//- Fit minimization options
+		double fitFcnTolerance;
+		long int fitMaxIters;
+		bool fitImproveConvergence;
+		long int fitNRetries;
+		bool fitDoFinalMinimizerStep;
+		int fitFinalMinimizer;
+		double chi2RegPar;
+
+		//- Fit minimizer
+		int fitPrintLevel;
+		int fitStrategy;
+		std::string fitMinimizer;
+		std::string fitMinimizerAlgo;
+		
 };//close SourceFitOptions
 
 
@@ -971,7 +992,6 @@ class SourceFitPars : public TObject {
 };
 
 
-
 //========================================
 //==         SOURCE FITTER
 //========================================
@@ -1002,8 +1022,15 @@ class SourceFitter : public TObject {
 		/**
 		* \brief Source fit data
 		*/
-		struct FitData {
-			FitData(double _x,double _y,double _S,double _Serr)
+		struct SourceFitData {
+			SourceFitData(){
+				x= 0;
+				y= 0;
+				S= 0;
+				Serr= 0;	
+			}
+
+			SourceFitData(double _x,double _y,double _S,double _Serr)
 				: x(_x),y(_y),S(_S),Serr(_Serr)
 			{}
 			double x;
@@ -1033,12 +1060,14 @@ class SourceFitter : public TObject {
 		/**
 		* \brief 2D Gaussian mixture model used for the fit
 		*/
-		static double Gaus2DMixtureFcn(double* x, double* p);
+		//static double Gaus2DMixtureFcn(double* x, double* p);
+		double Gaus2DMixtureFcn(double* x, const double* p);
 
 		/**
 		* \brief 2D Gaussian model used for the fit
 		*/
-		static double Gaus2DFcn(double* x, double* p);
+		//static double Gaus2DFcn(double* x, double* p);
+		double Gaus2DFcn(double* x, const double* p);
 
 	protected:
 		/**
@@ -1046,18 +1075,20 @@ class SourceFitter : public TObject {
 		*/
 		bool HasFitParsAtLimit(const ROOT::Fit::FitResult& fitRes);
 		/**
-		* \brief Returns list of parameters at limits
+		* \brief Returns list of parameters at limits (version with Minimizer)
 		*/
-		int GetParsAtLimits(std::vector<int>& parsAtLimits,TVirtualFitter* fitter);
-
+		int GetParsAtLimits(std::vector<int>& parsAtLimits,ROOT::Math::Minimizer* fitter);
+		
+		/**
+		* \brief Returns list of parameters at limits (version with TFitter)
+		*/
+		//int GetParsAtLimits(std::vector<int>& parsAtLimits,TFitter* fitter);
+		
 		/**
 		* \brief Estimate fit components
 		*/
 		int EstimateFitComponents(std::vector<std::vector<double>>& fitPars_start,Source* aSource,SourceFitOptions& fitOptions);
-		/**
-		* \brief Perform fit using given initial fit components pars
-		*/
-		//int DoFit(Source* aSource,SourceFitOptions& fitOptions,std::vector< std::vector<double> >& fitPars_start);
+		
 		/**
 		* \brief Perform fit using given initial fit components pars
 		*/
@@ -1075,22 +1106,40 @@ class SourceFitter : public TObject {
 		/**
 		* \brief Chi2 fit function 
 		*/
-		static void Chi2Fcn(int& nPar,double* grad,double& fval,double* p,int iflag);
+		double Chi2Fcn(const double* par);
+			
+		/**
+		* \brief Chi2 fit function (old MINUIT version)
+		*/
+		//static void Chi2Fcn(int& nPar,double* grad,double& fval,double* p,int iflag);
+		
 
 	private:
 	
-		static int m_NFitComponents;
-		static int m_fitStatus;
-		static SourceFitPars m_sourceFitPars;
+		//static int m_NFitComponents;
+		//static int m_fitStatus;
+		//static SourceFitPars m_sourceFitPars;
+		//static TH2D* m_fluxMapHisto;
+		//static std::vector<SourceFitData> m_fitData;
+		//static std::vector<SourceFitData> m_fitHaloData;
+		//static double m_chi2RegPar;
+		//static double m_bkgMean;
+		//static double m_rmsMean;
+		//static double m_sourceX0;
+		//static double m_sourceY0;
+
+		int m_NFitComponents;
+		int m_fitStatus;
+		SourceFitPars m_sourceFitPars;
 		
-		static TH2D* m_fluxMapHisto;
-		static std::vector<FitData> m_fitData;
-		static std::vector<FitData> m_fitHaloData;
-		static double m_chi2RegPar;
-		static double m_bkgMean;
-		static double m_rmsMean;
-		static double m_sourceX0;
-		static double m_sourceY0;
+		TH2D* m_fluxMapHisto;
+		std::vector<SourceFitData> m_fitData;
+		std::vector<SourceFitData> m_fitHaloData;
+		double m_chi2RegPar;
+		double m_bkgMean;
+		double m_rmsMean;
+		double m_sourceX0;
+		double m_sourceY0;
 		
 	ClassDef(SourceFitter,1)
 
@@ -1100,6 +1149,7 @@ class SourceFitter : public TObject {
 #pragma link C++ class SourceComponentPars+;
 #pragma link C++ class SourceFitPars+;
 #pragma link C++ class SourceFitter+;
+#pragma link C++ struct SourceFitter::SourceFitData+;
 #pragma link C++ enum FitStatusFlag;
 #pragma link C++ struct SourceFitOptions+;
 #endif

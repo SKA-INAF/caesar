@@ -213,7 +213,7 @@ int Source::Draw(int pixMargin,ImgType imgType,bool drawImg,bool drawContours,bo
 		//Draw main source info
 		TPaveText* sourceMainInfoText = new TPaveText(0.4,0.15,0.8,0.3,"NDC");
 		sourceMainInfoText->AddText(Form("Name: %s, Type: %d, Freq: %s",this->GetName(),Type,freq.Data()));
-		sourceMainInfoText->AddText(Form("NPix: %d, Xmin/Xmax: %1.2f/%1.2f, Ymin/Ymax: %1.2f/%1.2f",NPix,m_Xmin,m_Xmax,m_Ymin,m_Ymax));
+		sourceMainInfoText->AddText(Form("NPix: %ld, Xmin/Xmax: %1.2f/%1.2f, Ymin/Ymax: %1.2f/%1.2f",NPix,m_Xmin,m_Xmax,m_Ymin,m_Ymax));
 		sourceMainInfoText->AddText(Form("C(%1.2f,%1.2f), Wc(%1.2f,%1.2f)",X0,Y0,m_Sx,m_Sy));
 		sourceMainInfoText->AddText(Form("Stot(mJy): %1.1f, Smin/Smax(mJy): %1.2f/%1.2f",m_S*1.e+3,m_Smin*1.e+3,m_Smax*1.e+3));
 		sourceMainInfoText->SetTextAlign(12);

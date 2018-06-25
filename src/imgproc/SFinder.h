@@ -488,6 +488,13 @@ class SFinder : public TObject {
 		bool m_fitUseNestedAsComponents;
 		double m_fitChi2RegPar;
 
+		std::string m_fitMinimizer;		
+		std::string m_fitMinimizerAlgo;
+		int m_fitStrategy;
+		int m_fitPrintLevel;
+
+		bool m_fitUseThreads;
+
 		//Saliency computation
 		Image* m_SaliencyImg;
 		bool m_SaliencyUseOptimalThr;

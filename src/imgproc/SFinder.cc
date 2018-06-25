@@ -582,6 +582,14 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(fitFinalMinimizer,m_fitFinalMinimizer);
 	GET_OPTION_VALUE(fitUseNestedAsComponents,m_fitUseNestedAsComponents);
 	GET_OPTION_VALUE(fitChi2RegPar,m_fitChi2RegPar);
+		
+	GET_OPTION_VALUE(fitMinimizer,m_fitMinimizer);
+	GET_OPTION_VALUE(fitMinimizerAlgo,m_fitMinimizerAlgo);
+	GET_OPTION_VALUE(fitStrategy,m_fitStrategy);
+	GET_OPTION_VALUE(fitPrintLevel,m_fitPrintLevel);
+	
+	GET_OPTION_VALUE(fitUseThreads,m_fitUseThreads);
+	
 
 	if(m_peakMinKernelSize>m_peakMaxKernelSize){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Invalid peak kernel size option given (hint: min kernel must be larger or equal to max kernel size)!");
@@ -2785,6 +2793,27 @@ int SFinder::FitSources(std::vector<Source*>& sources){
 	fitOptions.fitFinalMinimizer= m_fitFinalMinimizer;
 	fitOptions.useNestedAsComponents= m_fitUseNestedAsComponents;
 	fitOptions.chi2RegPar= m_fitChi2RegPar;
+
+	fitOptions.fitMinimizer= m_fitMinimizer;		
+	fitOptions.fitMinimizerAlgo= m_fitMinimizerAlgo;
+	fitOptions.fitStrategy= m_fitStrategy;
+	fitOptions.fitPrintLevel= m_fitPrintLevel;
+
+	//## Check minimizer support
+	if(fitOptions.fitMinimizer=="Minuit2" || fitOptions.fitMinimizer=="minuit2"){
+		#ifndef MINUIT2_ENABLED
+			WARN_LOG("Minuit2 minimizer was selected as option but not available/found in the system, switching to Minuit+Migrad as fallback.");
+			fitOptions.fitMinimizer= "Minuit";
+			fitOptions.fitMinimizerAlgo= "Migrad";
+		#endif
+	}
+
+	//## Check fit minimizer multithread support
+	bool fitInMultithread= m_fitUseThreads;
+	if(m_fitUseThreads && (fitOptions.fitMinimizer=="Minuit" || fitOptions.fitMinimizer=="minuit")){
+		WARN_LOG("Selected Minuit minimizer is not thread-safe, switching off source fit multithread.");
+		fitInMultithread= false;
+	}
 	
 	//## NB: Convert scale pars in pixels assuming they represent multiple of beam width (Bmin)	
 	double pixSize= fabs(std::min(m_pixSizeX,m_pixSizeY));
@@ -2801,7 +2830,7 @@ int SFinder::FitSources(std::vector<Source*>& sources){
 	fitOptions.blobMapKernelFactor= m_nestedBlobKernFactor; 
 
 	#ifdef OPENMP_ENABLED
-	#pragma omp parallel for
+		#pragma omp parallel for if(fitInMultithread)
 	#endif
 	for(size_t i=0;i<sources.size();i++){
 
@@ -2809,7 +2838,7 @@ int SFinder::FitSources(std::vector<Source*>& sources){
 		bool isFittable= IsFittableSource(sources[i]);
 		if(isFittable) {
 			//Fit mother source
-			INFO_LOG("[PROC "<<m_procId<<"] - Source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") fittable as a whole...");
+			INFO_LOG("[PROC "<<m_procId<<", threadId="<<omp_get_thread_num()<<"] - Source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") fittable as a whole...");
 			if(sources[i]->Fit(fitOptions)<0) {
 				WARN_LOG("[PROC "<<m_procId<<"] - Failed to fit source no. "<<i+1<<" (name="<<sources[i]->GetName()<<"), skip to next...");
 				continue;
