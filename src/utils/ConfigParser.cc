@@ -343,7 +343,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(peakShiftTolerance,int,1,0,20);
 		REGISTER_OPTION(peakZThrMin,double,1,0,1000);
 		
-		REGISTER_OPTION(fitFcnTolerance,double,1.e-5,0,100);
+		REGISTER_OPTION(fitFcnTolerance,double,1.e-2,0,100);
 		REGISTER_OPTION(fitMaxIters,long int,100000,0,1000000);
 		REGISTER_OPTION(fitImproveConvergence,bool,true,false,true);
 		REGISTER_OPTION(fitNRetries,long int,1000,0,100000);
@@ -352,7 +352,13 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(fitUseNestedAsComponents,bool,false,false,true);	
 		REGISTER_OPTION(fitChi2RegPar,double,0,-0.001,1.001);
 		
-		
+		REGISTER_OPTION(fitMinimizer,std::string,"Minuit","","");
+		REGISTER_OPTION(fitMinimizerAlgo,std::string,"Migrad","","");
+		REGISTER_OPTION(fitPrintLevel,int,1,0,3);
+		REGISTER_OPTION(fitStrategy,int,2,0,3);
+
+		REGISTER_OPTION(fitUseThreads,bool,false,false,true);
+
 		//===================================
 		//==  Chan-Vese algorithm options  ==
 		//===================================

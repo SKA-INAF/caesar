@@ -31,7 +31,6 @@
 //#include <CodeUtils.h>
 
 #include <TObject.h>
-#include <TFITS.h>
 #include <TMath.h>
 
 #ifdef USE_TANGO
