@@ -127,6 +127,11 @@ if [ "$NARGS" -lt 2 ]; then
 
 	echo "=== SFINDER SOURCE FITTING OPTIONS ==="
 	echo "--fitsources - Fit compact point-like sources found (default=false)"
+	echo "--fit-usethreads - Enable multithread in source fitting (NB: use Minuit2 minimizer if enabled) (default=disabled)"
+	echo "--fit-minimizer=[FIT_MINIMIZER] - Fit minimizer {Minuit,Minuit2} (default=Minuit2)"
+	echo "--fit-minimizeralgo=[FIT_MINIMIZER_ALGO] - Fit minimizer algo {Migrad,Combined,Simplex,Scan,Fumili (Minuit2)} (default=Combined)"
+	echo "--fit-printlevel=[FIT_PRINTLEVEL] - Fit print level (default=1)"
+	echo "--fit-strategy=[FIT_STRATEGY] - Fit strategy (default=2)"
 	echo "--fit-maxnbeams=[FIT_MAX_NBEAMS] - Maximum number of beams for fitting if compact source (default=20)"
 	echo "--fit-maxcomponents=[FIT_MAX_COMPONENTS] - Maximum number of components fitted in a blob (default=3)"	
 	echo "--fit-usenestedascomponents - Initialize fit components to nested sources found in source (default=no)"
@@ -309,6 +314,11 @@ USE_OPTIMAL_THR_IN_SALIENCY="true"
 SEARCH_EXTENDED_SOURCES="true"
 
 FIT_SOURCES="false"
+FIT_USETHREADS="false"
+FIT_MINIMIZER="Minuit"
+FIT_MINIMIZER_ALGO="Combined"
+FIT_PRINTLEVEL="1"
+FIT_STRATEGY="2"
 FIT_MAX_NBEAMS="20"
 FIT_MAX_COMPONENTS="3"
 FIT_WITH_FIXED_BKG="true"
@@ -672,6 +682,21 @@ do
 		--fitsources*)
     	FIT_SOURCES="true"
     ;;	
+		--fit-usethreads*)
+    	FIT_USETHREADS="true"
+    ;;
+		--fit-minimizer=*)
+			FIT_MINIMIZER=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
+		--fit-minimizeralgo=*)
+			FIT_MINIMIZER_ALGO=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
+		--fit-printlevel=*)
+			FIT_PRINTLEVEL=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
+		--fit-strategy=*)
+			FIT_STRATEGY=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
 		--fit-maxnbeams=*)
 			FIT_MAX_NBEAMS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
 		;;
@@ -892,6 +917,16 @@ CONTAINER_IMG_FLAG=""
 if [ "$RUN_IN_CONTAINER" = true ]; then
 	RUN_IN_CONTAINER_FLAG="--containerrun "
 	CONTAINER_IMG_FLAG="--containerimg=$CONTAINER_IMG "	
+fi
+
+## Check minimizer options
+if [ "$FIT_MINIMIZER" != "Minuit" ] && [ "$FIT_MINIMIZER" != "Minuit2" ]; then
+  echo "ERROR: Empty or invalid fit minimizer option given (hint: valid choices are {Minuit, Minuit2})!"
+  exit 1
+fi
+if [ "$FIT_MINIMIZER_ALGO" != "Migrad" ] && [ "$FIT_MINIMIZER_ALGO" != "Combined" ] && [ "$FIT_MINIMIZER_ALGO" != "Simplex" ] && [ "$FIT_MINIMIZER_ALGO" != "Scan" ]; then
+  echo "ERROR: Empty or invalid fit minimizer algo option given (hint: valid choices are {Migrad, Combined, Simplex, Scan})!"
+  exit 1
 fi
 
 BATCH_SUB_CMD="qsub"
@@ -1139,7 +1174,12 @@ generate_config(){
 		echo '//=================================='
 		echo '//==  SOURCE FITTING OPTIONS  =='
 		echo '//=================================='
-		echo "fitSources = $FIT_SOURCES                             | Deblend point-like sources with multi-component gaus fit (T/F)"
+		echo "fitSources = $FIT_SOURCES                             | Deblend and fit point-like sources with multi-component gaus fit (T/F)"
+		echo "fitUseThreads = $FIT_USETHREADS                       | Use multithread in source fitting (default=false) (T/F)"
+		echo "fitMinimizer = $FIT_MINIMIZER                         | Minimizer {Minuit,Minuit2} (default=Minuit) (T/F)"
+		echo "fitMinimizerAlgo = $FIT_MINIMIZER_ALGO         				| Minimizer algorithm: {Migrad,Simplex,Scan,Combined,Fumili} (default=Migrad)"
+		echo "fitPrintLevel = $FIT_PRINTLEVEL                				| Minimizer print level (default=1)"
+		echo "fitStrategy = $FIT_STRATEGY                    				| Minimizer strategy (higher means more accurate but more fcn calls) (default=2)"
 		echo "nBeamsMaxToFit = $FIT_MAX_NBEAMS							 				| Maximum number of beams in compact source for fitting (if above thr fitting not performed)"
 		echo "fitUseNestedAsComponents = $FIT_USE_NESTED_AS_COMPONENTS  | If true use nested sources (if any) to estimate fitted components, otherwise estimate blended blobs (default=false)"
 		echo "fitMaxNComponents = $FIT_MAX_COMPONENTS               | Maximum number of components fitted in a blob"
