@@ -62,21 +62,25 @@ list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/cmake)
 list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/cmake/modules)
 
 #---Locate the ROOT package and defines a number of variables (e.g. ROOT_INCLUDE_DIRS)
-SET (ROOT_REQUIRED_MODULES MathCore RIO Hist Tree Net PyROOT)
+SET (ROOT_REQUIRED_MODULES MathCore RIO Hist Tree Net PyROOT Minuit)
+SET (ROOT_OPTIONAL_MODULES Minuit2 FITSIO RInterface)
 if(ENABLE_R)
 	list(APPEND ROOT_REQUIRED_MODULES RInterface)
 endif()
 
-find_package(ROOT REQUIRED MODULE COMPONENTS ${ROOT_REQUIRED_MODULES})
+find_package(ROOT REQUIRED MODULE COMPONENTS ${ROOT_REQUIRED_MODULES} OPTIONAL_COMPONENTS ${ROOT_OPTIONAL_MODULES})
 
-#find_package(ROOT REQUIRED MODULE COMPONENTS MathCore RIO Hist Tree Net FITSIO PyROOT RInterface)
-#find_package(ROOT REQUIRED)
 #---Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY)
-include(${ROOT_USE_FILE}) ### NOT WORKING!!
-#include(ROOTUseFile) 
-#include_directories(${ROOT_INCLUDE_DIR})
+include(${ROOT_USE_FILE}) 
 
-message (STATUS "ROOT HEADERS: ${ROOT_INCLUDE_DIRS}, LIBS: ${ROOT_LIBRARIES}, REQUIRED_MODULES: ${ROOT_REQUIRED_MODULES}")
+message (STATUS "ROOT HEADERS: ${ROOT_INCLUDE_DIRS}, LIBS: ${ROOT_LIBRARIES}, REQUIRED_MODULES: ${ROOT_REQUIRED_MODULES}, OPTIONAL_MODULES: ${ROOT_OPTIONAL_MODULES} ")
+message (STATUS "MINUIT2 FOUND? ${ROOT_minuit2_FOUND}")
+if(${ROOT_minuit2_FOUND})
+	MESSAGE(STATUS "MINUIT2 found, defining preprocessor flag MINUIT2_ENABLED=true and adding library ${ROOT_minuit2_LIBRARY} to linked lib list")
+	add_definitions(-DMINUIT2_ENABLED=1)
+else()
+	MESSAGE(STATUS "MINUIT2 not found")
+endif()
 #--------------------------------
 
 

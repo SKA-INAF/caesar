@@ -274,6 +274,7 @@
 #pragma link C++ class Caesar::SourceComponentPars+;
 #pragma link C++ class Caesar::SourceFitPars+;
 #pragma link C++ class Caesar::SourceFitter+;
+#pragma link C++ struct Caesar::SourceFitter::SourceFitData+;
 #pragma link C++ enum Caesar::FitStatusFlag;
 #pragma link C++ struct SourceFitOptions+;
 //======================
