@@ -2551,7 +2551,9 @@ Image* SFinder::FindExtendedSources_WT(Image* inputImg,TaskData* taskData,Image*
 
 
 
-int SFinder::SelectSources(std::vector<Source*>& sources){
+int SFinder::SelectSources(std::vector<Source*>& sources)
+{
+	auto t0_ssel = chrono::steady_clock::now();	
 
 	//## Apply source selection?
 	int nSources= static_cast<int>(sources.size());
@@ -2632,12 +2634,17 @@ int SFinder::SelectSources(std::vector<Source*>& sources){
 	sources.insert(sources.end(),sources_sel.begin(),sources_sel.end());
 	sources_sel.clear();
 
+	auto t1_ssel = chrono::steady_clock::now();	
+	sourceSelectionTime+= chrono::duration <double, milli> (t1_ssel-t0_ssel).count();
+
 	return 0;
 
 }//close SelectSources()
 
-bool SFinder::IsGoodSource(Source* aSource){
-	
+bool SFinder::IsGoodSource(Source* aSource)
+{
+	auto t0_ssel = chrono::steady_clock::now();	
+
 	if(!aSource) return false;
 
 	//## Check for pixels 	
@@ -2658,12 +2665,17 @@ bool SFinder::IsGoodSource(Source* aSource){
 	//## Add other check here ...
 	//...
 	//...
-
+	
+	auto t1_ssel = chrono::steady_clock::now();	
+	sourceSelectionTime+= chrono::duration <double, milli> (t1_ssel-t0_ssel).count();
+	
 	return true;
 
 }//close IsGoodSource()
 
-bool SFinder::IsPointLikeSource(Source* aSource){
+bool SFinder::IsPointLikeSource(Source* aSource)
+{
+	auto t0_ssel = chrono::steady_clock::now();	
 
 	if(!aSource) return false;
 	if(!aSource->HasParameters()) {
@@ -2726,6 +2738,9 @@ bool SFinder::IsPointLikeSource(Source* aSource){
 		DEBUG_LOG("[PROC "<<m_procId<<"] - Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass nMaxPix cut (NPix="<<NPix<<">"<<m_psMaxNPix<<")");
 		isPointLike= false;
 	}
+
+	auto t1_ssel = chrono::steady_clock::now();	
+	sourceSelectionTime+= chrono::duration <double, milli> (t1_ssel-t0_ssel).count();
 
 	if(!isPointLike) return false;
 
