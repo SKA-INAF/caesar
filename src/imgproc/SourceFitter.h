@@ -1132,7 +1132,7 @@ class SourceFitter : public TObject {
 		int m_fitStatus;
 		SourceFitPars m_sourceFitPars;
 		
-		TH2D* m_fluxMapHisto;
+		//TH2D* m_fluxMapHisto;
 		std::vector<SourceFitData> m_fitData;
 		std::vector<SourceFitData> m_fitHaloData;
 		double m_chi2RegPar;

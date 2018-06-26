@@ -124,7 +124,7 @@ double SourceFitter::m_chi2RegPar= 0.1;
 SourceFitter::SourceFitter()
 	: TObject()
 {
-	m_fluxMapHisto= 0;
+	//m_fluxMapHisto= 0;
 	m_bkgMean= 0.;
 	m_rmsMean= 0.;
 	m_fitData.clear();
@@ -136,10 +136,12 @@ SourceFitter::SourceFitter()
 SourceFitter::~SourceFitter()
 {
 	//Delete flux map histo
+	/*
 	if(m_fluxMapHisto){
 		delete m_fluxMapHisto;
 		m_fluxMapHisto= 0;
 	}
+	*/
 
 }//close destructor
 
@@ -163,9 +165,15 @@ int SourceFitter::InitData(Source* aSource,SourceFitOptions& fitOptions)
 
 	
 	//## Initialize flux histo/map
-	if(m_fluxMapHisto) CodeUtils::DeletePtr<TH2D>(m_fluxMapHisto);
+	/*
+	if(m_fluxMapHisto) {
+		delete m_fluxMapHisto;
+		m_fluxMapHisto= 0;
+	}
 	m_fluxMapHisto= new TH2D("","",nBoxX,Xmin-0.5,Xmax+0.5,nBoxY,Ymin-0.5,Ymax+0.5);
+	m_fluxMapHisto->SetDirectory(0);//disconnect from any existing file open
 	m_fluxMapHisto->Sumw2();
+	*/
 
 	//## Fill source flux histo
 	INFO_LOG("Filling flux histo for source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") ...");
@@ -173,7 +181,7 @@ int SourceFitter::InitData(Source* aSource,SourceFitOptions& fitOptions)
 	m_rmsMean= 0.;
 	long int ndata= 0;
 	long int ndata_rms= 0;
-	std::vector<int> filledBinIds;
+	//std::vector<int> filledBinIds;
 	m_fitData.clear();
 	m_fitHaloData.clear();
 
@@ -198,11 +206,13 @@ int SourceFitter::InitData(Source* aSource,SourceFitOptions& fitOptions)
 		*/
 
 		//Find histo bin being filled	
+		/*
 		int binId= m_fluxMapHisto->FindBin(x,y);
 		if(m_fluxMapHisto->IsBinUnderflow(binId) || m_fluxMapHisto->IsBinOverflow(binId)){
 			WARN_LOG("Cannot find histo bin corresponding to pixel flux (S="<<S<<"), skip pixel...");
 			continue;
 		}
+		*/
 
 		//Compute pixel flux error
 		//Set to 1 by default (e.g. ignored in fitting)
@@ -213,10 +223,12 @@ int SourceFitter::InitData(Source* aSource,SourceFitOptions& fitOptions)
 
 		
 		//Fill histogram bin and associated error
+		/*
 		m_fluxMapHisto->Fill(x,y,S);//increment sum of weights
 		m_fluxMapHisto->SetBinError(binId,S_err);
 		filledBinIds.push_back(binId);
-		
+		*/
+
 		//Scale and fill fit data
 		S*= 1.e+3;//convert to mJy/beam
 		S_err*= 1.e+3;//convert to mJy/beam
@@ -251,6 +263,7 @@ int SourceFitter::InitData(Source* aSource,SourceFitOptions& fitOptions)
 	}
 
 	//Set all bins error to average noise
+	/*
 	if(fitOptions.setBinErrorsToMapRMS && m_rmsMean>0){
 		INFO_LOG("Setting fitted histo bin errors to average rms (<rms(Jy)>="<<m_rmsMean<<")");
 		for(size_t i=0;i<filledBinIds.size();i++){
@@ -258,6 +271,7 @@ int SourceFitter::InitData(Source* aSource,SourceFitOptions& fitOptions)
 			m_fluxMapHisto->SetBinError(binId,m_rmsMean);
 		}
 	}//close if
+	*/
 
 	//Convert bkg & rms to mJy
 	m_bkgMean*= 1.e+3;//convert to mJy
@@ -266,10 +280,12 @@ int SourceFitter::InitData(Source* aSource,SourceFitOptions& fitOptions)
 	INFO_LOG("Source (name="<<aSource->GetName()<<", N="<<pixels.size()<<", pos("<<m_sourceX0<<","<<m_sourceY0<<")) bkg info: <bkg(mJy)>="<<m_bkgMean<<", <rms(mJy)>="<<m_rmsMean);
 
 	//Check if histo has entries
+	/*
 	if(m_fluxMapHisto->GetSumOfWeights()<=0){
 		ERROR_LOG("No entries present in flux map histogram (hint: check if properly filled, e.g. bin range problems)!");
 		return -1;
 	}
+	*/
 
 	return 0;
 
@@ -515,12 +531,15 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 				for(size_t j=0;j<peaks.size();j++){
 					double x= peaks[j].x;
 					double y= peaks[j].y;
+					double Speak= peaks[j].S;
+					/*
 					long int gbin= m_fluxMapHisto->FindBin(x,y);
 					if(m_fluxMapHisto->IsBinOverflow(gbin) || m_fluxMapHisto->IsBinUnderflow(gbin)){
 						WARN_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
 						return -1;
 					}
 					double Speak= m_fluxMapHisto->GetBinContent(gbin);
+					*/
 					double sigmaX= fitOptions.bmaj/GausSigma2FWHM;
 					double sigmaY= fitOptions.bmin/GausSigma2FWHM;
 					double theta= fitOptions.bpa;
