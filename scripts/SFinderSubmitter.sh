@@ -362,7 +362,7 @@ SAVE_DS9REGIONS="false"
 CONVERT_DS9REGIONS_TO_WCS="false"
 DS9REGION_WCSTYPE="0"
 
-for item in "$*"
+for item in "$@"
 do
 	case $item in 
 		## MANDATORY ##	
