@@ -362,7 +362,7 @@ SAVE_DS9REGIONS="false"
 CONVERT_DS9REGIONS_TO_WCS="false"
 DS9REGION_WCSTYPE="0"
 
-for item in $*
+for item in "$*"
 do
 	case $item in 
 		## MANDATORY ##	
@@ -1503,7 +1503,7 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		fi
 		EXE_ARGS="--config=$configfile"
 
-		generate_exec_script "$shfile" "$index" "$EXE" "$EXE_ARGS" "$logfile" "$BATCH_SYSTEM"
+		generate_exec_script "$shfile" "$index" "$EXE" "$EXE_ARGS" "$logfile"
 
 
 		# Submits the job to batch system
@@ -1574,7 +1574,7 @@ else
 
 	echo "INFO: Creating script file $shfile for input file: $inputfile ..."
 	jobId=" "
-	generate_exec_script "$shfile" "$jobId" "$EXE" "$EXE_ARGS" "$logfile" "$BATCH_SYSTEM"
+	generate_exec_script "$shfile" "$jobId" "$EXE" "$EXE_ARGS" "$logfile"
 
 	# Submits the job to batch system
 	if [ "$SUBMIT" = true ] ; then
