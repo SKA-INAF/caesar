@@ -187,6 +187,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"
 	echo "--addrunindex - Append a run index to submission script (in case of list execution) (default=no)"
 	echo "--outdir=[OUTPUT_DIR] - Output directory where to put run output file (default=pwd)"
+	echo "--no-mpi - Disable MPI run (even with 1 proc) (default=enabled)"
 	echo "--nproc=[NPROC] - Number of MPI processors per node used (NB: mpi tot nproc=nproc x nnodes) (default=1)"
 	echo "--nthreads=[NTHREADS] - Number of threads to be used in OpenMP (default=-1=all available in node)"
 	echo "--hostfile=[HOSTFILE] - Ascii file with list of hosts used by MPI (default=no hostfile used)"
@@ -213,7 +214,7 @@ fi
 #######################################
 ENV_FILE=""
 SUBMIT=false
-BATCH_SYSTEM="PBS"t
+BATCH_SYSTEM="PBS"
 CONTAINER_IMG=""
 CONTAINER_OPTIONS=""
 RUN_IN_CONTAINER=false
@@ -221,6 +222,7 @@ FILELIST_GIVEN=false
 INPUTFILE=""
 INPUTFILE_GIVEN=false
 APPEND_RUN_INDEX=false
+MPI_ENABLED=true
 NPROC=1
 HOSTFILE=""
 HOSTFILE_GIVEN=false
@@ -406,6 +408,9 @@ do
     	OUTPUT_DIR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
+		--no-mpi*)
+    	MPI_ENABLED=false
+    ;;
 		--nproc=*)
       NPROC=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
@@ -856,7 +861,7 @@ echo "FILELIST: $FILELIST, NMAX_PROCESSED_FILES: $NMAX_PROCESSED_FILES"
 echo "SAVE_INPUT_MAP? $SAVE_INPUT_MAP, SAVE_BKG_MAP: $SAVE_BKG_MAP, SAVE_RMS_MAP? $SAVE_RMS_MAP, SAVE_SIGNIFICANCE_MAP? $SAVE_SIGNIFICANCE_MAP, SAVE_RESIDUAL_MAP: $SAVE_RESIDUAL_MAP"
 echo "SAVE_SALIENCY_MAP? $SAVE_SALIENCY_MAP, SAVE_SEGMENTED_MAP? $SAVE_SEGMENTED_MAP"
 echo "SPLIT_IN_TILES? $SPLIT_IN_TILES, TILE_SIZE: $TILE_SIZE, TILE_STEP: $TILE_STEP"
-echo "NPROC: $NPROC, NTHREADS: $NTHREADS"
+echo "NPROC: $NPROC, NTHREADS: $NTHREADS, MPI_ENABLED? $MPI_ENABLED"
 echo "HOSTFILE_GIVEN? $HOSTFILE_GIVEN, HOSTFILE: $HOSTFILE"
 echo "LOG_LEVEL: $LOG_LEVEL"
 echo "OUTPUT_DIR: $OUTPUT_DIR"
@@ -986,7 +991,10 @@ fi
 
 ## Compute total number of MPI processor to be given to mpirun
 NPROC_TOT=$(($NPROC * $JOB_NNODES))
-
+MPI_ENABLED_OPTION=""
+if [ "$MPI_ENABLED" = false ]; then
+  MPI_ENABLED_OPTION="--no-mpi"
+fi
 
 #######################################
 ##     DEFINE & LOAD ENV VARS
@@ -1004,7 +1012,7 @@ source $ENV_FILE
 ##         CHECK ENVIRONMENT
 #######################################
 ## Check if CAESAR environment variable exists and is properly set
-if [ "$CAESAR_DIR" = "" ]; then
+if [ "$CAESAR_DIR" = "" ] && [ "$RUN_IN_CONTAINER" = false ]; then
 	echo "ERROR: Missing CAESAR_DIR environment variable, please set it to your CAESAR installation path."
 	exit 1
 fi
@@ -1486,22 +1494,19 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		## Generate script
 		echo "INFO: Creating script file $shfile for input file: $inputfile ..."
 
-		##EXE="$CAESAR_DIR/scripts/RunSFinderMPI.sh"
-		##EXE_ARGS="--nproc=$NPROC_TOT --config=$configfile $RUN_IN_CONTAINER_FLAG $CONTAINER_IMG_FLAG"
-		##if [ "$HOSTFILE_GIVEN" = true ] ; then
-		##	EXE_ARGS="$EXE_ARGS --hostfile=$HOSTFILE"
-		##fi
-
-		CMD="mpirun -np $NPROC_TOT "
-		if [ "$HOSTFILE_GIVEN" = true ] ; then
-			CMD="$CMD -f $HOSTFILE "
+		CMD=""
+		if [ "$MPI_ENABLED" = true ]; then	
+			CMD="mpirun -np $NPROC_TOT "
+			if [ "$HOSTFILE_GIVEN" = true ] ; then
+				CMD="$CMD -f $HOSTFILE "
+			fi
 		fi
 		if [ "$RUN_IN_CONTAINER" = true ] ; then
 			EXE="$CMD singularity run $CONTAINER_OPTIONS --app sfinder $CONTAINER_IMG"		
 		else
 			EXE="$CMD $CAESAR_DIR/bin/FindSourceMPI"
 		fi
-		EXE_ARGS="--config=$configfile"
+		EXE_ARGS="--config=$configfile $MPI_ENABLED_OPTION"
 
 		generate_exec_script "$shfile" "$index" "$EXE" "$EXE_ARGS" "$logfile"
 
@@ -1560,16 +1565,20 @@ else
 	##	EXE_ARGS="$EXE_ARGS --hostfile=$HOSTFILE"
 	##fi
 
-	CMD="mpirun -np $NPROC_TOT "
-	if [ "$HOSTFILE_GIVEN" = true ] ; then
-		CMD="$CMD -f $HOSTFILE "
+	CMD=""
+	if [ "$MPI_ENABLED" = true ]; then	
+		CMD="mpirun -np $NPROC_TOT "
+		if [ "$HOSTFILE_GIVEN" = true ] ; then
+			CMD="$CMD -f $HOSTFILE "
+		fi
 	fi
+
 	if [ "$RUN_IN_CONTAINER" = true ] ; then
 		EXE="$CMD singularity run $CONTAINER_OPTIONS --app sfinder $CONTAINER_IMG"		
 	else
 		EXE="$CMD $CAESAR_DIR/bin/FindSourceMPI"
 	fi
-	EXE_ARGS="--config=$configfile"
+	EXE_ARGS="--config=$configfile $MPI_ENABLED_OPTION"
 
 
 	echo "INFO: Creating script file $shfile for input file: $inputfile ..."

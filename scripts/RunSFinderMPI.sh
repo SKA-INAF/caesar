@@ -39,6 +39,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--hostfile=[HOSTFILE] - File listing hostnames to run MPI (default=all available hosts)"
 	echo "--containerrun - Run inside Caesar container"
 	echo "--containerimg=[CONTAINER_IMG] - Singularity container image file (.simg) with CAESAR installed software"
+	echo "--no-mpi - Disable MPI run"
   echo "****************"
   exit 1
 fi
@@ -51,6 +52,7 @@ CONFIGFILE_GIVEN=false
 NPROC=1
 HOSTFILE=""
 HOSTFILE_GIVEN=false
+MPI_ENABLED=true
 
 for item in $*
 do
@@ -72,7 +74,9 @@ do
 		--containerrun*)
     	RUN_IN_CONTAINER=true
     ;;
-
+		--no-mpi*)
+    	MPI_ENABLED=false
+    ;;
     *)
     # Unknown option
     echo "ERROR: Unknown option...exit!"
@@ -87,6 +91,7 @@ echo "CONFIGFILE: $CONFIGFILE"
 echo "NPROC: $NPROC"
 echo "HOSTFILE_GIVEN? $HOSTFILE_GIVEN, HOSTFILE: $HOSTFILE"
 echo "RUN_IN_CONTAINER? $RUN_IN_CONTAINER, CONTAINER_IMG=$CONTAINER_IMG"
+echo "MPI_ENABLED? $MPI_ENABLED"
 echo "****************************"
 echo ""
 
@@ -95,13 +100,21 @@ if [ "$CONFIGFILE" = "" ] || [ "$CONFIGFILE_GIVEN" = false ]; then
   exit 1
 fi
 
+MPI_ENABLED_OPTION=""
+if [ "$MPI_ENABLED" = false ]; then
+  MPI_ENABLED_OPTION="--no-mpi"
+fi
+
+
 #######################################
 ##         RUN COMMAND
 #######################################
-#CMD="mpirun -np $NPROC -f $HOSTFILE  $EXE --config=$CONFIGFILE"
-CMD="mpirun -np $NPROC "
-if [ "$HOSTFILE_GIVEN" = true ] ; then
-	CMD="$CMD -f $HOSTFILE "
+CMD=""
+if [ "$MPI_ENABLED" = true ]; then
+	CMD="mpirun -np $NPROC "
+	if [ "$HOSTFILE_GIVEN" = true ] ; then
+		CMD="$CMD -f $HOSTFILE "
+	fi
 fi
 
 if [ "$RUN_IN_CONTAINER" = true ] ; then
@@ -109,7 +122,7 @@ if [ "$RUN_IN_CONTAINER" = true ] ; then
 else
 	EXE="$CAESAR_DIR/bin/FindSourceMPI"
 fi
-EXE_ARGS="--config=$CONFIGFILE"
+EXE_ARGS="--config=$CONFIGFILE $MPI_ENABLED_OPTION"
 
 CMD="$CMD $EXE $EXE_ARGS"
 
