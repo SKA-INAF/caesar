@@ -43,6 +43,7 @@ void Usage(char* exeName){
 	cout<<"Options:"<<endl;
   cout<<"-h, --help \t Show help message and exit"<<endl;
 	cout<<"-c, --config \t Config file containing option settings"<<endl;
+	cout<<"-m, --no-mpi \t Disable MPI run (e.g. run normally)"<<endl;
 	cout<<"=============================="<<endl;
 }//close Usage()
 
@@ -50,20 +51,20 @@ static const struct option options_tab[] = {
   /* name, has_arg, &flag, val */
   { "help", no_argument, 0, 'h' },
 	{ "config", required_argument, 0, 'c' },
+	{ "no-mpi", no_argument, 0, 'm' },
   {(char*)0, (int)0, (int*)0, (int)0}
 };
 
 //Options
 std::string configFileName= "";
+bool mpiRunEnabled= true;
 
 //Functions
 int ParseOptions(int argc, char *argv[]);
 
 
-int main(int argc, char *argv[]){
-
-	
-
+int main(int argc, char *argv[])
+{
 	//================================
 	//== Parse command line options
 	//================================
@@ -72,46 +73,64 @@ int main(int argc, char *argv[]){
 		return -1;
 	}
 
-	//======================
-	//== INIT MPI
-	//======================
-	char processor_name[MPI_MAX_PROCESSOR_NAME];
-	int nproc;
-	int procid;
+	//================================
+	//== RUN SOURCE FINDER
+	//================================
+	if(mpiRunEnabled){
+		//## INIT MPI
+		char processor_name[MPI_MAX_PROCESSOR_NAME];
+		int nproc;
+		int procid;
 
-	MPI_Init(&argc, &argv);
-	MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-	MPI_Comm_rank(MPI_COMM_WORLD, &procid);
-	int namelen;
-	MPI_Get_processor_name(processor_name,&namelen);
-	double startTime= MPI_Wtime();
-	//cout<<"[PROC "<<procid<<"] - INFO: Process "<<procid<<" running on processor "<<processor_name<<endl;
-	INFO_LOG("[PROC "<<procid<<"] - INFO: Process "<<procid<<" running on processor "<<processor_name);
+		MPI_Init(&argc, &argv);
+		MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+		MPI_Comm_rank(MPI_COMM_WORLD, &procid);
+		int namelen;
+		MPI_Get_processor_name(processor_name,&namelen);
+		double startTime= MPI_Wtime();
+		INFO_LOG("[PROC "<<procid<<"] - INFO: Process "<<procid<<" running on processor "<<processor_name);
 
-	//=======================
-	//== Run SourceFinder
-	//=======================
-	INFO_LOG("[PROC "<<procid<<"] - Starting source finding");
-	SFinder* finder= new SFinder;
-	if(finder->Run()<0){
-		ERROR_LOG("[PROC "<<procid<<"] - Source finding failed!");
-	}
+		//## RUN FINDER
+		INFO_LOG("[PROC "<<procid<<"] - Starting source finding");
+		SFinder* finder= new SFinder;
+		if(finder->Run()<0){
+			ERROR_LOG("[PROC "<<procid<<"] - Source finding failed!");
+		}
+		else{
+			INFO_LOG("[PROC "<<procid<<"] - End source finding");
+		}
+
+		if(finder){
+			INFO_LOG("Clear finder");
+			delete finder;
+			finder= 0;
+		}
+
+		//## FINALIZE MPI
+		INFO_LOG("Finalizing MPI run...");
+		MPI_Finalize();
+		INFO_LOG("MPI comm finalized with success");
+
+	}//close if
 	else{
-		INFO_LOG("[PROC "<<procid<<"] - End source finding");
-	}
+	
+		//## RUN FINDER
+		INFO_LOG("Starting source finding");
+		SFinder* finder= new SFinder;
+		if(finder->Run()<0){
+			ERROR_LOG("Source finding failed!");
+		}
+		else{
+			INFO_LOG("End source finding");
+		}
 
-	//=======================
-	//== Finalize MPI run
-	//=======================
-	if(finder){
-		INFO_LOG("Clear finder");
-		delete finder;
-		finder= 0;
-	}
+		if(finder){
+			INFO_LOG("Clear finder");
+			delete finder;
+			finder= 0;
+		}
+	}//close else
 
-	INFO_LOG("Finalizing MPI run...");
-	MPI_Finalize();
-	INFO_LOG("MPI comm finalized with success");
 
 	return 0;
 
@@ -133,7 +152,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hc:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hc:m",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -149,6 +168,11 @@ int ParseOptions(int argc, char *argv[])
 			{
 				configFileName= std::string(optarg);	
 				break;	
+			}
+			case 'm':
+			{
+				mpiRunEnabled= false;
+      	break;
 			}
 			default:
 			{
