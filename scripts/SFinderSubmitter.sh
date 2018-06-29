@@ -188,6 +188,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--addrunindex - Append a run index to submission script (in case of list execution) (default=no)"
 	echo "--outdir=[OUTPUT_DIR] - Output directory where to put run output file (default=pwd)"
 	echo "--no-mpi - Disable MPI run (even with 1 proc) (default=enabled)"
+	echo "--mpioptions - Options to be passed to MPI (e.g. --bind-to {none,hwthread, core, l1cache, l2cache, l3cache, socket, numa, board}) (default=)"
 	echo "--nproc=[NPROC] - Number of MPI processors per node used (NB: mpi tot nproc=nproc x nnodes) (default=1)"
 	echo "--nthreads=[NTHREADS] - Number of threads to be used in OpenMP (default=-1=all available in node)"
 	echo "--hostfile=[HOSTFILE] - Ascii file with list of hosts used by MPI (default=no hostfile used)"
@@ -224,6 +225,7 @@ INPUTFILE_GIVEN=false
 APPEND_RUN_INDEX=false
 MPI_ENABLED=true
 NPROC=1
+MPI_OPTIONS=""
 HOSTFILE=""
 HOSTFILE_GIVEN=false
 TILE_SIZE=0
@@ -413,6 +415,9 @@ do
     ;;
 		--nproc=*)
       NPROC=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--mpioptions=*)
+      MPI_OPTIONS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--hostfile=*)
     	HOSTFILE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
@@ -861,7 +866,7 @@ echo "FILELIST: $FILELIST, NMAX_PROCESSED_FILES: $NMAX_PROCESSED_FILES"
 echo "SAVE_INPUT_MAP? $SAVE_INPUT_MAP, SAVE_BKG_MAP: $SAVE_BKG_MAP, SAVE_RMS_MAP? $SAVE_RMS_MAP, SAVE_SIGNIFICANCE_MAP? $SAVE_SIGNIFICANCE_MAP, SAVE_RESIDUAL_MAP: $SAVE_RESIDUAL_MAP"
 echo "SAVE_SALIENCY_MAP? $SAVE_SALIENCY_MAP, SAVE_SEGMENTED_MAP? $SAVE_SEGMENTED_MAP"
 echo "SPLIT_IN_TILES? $SPLIT_IN_TILES, TILE_SIZE: $TILE_SIZE, TILE_STEP: $TILE_STEP"
-echo "NPROC: $NPROC, NTHREADS: $NTHREADS, MPI_ENABLED? $MPI_ENABLED"
+echo "NPROC: $NPROC, NTHREADS: $NTHREADS, MPI_ENABLED? $MPI_ENABLED, MPI_OPTIONS: $MPI_OPTIONS"
 echo "HOSTFILE_GIVEN? $HOSTFILE_GIVEN, HOSTFILE: $HOSTFILE"
 echo "LOG_LEVEL: $LOG_LEVEL"
 echo "OUTPUT_DIR: $OUTPUT_DIR"
@@ -963,7 +968,8 @@ if [ "$BATCH_SYSTEM" = "PBS" ]; then
 	BATCH_JOB_PRIORITY="#PBS -p 1"
 	BATCH_JOB_NOREQUEUE_DIRECTIVE="#PBS -r n"
 	BATCH_JOB_SCATTER_DIRECTIVE="#PBS -l place=scatter"
-	BATCH_JOB_NNODES_DIRECTIVE="#PBS -l select="
+	##BATCH_JOB_NNODES_DIRECTIVE="#PBS -l select="
+	BATCH_JOB_NNODES_DIRECTIVE="#PBS -l nodes="
 	BATCH_JOB_NPROC_DIRECTIVE="#PBS -l mpiprocs="
 	BATCH_JOB_MEM_DIRECTIVE="#PBS -l mem="
 	BATCH_JOB_NCORE_DIRECTIVE="#PBS -l ncpus="
@@ -1496,7 +1502,7 @@ if [ "$FILELIST_GIVEN" = true ]; then
 
 		CMD=""
 		if [ "$MPI_ENABLED" = true ]; then	
-			CMD="mpirun -np $NPROC_TOT "
+			CMD="mpirun -np $NPROC_TOT $MPI_OPTIONS "
 			if [ "$HOSTFILE_GIVEN" = true ] ; then
 				CMD="$CMD -f $HOSTFILE "
 			fi
@@ -1567,7 +1573,7 @@ else
 
 	CMD=""
 	if [ "$MPI_ENABLED" = true ]; then	
-		CMD="mpirun -np $NPROC_TOT "
+		CMD="mpirun -np $NPROC_TOT $MPI_OPTIONS "
 		if [ "$HOSTFILE_GIVEN" = true ] ; then
 			CMD="$CMD -f $HOSTFILE "
 		fi
