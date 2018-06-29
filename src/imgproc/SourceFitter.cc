@@ -68,9 +68,13 @@
 #ifdef MINUIT2_ENABLED
 	#include <Minuit2/Minuit2Minimizer.h>
 #endif
+#ifdef ROOTR_ENABLED
+	#include <Math/RMinimizer.h>
+#endif
 #include <Math/WrappedTF1.h>
 #include <Math/GSLIntegrator.h>
 #include <Math/GSLMinimizer.h>
+#include <Math/GSLNLSMinimizer.h>
 #include <Math/Functor.h>
 #include <Math/Factory.h>
 #include <Math/WrappedFunction.h>
@@ -1295,10 +1299,26 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	//ROOT::Math::Minimizer* fitter = ROOT::Math::Factory::CreateMinimizer(fitOptions.fitMinimizer,fitOptions.fitMinimizerAlgo);
 	ROOT::Math::Minimizer* fitter = 0;
 	if(fitOptions.fitMinimizer=="Minuit2" || fitOptions.fitMinimizer=="minuit2"){
-		fitter= new ROOT::Minuit2::Minuit2Minimizer((fitOptions.fitMinimizerAlgo).c_str());
+		#ifdef MINUIT2_ENABLED
+			fitter= new ROOT::Minuit2::Minuit2Minimizer((fitOptions.fitMinimizerAlgo).c_str());
+		#else	
+			WARN_LOG("Minuit2 was selected but not available in the system, switching to MINUIT minimizer.");
+			fitter= new TMinuitMinimizer((fitOptions.fitMinimizerAlgo).c_str(),nFitPars);
+		#endif
 	}
 	else if(fitOptions.fitMinimizer=="Minuit" || fitOptions.fitMinimizer=="minuit"){
 		fitter= new TMinuitMinimizer((fitOptions.fitMinimizerAlgo).c_str(),nFitPars);
+	}
+	else if(fitOptions.fitMinimizer=="R" || fitOptions.fitMinimizer=="r"){
+		#ifdef ROOTR_ENABLED
+			fitter= new ROOT::Math::RMinimizer((fitOptions.fitMinimizerAlgo).c_str());
+		#else 
+			WARN_LOG("RMinimizer was selected but not available in the system, switching to MINUIT minimizer.");
+			fitter= new TMinuitMinimizer((fitOptions.fitMinimizerAlgo).c_str(),nFitPars);
+		#endif
+	}
+	else if(fitOptions.fitMinimizer=="GSL" || fitOptions.fitMinimizer=="gsl"){
+		fitter= new ROOT::Math::GSLNLSMinimizer();
 	}
 	else{
 		ERROR_LOG("Invalid or unsupported minimizer ("<<fitOptions.fitMinimizer<<") given!");
@@ -1321,9 +1341,17 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 
 	
 	//## Set minimization function
-	ROOT::Math::Functor fitFcn(std::bind(&SourceFitter::Chi2Fcn, this, _1), nFitPars); 
+	ROOT::Math::Functor fitFcn(std::bind(&SourceFitter::Chi2Fcn, this, _1), nFitPars);	
 	fitter->SetFunction(fitFcn);
 	
+	/*
+	if(fitOptions.fitMinimizer=="GSL" || fitOptions.fitMinimizer=="gsl"){
+		fitter->SetFunction(std::bind(&SourceFitter::Chi2Fcn, this, _1));
+	}
+	else{ 
+		fitter->SetFunction(fitFcn);
+	}
+	*/
 
 	//## Set start fit pars
 	int par_counter= 0;
@@ -1944,7 +1972,6 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 }//close DoChi2Fit()
 
 int SourceFitter::GetParsAtLimits(std::vector<int>& parsAtLimits,ROOT::Math::Minimizer* fitter)
-//int SourceFitter::GetParsAtLimits(std::vector<int>& parsAtLimits,TMinuitMinimizer* fitter)
 {
 	//Check minimizer ptr
 	if(!fitter){

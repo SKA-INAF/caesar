@@ -281,6 +281,12 @@ int BkgFinder::ComputeLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,
 		return -1;
 	}
 
+	//## Check bkg data
+	if(!bkgData){
+		ERROR_LOG("Null ptr to bkg data!");
+		return -1;
+	}
+
 	//## Check options
 	long int Nx= img->GetNx();
 	long int Ny= img->GetNy();

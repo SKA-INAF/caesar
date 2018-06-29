@@ -82,7 +82,11 @@ namespace Caesar {
  
 SFinder::SFinder() 
 {
-	
+	//MPI vars (initialized after to actual value)
+	//NB: When MPI is not used this should define only 1 process and 1 master
+	m_nProc= 1;
+	m_procId= 0;
+
 }//close costructor
 
 
@@ -196,7 +200,6 @@ void SFinder::Clear()
 
 void SFinder::InitOptions()
 {
-
 	//Check is MPI run is enabled at build & runtime
 	m_mpiEnabled= SysUtils::IsMPIInitialized();
 	INFO_LOG("MPI enabled? "<<m_mpiEnabled);
@@ -303,7 +306,6 @@ void SFinder::InitOptions()
 	//Task info
 	m_TaskInfoTree= 0;
 
-
 }//close InitOptions()
 
 
@@ -322,6 +324,7 @@ int SFinder::Init(){
 	if(!m_Application && m_IsInteractiveRun){
 		m_Application= new TApplication("Application", 0, 0);
 	}	
+
 
 	//## Create output file
 	//## NB: Done only by processor 0 in MPI run
@@ -2837,6 +2840,13 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 			fitOptions.fitMinimizerAlgo= "Migrad";
 		#endif
 	}
+	if(fitOptions.fitMinimizer=="R" || fitOptions.fitMinimizer=="r"){
+		#ifndef ROOTR_ENABLED
+			WARN_LOG("R minimizer was selected as option but not available/found in the system, switching to Minuit+Migrad as fallback.");
+			fitOptions.fitMinimizer= "Minuit";
+			fitOptions.fitMinimizerAlgo= "Migrad";
+		#endif
+	}
 
 	//## Check fit minimizer multithread support
 	bool fitInMultithread= m_fitUseThreads;
@@ -2844,6 +2854,11 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 		WARN_LOG("Selected Minuit minimizer is not thread-safe, switching off source fit multithread.");
 		fitInMultithread= false;
 	}
+	if(m_fitUseThreads && (fitOptions.fitMinimizer=="R" || fitOptions.fitMinimizer=="r")){
+		WARN_LOG("Selected R minimizer is not thread-safe, switching off source fit multithread.");
+		fitInMultithread= false;
+	}
+	INFO_LOG("Fitting sources in multithread? "<<fitInMultithread);
 	
 	//## NB: Convert scale pars in pixels assuming they represent multiple of beam width (Bmin)	
 	double pixSize= fabs(std::min(m_pixSizeX,m_pixSizeY));
