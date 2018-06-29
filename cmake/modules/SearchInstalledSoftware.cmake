@@ -62,12 +62,14 @@ list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/cmake)
 list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/cmake/modules)
 
 #---Locate the ROOT package and defines a number of variables (e.g. ROOT_INCLUDE_DIRS)
-SET (ROOT_REQUIRED_MODULES MathCore RIO Hist Tree Net PyROOT Minuit)
-SET (ROOT_OPTIONAL_MODULES Minuit2 FITSIO RInterface)
+SET (ROOT_REQUIRED_MODULES MathCore RIO Hist Tree Net PyROOT Minuit MathMore)
+SET (ROOT_OPTIONAL_MODULES Minuit2 FITSIO)
 if(ENABLE_R)
-	list(APPEND ROOT_REQUIRED_MODULES RInterface)
+	list(APPEND ROOT_REQUIRED_MODULES RInterface Rtools)
+else()
+	list(APPEND ROOT_OPTIONAL_MODULES RInterface Rtools)
 endif()
-
+ 
 find_package(ROOT REQUIRED MODULE COMPONENTS ${ROOT_REQUIRED_MODULES} OPTIONAL_COMPONENTS ${ROOT_OPTIONAL_MODULES})
 
 #---Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY)
@@ -80,6 +82,13 @@ if(${ROOT_minuit2_FOUND})
 	add_definitions(-DMINUIT2_ENABLED=1)
 else()
 	MESSAGE(STATUS "MINUIT2 not found")
+endif()
+message (STATUS "ROOT-R FOUND? ${ROOT_r_FOUND}")
+if(${ROOT_r_FOUND})
+	MESSAGE(STATUS "ROOT-R module found, defining preprocessor flag ROOTR_ENABLED=true and adding library ${ROOT_r_LIBRARY} to linked lib list")
+	add_definitions(-DROOTR_ENABLED=1)
+else()
+	MESSAGE(STATUS "ROOT-R module not found")
 endif()
 #--------------------------------
 
