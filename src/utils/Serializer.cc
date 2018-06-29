@@ -635,8 +635,9 @@ int Serializer::EncodeTaskDataToProtobuf(CaesarPB::TaskData& taskData_pb,TaskDat
 
 }//close EncodeTaskDataToProtobuf()
 
-int Serializer::EncodeTaskDataCollectionToProtobuf(CaesarPB::TaskDataCollection& taskDataCollection_pb,std::vector<TaskData*> taskDataCollection){
-
+//int Serializer::EncodeTaskDataCollectionToProtobuf(CaesarPB::TaskDataCollection& taskDataCollection_pb,std::vector<TaskData*> taskDataCollection)
+int Serializer::EncodeTaskDataCollectionToProtobuf(CaesarPB::TaskDataCollection& taskDataCollection_pb,const std::vector<TaskData*>& taskDataCollection)
+{
 	//Fill task collections
 	for(size_t i=0;i<taskDataCollection.size();i++){
 		CaesarPB::TaskData* thisTaskPB = taskDataCollection_pb.add_tasks();
@@ -650,6 +651,23 @@ int Serializer::EncodeTaskDataCollectionToProtobuf(CaesarPB::TaskDataCollection&
 	return 0;
 
 }//close EncodeTaskDataCollectionToProtobuf()
+
+
+int Serializer::EncodeSourceCollectionToProtobuf(CaesarPB::SourceCollection& sources_pb,const std::vector<Source*>& sources)
+{
+	//Fill source collections
+	for(size_t i=0;i<sources.size();i++){
+		CaesarPB::Source* thisSourcePB = sources_pb.add_sources();
+		if(EncodeSourceToProtobuf(*thisSourcePB,sources[i])<0){
+			std::stringstream errMsg;
+			errMsg<<"Encoding of source no. "<<i+1<<" in collection to protobuf failed!";
+			throw std::runtime_error(errMsg.str().c_str());
+		}
+	}
+
+	return 0;
+
+}//close EncodeSourceCollectionToProtobuf()
 
 
 int Serializer::SourceToBuffer(SBuffer& buffer,Source* source){
@@ -706,8 +724,9 @@ int Serializer::TaskDataToBuffer(SBuffer& buffer,TaskData* taskData){
 
 }//close TaskDataToBuffer()
 
-int Serializer::TaskDataCollectionToBuffer(SBuffer& buffer,std::vector<TaskData*> taskDataCollection){
-
+//int Serializer::TaskDataCollectionToBuffer(SBuffer& buffer,std::vector<TaskData*> taskDataCollection){
+int Serializer::TaskDataCollectionToBuffer(SBuffer& buffer,const std::vector<TaskData*>& taskDataCollection)
+{
 	try {
 		//## Create google protobuf source message
 		CaesarPB::TaskDataCollection taskDataCollection_pb;
@@ -761,8 +780,9 @@ char* Serializer::TaskDataToCharArray(long int& buffer_size,TaskData* taskData){
 }//close TaskDataToCharArray()
 
 
-char* Serializer::TaskDataCollectionToCharArray(long int& buffer_size,std::vector<TaskData*> taskDataCollection){
-
+//char* Serializer::TaskDataCollectionToCharArray(long int& buffer_size,std::vector<TaskData*> taskDataCollection){
+char* Serializer::TaskDataCollectionToCharArray(long int& buffer_size,const std::vector<TaskData*>& taskDataCollection)
+{
 	char* buffer= 0;
 
 	try {
@@ -786,6 +806,33 @@ char* Serializer::TaskDataCollectionToCharArray(long int& buffer_size,std::vecto
 	return buffer;
 
 }//close TaskDataCollectionToCharArray()
+
+
+char* Serializer::SourceCollectionToCharArray(long int& buffer_size,const std::vector<Source*>& sources)
+{
+	char* buffer= 0;
+
+	try {
+		//## Create google protobuf source message
+		CaesarPB::SourceCollection sources_pb;
+		if(EncodeSourceCollectionToProtobuf(sources_pb,sources)<0){
+			throw std::runtime_error("Encoding failed!");
+		}
+		
+		//## Fill buffer 
+		buffer_size = sources_pb.ByteSize();
+		if(!buffer) buffer = (char*)malloc(buffer_size);
+		sources_pb.SerializeToArray(buffer, buffer_size);
+		
+	}//close try blocks
+	catch(std::exception const & e) {
+		ERROR_LOG("Source collection encoding failed with status "<<e.what());
+		return 0;
+	}
+
+	return buffer;
+
+}//close SourceCollectionToCharArray()
 
 
 int Serializer::EncodeProtobufToSourceComponentPars(SourceComponentPars& sourceComponentPars,const CaesarPB::SourceComponentPars& sourceComponentPars_pb)
@@ -1583,6 +1630,83 @@ int Serializer::EncodeProtobufToTaskDataCollection(std::vector<TaskData*>& taskD
 }//close EncodeProtobufToTaskDataCollection()
 
 
+int Serializer::EncodeProtobufToSourceCollection(std::vector<Source*>& sources,const CaesarPB::SourceCollection& sources_pb,bool isSourceCollectionPreAllocated)
+{
+	
+	if(!isSourceCollectionPreAllocated){
+		try {		
+			//First clear existing vector
+			for(size_t i=0;i<sources.size();i++){
+				if(sources[i]){
+					delete sources[i];
+					sources[i]= 0;
+				}
+			}//end loop tasks
+			sources.clear();
+
+			//Now fill vector with new sources
+			Source* aSource= 0;
+			for(int i=0;i<sources_pb.sources_size();i++){		
+				const CaesarPB::Source& thisSourcePB= sources_pb.sources(i);
+				aSource= new Source;
+				if(EncodeProtobufToSource(*aSource,thisSourcePB)<0){
+					delete aSource;
+					aSource= 0;
+					throw std::runtime_error("Failed to encode source in collection from protobuf!");	
+				}
+				sources.push_back(aSource);
+			}//end loop tasks
+			
+		}//close try block
+
+		catch(std::exception const & e) {
+			//Clear allocated sources
+			for(size_t i=0;i<sources.size();i++){
+				if(sources[i]){
+					delete sources[i];
+					sources[i]= 0;
+				}
+			}//end loop tasks
+			sources.clear();
+			ERROR_LOG("Source collection encoding from protobuf failed with status "<<e.what());
+			return -1;
+		}
+	}//close if
+	else {	
+		try{
+			//Check first if number of pre-allocated sources and sources to be set is equal
+			int nSources= sources_pb.sources_size();
+			int nAllocatedSources= (int)sources.size();
+			if(nSources!=nAllocatedSources){
+				throw std::runtime_error("Pre-Allocated sources in vector is different from the number of sources to be set!");	
+			}
+
+			//Now fill vector with new sources
+			for(int i=0;i<sources_pb.sources_size();i++){		
+				const CaesarPB::Source& thisSourcePB= sources_pb.sources(i);
+				if(!sources[i]){
+					throw std::runtime_error("Null pointer to source item in collection!");
+				}
+
+				if(EncodeProtobufToSource(*sources[i],thisSourcePB)<0){//this update the collection
+					throw std::runtime_error("Failed to encode source in collection from protobuf!");	
+				}
+				
+			}//end loop tasks	
+		}//close try block
+		catch(std::exception const & e) {
+			//Do not clear allocated tasks in this case (because they have been previously allocated)
+			//NB: Some of the tasks (before the crash) have been updated in the vector
+			ERROR_LOG("Source collection encoding from protobuf failed with status "<<e.what());
+			return -1;
+		}
+	}//close else
+
+	return 0;
+
+}//close EncodeProtobufToSourceCollection()
+
+
 int Serializer::BufferToSource(Source& source,SBuffer& buffer){
 
 	//## Check for empty data
@@ -1732,5 +1856,32 @@ int Serializer::CharArrayToTaskDataCollection(std::vector<TaskData*>& taskDataCo
 }//close CharArrayToTaskDataCollection()
 
 
+int Serializer::CharArrayToSourceCollection(std::vector<Source*>& sources,char* buffer,long int buffer_size,bool isSourceCollectionPreAllocated)
+{
+	//## Check for empty data
+	if(!buffer || buffer_size<=0) {
+		return -1;
+	}
+
+	try {
+		//## Parse input and encode to protobuf message
+		CaesarPB::SourceCollection sources_pb;
+  	if( !sources_pb.ParseFromArray(buffer,buffer_size) ) {
+			throw std::runtime_error("Parsing of char array to SourceCollection protobuf failed!");
+		}
+
+		//## Convert protobuf to SourceCollection
+		if( EncodeProtobufToSourceCollection(sources,sources_pb,isSourceCollectionPreAllocated)<0) {
+			throw std::runtime_error("Encoding from protobuf to SourceCollection failed!");
+		}
+		
+	}//close try
+	catch(std::exception const & e) {
+		ERROR_LOG("Parsing SourceCollection from char array failed (err="<<e.what()<<")");
+		return -1;
+	}
+	return 0;
+
+}//close CharArrayToSourceCollection()
 
 }//close namespace

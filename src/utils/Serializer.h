@@ -85,7 +85,8 @@ class Serializer : public TObject {
 			static int EncodeContourToProtobuf(CaesarPB::Contour& contour_pb,Contour* contour);
 			static int EncodePixelToProtobuf(CaesarPB::Pixel& pixel_pb,Pixel* pixel);
 			static int EncodeBlobToProtobuf(CaesarPB::Blob& blob_pb,Source* source);
-			static int EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* source);		
+			static int EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* source);
+			static int EncodeSourceCollectionToProtobuf(CaesarPB::SourceCollection& sources_pb,const std::vector<Source*>& sources);
 			static int SourceToBuffer(SBuffer& buffer,Source* source);
 			static int EncodeSourceComponentParsToProtobuf(CaesarPB::SourceComponentPars* sourceCompPars_pb,SourceComponentPars& sourceCompPars);
 			static int EncodeSourceFitParsToProtobuf(CaesarPB::SourceFitPars& sourceFitPars_pb,SourceFitPars& sourceFitPars);
@@ -108,10 +109,11 @@ class Serializer : public TObject {
 			static int TaskDataToBuffer(SBuffer& buffer,TaskData* taskData);
 			static char* TaskDataToCharArray(long int& buffer_size,TaskData* taskData);
 
-			static int EncodeTaskDataCollectionToProtobuf(CaesarPB::TaskDataCollection& taskDataCollection_pb,std::vector<TaskData*> taskDataCollection);
-			static int TaskDataCollectionToBuffer(SBuffer& buffer,std::vector<TaskData*> taskDataCollection);
-			static char* TaskDataCollectionToCharArray(long int& buffer_size,std::vector<TaskData*> taskDataCollection);
+			static int EncodeTaskDataCollectionToProtobuf(CaesarPB::TaskDataCollection& taskDataCollection_pb,const std::vector<TaskData*>& taskDataCollection);
+			static int TaskDataCollectionToBuffer(SBuffer& buffer,const std::vector<TaskData*>& taskDataCollection);
+			static char* TaskDataCollectionToCharArray(long int& buffer_size,const std::vector<TaskData*>& taskDataCollection);
 
+			
 			//Buffer --> TaskData
 			static int EncodeProtobufToTaskData(TaskData& taskData,const CaesarPB::TaskData& taskData_pb);
 			static int BufferToTaskData(TaskData& taskData,SBuffer& buffer);
@@ -120,6 +122,14 @@ class Serializer : public TObject {
 			static int EncodeProtobufToTaskDataCollection(std::vector<TaskData*>& taskDataCollection,const CaesarPB::TaskDataCollection& taskDataCollection_pb,bool isTaskCollectionPreAllocated=false);
 			static int BufferToTaskDataCollection(std::vector<TaskData*>& taskDataCollection,SBuffer& buffer,bool isTaskCollectionPreAllocated=false);
 			static int CharArrayToTaskDataCollection(std::vector<TaskData*>& taskDataCollection,char* buffer,long int buffer_size,bool isTaskCollectionPreAllocated=false);
+
+			//SourceCollection --> Buffer
+			static char* SourceCollectionToCharArray(long int& buffer_size,const std::vector<Source*>& sourceCollection);
+
+			//Buffer --> SourceCollection
+			static int EncodeProtobufToSourceCollection(std::vector<Source*>& sources,const CaesarPB::SourceCollection& sources_pb,bool isSourceCollectionPreAllocated=false);
+			static int CharArrayToSourceCollection(std::vector<Source*>& sources,char* buffer,long int buffer_size,bool isSourceCollectionPreAllocated=false);
+
 
 	public:
     

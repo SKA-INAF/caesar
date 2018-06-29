@@ -189,7 +189,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		//==  Distributed processing options   ==
 		//=======================================
 		REGISTER_OPTION(splitInTiles,bool,false,false,true);
-		REGISTER_OPTION(nThreads,int,-1,-1,100);
+		REGISTER_OPTION(nThreads,int,-1,-2,1000);
 		REGISTER_OPTION(tileSizeX,long int,1000,1,10000000);
 		REGISTER_OPTION(tileSizeY,long int,1000,1,10000000);	
 		REGISTER_OPTION(useTileOverlap,bool,false,false,true);
@@ -353,7 +353,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(fitChi2RegPar,double,0,-0.001,1.001);
 		
 		REGISTER_OPTION(fitMinimizer,std::string,"Minuit","","");
-		REGISTER_OPTION(fitMinimizerAlgo,std::string,"Migrad","","");
+		REGISTER_OPTION(fitMinimizerAlgo,std::string,"Combined","","");
 		REGISTER_OPTION(fitPrintLevel,int,1,0,3);
 		REGISTER_OPTION(fitStrategy,int,2,0,3);
 
