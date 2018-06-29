@@ -301,5 +301,9 @@ message Source {
 	
 }//close Source schema
 
+message SourceCollection {
 
+	repeated Source sources= 1;
+
+}//close SourceCollection schema
 
