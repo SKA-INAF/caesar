@@ -127,6 +127,7 @@ double fluxDensity_true;
 double beamArea_true;
 std::string SourceName_rec;
 int SourceType_rec;
+int IsNestedSource_rec;
 long int NPix_rec;
 double S_rec;
 double X0_rec;
@@ -849,7 +850,10 @@ int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex)
 	}
 	std::string sname= std::string(source_rec->GetName());
 	SourceName_rec= std::string(source_rec->GetName());
-	SourceType_rec= source_rec->Type;			
+	IsNestedSource_rec= 0;
+	if(nestedIndex!=-1) IsNestedSource_rec= 1;
+	SourceType_rec= source_rec->Type;
+	NPix_rec= source_rec->GetNPixels();			
 	X0_rec= source_rec->X0;
 	Y0_rec= source_rec->Y0;
 	Smax_rec= source_rec->GetSmax();
@@ -1196,6 +1200,8 @@ void Init(){
 	recSourceInfo->Branch("name_rec",&SourceName_rec);
 	recSourceInfo->Branch("type_rec",&SourceType_rec,"type_rec/I");
 	recSourceInfo->Branch("HasFitInfo",&HasFitInfo,"HasFitInfo/I");	
+	recSourceInfo->Branch("IsNestedSource",&IsNestedSource_rec,"IsNestedSource/I");
+	recSourceInfo->Branch("NPix_rec",&NPix_rec,"NPix_rec/L");	
 	recSourceInfo->Branch("X0_rec",&X0_rec,"X0_rec/D");
 	recSourceInfo->Branch("Y0_rec",&Y0_rec,"Y0_rec/D");
 	recSourceInfo->Branch("Smax_rec",&Smax_rec,"Smax_rec/D");	
@@ -1209,6 +1215,7 @@ void Init(){
 	recSourceInfo->Branch("X0_true",&PosXList_true);
 	recSourceInfo->Branch("Y0_true",&PosYList_true);
 
+	/*
 	if(!recExtSourceInfo) recExtSourceInfo= new TTree("RecExtSourceInfo","RecExtSourceInfo");
 	recExtSourceInfo->Branch("name_rec",&SourceName_rec);
 	recExtSourceInfo->Branch("type_rec",&SourceType_rec,"type_rec/I");
@@ -1221,7 +1228,8 @@ void Init(){
 	recExtSourceInfo->Branch("name_true",&SourceNameList_true);
 	recExtSourceInfo->Branch("X0_true",&PosXList_true);
 	recExtSourceInfo->Branch("Y0_true",&PosYList_true);
-	
+	*/
+
 }//close Init()
 
 
@@ -1320,7 +1328,7 @@ void Save()
 		if(matchedSourceInfo) matchedSourceInfo->Write();
 		if(matchedExtSourceInfo) matchedExtSourceInfo->Write();
 		if(recSourceInfo) recSourceInfo->Write();
-		if(recExtSourceInfo) recExtSourceInfo->Write();
+		//if(recExtSourceInfo) recExtSourceInfo->Write();
 		outputFile->Close();
 	}
 }//close Save()
