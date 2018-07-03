@@ -282,18 +282,53 @@ void SFinder::InitOptions()
 	//Performance stats
 	totTime= 0;
 	initTime= 0;
+	initTime_sum= 0;
+	initTime_min= 0;
+	initTime_max= 0;
 	readImageTime= 0;
+	readImageTime_sum= 0;
+	readImageTime_min= 0;
+	readImageTime_max= 0;
 	imageStatsTime= 0;
+	imageStatsTime_sum= 0;
+	imageStatsTime_min= 0;
+	imageStatsTime_max= 0;
 	imageBkgTime= 0;	
+	imageBkgTime_sum= 0;	
+	imageBkgTime_min= 0;	
+	imageBkgTime_max= 0;		
 	blobMaskTime= 0;
+	blobMaskTime_min= 0;
+	blobMaskTime_max= 0;
+	blobMaskTime_sum= 0;
 	blobFindingTime= 0;
+	blobFindingTime_min= 0;
+	blobFindingTime_max= 0;
+	blobFindingTime_sum= 0;
 	compactSourceTime= 0;
+	compactSourceTime_min= 0;
+	compactSourceTime_max= 0;
+	compactSourceTime_sum= 0;	
 	sourceSelectionTime= 0;
+	sourceSelectionTime_min= 0;
+	sourceSelectionTime_max= 0;
+	sourceSelectionTime_sum= 0;
 	imgResidualTime= 0;
+	imgResidualTime_min= 0;
+	imgResidualTime_max= 0;
+	imgResidualTime_sum= 0;
 	extendedSourceTime= 0;
-	sourceFitTime= 0;	
+	extendedSourceTime_min= 0;
+	extendedSourceTime_max= 0;
+	extendedSourceTime_sum= 0;
+	sourceFitTime= 0;
+	sourceFitTime_min= 0;	
+	sourceFitTime_max= 0;	
+	sourceFitTime_sum= 0;		
 	saveTime= 0;
 	virtMemPeak= 0;
+	virtMemPeak_min= 0;
+	virtMemPeak_max= 0;
 
 	//Extended source finder
 	m_EdgeImg= 0;
@@ -362,18 +397,53 @@ int SFinder::Init(){
 		}
 		m_PerfTree->Branch("tot",&totTime,"tot/D");
 		m_PerfTree->Branch("init",&initTime,"init/D");
+		m_PerfTree->Branch("init_min",&initTime_min,"init_min/D");
+		m_PerfTree->Branch("init_max",&initTime_max,"init_max/D");
+		m_PerfTree->Branch("init_sum",&initTime_sum,"init_sum/D");
 		m_PerfTree->Branch("read",&readImageTime,"read/D");
+		m_PerfTree->Branch("read_min",&readImageTime_min,"read_min/D");	
+		m_PerfTree->Branch("read_max",&readImageTime_max,"read_max/D");
+		m_PerfTree->Branch("read_sum",&readImageTime_sum,"read_sum/D");
 		m_PerfTree->Branch("stats",&imageStatsTime,"stats/D");
+		m_PerfTree->Branch("stats_min",&imageStatsTime_min,"stats_min/D");
+		m_PerfTree->Branch("stats_max",&imageStatsTime_max,"stats_max/D");
+		m_PerfTree->Branch("stats_sum",&imageStatsTime_sum,"stats_sum/D");	
 		m_PerfTree->Branch("bkg",&imageBkgTime,"bkg/D");
+		m_PerfTree->Branch("bkg_min",&imageBkgTime_min,"bkg_min/D");
+		m_PerfTree->Branch("bkg_max",&imageBkgTime_max,"bkg_max/D");
+		m_PerfTree->Branch("bkg_sum",&imageBkgTime_sum,"bkg_sum/D");
 		m_PerfTree->Branch("blobmask",&blobMaskTime,"blobmask/D");
+		m_PerfTree->Branch("blobmask_min",&blobMaskTime_min,"blobmask_min/D");
+		m_PerfTree->Branch("blobmask_max",&blobMaskTime_max,"blobmask_max/D");
+		m_PerfTree->Branch("blobmask_sum",&blobMaskTime_sum,"blobmask_sum/D");
 		m_PerfTree->Branch("blobfinder",&blobFindingTime,"blobfinder/D");
+		m_PerfTree->Branch("blobfinder_min",&blobFindingTime_min,"blobfinder_min/D");
+		m_PerfTree->Branch("blobfinder_max",&blobFindingTime_max,"blobfinder_max/D");
+		m_PerfTree->Branch("blobfinder_sum",&blobFindingTime_sum,"blobfinder_sum/D");
 		m_PerfTree->Branch("sfinder",&compactSourceTime,"sfinder/D");
+		m_PerfTree->Branch("sfinder_min",&compactSourceTime_min,"sfinder_min/D");
+		m_PerfTree->Branch("sfinder_max",&compactSourceTime_max,"sfinder_max/D");
+		m_PerfTree->Branch("sfinder_sum",&compactSourceTime_sum,"sfinder_sum/D");
 		m_PerfTree->Branch("sselector",&sourceSelectionTime,"sselector/D");
-		m_PerfTree->Branch("imgres",&imgResidualTime,"imgres/D");
-		m_PerfTree->Branch("extsfinder",&extendedSourceTime,"extsfinder/D");
+		m_PerfTree->Branch("sselector_min",&sourceSelectionTime_min,"sselector_min/D");
+		m_PerfTree->Branch("sselector_max",&sourceSelectionTime_max,"sselector_max/D");
+		m_PerfTree->Branch("sselector_sum",&sourceSelectionTime_sum,"sselector_sum/D");
 		m_PerfTree->Branch("sfit",&sourceFitTime,"sfit/D");
-		//m_PerfTree->Branch("save",&saveTime,"save/D");
+		m_PerfTree->Branch("sfit_min",&sourceFitTime_min,"sfit_min/D");	
+		m_PerfTree->Branch("sfit_max",&sourceFitTime_max,"sfit_max/D");
+		m_PerfTree->Branch("sfit_sum",&sourceFitTime_sum,"sfit_sum/D");
+		m_PerfTree->Branch("imgres",&imgResidualTime,"imgres/D");
+		m_PerfTree->Branch("imgres_min",&imgResidualTime_min,"imgres_min/D");
+		m_PerfTree->Branch("imgres_max",&imgResidualTime_max,"imgres_max/D");
+		m_PerfTree->Branch("imgres_sum",&imgResidualTime_sum,"imgres_sum/D");
+		m_PerfTree->Branch("extsfinder",&extendedSourceTime,"extsfinder/D");
+		m_PerfTree->Branch("extsfinder_min",&extendedSourceTime_min,"extsfinder_min/D");
+		m_PerfTree->Branch("extsfinder_max",&extendedSourceTime_max,"extsfinder_max/D");
+		m_PerfTree->Branch("extsfinder_sum",&extendedSourceTime_sum,"extsfinder_sum/D");
+		
 		m_PerfTree->Branch("virtMemPeak",&virtMemPeak,"virtMemPeak/D");
+		m_PerfTree->Branch("virtMemPeak_min",&virtMemPeak_min,"virtMemPeak_min/D");
+		m_PerfTree->Branch("virtMemPeak_max",&virtMemPeak_max,"virtMemPeak_max/D");
 
 	}//close if saveToFile
 
@@ -856,6 +926,9 @@ int SFinder::RunTask(TaskData* taskData,bool storeData){
 int SFinder::Run(){
 
 	//Start timer
+	#ifdef MPI_ENABLED
+		if(m_mpiEnabled) MPI_Barrier(MPI_COMM_WORLD);
+	#endif
 	auto t0 = chrono::steady_clock::now();
 
 	//================================================
@@ -961,6 +1034,9 @@ int SFinder::Run(){
 	}
 
 	//Stop timer
+	#ifdef MPI_ENABLED
+	if(m_mpiEnabled) MPI_Barrier(MPI_COMM_WORLD);
+	#endif
 	auto t1 = chrono::steady_clock::now();	
 	totTime= chrono::duration <double, milli> (t1-t0).count();
 
@@ -981,11 +1057,12 @@ int SFinder::Run(){
 	//Compute max peak virt memory across all processors
 	#ifdef MPI_ENABLED
 	if(m_mpiEnabled) {	
-		double virtMemPeak_max= -1;
+		//double virtMemPeak_max= -1;
 		MPI_Reduce(&virtMemPeak, &virtMemPeak_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
+		MPI_Reduce(&virtMemPeak, &virtMemPeak_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
 		if (m_procId == MASTER_ID) {
-			virtMemPeak= virtMemPeak_max;
-			INFO_LOG("[PROC "<<m_procId<<"] - Max virtual memory peak across all processor is "<<virtMemPeak<<" kB");
+			//virtMemPeak= virtMemPeak_max;
+			INFO_LOG("[PROC "<<m_procId<<"] - Virtual memory peak across all processor min/max="<<virtMemPeak_max<<"/"<<virtMemPeak_min<<" kB");
 		}
 	}
 	#endif
@@ -1009,7 +1086,6 @@ int SFinder::Run(){
 	//== Print performance stats
 	//===============================
 	if(m_procId==MASTER_ID) PrintPerformanceStats();
-
 
 	return 0;
 
@@ -3159,24 +3235,9 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 }//close ComputeStatsAndBkg()
 
 
-int SFinder::DrawSources(Image* image,std::vector<Source*>& sources){
 
-	/*
-	INFO_LOG("Drawing sources...");
-	if(!image) return -1;
-
-	bool useCurrentCanvas= false;
-	bool drawFull= false;
-	image->Plot(sources,useCurrentCanvas,drawFull,eRAINBOW,true);
-	*/
-
-	return 0;
-
-}//close DrawSources()
-
-
-int SFinder::SaveDS9RegionFile(){
-
+int SFinder::SaveDS9RegionFile()
+{
 	//========================================
 	//==  SAVE SOURCES
 	//========================================
@@ -3379,19 +3440,19 @@ void SFinder::PrintPerformanceStats()
 	INFO_LOG("===   PERFORMANCE INFO  ===");
 	INFO_LOG("===========================");
 	INFO_LOG("tot (ms)= "<<totTime);
-	INFO_LOG("init (ms)= "<<initTime<<" ["<<initTime/totTime*100.<<"%]");
-	INFO_LOG("read image (ms)= "<<readImageTime<<" ["<<readImageTime/totTime*100.<<"%]");
-	INFO_LOG("image stats(ms)= "<<imageStatsTime<<" ["<<imageStatsTime/totTime*100.<<"%]");
-	INFO_LOG("image bkg(ms)= "<<imageBkgTime<<" ["<<imageBkgTime/totTime*100.<<"%]");
-	INFO_LOG("blob mask (ms)= "<<blobMaskTime<<" ["<<blobMaskTime/totTime*100.<<"%]");
-	INFO_LOG("blob finding (ms)= "<<blobFindingTime<<" ["<<blobFindingTime/totTime*100.<<"%]");
-	INFO_LOG("source finding (ms)= "<<compactSourceTime<<" ["<<compactSourceTime/totTime*100.<<"%]");
-	INFO_LOG("source selection (ms)= "<<sourceSelectionTime<<" ["<<sourceSelectionTime/totTime*100.<<"%]");
-	INFO_LOG("img residual (ms)= "<<imgResidualTime<<" ["<<imgResidualTime/totTime*100.<<"%]");
-	INFO_LOG("ext source finding (ms)= "<<extendedSourceTime<<" ["<<extendedSourceTime/totTime*100.<<"%]");
-	INFO_LOG("source fitting (ms)= "<<sourceFitTime<<" ["<<sourceFitTime/totTime*100.<<"%]");
+	INFO_LOG("init (ms)= "<<initTime<<" ["<<initTime/totTime*100.<<"%], min/max/sum="<<initTime_min<<"/"<<initTime_max<<"/"<<initTime_sum);
+	INFO_LOG("read image (ms)= "<<readImageTime<<" ["<<readImageTime/totTime*100.<<"%], min/max/sum="<<readImageTime_min<<"/"<<readImageTime_max<<"/"<<readImageTime_sum);
+	INFO_LOG("image stats(ms)= "<<imageStatsTime<<" ["<<imageStatsTime/totTime*100.<<"%], min/max/sum="<<imageStatsTime_min<<"/"<<imageStatsTime_max<<"/"<<imageStatsTime_sum);
+	INFO_LOG("image bkg(ms)= "<<imageBkgTime<<" ["<<imageBkgTime/totTime*100.<<"%], min/max/sum="<<imageBkgTime_min<<"/"<<imageBkgTime_max<<"/"<<imageBkgTime_sum);
+	INFO_LOG("blob mask (ms)= "<<blobMaskTime<<" ["<<blobMaskTime/totTime*100.<<"%], min/max/sum="<<blobMaskTime_min<<"/"<<blobMaskTime_max<<"/"<<blobMaskTime_sum);
+	INFO_LOG("blob finding (ms)= "<<blobFindingTime<<" ["<<blobFindingTime/totTime*100.<<"%], min/max/sum="<<blobFindingTime_min<<"/"<<blobFindingTime_max<<"/"<<blobFindingTime_sum);
+	INFO_LOG("source finding (ms)= "<<compactSourceTime<<" ["<<compactSourceTime/totTime*100.<<"%], min/max/sum="<<compactSourceTime_min<<"/"<<compactSourceTime_max<<"/"<<compactSourceTime_sum);
+	INFO_LOG("source selection (ms)= "<<sourceSelectionTime<<" ["<<sourceSelectionTime/totTime*100.<<"%], min/max/sum="<<sourceSelectionTime_min<<"/"<<sourceSelectionTime_max<<"/"<<sourceSelectionTime_sum);
+	INFO_LOG("source fitting (ms)= "<<sourceFitTime<<" ["<<sourceFitTime/totTime*100.<<"%], min/max/sum="<<sourceFitTime_min<<"/"<<sourceFitTime_max<<"/"<<sourceFitTime_sum);
+	INFO_LOG("img residual (ms)= "<<imgResidualTime<<" ["<<imgResidualTime/totTime*100.<<"%], min/max/sum="<<imgResidualTime_min<<"/"<<imgResidualTime_max<<"/"<<imgResidualTime_sum);
+	INFO_LOG("ext source finding (ms)= "<<extendedSourceTime<<" ["<<extendedSourceTime/totTime*100.<<"%], min/max/sum="<<extendedSourceTime_min<<"/"<<extendedSourceTime_max<<"/"<<extendedSourceTime_sum);
 	INFO_LOG("save (ms)= "<<saveTime<<" ["<<saveTime/totTime*100.<<"%]");
-	INFO_LOG("virtMemPeak (kB)= "<<virtMemPeak);
+	INFO_LOG("virtMemPeak (kB)= "<<virtMemPeak<<", min/max="<<virtMemPeak_min<<"/"<<virtMemPeak_max);
 	INFO_LOG("===========================");
 
 }//close PrintPerformanceStats()
@@ -3680,45 +3741,75 @@ int SFinder::GatherTaskDataFromWorkers()
 
 	//## Sum and average all the elapsed timers across workers 
 	INFO_LOG("[PROC "<<m_procId<<"] - Summing up and averaging he elapsed cpu timers across workers...");
-	double initTime_sum;
-	double readImageTime_sum;
-	double imageStatsTime_sum;
-	double imageBkgTime_sum;
-	double blobMaskTime_sum;
-	double blobFindingTime_sum;	
-	double compactSourceTime_sum;
-	double sourceSelectionTime_sum;
-	double imgResidualTime_sum;
-	double extendedSourceTime_sum;
-	double sourceFitTime_sum;
+	//double initTime_sum;
+	//double readImageTime_sum;
+	//double imageStatsTime_sum;
+	//double imageBkgTime_sum;
+	//double blobMaskTime_sum;
+	//double blobFindingTime_sum;	
+	//double compactSourceTime_sum;
+	//double sourceSelectionTime_sum;
+	//double imgResidualTime_sum;
+	//double extendedSourceTime_sum;
+	//double sourceFitTime_sum;
 
 	MPI_Reduce(&initTime, &initTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&initTime, &initTime_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&initTime, &initTime_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
 	MPI_Reduce(&readImageTime, &readImageTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&readImageTime, &readImageTime_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&readImageTime, &readImageTime_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
 	MPI_Reduce(&imageStatsTime, &imageStatsTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&imageStatsTime, &imageStatsTime_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&imageStatsTime, &imageStatsTime_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
 	MPI_Reduce(&imageBkgTime, &imageBkgTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&imageBkgTime, &imageBkgTime_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&imageBkgTime, &imageBkgTime_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
+
 	MPI_Reduce(&blobMaskTime, &blobMaskTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&blobMaskTime, &blobMaskTime_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&blobMaskTime, &blobMaskTime_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
+	
 	MPI_Reduce(&blobFindingTime, &blobFindingTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&blobFindingTime, &blobFindingTime_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&blobFindingTime, &blobFindingTime_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
+
 	MPI_Reduce(&compactSourceTime, &compactSourceTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
-	MPI_Reduce(&imgResidualTime, &imgResidualTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&compactSourceTime, &compactSourceTime_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&compactSourceTime, &compactSourceTime_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
+
 	MPI_Reduce(&sourceSelectionTime, &sourceSelectionTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
-	MPI_Reduce(&extendedSourceTime, &extendedSourceTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&sourceSelectionTime, &sourceSelectionTime_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&sourceSelectionTime, &sourceSelectionTime_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
+
 	MPI_Reduce(&sourceFitTime, &sourceFitTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&sourceFitTime, &sourceFitTime_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&sourceFitTime, &sourceFitTime_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
+		
+	MPI_Reduce(&imgResidualTime, &imgResidualTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&imgResidualTime, &imgResidualTime_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&imgResidualTime, &imgResidualTime_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
+	
+	MPI_Reduce(&extendedSourceTime, &extendedSourceTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&extendedSourceTime, &extendedSourceTime_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&extendedSourceTime, &extendedSourceTime_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
+
 	
 	INFO_LOG("[PROC "<<m_procId<<"] - CPU times (ms): {init="<<initTime<<", read="<<readImageTime<<", stats="<<imageStatsTime<<", bkg="<<imageBkgTime<<", blobmask="<<blobMaskTime<<", blobfind="<<blobFindingTime<<", sourcefind="<<compactSourceTime<<", residual="<<imgResidualTime<<", sourcesel="<<sourceSelectionTime<<", extsourcefind="<<extendedSourceTime<<", sourceFitTime="<<sourceFitTime<<"}");
 
 	if (m_procId == MASTER_ID) {
-		initTime= initTime_sum;
-		readImageTime= readImageTime_sum;
-		imageStatsTime= imageStatsTime_sum;
-		imageBkgTime= imageBkgTime_sum;
-		blobFindingTime= blobFindingTime_sum;
-		blobMaskTime= blobMaskTime_sum;
-		compactSourceTime= compactSourceTime_sum;
-		sourceSelectionTime= sourceSelectionTime_sum;
-		imgResidualTime= imgResidualTime_sum;
-		extendedSourceTime= extendedSourceTime_sum;
-		sourceFitTime= sourceFitTime_sum;
-		INFO_LOG("[PROC "<<m_procId<<"] - Cumulative cpu times (ms): {init="<<initTime<<", read="<<readImageTime<<", stats="<<imageStatsTime<<", bkg="<<imageBkgTime<<", blobmask="<<blobMaskTime<<", blobfind="<<blobFindingTime<<", sourcefind="<<compactSourceTime<<", residual="<<imgResidualTime<<", sourcesel="<<sourceSelectionTime<<", extsourcefind="<<extendedSourceTime<<", sourceFitTime="<<sourceFitTime);
+		//initTime= initTime_sum;
+		//readImageTime= readImageTime_sum;
+		//imageStatsTime= imageStatsTime_sum;
+		//imageBkgTime= imageBkgTime_sum;
+		//blobFindingTime= blobFindingTime_sum;
+		//blobMaskTime= blobMaskTime_sum;
+		//compactSourceTime= compactSourceTime_sum;
+		//sourceSelectionTime= sourceSelectionTime_sum;
+		//imgResidualTime= imgResidualTime_sum;
+		//extendedSourceTime= extendedSourceTime_sum;
+		//sourceFitTime= sourceFitTime_sum;
+		INFO_LOG("[PROC "<<m_procId<<"] - Cumulative cpu times (ms): {init="<<initTime_sum<<", read="<<readImageTime_sum<<", stats="<<imageStatsTime_sum<<", bkg="<<imageBkgTime_sum<<", blobmask="<<blobMaskTime_sum<<", blobfind="<<blobFindingTime_sum<<", sourcefind="<<compactSourceTime_sum<<", residual="<<imgResidualTime_sum<<", sourcesel="<<sourceSelectionTime_sum<<", extsourcefind="<<extendedSourceTime_sum<<", sourceFitTime="<<sourceFitTime_sum);
 	}
 
 	//## Merge all sources found by workers in a unique collection

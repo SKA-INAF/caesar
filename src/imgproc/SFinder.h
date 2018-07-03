@@ -230,10 +230,6 @@ class SFinder : public TObject {
 		* \brief Tag a source as point-like or not
 		*/
 		bool IsPointLikeSource(Source* aSource);
-		/**
-		* \brief Draw image along with detected sources
-		*/
-		int DrawSources(Image* image,std::vector<Source*>& sources);
 
 		/**
 		* \brief Fit sources
@@ -334,18 +330,53 @@ class SFinder : public TObject {
 		TTree* m_PerfTree;
 		double totTime;
 		double initTime;
-		double imageStatsTime;
+		double initTime_sum;
+		double initTime_min;
+		double initTime_max;
+		double imageStatsTime;	
+		double imageStatsTime_sum;
+		double imageStatsTime_min;
+		double imageStatsTime_max;
 		double imageBkgTime;
+		double imageBkgTime_sum;
+		double imageBkgTime_min;
+		double imageBkgTime_max;
 		double readImageTime;
+		double readImageTime_sum;
+		double readImageTime_min;
+		double readImageTime_max;
 		double blobMaskTime;
+		double blobMaskTime_min;
+		double blobMaskTime_max;
+		double blobMaskTime_sum;
 		double blobFindingTime;
+		double blobFindingTime_min;
+		double blobFindingTime_max;
+		double blobFindingTime_sum;
 		double compactSourceTime;
+		double compactSourceTime_min;
+		double compactSourceTime_max;
+		double compactSourceTime_sum;
 		double sourceSelectionTime;
+		double sourceSelectionTime_min;
+		double sourceSelectionTime_max;
+		double sourceSelectionTime_sum;
 		double imgResidualTime;
+		double imgResidualTime_min;
+		double imgResidualTime_max;
+		double imgResidualTime_sum;
 		double extendedSourceTime;
+		double extendedSourceTime_min;
+		double extendedSourceTime_max;
+		double extendedSourceTime_sum;
 		double sourceFitTime;
+		double sourceFitTime_min;
+		double sourceFitTime_max;
+		double sourceFitTime_sum;
 		double saveTime;
-		double virtMemPeak;
+		double virtMemPeak;	
+		double virtMemPeak_min;
+		double virtMemPeak_max;
 
 		//Source
 		Source* m_Source;

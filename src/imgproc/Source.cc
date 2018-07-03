@@ -736,8 +736,8 @@ bool Source::FindSourceMatchByOverlapArea(SourceOverlapMatchPars& pars, const st
 
 	//Loop over sources to find matches
 	//NB: Two pixel fractions are compared (M=overlap pixels, N=pixels of true source, N_rec=pixels of rec source)
-	// 1) f= M/N<thr (to ensure rec source is not a tiny fraction of true source)  
-	// 2) f_rec= M/N_rec<thr (to ensure rec source is not encompassing by a large amount the true source) 
+	// 1) f= M/N>thr (to ensure rec source is not a tiny fraction of true source)  
+	// 2) f_rec= M/N_rec>thr (to ensure rec source is not encompassing by a large amount the true source) 
 	std::vector<SourceOverlapMatchPars> tmpMatchPars;
 	std::vector<long int> overlappingSourceIndexes;
 

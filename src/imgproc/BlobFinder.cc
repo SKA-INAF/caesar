@@ -1524,7 +1524,7 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 				bool hasBin= markerImg->HasBin(i,j);
 				if(!hasBin) continue;
 				double binContent= img->GetPixelValue(i,j);
-				if(binContent!=0) markerImg->SetPixelValue(i,j,2);
+				if(binContent!=0) markerImg->SetPixelValue(i,j,2);//signal
 			}
 		}
 	
