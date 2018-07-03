@@ -813,7 +813,7 @@ int FindRealAndFakeSources()
 		//Loop over nested sources
 		std::vector<Source*> nestedSources= sources_rec[i]->GetNestedSources();
 		for(size_t k=0;k<nestedSources.size();k++){
-			INFO_LOG("Store nested source no. "<<k+1<<" (name="<<nestedSources[k]->GetName()<<") of mother rec source no. "<<i+1<<" (name="<<sources_rec[i]->GetName()<<") associations to true sources");
+			INFO_LOG("Store nested source no. "<<k+1<<" (name="<<nestedSources[k]->GetName()<<", nPix="<<nestedSources[k]->GetNPixels()<<") of mother rec source no. "<<i+1<<" (name="<<sources_rec[i]->GetName()<<", nPix="<<sources_rec[i]->GetNPixels()<<") associations to true sources");
 		
 			if(FindRecSourceMatch(nestedSources[k],i,k)<0){
 				WARN_LOG("Failed to find true associations to nested source no. "<<k+1<<" of rec source "<<i<<" (type="<<sourceType<<")!");
