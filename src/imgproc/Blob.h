@@ -678,7 +678,7 @@ class Blob : public TNamed {
 		//Image metadata
 		ImgMetaData* m_imgMetaData;
 	
-	ClassDef(Blob,1)
+	ClassDef(Blob,2)
 
 };//close Blob()
 
