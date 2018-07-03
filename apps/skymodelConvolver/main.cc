@@ -498,7 +498,7 @@ int RunConvolver()
 		int csourceIndex= 0;
 		if(csources.size()>1){
 			WARN_LOG("More than 1 source found in convolved image for source no. "<<i+1<<" (name="<<sources[i]->GetName()<<", id="<<sources[i]->Id<<", type="<<sources[i]->Type<<"), this should not occur normally (could be one extended source broke up at image edge), will take the larger one...");
-			long int nPix_max= -1.e+99;
+			long int nPix_max= -999;
 			for(size_t k=0;k<csources.size();k++){
 				long int nPix= csources[k]->NPix;
 				if(nPix>=nPix_max){
