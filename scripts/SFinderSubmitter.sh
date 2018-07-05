@@ -177,6 +177,17 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--saliency-usermsmap - Use noise map in saliency computation (default=not used)"
 	echo ""
 
+	echo "=== SFINDER CHAN-VESE OPTIONS ==="
+	echo "--cv-niters=[CV_NITERS] - Maximum number of iterations in ChanVese algorithms (default=1000)"
+	echo "--cv-timestep=[CV_TIMESTEP] - Chan-Vese time step parameter (default=0.007)"
+	echo "--cv-wsize=[CV_WINDOWSIZE] - Chan-Vese window size parameter (default=1)"
+	echo "--cv-lambda1=[CV_LAMBDA1] - Chan-Vese lambda1 parameter (default=1)"
+	echo "--cv-lambda2=[CV_LAMBDA2] - Chan-Vese lambda2 parameter (default=2)"	
+	echo "--cv-mu=[CV_MU] - Chan-Vese mu parameter (default=0.5)"
+	echo "--cv-nu=[CV_NU] - Chan-Vese nu parameter (default=0)"	
+	echo "--cv-p=[CV_P] - Chan-Vese p parameter (default=1)"		
+	echo ""	
+
 	echo "=== SFINDER WAVELET TRANSFORM FILTER OPTIONS ==="
 	echo "--wtscalemin - Minimum Wavelet Transform scale for extended source search (default=3)"
 	echo "--wtscalemax - Maximum Wavelet Transform scale for extended source search (default=6)"
@@ -365,6 +376,16 @@ BPA=0
 SAVE_DS9REGIONS="false"
 CONVERT_DS9REGIONS_TO_WCS="false"
 DS9REGION_WCSTYPE="0"
+
+CV_NITERS="1000"
+CV_TIMESTEP="0.007"
+CV_WINDOWSIZE="1"
+CV_LAMBDA1="1"
+CV_LAMBDA2="2"
+CV_MU="0.5"
+CV_NU="0"
+CV_P="1"
+
 
 for item in "$@"
 do
@@ -820,6 +841,33 @@ do
     	WTSCALE_MAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
+		## CHAN-VESE OPTIONS
+		--cv-niters=*)
+    	CV_NITERS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--cv-timestep=*)
+    	CV_TIMESTEP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--cv-wsize=*)
+    	CV_WINDOWSIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--cv-lambda1=*)
+    	CV_LAMBDA1=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--cv-lambda2=*)
+    	CV_LAMBDA2=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--cv-mu=*)
+    	CV_MU=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--cv-nu=*)
+    	CV_NU=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--cv-p=*)
+    	CV_P=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;		
+
+
 		## SUBMISSION OPTIONS
 		--submit*)
     	SUBMIT="true"
@@ -855,6 +903,8 @@ do
     ;;
 	esac
 done
+
+
 
 echo ""
 echo "*****  PARSED ARGUMENTS ****"
@@ -1262,15 +1312,15 @@ generate_config(){
 		echo '//==================================='
 		echo '//==  CHAN-VESE ALGORITHM OPTIONS  =='
 		echo '//==================================='
-		echo 'cvNIters = 1000 																		| Number of iterations'
-		echo 'cvTimeStepPar = 0.007																| Chan-Vese time step par'
-		echo 'cvWindowSizePar = 1																	| Chan-Vese window size par'
-		echo 'cvLambda1Par = 1																		| Chan-Vese lambda1 par'
-		echo 'cvLambda2Par = 2																		| Chan-Vese lambda2 par'
-		echo 'cvMuPar = 0.5																				| Chan-Vese mu par'
-		echo 'cvNuPar = 0																					|	Chan-Vese nu par'
-		echo 'cvPPar = 1																					| Chan-Vese p par'
-		echo 'cvInitContourToSaliencyMap = false                  | Init contour to binarized saliency map'
+		echo "cvNIters = $CV_NITERS 															| Number of iterations"
+		echo "cvTimeStepPar = $CV_TIMESTEP												| Chan-Vese time step par"
+		echo "cvWindowSizePar = $CV_WINDOWSIZE													| Chan-Vese window size par"
+		echo "cvLambda1Par = $CV_LAMBDA1													| Chan-Vese lambda1 par"
+		echo "cvLambda2Par = $CV_LAMBDA2													| Chan-Vese lambda2 par"
+		echo "cvMuPar = $CV_MU																		| Chan-Vese mu par"
+		echo "cvNuPar = $CV_NU																		|	Chan-Vese nu par"
+		echo "cvPPar = $CV_P																			| Chan-Vese p par"
+		echo "cvInitContourToSaliencyMap = false                  | Init contour to binarized saliency map"
 		echo '###'
 		echo '###'
 		echo '//==================================='
