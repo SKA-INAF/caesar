@@ -356,13 +356,23 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(fitMinimizerAlgo,std::string,"Combined","","");
 		REGISTER_OPTION(fitPrintLevel,int,1,0,3);
 		REGISTER_OPTION(fitStrategy,int,2,0,3);
-
 		REGISTER_OPTION(fitUseThreads,bool,false,false,true);
+		REGISTER_OPTION(fitParBoundIncreaseStepSize,double,0,0.1,10);
+
+		//=============================================
+		//==  Active-Contour algorithm main options  ==
+		//=============================================
+		REGISTER_OPTION(acNIters,long int,1000,0,100000);
+		REGISTER_OPTION(acInitLevelSetMethod,int,1,0,5);
+		REGISTER_OPTION(acInitLevelSetSizePar,float,0.1,0,1);
+		REGISTER_OPTION(acTolerance,double,0.1,0,1);
 
 		//===================================
 		//==  Chan-Vese algorithm options  ==
 		//===================================
-		REGISTER_OPTION(cvNIters,int,1000,0,100000);
+		//REGISTER_OPTION(cvNIters,int,1000,0,100000);	
+		REGISTER_OPTION(cvNItersInner,long int,5,0,100000);
+		REGISTER_OPTION(cvNItersReInit,long int,5,0,100000);
 		REGISTER_OPTION(cvTimeStepPar,double,0.007,0,1000);
 		REGISTER_OPTION(cvWindowSizePar,double,1,0,1000);
 		REGISTER_OPTION(cvLambda1Par,double,1,0,100);
@@ -370,17 +380,18 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(cvMuPar,double,0.5,0,100);
 		REGISTER_OPTION(cvNuPar,double,0,0,100);
 		REGISTER_OPTION(cvPPar,double,1,0,100);
-		REGISTER_OPTION(cvInitContourToSaliencyMap,bool,true,false,true);
+		//REGISTER_OPTION(cvInitContourToSaliencyMap,bool,true,false,true);
+		
 
 		//===================================================================
 		//==  Linear Region-based Active Contour (LRAC) algorithm options  ==
 		//===================================================================
-		REGISTER_OPTION(lracNIters,int,1000,0,100000);
+		//REGISTER_OPTION(lracNIters,int,1000,0,100000);
 		REGISTER_OPTION(lracLambdaPar,double,0.1,0,1000);
 		REGISTER_OPTION(lracRadiusPar,double,10,0,1000);
 		REGISTER_OPTION(lracEpsPar,double,0.01,0,1000);//Convergence par
-		REGISTER_OPTION(lracInitContourToSaliencyMap,bool,true,false,true);
-
+		//REGISTER_OPTION(lracInitContourToSaliencyMap,bool,true,false,true);
+		
 		//===================================
 		//==  Saliency filtering options   ==
 		//===================================

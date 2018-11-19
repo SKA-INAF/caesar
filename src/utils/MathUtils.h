@@ -320,6 +320,25 @@ class MathUtils : public TObject {
     	return m;
  		}//close Mod function
 
+		/**
+		* \brief Evaluate 2d elliptical gaussian at given (x,y) (NB: theta in radians)
+		*/
+		static double EvalGaus2D(double X,double Y,double A,double X0,double Y0,double sigmaX,double sigmaY,double theta)
+		{
+			double cost2= cos(theta)*cos(theta);
+			double sint2= sin(theta)*sin(theta);
+			double sin2t = sin(2. * theta);
+			double xstd2= sigmaX*sigmaX;
+			double ystd2= sigmaY*sigmaY;
+			double xdiff = X - X0;
+  		double ydiff = Y - Y0;
+			double a = 0.5 * ((cost2 / xstd2) + (sint2 / ystd2));
+  		double b = 0.5 * ((sin2t / xstd2) - (sin2t / ystd2));
+  		double c = 0.5 * ((sint2 / xstd2) + (cost2 / ystd2));
+			double fcn= A * exp(-((a * xdiff*xdiff) + (b * xdiff * ydiff) + (c * ydiff*ydiff)));
+	
+			return fcn;
+		}//close EvalGaus2D()
 		
 	private:
 	

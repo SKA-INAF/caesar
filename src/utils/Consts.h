@@ -123,6 +123,12 @@ enum activeContourMethod {
 	eLRAC= 2
 };
 
+enum activeContourInitLevelSetMethod {
+	eCircleLevelSet= 1,
+	eCheckerboardLevelSet= 2,
+	eSaliencyLevelSet= 3
+};
+
 enum DS9RegionFormat {
 	eEllipseRegion= 1,
 	ePolygonRegion= 2
@@ -143,6 +149,17 @@ enum MorphOperation {
 	eMORPH_EROSION= 5,
 	eMORPH_DILATION= 6
 };
+
+enum DilationModel {
+	eDilateWithBkg=1,
+	eDilateWithSourceMedian=2
+};
+
+enum PSSubtractionMethod {
+	ePS_DILATION= 1,
+	ePS_MODELSUBTRACTION= 2
+};
+
 
 enum ContourOverlapFlag {
 	eCONT_OVERLAP_FAILED=-1,
