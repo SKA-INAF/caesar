@@ -35,6 +35,7 @@
 #include <CodeUtils.h>
 #include <MathUtils.h>
 #include <SysUtils.h>
+#include <ImgUtils.h>
 #include <Logger.h>
 #include <Consts.h>
 #include <GausFilter.h>
@@ -660,7 +661,7 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(fitMinimizerAlgo,m_fitMinimizerAlgo);
 	GET_OPTION_VALUE(fitStrategy,m_fitStrategy);
 	GET_OPTION_VALUE(fitPrintLevel,m_fitPrintLevel);
-	
+	GET_OPTION_VALUE(fitParBoundIncreaseStepSize,m_fitParBoundIncreaseStepSize);
 	GET_OPTION_VALUE(fitUseThreads,m_fitUseThreads);
 	
 
@@ -724,8 +725,16 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(spMinArea,m_spMinArea);
 	GET_OPTION_VALUE(spUseLogContrast,m_spUseLogContrast);
 
+	//Active-contour main options
+	GET_OPTION_VALUE(acNIters,m_acNIters);
+	GET_OPTION_VALUE(acInitLevelSetMethod,m_acInitLevelSetMethod);
+	GET_OPTION_VALUE(acInitLevelSetSizePar,m_acInitLevelSetSizePar);
+	GET_OPTION_VALUE(acTolerance,m_acTolerance);
+
 	//Chan-Vese options
-	GET_OPTION_VALUE(cvNIters,m_cvNIters);
+	//GET_OPTION_VALUE(cvNIters,m_cvNIters);
+	GET_OPTION_VALUE(cvNItersInner,m_cvNItersInner);
+	GET_OPTION_VALUE(cvNItersReInit,m_cvNItersReInit);
 	GET_OPTION_VALUE(cvTimeStepPar,m_cvTimeStepPar);
 	GET_OPTION_VALUE(cvWindowSizePar,m_cvWindowSizePar);
 	GET_OPTION_VALUE(cvLambda1Par,m_cvLambda1Par);
@@ -733,15 +742,15 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(cvMuPar,m_cvMuPar);
 	GET_OPTION_VALUE(cvNuPar,m_cvNuPar);
 	GET_OPTION_VALUE(cvPPar,m_cvPPar);
-	GET_OPTION_VALUE(cvInitContourToSaliencyMap,m_cvInitContourToSaliencyMap);
-
+	//GET_OPTION_VALUE(cvInitContourToSaliencyMap,m_cvInitContourToSaliencyMap);
+	
 	//LRAC algorithm options
-	GET_OPTION_VALUE(lracNIters,m_lracNIters);	
+	//GET_OPTION_VALUE(lracNIters,m_lracNIters);	
 	GET_OPTION_VALUE(lracLambdaPar,m_lracLambdaPar);
 	GET_OPTION_VALUE(lracRadiusPar,m_lracRadiusPar);
 	GET_OPTION_VALUE(lracEpsPar,m_lracEpsPar);
-	GET_OPTION_VALUE(lracInitContourToSaliencyMap,m_lracInitContourToSaliencyMap);
-
+	//GET_OPTION_VALUE(lracInitContourToSaliencyMap,m_lracInitContourToSaliencyMap);
+	
 	//Hierarchical clustering options
 	GET_OPTION_VALUE(spMergingEdgeModel,m_spMergingEdgeModel);
 	GET_OPTION_VALUE(spMergingRegPar,m_spMergingRegPar);
@@ -1766,8 +1775,8 @@ Image* SFinder::FindExtendedSources(Image* inputImg,ImgBkgData* bkgData,TaskData
 
 
 
-Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,TaskData* taskData,Image* searchedImg,bool storeData){
-
+Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,TaskData* taskData,Image* searchedImg,bool storeData)
+{
 	//Check input image
 	if(!inputImg || !bkgData || !taskData){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Null ptr to input image and/or bkg/task data given!");
@@ -1809,18 +1818,9 @@ Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,T
 	//==========================================
 	//## Find compact blobs in saliency map by simple thresholding
 	INFO_LOG("[PROC "<<m_procId<<"] - Finding blobs in saliency map with threshold="<<signalThr<<"...");	
-	//bool findNegativeExcess= false;
-	//bool mergeBelowSeed= false;
 	bool findNestedSources= false;
 	int minNPix= m_NMinPix;
 	std::vector<Source*> sources;
-	/*
-	int status= inputImg->FindCompactSource(	
-		sources, saliencyImg, 0,
-		signalThr,signalThr,minNPix,
-		findNegativeExcess,mergeBelowSeed,findNestedSources
-	);
-	*/
 	int status= inputImg->FindCompactSource(	
 		sources, saliencyImg, 0,
 		signalThr,signalThr,minNPix,
@@ -2251,7 +2251,8 @@ Image* SFinder::ComputeEdgeImage(Image* inputImg,int edgeModel){
 		bool returnContourImg= true;
 		edgeImg= ChanVeseSegmenter::FindSegmentation (
 			inputImg, 0, returnContourImg,
-			m_cvTimeStepPar, m_cvWindowSizePar, m_cvLambda1Par, m_cvLambda2Par, m_cvMuPar, m_cvNuPar, m_cvPPar, m_cvNIters
+			m_cvTimeStepPar, m_cvWindowSizePar, m_cvLambda1Par, m_cvLambda2Par, m_cvMuPar, m_cvNuPar, m_cvPPar, m_acNIters,
+			m_acTolerance,m_cvNItersInner,m_cvNItersReInit
 		);
 	}
 	else {
@@ -2306,7 +2307,9 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 	//## Compute saliency
 	Image* signalMarkerImg= nullptr;
 	double fgValue= 1;
-	if( (m_activeContourMethod==eChanVeseAC && m_cvInitContourToSaliencyMap) || (m_activeContourMethod==eLRAC && m_lracInitContourToSaliencyMap) ){
+	//if( (m_activeContourMethod==eChanVeseAC && m_cvInitContourToSaliencyMap) || (m_activeContourMethod==eLRAC && m_lracInitContourToSaliencyMap) ){
+	if( m_acInitLevelSetMethod==eSaliencyLevelSet )	
+	{
 		INFO_LOG("[PROC "<<m_procId<<"] - Computing image saliency map...");
 		Image* saliencyImg= img->GetMultiResoSaliencyMap(
 			m_SaliencyResoMin,m_SaliencyResoMax,m_SaliencyResoStep,
@@ -2360,6 +2363,29 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 			return nullptr;
 		}
 	}//close if initCVToSaliencyMap
+	else if( m_acInitLevelSetMethod==eCircleLevelSet )
+	{
+		INFO_LOG("[PROC "<<m_procId<<"] - Computing circle level set image...");
+		signalMarkerImg= ImgUtils::GetCircleLevelSetImage(img->GetNx(),img->GetNy(),m_acInitLevelSetSizePar);	
+		if(!signalMarkerImg){
+			ERROR_LOG("Failed to compute circle level set image!");
+			return nullptr;
+		}
+		
+	}//close else if circle level set
+	else if( m_acInitLevelSetMethod==eCheckerboardLevelSet )
+	{
+		INFO_LOG("[PROC "<<m_procId<<"] - Computing checkerboard level set image...");
+		signalMarkerImg= ImgUtils::GetCheckerBoardLevelSetImage(img->GetNx(),img->GetNy(),m_acInitLevelSetSizePar);	
+		if(!signalMarkerImg){
+			ERROR_LOG("Failed to compute checkerboard level set image!");
+			return nullptr;
+		}
+
+	}//close else if checkerboard level set
+	else{
+		WARN_LOG("Unknown or invalid init level set method given ("<<m_acInitLevelSetMethod<<"), init level set map won't be computed");	
+	}
 
 	//==========================================
 	//==    RUN ACTIVE CONTOUR SEGMENTATION
@@ -2371,13 +2397,14 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 	if(m_activeContourMethod==eChanVeseAC){//Standard ChanVese algorithm
 		segmentedImg= ChanVeseSegmenter::FindSegmentation (
 			img, signalMarkerImg, returnContourImg,
-			m_cvTimeStepPar,m_cvWindowSizePar,m_cvLambda1Par,m_cvLambda2Par,m_cvMuPar,m_cvNuPar,m_cvPPar,m_cvNIters
+			m_cvTimeStepPar,m_cvWindowSizePar,m_cvLambda1Par,m_cvLambda2Par,m_cvMuPar,m_cvNuPar,m_cvPPar,m_acNIters,
+			m_acTolerance,m_cvNItersInner,m_cvNItersReInit
 		);
 	}
 	else if(m_activeContourMethod==eLRAC){//LRAC algorithm (with Chan-vese energy)
 		segmentedImg= LRACSegmenter::FindSegmentation (
 			img, signalMarkerImg,
-			m_lracNIters,m_lracLambdaPar,m_lracRadiusPar,m_lracEpsPar
+			m_acNIters,m_lracLambdaPar,m_lracRadiusPar,m_lracEpsPar
 		);
 	}
 	else{
@@ -2907,6 +2934,7 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	fitOptions.fitMinimizerAlgo= m_fitMinimizerAlgo;
 	fitOptions.fitStrategy= m_fitStrategy;
 	fitOptions.fitPrintLevel= m_fitPrintLevel;
+	fitOptions.fitParBoundIncreaseStepSize= m_fitParBoundIncreaseStepSize;
 
 	//## Check minimizer support
 	if(fitOptions.fitMinimizer=="Minuit2" || fitOptions.fitMinimizer=="minuit2"){
@@ -2963,7 +2991,11 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 		bool isFittable= IsFittableSource(sources[i]);
 		if(isFittable) {
 			//Fit mother source
-			INFO_LOG("[PROC "<<m_procId<<", threadId="<<omp_get_thread_num()<<"] - Source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") fittable as a whole...");
+			#ifdef OPENMP_ENABLED
+				INFO_LOG("[PROC "<<m_procId<<", threadId="<<omp_get_thread_num()<<"] - Source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") fittable as a whole...");
+			#else
+				INFO_LOG("[PROC "<<m_procId<<"] - Source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") fittable as a whole...");
+			#endif
 			if(sources[i]->Fit(fitOptions)<0) {
 				WARN_LOG("[PROC "<<m_procId<<"] - Failed to fit source no. "<<i+1<<" (name="<<sources[i]->GetName()<<"), skip to next...");
 				continue;
