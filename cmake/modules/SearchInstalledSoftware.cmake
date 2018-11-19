@@ -67,7 +67,7 @@ SET (ROOT_OPTIONAL_MODULES Minuit2 FITSIO)
 if(ENABLE_R)
 	list(APPEND ROOT_REQUIRED_MODULES RInterface Rtools)
 else()
-	list(APPEND ROOT_OPTIONAL_MODULES RInterface Rtools)
+	#list(APPEND ROOT_OPTIONAL_MODULES RInterface Rtools) ## Do not link with ROOT-R if disabled
 endif()
  
 find_package(ROOT REQUIRED MODULE COMPONENTS ${ROOT_REQUIRED_MODULES} OPTIONAL_COMPONENTS ${ROOT_OPTIONAL_MODULES})
@@ -83,12 +83,13 @@ if(${ROOT_minuit2_FOUND})
 else()
 	MESSAGE(STATUS "MINUIT2 not found")
 endif()
+
 message (STATUS "ROOT-R FOUND? ${ROOT_r_FOUND}")
-if(${ROOT_r_FOUND})
+if(${ROOT_r_FOUND} AND ENABLE_R)
 	MESSAGE(STATUS "ROOT-R module found, defining preprocessor flag ROOTR_ENABLED=true and adding library ${ROOT_r_LIBRARY} to linked lib list")
 	add_definitions(-DROOTR_ENABLED=1)
 else()
-	MESSAGE(STATUS "ROOT-R module not found")
+	MESSAGE(STATUS "ROOT-R module not found or disabled")
 endif()
 #--------------------------------
 
