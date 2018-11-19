@@ -31,6 +31,7 @@
 #pragma link C++ class Caesar::GraphicsUtils+;
 #pragma link C++ class Caesar::StatsUtils+;
 #pragma link C++ class Caesar::EllipseUtils+;
+#pragma link C++ class Caesar::ImgUtils+;
 
 
 #pragma link C++ class Caesar::ClippedStats<int>+;
