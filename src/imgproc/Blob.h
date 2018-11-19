@@ -216,6 +216,36 @@ class Blob : public TNamed {
 		}//close GetSeedPixelIndexes()
 
 		/**
+		* \brief Find and return largest-significance seed pixel 
+		*/
+		Pixel* GetSeedPixel()
+		{
+			//Loop over pixels and return the largest
+			long int seedPixelIndex= -1;
+			double Zmax= -1.e+99;
+			for(size_t i=0;i<m_Pixels.size();i++){
+				int pixType= m_Pixels[i]->type;
+				if(pixType!=Pixel::eSeed) continue;
+				std::pair<double,double> bkgInfo= m_Pixels[i]->GetBkg();
+				double bkgLevel= bkgInfo.first;
+				double noiseLevel= bkgInfo.second;
+				double S= m_Pixels[i]->S;
+				double Z= (S-bkgLevel)/noiseLevel;
+				if(fabs(Z)>Zmax) {
+					Zmax= Z;
+					seedPixelIndex= i;
+				}
+			}//end loop pixels
+
+			//Check if seed exists and was found
+			if(seedPixelIndex<0) return nullptr;
+
+			//Return seed pixel
+			return m_Pixels[seedPixelIndex];
+
+		}//close GetSeedPixel()
+
+		/**
 		* \brief Mark pixels with significance within given thresholds as halo pixels
 		*/
 		void MarkHaloPixels(double ZThr){

@@ -115,7 +115,6 @@ struct SourceFitOptions {
 		blobMapKernelFactor= 6; 
 		useNestedAsComponents= false;
 	
-		
 		fitImproveConvergence= true;
 		fitNRetries= 1000;
 		fitDoFinalMinimizerStep= true;
@@ -133,6 +132,7 @@ struct SourceFitOptions {
 		fitStrategy= 2;
 		fitFcnTolerance= 1.e-2;//default tolerance used in ROOT
 		fitMaxIters= 100000;
+		fitParBoundIncreaseStepSize= 0.1;
 
 	}//close constructor
 
@@ -214,7 +214,8 @@ struct SourceFitOptions {
 		int fitStrategy;
 		std::string fitMinimizer;
 		std::string fitMinimizerAlgo;
-		
+		double fitParBoundIncreaseStepSize;		
+
 };//close SourceFitOptions
 
 
@@ -1114,6 +1115,11 @@ class SourceFitter : public TObject {
 		//static void Chi2Fcn(int& nPar,double* grad,double& fval,double* p,int iflag);
 		
 
+		/**
+		* \brief Initialize fitter
+		*/
+		ROOT::Math::Minimizer* InitMinimizer(int nFitPars,SourceFitOptions& fitOptions);
+	
 	private:
 	
 		//static int m_NFitComponents;

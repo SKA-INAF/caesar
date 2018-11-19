@@ -155,7 +155,7 @@ ChanVeseSegmenter::CVdata* ChanVeseSegmenter::Init(Image* img,Image* initSegmImg
 		double rowCenter= nRows/2.0;
 		double colCenter= nCols/2.0;
 		double initContourRadius= 0.5;//1
-		INFO_LOG("Initializing level set from dummy gaussian (center("<<rowCenter<<","<<colCenter<<", radiu="<<initContourRadius<<")");
+		INFO_LOG("Initializing level set from dummy gaussian (center("<<rowCenter<<","<<colCenter<<", radius="<<initContourRadius<<")");
 	
 		for (int i=0; i<nRows; ++i) {
     	for (int j=0; j<nCols; ++j) {
@@ -174,7 +174,7 @@ ChanVeseSegmenter::CVdata* ChanVeseSegmenter::Init(Image* img,Image* initSegmImg
 }//close Init()
 
 
-Image* ChanVeseSegmenter::FindSegmentation(Image* img,Image* initSegmImg,bool returnContourImg,double dt,double h,double lambda1,double lambda2,double mu,double nu,double p,int nIterations)
+Image* ChanVeseSegmenter::FindSegmentation(Image* img,Image* initSegmImg,bool returnContourImg,double dt,double h,double lambda1,double lambda2,double mu,double nu,double p,long int nIterations,double tol,long int nIterationsInner,long int nIterationsReInit)
 {
 	//Check input image
 	if(!img){
@@ -193,8 +193,11 @@ Image* ChanVeseSegmenter::FindSegmentation(Image* img,Image* initSegmImg,bool re
   pCVinputs->mu = mu;
   pCVinputs->nu = nu;
   pCVinputs->p = p;
-	pCVinputs->niters = nIterations;
-	INFO_LOG("Running Chan-Vese segmentation with pars {dt="<<dt<<", h="<<h<<", lambda1="<<lambda1<<", lambda2="<<lambda2<<" mu="<<mu<<" nu="<<nu<<" p="<<p<<", niters="<<nIterations<<"}");
+	pCVinputs->niters = nIterations;	
+	pCVinputs->niters_reinit = nIterationsReInit;
+	pCVinputs->niters_inner = nIterationsInner;
+	pCVinputs->tol= tol;
+	INFO_LOG("Running Chan-Vese segmentation with pars {dt="<<dt<<", h="<<h<<", lambda1="<<lambda1<<", lambda2="<<lambda2<<" mu="<<mu<<" nu="<<nu<<" p="<<p<<", niters="<<nIterations<<" tol="<<tol<<", niters_inner="<<nIterationsInner<<", niters_reinit="<<nIterationsReInit<<"}");
 	
 	//## Initialize algo data
 	ChanVeseSegmenter::CVdata* pCVdata= Init(img,initSegmImg);
@@ -292,12 +295,17 @@ void ChanVeseSegmenter::CVSegmentation(TMatrixD* img,TMatrixD* phi0,TMatrixD** p
   double lambda1 = pCVinputs->lambda1;
   double lambda2 = pCVinputs->lambda2;
   unsigned int p = pCVinputs->p;
-	int nIterations= pCVinputs->niters;
+	long int nIterations= pCVinputs->niters;
+	long int nIterations_inner= pCVinputs->niters_inner;
+	long int nIterations_reinit= pCVinputs->niters_reinit;
+	double tol= pCVinputs->tol;
   
+	
   // Variables to evaluate stopping condition
   bool fStop = false;
   TMatrixD* phiOld = new TMatrixD(img->GetNrows(),img->GetNcols());
-  
+  double nPix= img->GetNrows()*img->GetNcols();
+
   // Initialize phi
 	if (*phi == 0){
     (*phi) = new TMatrixD(img->GetNrows(),img->GetNcols());
@@ -310,7 +318,10 @@ void ChanVeseSegmenter::CVSegmentation(TMatrixD* img,TMatrixD* phi0,TMatrixD** p
   (**phi) = *phi0;
   
   // Main loop
-  for (unsigned int k = 0; k < 5 && fStop == false; ++k) {
+	double eps= 0;
+
+  //for (unsigned int k = 0; k < 5 && fStop == false; ++k) {
+	for (long int k = 0; k < nIterations && fStop == false; ++k) {
     *phiOld= (**phi);
     
     // Compute region averages for current level set function
@@ -318,7 +329,8 @@ void ChanVeseSegmenter::CVSegmentation(TMatrixD* img,TMatrixD* phi0,TMatrixD** p
     GetRegionAverages(img, *phi, h, c1, c2);
 
     // Inner loop...
-    for (unsigned int l = 0; l < 5; ++l) {
+    //for (unsigned int l = 0; l < 5; ++l) {
+		for (long int l = 0; l < nIterations_inner; ++l) {
 
       // Compute length of contour if p > 1
       if (1 == p) L = 1.0;
@@ -354,12 +366,34 @@ void ChanVeseSegmenter::CVSegmentation(TMatrixD* img,TMatrixD* phi0,TMatrixD** p
       }
  
       // Reinitialize phi to the signed distance function to its zero contour
-      ReinitPhi(*phi, phi, 0.1, h, nIterations);
-    }
+      ReinitPhi(*phi, phi, 0.1, h, nIterations_reinit);
+    }//end inner loop l
     
     // Check stopping condition
-    //...
-  }
+    double resSum2= 0.0;
+    for (int i = 0; i < img->GetNrows(); ++i) {
+      for (int j = 0; j < img->GetNcols(); ++j) {
+				double w_old= (*phiOld)(i,j);	
+				double w= (**phi)(i,j);
+				resSum2+= (w-w_old)*(w-w_old);
+      }//end loop cols
+    }//end loop rows
+
+		eps= sqrt(resSum2/nPix);
+		if(eps<=tol){
+			INFO_LOG("Stopping condition reached (eps="<<eps<<"<="<<tol<<") after #"<<k<<" iterations.");
+			fStop= true;
+		}
+		else{
+			INFO_LOG("#"<<k<<"/"<<nIterations<<" iterations performed (eps="<<eps<<", tol="<<tol<<")");
+		}
+		
+  }//end loop outer iters
+
+	if(!fStop){
+		WARN_LOG("Maximum number of iterations reached without convergence (eps="<<eps<<", tol="<<tol<<")");
+	}
+
 }//close CVSegmentation()
 
 
@@ -430,7 +464,7 @@ void ChanVeseSegmenter::GetRegionAverages(TMatrixD* img,TMatrixD* phi,double eps
 //---------------------------------------------------------------------------//
 // function ReinitPhi
 // Reinitialize phi to the signed distance function to its zero contour
-void ChanVeseSegmenter::ReinitPhi(TMatrixD* phiIn,TMatrixD** psiOut,double dt,double h,unsigned int numIts) {
+void ChanVeseSegmenter::ReinitPhi(TMatrixD* phiIn,TMatrixD** psiOut,double dt,double h,long int numIts) {
 
   if (*psiOut == 0){
     (*psiOut) = new TMatrixD(phiIn->GetNrows(),phiIn->GetNcols());
@@ -455,7 +489,7 @@ void ChanVeseSegmenter::ReinitPhi(TMatrixD* phiIn,TMatrixD** psiOut,double dt,do
   unsigned int M;
   TMatrixD* psiOld = new TMatrixD(phiIn->GetNrows(),phiIn->GetNcols());
   
-  for (unsigned int k = 0; k < numIts && fStop == false; ++k) {
+  for (long int k = 0; k < numIts && fStop == false; ++k) {
     *psiOld= (**psiOut);
     for (int i = 1; i < phiIn->GetNrows()-1; ++i) {
       for (int j = 1; j < phiIn->GetNcols()-1; ++j){
@@ -510,6 +544,9 @@ void ChanVeseSegmenter::ReinitPhi(TMatrixD* phiIn,TMatrixD** psiOut,double dt,do
       //cout << "Iteration " << k << ", Q = " << Q << " > " << dt*h*h << endl;
     }
   }//end iteration loop
+
+	//Delete stuff
+	psiOld->Delete();
 
 }//close ChanVeseSegmenter::ReinitPhi()
 

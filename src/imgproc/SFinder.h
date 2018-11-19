@@ -538,7 +538,7 @@ class SFinder : public TObject {
 		std::string m_fitMinimizerAlgo;
 		int m_fitStrategy;
 		int m_fitPrintLevel;
-
+		double m_fitParBoundIncreaseStepSize;
 		bool m_fitUseThreads;
 
 		//Saliency computation
@@ -575,8 +575,16 @@ class SFinder : public TObject {
 		int m_spMinArea;
 		bool m_spUseLogContrast;
 
+		//Active-Contour main options
+		long int m_acNIters;
+		int m_acInitLevelSetMethod;
+		float m_acInitLevelSetSizePar;
+		double m_acTolerance;
+		
 		//Chan-Vese options
-		int m_cvNIters;
+		//int m_cvNIters;
+		long int m_cvNItersInner;
+		long int m_cvNItersReInit;
 		double m_cvTimeStepPar;
 		double m_cvWindowSizePar;
 		double m_cvLambda1Par;
@@ -584,15 +592,15 @@ class SFinder : public TObject {
 		double m_cvMuPar;
 		double m_cvNuPar;
 		double m_cvPPar;
-		bool m_cvInitContourToSaliencyMap;
-
+		//bool m_cvInitContourToSaliencyMap;
+		
 		//LRAC options
-		int m_lracNIters;
+		//int m_lracNIters;
 		double m_lracLambdaPar;
 		double m_lracRadiusPar;
 		double m_lracEpsPar;
-		bool m_lracInitContourToSaliencyMap;
-
+		//bool m_lracInitContourToSaliencyMap;
+		
 		//Hierachical clustering data
 		Image* m_LaplImg;
 		Image* m_EdgeImg;

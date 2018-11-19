@@ -1270,6 +1270,61 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 }//close DoChi2Fit()
 */
 
+
+ROOT::Math::Minimizer* SourceFitter::InitMinimizer(int nFitPars,SourceFitOptions& fitOptions)
+{
+	//Initialize fitter according to options
+	ROOT::Math::Minimizer* fitter = 0;
+	//fitter = ROOT::Math::Factory::CreateMinimizer(fitOptions.fitMinimizer,fitOptions.fitMinimizerAlgo);
+
+	if(fitOptions.fitMinimizer=="Minuit2" || fitOptions.fitMinimizer=="minuit2"){
+		#ifdef MINUIT2_ENABLED
+			fitter= new ROOT::Minuit2::Minuit2Minimizer((fitOptions.fitMinimizerAlgo).c_str());
+		#else	
+			WARN_LOG("Minuit2 was selected but not available in the system, switching to MINUIT minimizer.");
+			fitter= new TMinuitMinimizer((fitOptions.fitMinimizerAlgo).c_str(),nFitPars);
+		#endif
+	}
+	else if(fitOptions.fitMinimizer=="Minuit" || fitOptions.fitMinimizer=="minuit"){
+		fitter= new TMinuitMinimizer((fitOptions.fitMinimizerAlgo).c_str(),nFitPars);
+	}
+	else if(fitOptions.fitMinimizer=="R" || fitOptions.fitMinimizer=="r"){
+		#ifdef ROOTR_ENABLED
+			fitter= new ROOT::Math::RMinimizer((fitOptions.fitMinimizerAlgo).c_str());
+		#else 
+			WARN_LOG("RMinimizer was selected but not available in the system, switching to MINUIT minimizer.");
+			fitter= new TMinuitMinimizer((fitOptions.fitMinimizerAlgo).c_str(),nFitPars);
+		#endif
+	}
+	else if(fitOptions.fitMinimizer=="GSL" || fitOptions.fitMinimizer=="gsl"){
+		fitter= new ROOT::Math::GSLNLSMinimizer();
+	}
+	else{
+		ERROR_LOG("Invalid or unsupported minimizer ("<<fitOptions.fitMinimizer<<") given!");
+		return nullptr;
+	}
+
+	if(!fitter){
+		ERROR_LOG("Fitter creation failed (hint: chosen minimizer "<<fitOptions.fitMinimizer<<" not supported in the system?)");
+		return nullptr;
+	}
+
+	//Set minimizer options
+	//fitter->UseStaticMinuit(false);	
+	fitter->SetMaxFunctionCalls(fitOptions.fitMaxIters);// for Minuit/Minuit2 
+  fitter->SetMaxIterations(fitOptions.fitMaxIters);// for GSL 
+  fitter->SetTolerance(fitOptions.fitFcnTolerance);//default tolerance
+	fitter->SetPrecision(-1);//let minimizer choose the default
+	fitter->SetErrorDef(1);//set chi2 error definition (0.5 for likelihood fits)
+  fitter->SetPrintLevel(fitOptions.fitPrintLevel);//1=low
+	fitter->SetStrategy(fitOptions.fitStrategy);//2=better error calculation
+	fitter->SetValidError(fitOptions.fitDoFinalMinimizerStep);//run HESS for MINUIT if true
+
+	return fitter;
+
+}//close InitMinimizer()
+
+
 int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::vector< std::vector<double> >& fitPars_start)
 {
 	//## Get source pars
@@ -1296,6 +1351,13 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	int nFitPars= nComponentPars*m_NFitComponents + 1;//fit components + constant offset
 
 	//## Initialize fitter
+	ROOT::Math::Minimizer* fitter= InitMinimizer(nFitPars,fitOptions);
+	if(!fitter){
+		ERROR_LOG("Failed to initialize minimizer ("<<fitOptions.fitMinimizer<<")!");
+		return -1;
+	}
+
+	/*
 	//ROOT::Math::Minimizer* fitter = ROOT::Math::Factory::CreateMinimizer(fitOptions.fitMinimizer,fitOptions.fitMinimizerAlgo);
 	ROOT::Math::Minimizer* fitter = 0;
 	if(fitOptions.fitMinimizer=="Minuit2" || fitOptions.fitMinimizer=="minuit2"){
@@ -1338,20 +1400,12 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
   fitter->SetPrintLevel(fitOptions.fitPrintLevel);//1=low
 	fitter->SetStrategy(fitOptions.fitStrategy);//2=better error calculation
 	fitter->SetValidError(fitOptions.fitDoFinalMinimizerStep);//run HESS for MINUIT if true
-
+	*/
 	
 	//## Set minimization function
 	ROOT::Math::Functor fitFcn(std::bind(&SourceFitter::Chi2Fcn, this, _1), nFitPars);	
 	fitter->SetFunction(fitFcn);
 	
-	/*
-	if(fitOptions.fitMinimizer=="GSL" || fitOptions.fitMinimizer=="gsl"){
-		fitter->SetFunction(std::bind(&SourceFitter::Chi2Fcn, this, _1));
-	}
-	else{ 
-		fitter->SetFunction(fitFcn);
-	}
-	*/
 
 	//## Set start fit pars
 	int par_counter= 0;
@@ -1705,7 +1759,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 
 		//Modify par bounds if requested
 		if(modifyParBounds){
-			double limitStep= (niters_fit+1)*0.1;
+			double limitStep= (niters_fit+1)*fitOptions.fitParBoundIncreaseStepSize;
 			for(size_t i=0;i<parsAtLimits.size();i++){
 				int parIndex= parsAtLimits[i];
 					
@@ -1871,7 +1925,6 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	if(m_fitStatus==eFitConverged && hasParsAtLimits) m_fitStatus= eFitConvergedWithWarns;	
 	fitStatus= fitter->Status();
 
-	
 	
 	INFO_LOG("Source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") fit info: status="<<fitStatus<<", fitterStatus="<<m_fitStatus<<", covMatrixStatus="<<fitter->CovMatrixStatus()<<", IsValidError? "<<fitter->IsValidError()<<", ProvidesError? "<<fitter->ProvidesError()<<", fit strategy="<<fitter->Strategy()<<" (hasParsAtLimits? "<<hasParsAtLimits<<"), NDF="<<NDF<<", Chi2="<<Chi2<<", NPars="<<NPars<<", NFreePars="<<NFreePars<<" NFittedBins="<<NFittedBins);
 

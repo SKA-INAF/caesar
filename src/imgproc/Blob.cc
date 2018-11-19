@@ -231,7 +231,7 @@ void Blob::Copy(TObject &obj) const {
 
 Blob& Blob::operator=(const Blob& blob) { 
 	// Operator =
-  if (this != &blob)  ((Blob&)blob).Copy(*this);
+  if (this != &blob) ((Blob&)blob).Copy(*this);
   return *this;
 }
 

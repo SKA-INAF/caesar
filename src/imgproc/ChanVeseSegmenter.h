@@ -65,7 +65,10 @@ class ChanVeseSegmenter : public TObject {
   		double mu; // contour length weighting parameter
   		double nu; // region area weighting parameter
   		unsigned int p; // length weight exponent
-			int niters;
+			long int niters;//max number of outer iterations
+			long int niters_inner;//max number of inner iterations
+			long int niters_reinit;//max number of re-initialization iterations
+			double tol;//tolerance to stop outer loop
 		};
 
 		struct CVdata {
@@ -96,16 +99,7 @@ class ChanVeseSegmenter : public TObject {
 		/**
 		* \brief Find the ChanVese segmentation of input image
 		*/
-		static Image* FindSegmentation(Image* img,Image* initSegmImg=0,bool returnContourImg=false,double dt=0.1,double h=1,double lambda1=1.0,double lambda2=2.0,double mu=0.5,double nu=0,double p=1,int nIterations=1000);
-
-		
-
-	private:
-
-		/**
-		* \brief Initialize algorithm
-		*/
-		static CVdata* Init(Image* img,Image* initSegmImg=0);
+		static Image* FindSegmentation(Image* img,Image* initSegmImg=0,bool returnContourImg=false,double dt=0.1,double h=1,double lambda1=1.0,double lambda2=2.0,double mu=0.5,double nu=0,double p=1,long int nIterations=1000,double tol=1.e-2,long int nIterationsInner=1,long int nIterationsReInit=10);
 
 		/**
 		* \brief Set level set to checker board model
@@ -116,6 +110,14 @@ class ChanVeseSegmenter : public TObject {
 		* \brief Set level set to circle model
 		*/
 		static void SetCircleLevelSet(TMatrixD* M);
+
+	private:
+
+		/**
+		* \brief Initialize algorithm
+		*/
+		static CVdata* Init(Image* img,Image* initSegmImg=0);
+
 
 		//===============================================
 		//==          CHAN-VESE INTERNAL METHODS
@@ -147,7 +149,7 @@ class ChanVeseSegmenter : public TObject {
     /**
 		* \brief Reinitialize a function to the signed distance function to its zero contour
 		*/                         
-		static void ReinitPhi(TMatrixD* phiIn,TMatrixD** psiOut,double dt,double h,unsigned int numIts);
+		static void ReinitPhi(TMatrixD* phiIn,TMatrixD** psiOut,double dt,double h,long int numIts);
 		/**
 		* \brief Compute zero crossings
 		*/ 
