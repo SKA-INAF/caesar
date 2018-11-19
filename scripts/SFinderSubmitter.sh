@@ -54,6 +54,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--bmaj=[BMAJ] - User-supplied beam Bmaj in arcsec (NB: used only when beam info is not available in input map) (default: 10 arcsec)"
 	echo "--bmin=[BMIN] - User-supplied beam Bmin in arcsec (NB: used only when beam info is not available in input map) (default: 5 arcsec)"
 	echo "--bpa=[BMIN] - User-supplied beam position angle in degrees (NB: used only when beam info is not available in input map) (default: 0 deg)"
+	echo "--mappixsize=[MAP_PIXSIZE] - Map pixel size in arcsec (NB: used only when info is not available in input map) (default=1 arcsec)"
 	echo "--globalbkg - Use global bkg (default=use local bkg)"
 	echo "--bkgestimator=[BKG_ESTIMATOR] - Stat estimator used for bkg (1=Mean,2=Median,3=BiWeight,4=ClippedMedian) (default=2)"
 	echo "--bkgbox=[BKG_BOXSIZE] - Box size (muliple of beam size) used to compute local bkg (default=20 x beam)"
@@ -153,7 +154,11 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--fit-peakmultiplicitythr=[PEAK_KERNEL_MULTIPLICITY_THR] - Requested peak multiplicity across different dilation kernels (-1=peak found in all given kernels,1=only in one kernel, etc) (default=1)"
 	echo "--fit-peakshifttol=[PEAK_SHIFT_TOLERANCE] - Shift tolerance (in pixels) used to compare peaks in different dilation kernels (default=2 pixels)"
 	echo "--fit-peakzthrmin=[PEAK_ZTHR_MIN] - Minimum peak flux significance (in nsigmas above avg source bkg & noise) below which peak is skipped (default=1)"
+	echo "--fit-fcntol=[FIT_FCNTOL] - Fit function tolerance for convergence (default 1.e-2)"
+	echo "--fit-maxniters=[FIT_MAXNITERS] - Maximum number of fit iterations or function calls performed (default 10000)"
 	echo "--fit-noimproveconvergence - Do not use iterative fitting to try to achieve fit convergence (default=use)"
+	echo "--fit-nretries=[FIT_NRETRIES] - Maximum number of fit retries if fit failed or has parameters at bound (default 10)"
+	echo "--fit-parboundincreasestep - Fit par bound increase step size (e.g. parmax= parmax_old+(1+nretry)*fitParBoundIncreaseStepSize*0.5*|max-min|). Used in iterative fitting. (default=0.1)"
 	echo ""
 
 	echo "=== SFINDER SMOOTHING FILTER OPTIONS ==="
@@ -177,8 +182,17 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--saliency-usermsmap - Use noise map in saliency computation (default=not used)"
 	echo ""
 
+	echo "=== SFINDER ACTIVE-CONTOUR MAIN OPTIONS ==="
+	echo "--ac-niters=[AC_NITERS] - Maximum number of iterations in active-contour algorithms (default=1000)"
+	echo "--ac-levelset=[AC_LEVELSET_METHOD] - Init level set method in active-contour algorithms (1=circle,2=checkerboard,3=saliency) (default=1)"
+	echo "--ac-levelsetsize=[AC_LEVELSET_SIZE] - Init level set size par in active-contour algorithms (default=0.1ximage size)"
+	echo "--ac-tolerance=[AC_TOLERANCE] - Tolerance par in active-contour algorithms (default=0.1)"
+	echo ""
+
 	echo "=== SFINDER CHAN-VESE OPTIONS ==="
-	echo "--cv-niters=[CV_NITERS] - Maximum number of iterations in ChanVese algorithms (default=1000)"
+	#echo "--cv-niters=[CV_NITERS] - Maximum number of iterations in ChanVese algorithms (default=1000)"
+	echo "--cv-nitersinner=[CV_NITERS_INNER] - Maximum number of inner iterations in ChanVese algorithm (default=1000)"
+	echo "--cv-nitersreinit=[CV_NITERS_REINIT] - Maximum number of re-init iterations in ChanVese algorithm (default=1000)"
 	echo "--cv-timestep=[CV_TIMESTEP] - Chan-Vese time step parameter (default=0.007)"
 	echo "--cv-wsize=[CV_WINDOWSIZE] - Chan-Vese window size parameter (default=1)"
 	echo "--cv-lambda1=[CV_LAMBDA1] - Chan-Vese lambda1 parameter (default=1)"
@@ -356,6 +370,10 @@ PEAK_SHIFT_TOLERANCE="2"
 PEAK_ZTHR_MIN="1"
 FIT_USE_NESTED_AS_COMPONENTS="false"
 FIT_IMPROVE_CONVERGENCE="true"
+FIT_PARBOUNDINCREASE_STEPSIZE="0.1"
+FIT_MAXNITERS="10000"
+FIT_NRETRIES="10"
+FIT_FCNTOL="1.e-2"
 
 WTSCALE_MIN="3"
 WTSCALE_MAX="6"
@@ -373,11 +391,19 @@ SAVE_SEGMENTED_MAP="false"
 BMAJ=10
 BMIN=5
 BPA=0
+MAP_PIXSIZE="1.0"
 SAVE_DS9REGIONS="false"
 CONVERT_DS9REGIONS_TO_WCS="false"
 DS9REGION_WCSTYPE="0"
 
-CV_NITERS="1000"
+AC_NITERS="1000"
+AC_LEVELSET_METHOD="1"
+AC_LEVELSET_SIZE="0.1"
+AC_TOLERANCE="0.1"
+
+##CV_NITERS="1000"
+CV_NITERS_INNER="5"
+CV_NITERS_REINIT="5"
 CV_TIMESTEP="0.007"
 CV_WINDOWSIZE="1"
 CV_LAMBDA1="1"
@@ -489,6 +515,9 @@ do
     ;;
 		--bpa=*)
     	BPA=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    ;;
+		--mappixsize=*)
+    	MAP_PIXSIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
 
     --tilesize=*)
@@ -795,7 +824,19 @@ do
 		--fit-noimproveconvergence*)
 			FIT_IMPROVE_CONVERGENCE="false"
 		;;
-	
+		--fit-parboundincreasestep=*)
+			FIT_PARBOUNDINCREASE_STEPSIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
+		--fit-maxniters=*)
+			FIT_MAXNITERS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
+		--fit-nretries=*)
+			FIT_NRETRIES=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
+		--fit-fcntol=*)
+			FIT_FCNTOL=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
+
 		## SALIENCY FILTER OPTIONS
 		--saliency-nooptimalthr*)
 			USE_OPTIMAL_THR_IN_SALIENCY="false"
@@ -841,9 +882,26 @@ do
     	WTSCALE_MAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
+		## ACTIVE CONTOURS OPTIONS
+		--ac-niters=*)
+    	AC_NITERS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--ac-levelset=*)
+    	AC_LEVELSET_METHOD=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--ac-levelsetsize=*)
+    	AC_LEVELSET_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--ac-tolerance=*)
+    	AC_TOLERANCE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+
 		## CHAN-VESE OPTIONS
-		--cv-niters=*)
-    	CV_NITERS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		--cv-nitersinner=*)
+    	CV_NITERS_INNER=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--cv-nitersreinit=*)
+    	CV_NITERS_REINIT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-timestep=*)
     	CV_TIMESTEP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
@@ -1093,8 +1151,8 @@ generate_config(){
 		echo '//============================'
 		echo '//==      BEAM INFO         =='
 		echo '//============================'
-		echo 'pixSize = 1.0   												| User-supplied map pixel area in arcsec (pixSize=CDELT, default=1 arcsec)'
-		echo 'beamFWHM = 6.5                          | User-supplied circular beam FWHM in arcsec (beamFWHM=BMAJ=BMIN, default=6.5 arcsec)'
+		echo "pixSize = $MAP_PIXSIZE   								| User-supplied map pixel area in arcsec (pixSize=CDELT, default=1 arcsec)"
+		echo "beamFWHM = $BMIN                          | User-supplied circular beam FWHM in arcsec (beamFWHM=BMAJ=BMIN, default=6.5 arcsec)"
 		echo "beamBmaj = $BMAJ                        | User-supplied elliptical beam bmaj FWHM in arcsec (default=10 arcsec)"
 		echo "beamBmin = $BMIN                        | User-supplied elliptical beam bmin FWHM in arcsec (default=5 arcsec)"
 		echo "beamTheta = $BPA                        | User-supplied beam theta in deg (default=0)"
@@ -1257,13 +1315,14 @@ generate_config(){
 		echo "peakKernelMultiplicityThr = $PEAK_KERNEL_MULTIPLICITY_THR  | Requested peak multiplicity across different dilation kernels (-1=peak found in all given kernels,1=only in one kernel, etc)"
 		echo "peakShiftTolerance = $PEAK_SHIFT_TOLERANCE            | Shift tolerance (in pixels) used to compare peaks in different dilation kernels (default=1 pixel)"
 		echo "peakZThrMin = $PEAK_ZTHR_MIN                          | Minimum peak flux significance (in nsigmas above avg source bkg & noise) below which peak is skipped (default=1)"
-		echo "fitFcnTolerance = 1.e-2												        | Fit function minimization tolerance (default=1.e-5)"
-		echo "fitMaxIters = 100000                                  | Fit max number of iterations (default=100000)"
+		echo "fitFcnTolerance = $FIT_FCNTOL								          | Fit function minimization tolerance (default=1.e-5)"
+		echo "fitMaxIters = $FIT_MAXNITERS                          | Fit max number of iterations (default=100000)"
     echo "fitImproveConvergence = $FIT_IMPROVE_CONVERGENCE      | Try to improve convergence by iterating fit if not converged or converged with pars at limits (default=true)"
-		echo "fitNRetries = 1000                                    | Number of times fit is repeated (with enlarged limits) if improve convergence flag is enabled (default=1000)"
+		echo "fitNRetries = $FIT_NRETRIES                           | Number of times fit is repeated (with enlarged limits) if improve convergence flag is enabled (default=1000)"
 		echo "fitDoFinalMinimizerStep = true                        | Switch on/off running of final minimizer step after fit convergence with MIGRAD (default=true)"
 		echo "fitFinalMinimizer = 2                                 | Final minimizer (1=MIGRAD,2=HESS,3=MINOS) (default=2)"
-		echo "fitChi2RegPar = 1															 				| Chi2 regularization par chi2=chi2_signal + regpar*chi2_bkg (default=1)"
+		echo "fitChi2RegPar = 1															 				| Chi2 regularization par chi2=chi2_signal + regpar*chi2_bkg (default=1)"	
+		echo "fitParBoundIncreaseStepSize = $FIT_PARBOUNDINCREASE_STEPSIZE    | Par bound increase step size (e.g. parmax= parmax_old+(1+nretry)*fitParBoundIncreaseStepSize*0.5*|max-min| (default=0.1)"
 		echo '###'
 		echo '###'
 		echo '//============================================='
@@ -1301,7 +1360,7 @@ generate_config(){
 		echo '//==  SOURCE RESIDUAL OPTIONS   =='
 		echo '//================================'
 		echo "dilateNestedSources = $DILATE_NESTED								| Dilate sources nested inside bright sources (T/F)"
-		echo "dilateZThr = $DILATE_THR                            | Significance threshold (in sigmas) above which sources are dilated"
+		echo "dilateZThr = $DILATE_THR                            | Significance threshold (in sigmas) above which sources of selected type are dilated"
 		echo "dilateZBrightThr = $DILATE_BRIGHT_THR               | Significance threshold (in sigmas) above which sources are always dilated (even if they have nested or different type)"
 		echo "dilateKernelSize = $DILATE_KERNEL_SIZE							| Size of kernel (odd) to be used in dilation operation"
 		echo "dilatedSourceType = $DILATED_SOURCE									| Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"
@@ -1309,28 +1368,38 @@ generate_config(){
 		echo 'dilateRandomize = false															| Randomize dilated values (T/F)'
 		echo '###'
 		echo '###'
+		echo '//=============================================='
+		echo '//==  ACTIVE CONTOUR ALGORITHMS MAIN OPTIONS  =='
+		echo '//=============================================='
+		echo "acNIters = $AC_NITERS																| Maximum number of iterations"
+		echo "acInitLevelSetMethod = $AC_LEVELSET_METHOD          | Level set initialization method (1=circle,2=checkerboard,3=saliency)"
+		echo "acInitLevelSetSizePar = $AC_LEVELSET_SIZE           | Level set size fraction wrt to minimum image size (e.g. circle radius=fraction x image size)"
+		echo "acTolerance = $AC_TOLERANCE                         | Tolerance parameter to stop main iteration loop"
+		echo '###'
+		echo '###'
 		echo '//==================================='
 		echo '//==  CHAN-VESE ALGORITHM OPTIONS  =='
 		echo '//==================================='
-		echo "cvNIters = $CV_NITERS 															| Number of iterations"
+		echo "cvNItersInner = $CV_NITERS_INNER                    | Chan-Vese maximum number of inner iterations"
+		echo "cvNItersReInit = $CV_NITERS_REINIT                  | Chan-Vese maximum number of iterations performed in re-initialization step"
 		echo "cvTimeStepPar = $CV_TIMESTEP												| Chan-Vese time step par"
-		echo "cvWindowSizePar = $CV_WINDOWSIZE													| Chan-Vese window size par"
+		echo "cvWindowSizePar = $CV_WINDOWSIZE										| Chan-Vese window size par"
 		echo "cvLambda1Par = $CV_LAMBDA1													| Chan-Vese lambda1 par"
 		echo "cvLambda2Par = $CV_LAMBDA2													| Chan-Vese lambda2 par"
 		echo "cvMuPar = $CV_MU																		| Chan-Vese mu par"
 		echo "cvNuPar = $CV_NU																		|	Chan-Vese nu par"
 		echo "cvPPar = $CV_P																			| Chan-Vese p par"
-		echo "cvInitContourToSaliencyMap = false                  | Init contour to binarized saliency map"
+		##echo "cvInitContourToSaliencyMap = false                  | Init contour to binarized saliency map"
 		echo '###'
 		echo '###'
 		echo '//==================================='
 		echo '//==  LRAC ALGORITHM OPTIONS       =='
 		echo '//==================================='
-		echo 'lracNIters = 1000 																	| Number of iterations'
+		##echo 'lracNIters = 1000 																	| Number of iterations'
 		echo 'lracLambdaPar = 0.1																  | Regularization par'
 		echo 'lracRadiusPar = 1																	  | Radius of locatization ball par'
 		echo 'lracEpsPar = 0.1																	  | Convergence par'
-		echo 'lracInitContourToSaliencyMap = false                  | Init contour to binarized saliency map'
+		##echo 'lracInitContourToSaliencyMap = false                  | Init contour to binarized saliency map'
 		echo '###'
 		echo '###'
 		echo '//==============================='
