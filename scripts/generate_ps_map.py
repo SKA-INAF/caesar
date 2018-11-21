@@ -64,6 +64,10 @@ def get_args():
 	## Needed to trick CASA when running in batch	
 	parser.add_argument('-c', dest='scriptname', required=False, type=str, default='',action='store',help='Script name')
 
+	# - RUN
+	parser.add_argument('--no-convolve', dest='do_convolve', action='store_false')	
+	parser.set_defaults(do_convolve=True)
+
 	# - INPUTS
 	parser.add_argument('-mosaic', '--mosaic', dest='mosaic', required=True, type=str, default='', action='store',help='Mosaic Image in units Jy/beam (.fits)')
 	parser.add_argument('-residual', '--residual', dest='residual', required=True, type=str, default='', action='store',help='Residual Image in units Jy/pixel (.fits)')
@@ -111,7 +115,7 @@ class SkyMapSimulator(object):
 		""" Return a SkyMapGenerator object """
 
 		## Input maps
-		self.mosaic_file= ''
+		self.mosaic_file= mosaic_file
 		self.mosaic_im= None
 		self.mosaic_cs= None
 
@@ -239,22 +243,41 @@ class SkyMapSimulator(object):
 	def init(self):
 		""" Initialize data """
 		
+		## Check if residual map is empty
+		if not self.mosaic_file:
+			raise ValueError('Missing mosaic map filename!')
+
 		## Read residual map from file
-		if self.mosaic_file:
+		file_ext= os.path.splitext(self.mosaic_file)[1]
+		if file_ext=='.fits':
 			print 'INFO: Importing mosaic FITS file %s as CASA image ...' % self.mosaic_file
 			self.mosaic_im= ia.newimagefromfits(infile=self.mosaic_file)
-			self.mosaic_cs= self.mosaic_im.coordsys() 	
-			self.mosaic_data= self.mosaic_im.getregion()
-			self.nx= self.mosaic_data[0]
-			self.ny= self.mosaic_data[1]
-			dx= np.abs(np.rad2deg(self.mosaic_cs.increment(type='direction')['numeric'][0]))*3600 # in arcsec
-			dy= np.abs(np.rad2deg(self.mosaic_cs.increment(type='direction')['numeric'][1]))*3600 # in arcsec
-			self.pixsize= min(dx,dy)
-			print 'INFO: Mosaic image shape=', self.mosaic_im.shape()	
-				
 		else:
-			raise ValueError('Missing mosaic map filename!')
+			print 'INFO: Importing mosaic CASA image %s ' % self.mosaic_file
+			self.mosaic_im= ia.newimagefromfile(infile=self.mosaic_file)
+
+		## Check image read
+		if not self.mosaic_im:
+			errmsg= 'ERROR: Failed to import given mosaic input file!'
+			print(errmsg)
+			raise ValueError(errmsg)
 			
+		## Read and store mosaic image info 
+		self.mosaic_cs= self.mosaic_im.coordsys() 	
+		self.mosaic_data= self.mosaic_im.getregion()
+		data_shape= self.mosaic_im.shape()
+		self.nx= data_shape[0]
+		self.ny= data_shape[1]
+		dx= np.abs(np.rad2deg(self.mosaic_cs.increment(type='direction')['numeric'][0]))*3600 # in arcsec
+		dy= np.abs(np.rad2deg(self.mosaic_cs.increment(type='direction')['numeric'][1]))*3600 # in arcsec
+		self.pixsize= min(dx,dy)
+		beam= self.mosaic_im.restoringbeam()
+		self.beam_bmaj= beam['major']['value'] # in arcsec
+		self.beam_bmin= beam['minor']['value'] # in arcsec
+		self.beam_bpa= beam['positionangle']['value'] # in deg	
+		print 'INFO: Mosaic image shape=', data_shape
+		print ('INFO: Restored image beam= (%s,%s,%s)') % (self.beam_bmaj,self.beam_bmin,self.beam_bpa)
+					
 		## Check margins
 		if (self.marginx<0 or self.marginy<0 or self.marginx>=self.nx/2 or self.marginy>=self.ny/2) :
 			raise ValueError('Invalid margin specified (<0 or larger than image half size!')
@@ -334,7 +357,7 @@ class SkyMapSimulator(object):
 		self.model_im= ia.newimagefromarray(pixels=self.model_data, csys=self.mosaic_cs.torecord())  
 		self.model_im.setbrightnessunit('Jy/pixel')
 		print ('INFO: model units=%s') % self.model_im.brightnessunit()	
-		print 'INFO: model shape=', self.model_im.shape
+		print 'INFO: model shape=', self.model_im.shape()
 
 
 		print ('INFO: End source generation')
@@ -458,7 +481,14 @@ class SkyMapImager(object):
 			x1_wcs= tr_coords[0]
 			y0_wcs= bl_coords[1]
 			y1_wcs= tr_coords[1]
-				
+			cs= self.residual_im.coordsys()
+			xref_wcs= np.rad2deg(cs.referencevalue(type='direction')['numeric'][0]) # in deg
+			yref_wcs= np.rad2deg(cs.referencevalue(type='direction')['numeric'][1]) # in deg
+			nx= self.residual_im.shape()[0]
+			ny= self.residual_im.shape()[1]
+
+			print('INFO: (nx,ny)=(%s,%s), pixref_wcs(%s,%s)') % (nx,ny,xref_wcs,yref_wcs)
+
 		else:
 			raise ValueError('Missing residual map filename!')
 			
@@ -485,11 +515,19 @@ class SkyMapImager(object):
 			ia.open(self.model_file)
 
 			## Create region from bounding box of beam residual map
-			print ('INFO: Creating region from bounding box of beam residual map [(x0,y0),(x1,y1)]=[(%s,%s)(%s,%s)]') % (x0_wcs,y0_wcs,x1_wcs,y1_wcs)
-			x0= ia.topixel([x0_wcs,y0_wcs])['numeric'][0]
-			y0= ia.topixel([x0_wcs,y0_wcs])['numeric'][1]
-			x1= ia.topixel([x1_wcs,y1_wcs])['numeric'][0]
-			y1= ia.topixel([x1_wcs,y1_wcs])['numeric'][1]
+			#print ('INFO: Creating region from bounding box of beam residual map [(x0,y0),(x1,y1)]=[(%s,%s)(%s,%s)]') % (x0_wcs,y0_wcs,x1_wcs,y1_wcs)
+			#x0= ia.topixel([x0_wcs,y0_wcs])['numeric'][0]
+			#y0= ia.topixel([x0_wcs,y0_wcs])['numeric'][1]
+			#x1= ia.topixel([x1_wcs,y1_wcs])['numeric'][0]
+			#y1= ia.topixel([x1_wcs,y1_wcs])['numeric'][1]
+			xref= ia.topixel([str(xref_wcs)+'deg',str(yref_wcs)+'deg'])['numeric'][0]
+			yref= ia.topixel([str(xref_wcs)+'deg',str(yref_wcs)+'deg'])['numeric'][1]
+			x0= xref-nx/2
+			x1= xref+nx/2-1
+			y0= yref-ny/2
+			y1= yref+ny/2-1
+			print ('INFO: Creating region from bounding box of beam residual map pixref_wcs(%s,%s), pixref(%s,%s), [(x0,y0),(x1,y1)]=[(%s,%s)(%s,%s)]') % (xref_wcs,yref_wcs,xref,yref,x0,y0,x1,y1)
+			
 			reg= rg.box(blc=[x0,y0],trc=[x1,y1])
 			
 			## Extract model subimage
@@ -572,6 +610,9 @@ def main():
 	except Exception as ex:
 		print("Failed to get and parse options (err=%s)",str(ex))
 		return 1
+	
+	# - Run options
+	do_convolve= args.do_convolve	
 
 	# - Input maps
 	mosaic_file= args.mosaic
@@ -625,11 +666,12 @@ def main():
 		simulator.run()
 
 	## Generate restored image by convolving model with restored beam
-	print ('INFO: Convolve skymodel with beam ...')
-	imager= SkyMapImager(residual_file,model_file_input,img_file)
-	imager.set_map_outfile(outfile_img)
-	imager.set_modelconv_outfile(outfile_modelconv)
-	imager.run()
+	if do_convolve:
+		print ('INFO: Convolve skymodel with beam ...')
+		imager= SkyMapImager(residual_file,model_file_input,img_file)
+		imager.set_map_outfile(outfile_img)
+		imager.set_modelconv_outfile(outfile_modelconv)
+		imager.run()
 	
 	print 'INFO: End run'
 	
