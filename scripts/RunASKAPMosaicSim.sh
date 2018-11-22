@@ -34,8 +34,8 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--startid=[START_ID] - Run start id (default: 1)"	
 	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"
 	echo "--addrunindex - Append a run index to submission script (in case of list execution) (default=no)"	
-	echo "--containerrun - Run inside Caesar container"
-	echo "--containerimg=[CONTAINER_IMG] - Singularity container image file (.simg) with CAESAR installed software"
+	echo "--containerrun - Run inside ASKAPSoft container"
+	echo "--containerimg=[CONTAINER_IMG] - Singularity container image file (.simg) with ASKAPSoft installed software"
 	echo ""
 	
 	echo "=== SUBMISSION OPTIONS ==="
@@ -309,10 +309,11 @@ do
 		echo ''
 
 		echo '	## Define output file names'
+		echo '	outfile_img_casa="sim-$img_file_base_noext'"-RUN$RUN_ID"'"'
 		echo '	outfile_img="sim-$img_file_base_noext'"-RUN$RUN_ID.fits"'"'
 		echo '	outfile_modelconv="skymodelconv-$img_file_base_noext'"-RUN$RUN_ID.fits"'"'
 		echo '	WEIGHT_LIST+=("$weight_file")'
-		echo '	IMG_LIST+=("$JOBDIR/$outfile_img")'
+		echo '	IMG_LIST+=("$JOBDIR/$outfile_img_casa")'
 		
 		echo '	echo "INFO: Set outfile to: $outfile_img ..."'
 		
@@ -350,19 +351,25 @@ do
 		echo 'echo "linmos.weighttype = FromWeightImages"'" > $JOB_DIR/$mosaic_parset_file"
 		echo 'echo "linmos.names = [$IMG_CONCAT_LIST]"'" >> $JOB_DIR/$mosaic_parset_file"
 		echo 'echo "linmos.weights = [$WEIGHT_CONCAT_LIST]"'">> $JOB_DIR/$mosaic_parset_file"
-		echo 'echo "linmos.outname = $JOB_DIR/'"$mosaic_outfile"'"'" >> $JOB_DIR/$mosaic_parset_file"
-		echo 'echo "linmos.outweight = $JOB_DIR/'"$mosaic_weight_outfile"'"'" >> $JOB_DIR/$mosaic_parset_file"
+		echo 'echo "linmos.outname = '"$JOB_DIR/$mosaic_outfile"'"'" >> $JOB_DIR/$mosaic_parset_file"
+		echo 'echo "linmos.outweight = '"$JOB_DIR/$mosaic_weight_outfile"'"'" >> $JOB_DIR/$mosaic_parset_file"
 
 		echo " "
 
 		echo 'echo "INFO: Generate linmos runscript ..."'
 		echo 'echo "#!/bin/sh"'" > $JOB_DIR/$mosaic_run_script"
 		echo 'echo "linmos -c "'"$JOB_DIR/$mosaic_parset_file >> $JOB_DIR/$mosaic_run_script"
-		
+		echo "chmod +x $JOB_DIR/$mosaic_run_script"
 		echo " "
 
 		echo 'echo "INFO: Running linmos with all beams ..."'
-		
+		if [ "$RUN_IN_CONTAINER" = true ] ; then
+			echo 'EXE="singularity exec '"$CONTAINER_IMG $JOB_DIR/$mosaic_run_script"'"'
+		else
+			echo 'EXE="'"$JOB_DIR/$mosaic_run_script"'"'
+		fi
+		echo '$EXE'
+
 		echo " "
 
     echo 'echo "*** END RUN ***"'
