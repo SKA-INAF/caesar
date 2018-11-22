@@ -36,6 +36,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--addrunindex - Append a run index to submission script (in case of list execution) (default=no)"	
 	echo "--containerrun - Run inside ASKAPSoft container"
 	echo "--containerimg=[CONTAINER_IMG] - Singularity container image file (.simg) with ASKAPSoft installed software"
+	echo "--containeroptions=[CONTAINER_OPTIONS] - Options to be passed to container run (e.g. -B /home/user:/home/user) (default=none)"	
 	echo ""
 	
 	echo "=== SUBMISSION OPTIONS ==="
@@ -71,7 +72,7 @@ NRUNS_GIVEN=false
 START_ID=1
 CONTAINER_IMG=""
 RUN_IN_CONTAINER=false
-
+CONTAINER_OPTIONS=""
 
 ## SUBMIT DEFAULT OPTIONS
 SUBMIT=false
@@ -134,6 +135,9 @@ do
     ;;
 		--containerrun*)
     	RUN_IN_CONTAINER=true
+    ;;
+		--containeroptions=*)
+    	CONTAINER_OPTIONS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		
 		
@@ -368,7 +372,7 @@ do
 
 		echo 'echo "INFO: Running linmos with all beams ..."'
 		if [ "$RUN_IN_CONTAINER" = true ] ; then
-			echo 'EXE="singularity exec '"$CONTAINER_IMG $JOB_DIR/$mosaic_run_script"'"'
+			echo 'EXE="singularity exec '"$CONTAINER_OPTIONS $CONTAINER_IMG $JOB_DIR/$mosaic_run_script"'"'
 		else
 			echo 'EXE="'"$JOB_DIR/$mosaic_run_script"'"'
 		fi
