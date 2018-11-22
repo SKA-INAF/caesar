@@ -69,10 +69,10 @@ def get_args():
 	parser.set_defaults(do_convolve=True)
 
 	# - INPUTS
-	parser.add_argument('-mosaic', '--mosaic', dest='mosaic', required=True, type=str, default='', action='store',help='Mosaic Image in units Jy/beam (.fits)')
-	parser.add_argument('-residual', '--residual', dest='residual', required=True, type=str, default='', action='store',help='Residual Image in units Jy/pixel (.fits)')
+	parser.add_argument('-mosaic', '--mosaic', dest='mosaic', required=False, type=str, default='', action='store',help='Mosaic Image in units Jy/beam (.fits)')
+	parser.add_argument('-residual', '--residual', dest='residual', required=False, type=str, default='', action='store',help='Residual Image in units Jy/pixel (.fits)')
 	parser.add_argument('-model', '--model', dest='model', required=False, type=str, default='', action='store',help='Sky Model Image (if given override model generation) in units Jy/pixel (.fits)')
-	parser.add_argument('-img', '--img', dest='img', required=True, type=str, default='', action='store',help='Restored Image (.fits)')
+	parser.add_argument('-img', '--img', dest='img', required=False, type=str, default='', action='store',help='Restored Image (.fits)')
 		
 
 	# - POINT SOURCE GENERATION OPTIONS
@@ -212,27 +212,54 @@ class SkyMapSimulator(object):
 	
 		## Open file	
 		fout = open(self.ds9_outfile, 'wb')
-	
+
+		ds9_outfile_dir= os.path.dirname(self.ds9_outfile)
+		ds9_outfile_base= os.path.basename(self.ds9_outfile)
+		wcs_ds9_outfile= ds9_outfile_dir + '/wcs_' + ds9_outfile_base
+
+		fout_wcs= open(wcs_ds9_outfile, 'wb')
+		
 		## Write file header
 		fout.write('global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n')
 		fout.write('image\n')
 
+		cs= self.model_im.coordsys() 
+		wcs_type= cs.referencecode()[0]
+		wcs_type= wcs_type.lower()
+		wcs_type_str= (("%s\n") % wcs_type)
+
+		fout_wcs.write('global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n')		
+		fout_wcs.write(wcs_type_str)
+
 		for i in range(len(self.ps_list)):
 			name= self.ps_list[i][0]
-			x= self.ps_list[i][1]+1 # NB: DS9 starts index from 1
-			y= self.ps_list[i][2]+1
+			x= self.ps_list[i][1]
+			y= self.ps_list[i][2]
+			x_wcs= self.model_im.toworld([x,y])['numeric'][0]
+			y_wcs= self.model_im.toworld([x,y])['numeric'][1]
+			
+			x_ds9= x+1 # NB: DS9 starts index from 1
+			y_ds9= y+1
 			S= self.ps_list[i][3]
+			
 			# point=[circle|box|diamond|cross|x|arrow|boxcircle] [size]
 			#region= (("circle point %s %s # %s") % (x,y,name) )
 			bmaj_pix= self.beam_bmaj/self.pixsize # in pixels
 			bmin_pix= self.beam_bmin/self.pixsize # in pixels
 			bpa= self.beam_bpa
-			region= (("ellipse %s %s %s %s %s # %s") % (x,y,bmaj_pix,bmin_pix,bpa,name) )
-
+			region= (("ellipse %s %s %s %s %s # text=%s") % (x_wcs,y_wcs,bmaj_pix,bmin_pix,bpa,name) )
+			
 			fout.write(region)
-			fout.write('\n')			
+			fout.write('\n')	
+
+			## Write WCS DS9
+			region_wcs= (("ellipse %s %s %s %s %s # text=%s") % (x_wcs,y_wcs,self.beam_bmaj,self.beam_bmin,self.beam_bpa,name) )
+			fout_wcs.write(region_wcs)
+			fout_wcs.write('\n')	
+					
 
 		fout.close();
+		fout_wcs.close();
 
 	
 	def write_data_to_fits(self,im,outputfile):
@@ -397,12 +424,6 @@ class SkyMapSimulator(object):
 
 
 
-
-
-
-
-
-
 ###########################
 ##     IMAGER CLASS
 ###########################
@@ -445,12 +466,18 @@ class SkyMapImager(object):
 		
 		## Map output file
 		self.img_outfile= 'simmap.fits'
+		self.img_outfile_casa= 'simmap'
 		self.model_conv_outfile= 'skymodel_conv.fits'
 		
 		
 	def set_map_outfile(self,filename):
 		""" Set the output map filename """
+		filename_base= os.path.splitext(filename)[0]
+		filename_ext= os.path.splitext(filename)[1]
+		if filename_ext!='.fits':
+			raise ValueError('Invalid outfile specified (missing .fits extension)!')
 		self.img_outfile= filename
+		self.img_outfile_casa= str(filename_base)
 
 	
 	def set_modelconv_outfile(self,filename):
@@ -465,86 +492,116 @@ class SkyMapImager(object):
 
 	def init(self):
 		""" Initialize imager """
-		
-		## Read residual map from file
-		if self.residual_file:
-			print 'INFO: Importing residual FITS file %s as CASA image ...' % self.residual_file
-			self.residual_im= ia.newimagefromfits(infile=self.residual_file)
-			self.residual_data= self.residual_im.getregion()
-			print 'INFO: Residual image shape=', self.residual_im.shape()	
 
-			## Get bounding box (used to extract submap from model)
-			bb= self.residual_im.boundingbox()
-			bl_coords= bb['blcf'].split(',')
-			tr_coords= bb['trcf'].split(',')
-			x0_wcs= bl_coords[0]
-			x1_wcs= tr_coords[0]
-			y0_wcs= bl_coords[1]
-			y1_wcs= tr_coords[1]
-			cs= self.residual_im.coordsys()
-			xref_wcs= np.rad2deg(cs.referencevalue(type='direction')['numeric'][0]) # in deg
-			yref_wcs= np.rad2deg(cs.referencevalue(type='direction')['numeric'][1]) # in deg
-			nx= self.residual_im.shape()[0]
-			ny= self.residual_im.shape()[1]
-
-			print('INFO: (nx,ny)=(%s,%s), pixref_wcs(%s,%s)') % (nx,ny,xref_wcs,yref_wcs)
-
-		else:
+		## Check mandatory filename inputs		
+		if not self.residual_file:
 			raise ValueError('Missing residual map filename!')
-			
-
-		## Read restored image from file
-		if self.img_file:
-			print 'INFO: Importing restored image FITS file %s as CASA image ...' % self.img_file
-			self.img_im= ia.newimagefromfits(infile=self.img_file)
-
-			beam= self.img_im.restoringbeam()
-			self.beam_bmaj= beam['major']['value'] # in arcsec
-			self.beam_bmin= beam['minor']['value'] # in arcsec
-			self.beam_bpa= beam['positionangle']['value'] # in deg	
-			print ('INFO: Restored image beam= (%s,%s,%s)') % (self.beam_bmaj,self.beam_bmin,self.beam_bpa)
-			print 'INFO: Restored image shape=', self.img_im.shape()	
-		else:
+		
+		if not self.img_file:			
 			raise ValueError('Missing restored image input filename!')
 			
-			
-		## Import model map from file
-		if self.model_file:
-			## Read model image
-			print 'INFO: Importing model FITS map from file %s as CASA image ' % self.model_file
-			ia.open(self.model_file)
-
-			## Create region from bounding box of beam residual map
-			#print ('INFO: Creating region from bounding box of beam residual map [(x0,y0),(x1,y1)]=[(%s,%s)(%s,%s)]') % (x0_wcs,y0_wcs,x1_wcs,y1_wcs)
-			#x0= ia.topixel([x0_wcs,y0_wcs])['numeric'][0]
-			#y0= ia.topixel([x0_wcs,y0_wcs])['numeric'][1]
-			#x1= ia.topixel([x1_wcs,y1_wcs])['numeric'][0]
-			#y1= ia.topixel([x1_wcs,y1_wcs])['numeric'][1]
-			xref= ia.topixel([str(xref_wcs)+'deg',str(yref_wcs)+'deg'])['numeric'][0]
-			yref= ia.topixel([str(xref_wcs)+'deg',str(yref_wcs)+'deg'])['numeric'][1]
-			x0= xref-nx/2
-			x1= xref+nx/2-1
-			y0= yref-ny/2
-			y1= yref+ny/2-1
-			print ('INFO: Creating region from bounding box of beam residual map pixref_wcs(%s,%s), pixref(%s,%s), [(x0,y0),(x1,y1)]=[(%s,%s)(%s,%s)]') % (xref_wcs,yref_wcs,xref,yref,x0,y0,x1,y1)
-			
-			reg= rg.box(blc=[x0,y0],trc=[x1,y1])
-			
-			## Extract model subimage
-			print ('INFO: Extracting model subimage using region [(x0,y0),(x1,y1)]=[(%s,%s)(%s,%s)]') % (x0,y0,x1,y1)
-			self.model_im= ia.subimage(region=reg)
-			self.model_data= self.model_im.getregion()
-			print ('INFO: model units=%s') % self.model_im.brightnessunit()	
-			print 'INFO: model shape=', self.model_im.shape()	
-
-			## Close model image
-			ia.done
-
-		else:
+		if not self.model_file:
 			raise ValueError('Missing skymodel image input filename!')
 
+
+
+		
+		#####################################
+		## Read residual map from file
+		#####################################
+		file_ext= os.path.splitext(self.residual_file)[1]
+		if file_ext=='.fits':
+			print 'INFO: Importing residual FITS file %s as CASA image ...' % self.residual_file
+			self.residual_im= ia.newimagefromfits(infile=self.residual_file)
+		else:
+			print 'INFO: Importing residual CASA image %s ' % self.residual_file
+			self.residual_im= ia.newimagefromfile(infile=self.residual_file)
+
+		self.residual_data= self.residual_im.getregion()
+		print 'INFO: Residual image shape=', self.residual_im.shape()	
+
+		## Get bounding box (used to extract submap from model)
+		bb= self.residual_im.boundingbox()
+		bl_coords= bb['blcf'].split(',')
+		tr_coords= bb['trcf'].split(',')
+		x0_wcs= bl_coords[0]
+		x1_wcs= tr_coords[0]
+		y0_wcs= bl_coords[1]
+		y1_wcs= tr_coords[1]
+		cs= self.residual_im.coordsys()
+		xref_wcs= np.rad2deg(cs.referencevalue(type='direction')['numeric'][0]) # in deg
+		yref_wcs= np.rad2deg(cs.referencevalue(type='direction')['numeric'][1]) # in deg
+		nx= self.residual_im.shape()[0]
+		ny= self.residual_im.shape()[1]
+		print('INFO: (nx,ny)=(%s,%s), pixref_wcs(%s,%s)') % (nx,ny,xref_wcs,yref_wcs)
+
+			
+		#####################################
+		## Read restored image from file
+		#####################################
+		file_ext= os.path.splitext(self.img_file)[1]
+		if file_ext=='.fits':
+			print 'INFO: Importing restored image FITS file %s as CASA image ...' % self.img_file
+			self.img_im= ia.newimagefromfits(infile=self.img_file)
+		else:
+			print 'INFO: Importing restored CASA image %s ' % self.img_file
+			self.img_im= ia.newimagefromfile(infile=self.img_file)
+
+		## Get beam info from restored image
+		beam= self.img_im.restoringbeam()
+		units= beam['major']['unit']
+		bmaj= beam['major']['value'] # expected in rad in CASA
+		bmin= beam['minor']['value'] # expected in rad in CASA
+		bpa= beam['positionangle']['value'] # expected in deg in CASA
+		if units=='rad':
+			bmaj= np.rad2deg(bmaj)	
+			bmin= np.rad2deg(bmin)
+
+		self.beam_bmaj= bmaj*3600 # in arcsec
+		self.beam_bmin= bmin*3600 # in arcsec
+		self.beam_bpa= bpa # in deg	
+		print ('INFO: Restored image beam= (%s,%s,%s)') % (self.beam_bmaj,self.beam_bmin,self.beam_bpa)
+		print 'INFO: Restored image shape=', self.img_im.shape()	
+			
+		#####################################
+		## Read skymodel map from file
+		#####################################
+		print 'INFO: Importing model map from file %s as CASA image ' % self.model_file
+		ia.open(self.model_file)
+
+		## Create region from bounding box of beam residual map
+		#print ('INFO: Creating region from bounding box of beam residual map [(x0,y0),(x1,y1)]=[(%s,%s)(%s,%s)]') % (x0_wcs,y0_wcs,x1_wcs,y1_wcs)
+		#x0= ia.topixel([x0_wcs,y0_wcs])['numeric'][0]
+		#y0= ia.topixel([x0_wcs,y0_wcs])['numeric'][1]
+		#x1= ia.topixel([x1_wcs,y1_wcs])['numeric'][0]
+		#y1= ia.topixel([x1_wcs,y1_wcs])['numeric'][1]
+		xref= ia.topixel([str(xref_wcs)+'deg',str(yref_wcs)+'deg'])['numeric'][0]
+		yref= ia.topixel([str(xref_wcs)+'deg',str(yref_wcs)+'deg'])['numeric'][1]
+		x0= xref-nx/2
+		x1= xref+nx/2-1
+		y0= yref-ny/2
+		y1= yref+ny/2-1
+		print ('INFO: Creating region from bounding box of beam residual map pixref_wcs(%s,%s), pixref(%s,%s), [(x0,y0),(x1,y1)]=[(%s,%s)(%s,%s)]') % (xref_wcs,yref_wcs,xref,yref,x0,y0,x1,y1)
+	
+		reg= rg.box(blc=[x0,y0],trc=[x1,y1])
+		
+		#################################	
+		## Extract model subimage
+		#################################
+		print ('INFO: Extracting model subimage using region [(x0,y0),(x1,y1)]=[(%s,%s)(%s,%s)]') % (x0,y0,x1,y1)
+		self.model_im= ia.subimage(region=reg)
+		self.model_data= self.model_im.getregion()
+		print ('INFO: model units=%s') % self.model_im.brightnessunit()	
+		print 'INFO: model shape=', self.model_im.shape()	
+
+		## Close model image
+		ia.done
+
 		
 		
+	#####################################
+	###         CONVOLVE SKYMODEL     ##
+	#####################################	
 	def convolve_skymodel(self):
 		""" Convolve sky model with restored beam """
 				
@@ -561,7 +618,7 @@ class SkyMapImager(object):
 
 
 	#####################################
-	###         RUN           ##
+	###         RUN                    ##
 	#####################################
 	def run(self):
 		""" Convolve skymodel with beam """
@@ -581,7 +638,14 @@ class SkyMapImager(object):
 		print 'INFO: model conv data size=',self.model_conv_data.shape	
 		data= self.residual_data + self.model_conv_data
 		cs = self.img_im.coordsys()
-		self.img_conv_im= ia.newimagefromarray(pixels=data, csys=cs.torecord())  		
+		bmaj= str(self.beam_bmaj) + 'arcsec'
+		bmin= str(self.beam_bmin) + 'arcsec'
+		bpa= str(self.beam_bpa) + 'deg'
+		self.img_conv_im= ia.newimagefromarray(pixels=data, csys=cs.torecord(), outfile=self.img_outfile_casa, overwrite=True)
+		self.img_conv_im.setbrightnessunit('Jy/pixel')		
+		self.img_conv_im.setrestoringbeam(major=bmaj,minor=bmin,pa=bpa)  
+		self.img_conv_im.calcmask('T', name='mask1')
+		self.img_conv_im.maskhandler('set', ['mask1'])
 
 		## == WRITE MAPS TO FITS FILES ==
 		print ('INFO: Writing images to FITS...')
@@ -592,6 +656,7 @@ class SkyMapImager(object):
 		self.model_im.done()
 		self.img_im.done()
 		self.residual_im.done()
+		self.img_conv_im.done()
 
 
 
