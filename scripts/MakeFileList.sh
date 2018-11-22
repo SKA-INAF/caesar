@@ -118,7 +118,13 @@ process_filename(){
 
 
 ## Process file/directory found by find command
-FIND_CMD="find $ROOT_DIR $RECURSIVE_FLAG $SEARCH_TYPE_FLAG -name "'"'"$FILE_PREFIX*.$FILE_EXT"'"'" | sort --version-sort"
+if [ "$FILE_EXT" = "" ]; then
+	FIND_CMD="find $ROOT_DIR $RECURSIVE_FLAG $SEARCH_TYPE_FLAG -name "'"'"$FILE_PREFIX*"'"'" | sort --version-sort"
+else
+	FIND_CMD="find $ROOT_DIR $RECURSIVE_FLAG $SEARCH_TYPE_FLAG -name "'"'"$FILE_PREFIX*.$FILE_EXT"'"'" | sort --version-sort"
+fi
+
+
 echo "Executing find command: $FIND_CMD"
 
 #find $ROOT_DIR "$RECURSIVE_FLAG" "$SEARCH_TYPE_FLAG" -name "$FILE_PREFIX*.$FILE_EXT"  | while read item; do
