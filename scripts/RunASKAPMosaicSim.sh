@@ -221,6 +221,11 @@ do
 	skymodel_file="skymodel-RUN$RUN_ID.fits"
 	ds9_file="ds9-RUN$RUN_ID.reg"
 	source_file="sources-RUN$RUN_ID.dat"
+	mosaic_parset_file="mosaic-RUN$RUN_ID.parset"
+	mosaic_outfile="mosaic-RUN$RUN_ID"
+	mosaic_outfile_fits="$mosaic_outfile.fits"
+	mosaic_weight_outfile="weight_mosaic-RUN$RUN_ID"
+	mosaic_run_script="linmos-RUN$RUN_ID.sh"
 
 	## Define run script
 	shfile="Sim-RUN$RUN_ID.sh"
@@ -285,15 +290,20 @@ do
 		echo " "
 
 
-		## Iterate over filelists provided    
-		echo 'while IFS=$'"'\t'"' read -r residual_file img_file '
+		## Iterate over filelists provided 
+		echo 'WEIGHT_LIST=()'
+		echo 'IMG_LIST=()'
+   
+		echo 'while IFS=$'"'\t'"' read -r residual_file img_file weight_file'
 		echo 'do' 
 
-		echo " "
+		echo ""
 
 		echo '	## Extract base filename from file given in list'
 		echo '	img_file_base=$(basename "$img_file")'
 		echo '	img_file_base_noext="${img_file_base%.*}"'
+		
+
 		echo '	echo "INFO: Processing restored image $img_file_base_noext in list ..."'
 		
 		echo ''
@@ -301,6 +311,9 @@ do
 		echo '	## Define output file names'
 		echo '	outfile_img="sim-$img_file_base_noext'"-RUN$RUN_ID.fits"'"'
 		echo '	outfile_modelconv="skymodelconv-$img_file_base_noext'"-RUN$RUN_ID.fits"'"'
+		echo '	WEIGHT_LIST+=("$weight_file")'
+		echo '	IMG_LIST+=("$JOBDIR/$outfile_img")'
+		
 		echo '	echo "INFO: Set outfile to: $outfile_img ..."'
 		
 		echo ''
@@ -316,7 +329,39 @@ do
 
 		echo " "
 		
-		echo "done < <(paste $FILELIST_RESIDUALS_FULLPATH $FILELIST_IMGS_FULLPATH)"
+		echo "done < <(paste $FILELIST_RESIDUALS_FULLPATH $FILELIST_IMGS_FULLPATH $FILELIST_WEIGHTS_FULLPATH)"
+		
+		echo " "
+
+		echo " "
+		
+		echo 'echo "*************************************************"'
+    echo 'echo "****        MOSAIC COMPUTING                 ****"'
+    echo 'echo "*************************************************"'
+
+		echo 'echo "INFO: Generate linmos parset ..."'
+		echo 'WEIGHT_CONCAT_LIST=$(printf ",%s" "${WEIGHT_LIST[@]}") && WEIGHT_CONCAT_LIST=${WEIGHT_CONCAT_LIST:1}'
+		echo 'IMG_CONCAT_LIST=$(printf ",%s" "${IMG_LIST[@]}") && IMG_CONCAT_LIST=${IMG_CONCAT_LIST:1}'
+		echo 'echo "INFO: weight list: $WEIGHT_CONCAT_LIST"'
+		echo 'echo "INFO: image list: $IMG_CONCAT_LIST"'
+
+		echo " "
+
+		echo 'echo "linmos.weighttype = FromWeightImages"'" > $JOB_DIR/$mosaic_parset_file"
+		echo 'echo "linmos.names = [$IMG_CONCAT_LIST]"'" >> $JOB_DIR/$mosaic_parset_file"
+		echo 'echo "linmos.weights = [$WEIGHT_CONCAT_LIST]"'">> $JOB_DIR/$mosaic_parset_file"
+		echo 'echo "linmos.outname = $JOB_DIR/'"$mosaic_outfile"'"'" >> $JOB_DIR/$mosaic_parset_file"
+		echo 'echo "linmos.outweight = $JOB_DIR/'"$mosaic_weight_outfile"'"'" >> $JOB_DIR/$mosaic_parset_file"
+
+		echo " "
+
+		echo 'echo "INFO: Generate linmos runscript ..."'
+		echo 'echo "#!/bin/sh"'" > $JOB_DIR/$mosaic_run_script"
+		echo 'echo "linmos -c "'"$JOB_DIR/$mosaic_parset_file >> $JOB_DIR/$mosaic_run_script"
+		
+		echo " "
+
+		echo 'echo "INFO: Running linmos with all beams ..."'
 		
 		echo " "
 
