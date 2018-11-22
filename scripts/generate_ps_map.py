@@ -18,22 +18,21 @@ import math
 ##from ctypes import *
 
 ## ASTRO
-from scipy import ndimage
-##import pyfits
-from astropy.io import fits
-from astropy.units import Quantity
-from astropy.modeling.parameters import Parameter
-from astropy.modeling.core import Fittable2DModel
-from astropy.modeling.models import Box2D, Gaussian2D, Ring2D, Ellipse2D, TrapezoidDisk2D, Disk2D, AiryDisk2D, Sersic2D
-from astropy import wcs
+#from scipy import ndimage
+#from astropy.io import fits
+#from astropy.units import Quantity
+#from astropy.modeling.parameters import Parameter
+#from astropy.modeling.core import Fittable2DModel
+#from astropy.modeling.models import Box2D, Gaussian2D, Ring2D, Ellipse2D, TrapezoidDisk2D, Disk2D, AiryDisk2D, Sersic2D
+#from astropy import wcs
 
 ## ROOT
-import ROOT
-from ROOT import gSystem, TFile, TTree, gROOT, AddressOf
+#import ROOT
+#from ROOT import gSystem, TFile, TTree, gROOT, AddressOf
 
 ## CAESAR
-gSystem.Load('libCaesar')
-from ROOT import Caesar
+#gSystem.Load('libCaesar')
+#from ROOT import Caesar
 
 ## COMMAND-LINE ARG MODULES
 import getopt
@@ -41,8 +40,8 @@ import argparse
 import collections
 
 ## Graphics modules
-import matplotlib.pyplot as plt
-import pylab
+#import matplotlib.pyplot as plt
+#import pylab
 ##################################################
 
 #### GET SCRIPT ARGS ####
@@ -237,6 +236,8 @@ class SkyMapSimulator(object):
 			y= self.ps_list[i][2]
 			x_wcs= self.model_im.toworld([x,y])['numeric'][0]
 			y_wcs= self.model_im.toworld([x,y])['numeric'][1]
+			x_wcs= np.rad2deg(x_wcs)
+			y_wcs= np.rad2deg(y_wcs)
 			
 			x_ds9= x+1 # NB: DS9 starts index from 1
 			y_ds9= y+1
@@ -247,13 +248,13 @@ class SkyMapSimulator(object):
 			bmaj_pix= self.beam_bmaj/self.pixsize # in pixels
 			bmin_pix= self.beam_bmin/self.pixsize # in pixels
 			bpa= self.beam_bpa
-			region= (("ellipse %s %s %s %s %s # text=%s") % (x_wcs,y_wcs,bmaj_pix,bmin_pix,bpa,name) )
+			region= (("ellipse %s %s %s %s %s # text={%s}") % (x_ds9,y_ds9,bmaj_pix,bmin_pix,bpa,name) )
 			
 			fout.write(region)
 			fout.write('\n')	
 
 			## Write WCS DS9
-			region_wcs= (("ellipse %s %s %s %s %s # text=%s") % (x_wcs,y_wcs,self.beam_bmaj,self.beam_bmin,self.beam_bpa,name) )
+			region_wcs= (("ellipse(%s %s %s\" %s\" %s) # text={%s}") % (x_wcs,y_wcs,self.beam_bmaj,self.beam_bmin,self.beam_bpa,name) )
 			fout_wcs.write(region_wcs)
 			fout_wcs.write('\n')	
 					
