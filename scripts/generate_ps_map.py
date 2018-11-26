@@ -121,6 +121,9 @@ class SkyMapSimulator(object):
 		self.model_data= None
 		self.model_im= None
 
+		## Convolved map
+		self.model_conv_data= None
+
 		## Image parameters
 		self.nx= 0
 		self.ny= 0
@@ -144,6 +147,9 @@ class SkyMapSimulator(object):
 		## Map output file
 		self.model_outfile= 'skymodel.fits'
 		
+		self.img_outfile= 'simmap.fits'
+		self.img_im= None	
+
 		## DS9 & ascii output file
 		self.ps_outfile= 'sources.dat'
 		self.ds9_outfile= 'ds9region.reg'
@@ -168,6 +174,10 @@ class SkyMapSimulator(object):
 	def set_model_outfile(self,filename):
 		""" Set the output model filename """
 		self.model_outfile= filename
+
+	def set_img_outfile(self,filename):
+		""" Set the output image filename """
+		self.img_outfile= filename
 
 	
 	def set_source_flux_range(self,Smin,Smax):
@@ -198,7 +208,7 @@ class SkyMapSimulator(object):
 			x= self.ps_list[i][1]
 			y= self.ps_list[i][2]
 			S= self.ps_list[i][3]
-			data= (("%s %s %s %s") % (x,y,S,name) )
+			data= (("%s %s %s %s") % (name,x,y,S) )
 
 			fout.write(data)
 			fout.write('\n')			
@@ -247,14 +257,17 @@ class SkyMapSimulator(object):
 			#region= (("circle point %s %s # %s") % (x,y,name) )
 			bmaj_pix= self.beam_bmaj/self.pixsize # in pixels
 			bmin_pix= self.beam_bmin/self.pixsize # in pixels
-			bpa= self.beam_bpa
+			bpa= self.beam_bpa - 90 ## to convert to DS9 format 
 			region= (("ellipse %s %s %s %s %s # text={%s}") % (x_ds9,y_ds9,bmaj_pix,bmin_pix,bpa,name) )
 			
 			fout.write(region)
 			fout.write('\n')	
 
 			## Write WCS DS9
-			region_wcs= (("ellipse(%s %s %s\" %s\" %s) # text={%s}") % (x_wcs,y_wcs,self.beam_bmaj,self.beam_bmin,self.beam_bpa,name) )
+			bmaj_wcs= self.beam_bmaj
+			bmin_wcs= self.beam_bmin
+			bpa_wcs= self.beam_bpa - 90 ## to convert to DS9 format 
+			region_wcs= (("ellipse(%s %s %s\" %s\" %s) # text={%s}") % (x_wcs,y_wcs,bmaj_wcs,bmin_wcs,bpa_wcs,name) )
 			fout_wcs.write(region_wcs)
 			fout_wcs.write('\n')	
 					
@@ -271,11 +284,11 @@ class SkyMapSimulator(object):
 	def init(self):
 		""" Initialize data """
 		
-		## Check if residual map is empty
+		## Check if mosaic map is empty
 		if not self.mosaic_file:
 			raise ValueError('Missing mosaic map filename!')
 
-		## Read residual map from file
+		## Read mosaic map from file
 		file_ext= os.path.splitext(self.mosaic_file)[1]
 		if file_ext=='.fits':
 			print 'INFO: Importing mosaic FITS file %s as CASA image ...' % self.mosaic_file
@@ -391,6 +404,22 @@ class SkyMapSimulator(object):
 		print ('INFO: End source generation')
 
 		
+	#####################################
+	###         CONVOLVE SKYMODEL     ##
+	#####################################	
+	def convolve_skymodel(self):
+		""" Convolve sky model with restored beam """
+				
+		## Convolving skymodel with restoring beam
+		## NB: If input map is in Jy/pixel units, the convolve task automatically scale results to Jy/beam (no further scaling needed)
+		bmaj= str(self.beam_bmaj) + 'arcsec'
+		bmin= str(self.beam_bmin) + 'arcsec'
+		bpa= str(self.beam_bpa) + 'deg'
+		print ('INFO: Convolving skymodel with restored beam (%s,%s,%s)') % (bmaj,bmin,bpa)
+		self.model_im_conv= self.model_im.convolve2d(type='gauss',major=bmaj,minor=bmin,pa=bpa)
+
+		## Get pixel data from convolved image
+		self.model_conv_data= self.model_im_conv.getregion()
 
 	#####################################
 	###         RUN           ##
@@ -405,11 +434,29 @@ class SkyMapSimulator(object):
 		## == GENERATE SKYMODEL WITH POINT SOURCES ==
 		print ('INFO: Generating compact sources...')
 		self.generate_compact_sources()
+
+		## == CONVOLVE SKY MODEL WITH BEAM ==
+		print ('INFO: Convolving skymodel with beam ...')
+		self.convolve_skymodel()		
+
+		## == CREATE FINAL MAP = MOSAIC + CONVOLVED SKY MODEL ===
+		data= self.mosaic_data + self.model_conv_data
+		cs = self.mosaic_im.coordsys()
+		bmaj= str(self.beam_bmaj) + 'arcsec'
+		bmin= str(self.beam_bmin) + 'arcsec'
+		bpa= str(self.beam_bpa) + 'deg'
+		self.img_im= ia.newimagefromarray(pixels=data, csys=cs.torecord())
+		self.img_im.setbrightnessunit('Jy/beam')		
+		self.img_im.setrestoringbeam(major=bmaj,minor=bmin,pa=bpa) 
 			
 		## == WRITE MAPS TO FITS FILES ==
 		print ('INFO: Writing model to FITS...')
 		self.write_data_to_fits(self.model_im,self.model_outfile)
 		
+		print ('INFO: Writing image to FITS...')
+		self.write_data_to_fits(self.img_im,self.img_outfile)
+		
+
 		## == WRITE DS9 REGION FILE ==
 		print ('INFO: Writing DS9 regions ...')
 		self.write_ds9_regions()
@@ -420,7 +467,7 @@ class SkyMapSimulator(object):
 		## Close open CASA images
 		self.mosaic_im.done()
 		self.model_im.done()
-
+		self.img_im.done()
 
 
 
@@ -643,7 +690,7 @@ class SkyMapImager(object):
 		bmin= str(self.beam_bmin) + 'arcsec'
 		bpa= str(self.beam_bpa) + 'deg'
 		self.img_conv_im= ia.newimagefromarray(pixels=data, csys=cs.torecord(), outfile=self.img_outfile_casa, overwrite=True)
-		self.img_conv_im.setbrightnessunit('Jy/pixel')		
+		self.img_conv_im.setbrightnessunit('Jy/beam')		
 		self.img_conv_im.setrestoringbeam(major=bmaj,minor=bmin,pa=bpa)  
 		self.img_conv_im.calcmask('T', name='mask1')
 		self.img_conv_im.maskhandler('set', ['mask1'])
@@ -724,6 +771,7 @@ def main():
 		simulator= SkyMapSimulator(mosaic_file)
 		simulator.set_margins(marginX,marginY)
 		simulator.set_model_outfile(outfile_model)
+		simulator.set_img_outfile(outfile_img)
 		simulator.set_ds9region_outfile(outfile_ds9region)
 		simulator.set_source_outfile(outfile_sources)
 		simulator.set_nsources(nsources)
