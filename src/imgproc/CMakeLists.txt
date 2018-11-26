@@ -24,6 +24,7 @@ set(
 	SLICSegmenter.h
 	LRACSegmenter.h
 	SourceFitter.h
+	SourceExporter.h
 )
 set(
 	THIS_DICT_SRCS 
@@ -44,6 +45,7 @@ set(
 	${SRC_DIR}/SLICSegmenter.cc
 	${SRC_DIR}/LRACSegmenter.cc
 	${SRC_DIR}/SourceFitter.cc
+	${SRC_DIR}/SourceExporter.cc
 )
 
 set(THIS_HEADERS_WPATH "")

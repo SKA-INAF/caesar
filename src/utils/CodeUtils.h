@@ -467,6 +467,33 @@ class CodeUtils : public TObject {
 		}
 
 		/**
+		* \brief Split string on whitespaces
+		*/
+		static std::vector<std::string> SplitStringOnWhitespaces(const std::string& s)
+		{
+			std::vector<std::string> result;
+			std::istringstream iss(s);
+			for(std::string s; iss >> s;) result.push_back(s);
+			return result;
+		}
+
+		/**
+		* \brief Split string on pattern
+		*/
+		static std::vector<std::string> SplitStringOnPattern(const std::string& s,char delim)
+		{			
+			std::vector<std::string> result;
+			std::stringstream ss(s);
+    	std::string item;
+    	while (std::getline(ss, item, delim)) {
+      	if (item.length() > 0) {
+        	result.push_back(item);  
+        }
+    	}
+    	return result;		
+		}
+
+		/**
 		* \brief Extract filename from path
 		*/
 		static std::string ExtractFileNameFromPath(const std::string& s,bool strip_extension=false){

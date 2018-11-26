@@ -77,19 +77,41 @@ class AstroUtils : public TObject {
 	public:
 
 		/**
+		* \brief Get IAU naming from WCS string coordinates
+		*/
+		static int GetIAUCoords(std::string& iau,const std::string& s);
+		
+
+		/**
 		* \brief Get WCS coordinates corresponding to image coordinates
 		*/
 		static int PixelToWCSCoords(double& xpos, double& ypos,WorldCoor* wcs,double ix,double iy);
+		/**
+		* \brief Get WCS coordinates in string format corresponding to image coordinates
+		*/
+		static int PixelToWCSStrCoords(std::string& wcs_str,WorldCoor* wcs,double ix,double iy,int max_str_length=4096);
+
 
 		/**
 		* \brief Get WCS coordinates corresponding to image coordinates
 		*/
 		static int PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,double& xpos, double& ypos,bool useImageCoords=true);
 		/**
+		* \brief Get WCS coordinates in string format corresponding to image coordinates
+		*/
+		static int PixelToWCSStrCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,std::string& wcs_str,bool useImageCoords=true,int max_str_length=4096); 
+
+		/**
 		* \brief Get WCS coordinates corresponding to image coordinates
 		*/
 		static int PixelToWCSCoords(Caesar::Image* image,double ix,double iy,double& xpos, double& ypos,int coordSystem=-1,bool useImageCoords=true);
 		
+		/**
+		* \brief Get WCS coordinates in string format corresponding to image coordinates
+		*/
+		static int PixelToWCSStrCoords(Caesar::Image* image,double ix,double iy,std::string& wcs_pos,int coordSystem=-1,bool useImageCoords=true,int max_str_length=4096);
+		
+
 		/**
 		* \brief Get beam area from BMAJ, BMIN 
 		*/

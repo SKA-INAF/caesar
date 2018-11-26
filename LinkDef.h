@@ -241,6 +241,8 @@
 #pragma link C++ class Caesar::vector<SourceCube>+;
 #pragma link C++ class Caesar::vector<SourceCube*>+;
 
+#pragma link C++ class Caesar::SourceExporter+;
+
 //slic generator
 #pragma link C++ class Caesar::SLICData+;
 #pragma link C++ class Caesar::SLICContourData+;

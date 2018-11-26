@@ -528,7 +528,6 @@ class Source : public Blob {
 		int GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM=true,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1,int pixOffset=0);
 	
 		
-
 		/**
 		* \brief Get number of fit components
 		*/
@@ -547,12 +546,39 @@ class Source : public Blob {
 		*/
 		int FindBlendedComponents(std::vector<Source*>& deblendedComponents,std::vector<ImgPeak>& deblendedPeaks,double peakZThr=0,int maxPeaks=-1,double sigmaMin=3,double sigmaMax=3,double sigmaStep=1,int minBlobSize=5,double thrFactor=0,int kernelFactor=1,int pixMargin=10);
 
+		/**
+		* \brief Return source position in WCS coordinates
+		*/
+		int GetWCSPos(double& xwcs,double& ywcs,WorldCoor* wcs=0,int coordSystem=eJ2000)
+		{
+			return GetWCSCoords(xwcs,ywcs,X0,Y0,wcs,coordSystem);
+		}
+
+		/**
+		* \brief Return signal-weighted source position in WCS coordinates
+		*/
+		int GetWCSWeightedPos(double& xwcs,double& ywcs,WorldCoor* wcs=0,int coordSystem=eJ2000)
+		{
+			return GetWCSCoords(xwcs,ywcs,m_Sx,m_Sy,wcs,coordSystem);
+		}
+	
+		/**
+		* \brief Return source name following IAU convention
+		*/
+		std::string GetIAUName(bool useWeightedPos=false,WorldCoor* wcs=0,int coordSystem=eJ2000);
+		
 	protected:
 		/**
 		* \brief Find source match by position
 		*/
 		bool FindSourceMatchByPos(std::vector<SourcePosMatchPars>& pars, long int source_index,long int nested_source_index,Source* source, float matchPosThr);
 		
+		/**
+		* \brief Return centroid in WCS coordinates
+		*/
+		int GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WorldCoor* wcs=0,int coordSystem=eJ2000);
+
+
 
 	private:
 	

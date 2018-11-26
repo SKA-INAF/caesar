@@ -61,6 +61,68 @@ AstroUtils::~AstroUtils()
 
 }
 
+int AstroUtils::GetIAUCoords(std::string& iau,const std::string& s)
+{
+	//Init string 
+	iau= "";
+
+	//Split string on whitespaces
+	std::vector<std::string> fields= CodeUtils::SplitStringOnWhitespaces(s);
+	if(fields.size()!=3){
+		WARN_LOG("Invalid number of parsed fields (n="<<fields.size()<<") when 3 expected!");
+		return -1;
+	}
+
+	std::string ra_field= fields[0];
+	std::string dec_field= fields[1];
+	std::string cs_field= fields[2];
+
+	//Last field gives the coord system flag
+	std::string cs= "";
+	if(cs_field=="FK5" || cs_field=="fk5") cs= "J";
+	else if(cs_field=="FK4" || cs_field=="fk4") cs= "B";
+	else if(cs_field=="galactic") cs= "G";
+	else {
+		WARN_LOG("");
+		return -1;
+	}
+
+	//Split ra & dec fields on :
+	std::vector<std::string> ra_parsed_fields= CodeUtils::SplitStringOnPattern(ra_field,':');
+	if(ra_parsed_fields.size()!=3){
+		WARN_LOG("Invalid number of RA parsed fields (n="<<ra_parsed_fields.size()<<") when 3 expected!");
+		return -1;
+	}
+
+	std::vector<std::string> dec_parsed_fields= CodeUtils::SplitStringOnPattern(dec_field,':');
+	if(dec_parsed_fields.size()!=3){
+		WARN_LOG("Invalid number of DEC parsed fields (n="<<dec_parsed_fields.size()<<") when 3 expected!");
+		return -1;
+	}
+
+	//Create IAU coordinates
+	std::stringstream ss;
+	ss<<cs;
+	//if(ra_parsed_fields[0]>0) ss<<"+";
+	for(size_t i=0;i<ra_parsed_fields.size();i++) {
+		int l= ra_parsed_fields[i].size();
+		if(l==1) ss<<0<<ra_parsed_fields[i]; 
+		else ss<<ra_parsed_fields[i];
+	}
+ 	if(atol(dec_parsed_fields[0].c_str())>0) ss<<"+";
+	for(size_t i=0;i<dec_parsed_fields.size();i++) {
+		int l= dec_parsed_fields[i].size();
+		if(l==1) ss<<0<<dec_parsed_fields[i]; 
+		else ss<<dec_parsed_fields[i];
+	}
+ 	
+	iau= ss.str();	
+
+	return 0;
+
+}//close GetIAUCoords()
+
+
 std::string AstroUtils::GetDS9WCSTypeHeader(int coordSys)
 {
 	std::string ds9CoordSys= "image";
@@ -77,8 +139,8 @@ std::string AstroUtils::GetDS9WCSTypeHeader(int coordSys)
 }//close GetDS9WCSTypeHeader()
 
 
-int AstroUtils::PixelToWCSCoords(double& xpos, double& ypos,WorldCoor* wcs,double ix,double iy) {
-
+int AstroUtils::PixelToWCSCoords(double& xpos, double& ypos,WorldCoor* wcs,double ix,double iy) 
+{
 	//Check WCS
 	if(!wcs){
 		ERROR_LOG("Null ptr to given WCS!");
@@ -91,6 +153,36 @@ int AstroUtils::PixelToWCSCoords(double& xpos, double& ypos,WorldCoor* wcs,doubl
 	return 0;
 
 }//close PixelToWCSCoords()
+
+
+int AstroUtils::PixelToWCSStrCoords(std::string& wcs_str,WorldCoor* wcs,double ix,double iy,int max_str_length) 
+{
+	//Init str
+	wcs_str= "";
+
+	//Check WCS
+	if(!wcs){
+		ERROR_LOG("Null ptr to given WCS!");
+		return -1;
+	}
+	
+	if(max_str_length<=0){
+		ERROR_LOG("Invalid max wcs string size given (must be >0)!");
+		return -1;
+	}
+
+	//Convert coords
+	char data[max_str_length];
+	int status= pix2wcst (wcs,ix,iy,data,max_str_length);
+	if(status==0){
+		WARN_LOG("Failed to convert pixel coords ("<<ix<<","<<iy<<") to WCS string!");
+		return -1;
+	}	
+	wcs_str= std::string(data);
+
+	return 0;
+
+}//close PixelToWCSStrCoords()
 
 
 int AstroUtils::PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,double& xpos, double& ypos,bool useImageCoords) {
@@ -128,9 +220,57 @@ int AstroUtils::PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,d
 }//close PixelToWCSCoords()
 
 
+int AstroUtils::PixelToWCSStrCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,std::string& wcs_str,bool useImageCoords,int max_str_length) 
+{
+	//Init str
+	wcs_str= "";
 
-int AstroUtils::PixelToWCSCoords(Caesar::Image* image,double ix,double iy,double& xpos, double& ypos,int coordSystem,bool useImageCoords) {
+	//## NB: ix & iy shall be the pixel coordinates (image matrix coordinates).
+	//## When a tile is read in FITS the header keywords (crpix) are modified accordingly so you need to pass the new matrix coordinates (not the (x,y) corresponding to full image) 
+	//Check pixel values in input
+	if(!image){
+		ERROR_LOG("Null image ptr given!");
+		return -1;	
+	}
 
+	if(max_str_length<=0){
+		ERROR_LOG("Invalid max wcs string size given (must be >0)!");
+		return -1;
+	}
+
+	//Get image range
+	double xmin= image->GetXmin();
+	double ymin= image->GetYmin();
+	double xmax= image->GetXmax();
+	double ymax= image->GetYmax();
+	
+	if(useImageCoords && (ix<xmin || iy<ymin || ix>xmax || iy>ymax) ){
+		ERROR_LOG("Invalid pix range selected (ix="<<ix<<", iy="<<iy<<")");
+		return -1;	
+	}
+
+	//Check WCS
+	if(!wcs){
+		ERROR_LOG("Null ptr to given WCS!");
+		return -1;
+	}
+
+	//Convert coords
+	char data[max_str_length];
+	int status= pix2wcst(wcs,ix,iy,data,max_str_length);
+	if(status==0){
+		WARN_LOG("Failed to convert pixel coords ("<<ix<<","<<iy<<") to WCS string!");
+		return -1;
+	}	
+	wcs_str= std::string(data);
+
+	return 0;
+
+}//close PixelToWCSStrCoords()
+
+
+int AstroUtils::PixelToWCSCoords(Caesar::Image* image,double ix,double iy,double& xpos, double& ypos,int coordSystem,bool useImageCoords) 
+{
 	//Check pixel values in input
 	if(!image){
 		ERROR_LOG("Null image ptr given!");
@@ -173,6 +313,63 @@ int AstroUtils::PixelToWCSCoords(Caesar::Image* image,double ix,double iy,double
 		
 }//close PixelToWCSCoords()
 
+
+int AstroUtils::PixelToWCSStrCoords(Caesar::Image* image,double ix,double iy,std::string& wcs_str,int coordSystem,bool useImageCoords,int max_str_length) 
+{
+	//Init str
+	wcs_str= "";
+
+	//Check pixel values in input
+	if(!image){
+		ERROR_LOG("Null image ptr given!");
+		return -1;	
+	}
+	if(max_str_length<=0){
+		ERROR_LOG("Invalid max wcs string size given (must be >0)!");
+		return -1;
+	}
+
+	//Get image range
+	double xmin= image->GetXmin();
+	double ymin= image->GetYmin();
+	double xmax= image->GetXmax();
+	double ymax= image->GetYmax();
+
+	if(useImageCoords && (ix<xmin || iy<ymin || ix>xmax || iy>ymax) ){
+		ERROR_LOG("Invalid pix range selected (ix="<<ix<<", iy="<<iy<<")");
+		return -1;	
+	}
+
+	//Check image meta-data
+	if(!image->HasMetaData() ){
+    ERROR_LOG("No metadata available in image!");
+		return -1;
+	}
+	Caesar::ImgMetaData* metadata= image->GetMetaData();	
+	
+	//Get the coord system
+	WorldCoor* wcs= metadata->GetWorldCoord(coordSystem);
+	if(!wcs){
+		ERROR_LOG("Failed to get WorldCoord system from metadata!");
+		return -1;
+	}
+
+	//Convert coords
+	char data[max_str_length];
+	int status= pix2wcst(wcs,ix,iy,data,max_str_length);	
+	if(status==0){
+		WARN_LOG("Failed to convert pixel coords ("<<ix<<","<<iy<<") to WCS string!");
+		return -1;
+	}	
+	wcs_str= std::string(data);
+
+	//Clear up
+	delete wcs;
+	wcs= 0;
+
+	return 0;
+		
+}//close PixelToWCSStrCoords()
 
 Contour* AstroUtils::PixelToWCSContour(Contour* contour,WorldCoor* wcs,int pixOffset)
 {

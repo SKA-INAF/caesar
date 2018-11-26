@@ -291,8 +291,8 @@ int Source::Draw(int pixMargin,ImgType imgType,bool drawImg,bool drawContours,bo
 }//close Draw()
 
 
-void Source::Draw(bool drawBoundingBox,bool drawEllipse,bool drawNested,int lineColor,int lineStyle){
-
+void Source::Draw(bool drawBoundingBox,bool drawEllipse,bool drawNested,int lineColor,int lineStyle)
+{
 	//Drawing contours?
 	DEBUG_LOG("#"<<m_Contours.size()<<" contours present for source "<<Id<<"...");
 	for(size_t i=0;i<m_Contours.size();i++){		
@@ -425,52 +425,6 @@ const std::string Source::GetDS9Region(bool dumpNestedSourceInfo,bool convertToW
 }//close GetDS9Region()
 
 
-/*
-const std::string Source::GetDS9Region(bool dumpNestedSourceInfo){
-
-	//Check if has pixels
-	//NB: DS9 crashes miserably when given a polygon region with one point 
-	if(NPix<=1) return std::string("");
-
-	//global color=red dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 image
-	std::stringstream sstream;
-	sstream<<"polygon ";
-	for(size_t i=0; i<m_Contours.size(); i++){ 
-		int nPoints= m_Contours[i]->GetN();
-		for(int j=0;j<nPoints;j++){
-			TVector2* contPnt= m_Contours[i]->GetPoint(j);
-			if(!contPnt) continue;
-			sstream<<(int)contPnt->X()+1<<" "<<(int)contPnt->Y()+1<<" ";
-		}
-	}
-	sstream<<"# text={"<<this->GetName()<<"} color="<<this->GetDS9RegionColor()<<" tag={"<<this->GetDS9RegionTag()<<"}";
-
-	//Fill nested source regions
-	if(dumpNestedSourceInfo && m_HasNestedSources){			
-		sstream<<endl;
-		for(unsigned int k=0;k<m_NestedSources.size();k++){
-			sstream<<"polygon ";
-			std::vector<Contour*> nestedContours= m_NestedSources[k]->m_Contours;
-			for(unsigned int i=0; i<nestedContours.size(); i++){ 
-				int nPoints= nestedContours[i]->GetN();
-				for(int j=0;j<nPoints;j++){
-					TVector2* contPnt= nestedContours[i]->GetPoint(j);
-					if(!contPnt) continue;
-					sstream<<(int)contPnt->X()+1<<" "<<(int)contPnt->Y()+1<<" ";
-				}
-			}//end loop contours
-			//sstream<<"# text={"<<m_NestedSources[k]->GetName()<<"}";
-			sstream<<"# text={"<<m_NestedSources[k]->GetName()<<"} color="<<m_NestedSources[k]->GetDS9RegionColor()<<" tag={"<<m_NestedSources[k]->GetDS9RegionTag()<<"}";
-			if(k!=m_NestedSources.size()-1) sstream<<endl;
-		}//end loop nested sources
-	}//close dumpNestedSourceInfo
-
-	const std::string dsregions= sstream.str();
-	return dsregions;
-
-}//close GetDS9Region()
-*/
-
 const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNestedSourceInfo,bool convertToWCS,WorldCoor* wcs,int coordSystem)
 {
 	//Check WCS & metadata
@@ -530,51 +484,9 @@ const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNested
 }//close GetDS9FittedEllipseRegion()
 
 
-/*
-const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNestedSourceInfo)
-{
-	//Check if source has fit info
-	std::stringstream sstream;
-	
-	if(m_HasFitInfo){
-		//Loop over fitted components and get their ellipses
-		std::vector<TEllipse*> ellipses= m_fitPars.GetFittedEllipses();
-	
-		for(size_t i=0;i<ellipses.size();i++){
-			if(!ellipses[i]) continue;
 
-			//Get ellipse pars
-			double x0= ellipses[i]->GetX1();
-			double y0= ellipses[i]->GetY1();
-			double R1= ellipses[i]->GetR1()*2;//DS9 wants axis (not semi-axis)
-			double R2= ellipses[i]->GetR2()*2;
-			double theta= ellipses[i]->GetTheta();
-			//theta-= 90;//DS9 format
-			//sstream<<"ellipse "<<x0+1<<" "<<y0+1<<" "<<R1<<" "<<R2<<" "<<theta<<" # text={"<<this->GetName()<<"_"<<i+1<<"}";
-			sstream<<"ellipse "<<x0+1<<" "<<y0+1<<" "<<R1<<" "<<R2<<" "<<theta<<" # text={"<<this->GetName()<<"_fitcomp"<<i+1<<"} ";
-			sstream<<"color=red tag={point-like} tag={fitted component}";
-
-			if(i!=ellipses.size()-1) sstream<<endl;
-		}//end loop ellipses
-
-	}//close if has fit info
-
-	//Loop over nested components and get fit ellipse regions
-	if(dumpNestedSourceInfo && m_HasNestedSources){			
-		for(size_t k=0;k<m_NestedSources.size();k++){	
-			std::string nestedRegionStr= m_NestedSources[k]->GetDS9FittedEllipseRegion(useFWHM,false);
-			if(nestedRegionStr!="") sstream<<nestedRegionStr<<endl;
-		}//end loop nested sources
-	}//close if
-
-	return sstream.str();
-	
-}//close GetDS9FittedEllipseRegion()
-*/
-
-
-const std::string Source::GetDS9EllipseRegion(bool dumpNestedSourceInfo){
-			
+const std::string Source::GetDS9EllipseRegion(bool dumpNestedSourceInfo)
+{			
 	//ellipse x y radius radius angle
 	std::stringstream sstream;
 	sstream<<"ellipse ";
@@ -1570,6 +1482,88 @@ int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std:
 
 }//close FindBlendedComponents()
 
+
+std::string Source::GetIAUName(bool useWeightedPos,WorldCoor* wcs,int coordSystem)
+{
+	//Init name
+	std::string iau= "";
+
+	//If wcs is not given, retrieve it from metadata
+	bool deleteWCS= false;
+	if(!wcs){
+		if(!m_imgMetaData){
+			WARN_LOG("No metadata are available to retrieve WCS!");
+			return iau;
+		}
+		wcs= m_imgMetaData->GetWorldCoord(coordSystem);
+		if(!wcs){
+			ERROR_LOG("Failed to get WCS from metadata!");
+			return iau;
+		}
+		deleteWCS= true;
+	}//close if
+
+	//Compute WCS string coords	
+	std::string wcspos_str= "";
+	int status= 0;
+	if(useWeightedPos) status= AstroUtils::PixelToWCSStrCoords(wcspos_str,wcs,m_Sx,m_Sy);
+	else status= AstroUtils::PixelToWCSStrCoords(wcspos_str,wcs,X0,Y0);
+
+	if(status<0){
+		WARN_LOG("Failed to compute WCS source pos in string format!");
+		if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+		return iau;
+	}
+
+	//Compute IAU name
+	if(AstroUtils::GetIAUCoords(iau,wcspos_str)<0){
+		WARN_LOG("Failed to compute IAU name from WCS string coords!");
+		iau= "";
+		if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+		return iau;
+	}
+
+	//Delete WCS
+	if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+
+	return iau;
+
+}//close GetIAUName()
+
+int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WorldCoor* wcs,int coordSystem)
+{
+	//Init pos
+	xwcs= -999;
+	ywcs= -999;
+
+	//If wcs is not given, retrieve it from metadata
+	bool deleteWCS= false;
+	if(!wcs){
+		if(!m_imgMetaData){
+			WARN_LOG("Requested to get WCS centroid coords but no wcs was provided and no metadata are available to retrieve it!");
+			return -1;
+		}
+		wcs= m_imgMetaData->GetWorldCoord(coordSystem);
+		if(!wcs){
+			ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			return -1;
+		}
+		deleteWCS= true;
+	}//close if
+
+	//Get WCS centroid coords
+	int status= AstroUtils::PixelToWCSCoords(xwcs,ywcs,wcs,x,y);
+	if(status<0){
+		WARN_LOG("Failed to get WCS coordinate corresponding to ("<<x<<","<<y<<")!");
+		return -1;
+	}
+
+	//Delete WCS
+	if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+
+	return 0;
+
+}//close GetWCSPos()
 
 }//close namespace
 
