@@ -258,6 +258,41 @@ message Dict {
 message SourceComponentPars {
 	repeated Dict FitPars= 1;
 	repeated Dict FitParsErr= 2;
+
+	optional bool m_hasBeamPars= 3;
+	optional float m_beam_bmaj= 4;
+	optional float m_beam_bmin= 5;
+	optional float m_beam_pa= 6;
+
+	optional bool m_hasEllipsePars= 7;
+	optional float m_x0= 8;
+	optional float m_y0= 9;
+	optional float m_bmaj= 10;
+	optional float m_bmin= 11;
+	optional float m_pa= 12;
+	optional float m_x0_err= 13;
+	optional float m_y0_err= 14;
+	optional float m_bmaj_err= 15;
+	optional float m_bmin_err= 16;
+	optional float m_pa_err= 17;
+
+	optional bool m_hasWCSEllipsePars= 18;
+	optional float m_x0_wcs= 19;
+	optional float m_y0_wcs= 20;
+	optional float m_bmaj_wcs= 21;
+	optional float m_bmin_wcs= 22;
+	optional float m_pa_wcs= 23;
+	optional float m_x0_err_wcs= 24;
+	optional float m_y0_err_wcs= 25;
+	optional float m_bmaj_err_wcs= 26;
+	optional float m_bmin_err_wcs= 27;
+	optional float m_pa_err_wcs= 28;
+		
+	optional bool m_hasWCSDeconvolvedEllipsePars= 29;
+	optional float m_bmaj_deconv_wcs= 30;
+	optional float m_bmin_deconv_wcs= 31;
+	optional float m_pa_deconv_wcs= 32;
+
 }//close SourceComponentPars()
 
 message SourceFitPars {
@@ -265,13 +300,28 @@ message SourceFitPars {
 	optional int32 nComponents= 1;
 	optional float chi2= 2;
 	optional float ndof= 3;
-	optional float npars_free= 4;	
-	optional float nfit_points= 5;
-	optional int32 status= 6;
-	optional int32 minimizer_status= 7;
-	optional float offset= 8;
-	optional float offset_err= 9;
-	repeated SourceComponentPars pars= 10;
+	optional int32 npars_free= 4;	
+	optional int32 npars_component= 5;//to be added
+	optional int32 nfit_points= 6;
+	optional int32 status= 7;
+	optional int32 minimizer_status= 8;
+	optional float offset= 9;
+	optional float offset_err= 10;
+
+	optional float residualMean= 11;
+	optional float residualRMS= 12;
+	optional float residualMedian= 13;
+	optional float residualMAD= 14;
+	optional float residualMin= 15;
+	optional float residualMax= 16;
+
+	repeated SourceComponentPars pars= 17;
+
+	optional bool thetaFixed= 18;
+	optional bool offsetFixed= 19;
+	optional bool sigmaFixed= 20;
+	optional float fluxDensity= 21;
+	optional float fluxDensityErr= 22;
 
 }//close SourceFitPars()
 
