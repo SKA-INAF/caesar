@@ -28,6 +28,7 @@
 */
 
 #include <ImgMetaData.h>
+#include <CodeUtils.h>
 #include <Consts.h>
 #include <Logger.h>
 
@@ -77,6 +78,7 @@ void ImgMetaData::SetFITSCards(Caesar::FITSFileInfo& fits_info){
 	CoordTypeX= (fits_info.header).CoordTypeX;
 	CoordTypeY= (fits_info.header).CoordTypeY;
 	BUnit= (fits_info.header).BUnit;
+	CodeUtils::StripBlankSpaces(BUnit);//remove blank spaces if present
 	Bmaj= (fits_info.header).Bmaj;
 	Bmin= (fits_info.header).Bmin;
 	Bpa= (fits_info.header).Bpa;
@@ -86,6 +88,7 @@ void ImgMetaData::SetFITSCards(Caesar::FITSFileInfo& fits_info){
 	RotY= (fits_info.header).RotY;
 	Epoch= (fits_info.header).Epoch;
 	FreqUnit= (fits_info.header).FreqUnit;
+	CodeUtils::StripBlankSpaces(FreqUnit);//remove blank spaces if present
 	Freq= (fits_info.header).Freq;
 	FreqRef= (fits_info.header).FreqRef;
 	dFreq= (fits_info.header).dFreq;

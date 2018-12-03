@@ -43,6 +43,8 @@
 #include <GraphicsUtils.h>
 #include <CodeUtils.h>
 #include <SysUtils.h>
+#include <MathUtils.h>
+
 
 //== Img processing headers
 #include <BkgFinder.h>
@@ -2133,10 +2135,10 @@ int Image::FindBlendedSources(std::vector<Source*>& deblendedSources,std::vector
 }//close FindBlendedSources()
 
 
-int Image::FindExtendedSource_CV(std::vector<Source*>& sources,Image* initSegmImg,ImgBkgData* bkgData,int minPixels,bool findNegativeExcess,double dt,double h,double lambda1,double lambda2,double mu,double nu,double p,int niters){
-
+int Image::FindExtendedSource_CV(std::vector<Source*>& sources,Image* initSegmImg,ImgBkgData* bkgData,int minPixels,bool findNegativeExcess,double dt,double h,double lambda1,double lambda2,double mu,double nu,double p,int niters,double tol,int niters_inner,int niters_reinit)
+{
 	//## Compute segmented image
-	Image* segmentedImg= ChanVeseSegmenter::FindSegmentation(this,initSegmImg,false,dt,h,lambda1,lambda2,mu,nu,p,niters);
+	Image* segmentedImg= ChanVeseSegmenter::FindSegmentation(this,initSegmImg,false,dt,h,lambda1,lambda2,mu,nu,p,niters,tol,niters_inner,niters_reinit);
 	if(!segmentedImg){
 		ERROR_LOG("Failed to compute ChanVese image segmentation!");
 		return -1;
@@ -2145,7 +2147,6 @@ int Image::FindExtendedSource_CV(std::vector<Source*>& sources,Image* initSegmIm
 	//## Finding blobs in masked image
 	double fgValue= 1;	
 	bool findNestedSources= false;
-	//int status= this->FindCompactSource(sources,segmentedImg,bkgData,fgValue,fgValue,minPixels,false,false,false);
 	int status= this->FindCompactSource(sources,segmentedImg,bkgData,fgValue,fgValue,minPixels,findNestedSources);
 	if(status<0){
 		ERROR_LOG("Finding sources in Chan-Vese segmented mask failed!");
@@ -2256,6 +2257,162 @@ Image* Image::GetMask(Image* mask,bool isBinary)
 
 }//close GetMask()
 
+
+int Image::SubtractFittedSources(const std::vector<Source*>& sources,bool subtractNested,bool recomputeStats,double nsigmaTrunc)
+{
+	//Nothing to be done is source collection is empty
+	if(sources.empty()){
+		WARN_LOG("Given source collection is empty, nothing to be done!");	
+		return 0;
+	}
+
+	//Get source fit model image
+	Image* modelImg= GetSourceFitModelImage(sources,subtractNested,nsigmaTrunc);
+	if(!modelImg){
+		ERROR_LOG("Failed to compute source fit model image!");
+		return -1;
+	}
+	
+	//Subtract model image from current image
+	if(this->Add(modelImg,-1,recomputeStats)<0){
+		ERROR_LOG("Failed to subtract model image from this image!");
+		delete modelImg;
+		modelImg= 0;
+		return -1;
+	}
+
+	//Clear data
+	if(modelImg){
+		delete modelImg;
+		modelImg= 0;
+	}
+
+	return 0;
+
+}//close SubtractFittedSources()
+
+int Image::SubtractFittedSource(Source* source,bool subtractNested,bool recomputeStats,double nsigmaTrunc)
+{
+	//Nothing to be done is source collection is empty
+	if(!source){
+		ERROR_LOG("Null ptr to input source given!");	
+		return -1;
+	}
+
+	//Get source fit model image	
+	std::vector<Source*> sources {source};
+	Image* modelImg= GetSourceFitModelImage(sources,subtractNested,nsigmaTrunc);
+	if(!modelImg){
+		ERROR_LOG("Failed to compute source fit model image!");
+		return -1;
+	}
+	
+	//Subtract model image from current image
+	if(this->Add(modelImg,-1,recomputeStats)<0){
+		ERROR_LOG("Failed to subtract model image from this image!");
+		delete modelImg;
+		modelImg= 0;
+		return -1;
+	}
+
+	//Clear data
+	if(modelImg){
+		delete modelImg;
+		modelImg= 0;
+	}
+
+	return 0;
+
+}//close SubtractFittedSource()
+
+
+int Image::FillFromSourceFitModel(Source* source,bool useNested,double nsigmaTrunc)
+{
+	//Check source
+	if(!source){
+		ERROR_LOG("Null ptr to source given!");
+		return -1;
+	}
+
+	//Check if has fit info
+	bool hasFitInfo= source->HasFitInfo();
+	if(hasFitInfo) {
+		//Loop over source components and fill image
+		SourceFitPars fitPars= source->GetFitPars();
+		for(int k=0;k<fitPars.GetNComponents();k++){
+			double X0= fitPars.GetParValue(k,"x0");	
+			double Y0= fitPars.GetParValue(k,"y0");
+			double A= fitPars.GetParValue(k,"A");	
+			double sigmaX= fitPars.GetParValue(k,"sigmaX");
+			double sigmaY= fitPars.GetParValue(k,"sigmaY");
+			double theta= fitPars.GetParValue(k,"theta")*TMath::DegToRad();
+			long int boxHalfWidthX= std::ceil(nsigmaTrunc*sigmaX);
+			long int boxHalfWidthY= std::ceil(nsigmaTrunc*sigmaY);
+			long int binId_centroid= this->FindBin(X0,Y0);
+			if(binId_centroid<0) {
+				WARN_LOG("Source fitted centroid ("<<X0<<","<<Y0<<") outside image range, skip source...");
+				continue;
+			}
+		
+			long int ix_centroid= GetBinX(binId_centroid);
+			long int iy_centroid= GetBinY(binId_centroid);
+
+			//Loop over model box
+			DEBUG_LOG("Source "<<source->GetName()<<", component "<<k+1<<": A="<<A<<", pos("<<X0<<","<<Y0<<"), sigma("<<sigmaX<<","<<sigmaY<<"), theta="<<theta<<", box half widths=("<<boxHalfWidthX<<","<<boxHalfWidthY<<"), centroid bin("<<ix_centroid<<","<<iy_centroid<<")");
+	
+			for(long int ix=-boxHalfWidthX;ix<=boxHalfWidthX;ix++){
+				for(long int iy=-boxHalfWidthY;iy<=boxHalfWidthY;iy++){
+					//Check bin exists
+					long int ix_pix= ix_centroid + ix;
+					long int iy_pix= iy_centroid + iy;
+					if(!this->HasBin(ix_pix,iy_pix)) continue;
+					double x_pix= this->GetX(ix_pix);
+					double y_pix= this->GetY(iy_pix);
+
+					//Evaluate source fit model in bin center
+					double w= MathUtils::EvalGaus2D(x_pix,y_pix,A,X0,Y0,sigmaX,sigmaY,theta);
+
+					//Add to model bin
+					double w_old= this->GetBinContent(ix_pix,iy_pix);
+					this->SetBinContent(ix_pix,iy_pix,w+w_old);
+				}//end loop y box
+			}//end loop x box		
+		}//end loop components
+	}//close if
+	else{	
+		if(useNested){
+			DEBUG_LOG("Source "<<source->GetName()<<" without fit info, check nested sources...");
+			std::vector<Source*> nestedSources= source->GetNestedSources();
+			for(size_t k=0;k<nestedSources.size();k++){
+				this->FillFromSourceFitModel(nestedSources[k],nsigmaTrunc);
+			}
+		}
+	}//close else 	
+
+	return 0;
+
+}//close FillFromSourceFitModel()
+
+Image* Image::GetSourceFitModelImage(const std::vector<Source*>& sources,bool useNested,double nsigmaTrunc)
+{
+	// Clone map
+	Image* modelImg= this->GetCloned("",true,true);
+	modelImg->Reset();
+	
+	// Check if source collection is empty
+	if(sources.empty()){
+		WARN_LOG("Source collection is empty, no model can be created, returning empty image!");	
+		return modelImg;
+	}
+
+	//Loop over sources and fill from source fit model (including nested sources)
+	for(size_t i=0;i<sources.size();i++){		
+		modelImg->FillFromSourceFitModel(sources[i],useNested,nsigmaTrunc);
+	}
+
+	return modelImg;
+
+}//close GetSourceFitModelImage()
 
 int Image::MaskSources(std::vector<Source*>const& sources,float maskValue)
 {
@@ -2390,8 +2547,168 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 
 }//close GetSourceMask()
 
-Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int KernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr){
 
+Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr,int psSubtractionMethod)
+{
+	//Check bkg data
+	if(dilateModel==eDilateWithBkg){
+	 	if(!bkgData){
+			ERROR_LOG("Selected to use bkg dilation but null ptr to bkg data!");
+			return nullptr;
+		}
+		if(useLocalBkg && !bkgData->HasLocalBkg()){
+			ERROR_LOG("Selected to use local bkg but no local bkg data are available!");
+			return nullptr;
+		}
+	}//close if
+
+	
+	//Check thresholds
+	if(zBrightThr<zThr){
+		ERROR_LOG("Invalid z threshold given (hint: zBrightThr shall be >= than zThr)!");
+		return nullptr;
+	}
+
+	//Clone input image	
+	TString imgName= Form("%s_Residual",m_name.c_str());	
+	Image* residualImg= this->GetCloned(std::string(imgName),true,true);
+	if(!residualImg){
+		ERROR_LOG("Failed to clone input image, returning nullptr!");
+		return nullptr;
+	}
+
+	//Check source list
+	if(sources.size()<=0){
+		WARN_LOG("Source list empty, nothing to be dilated!");
+		return residualImg;
+	}
+
+
+	//Fill list of sources to be subtracted
+	std::vector<Source*> dilatedSources;
+	std::vector<Source*> psSources;
+	for(size_t i=0;i<sources.size();i++){
+		Source* source= sources[i];
+		int sourceType= source->Type;
+		bool hasFitInfo= source->HasFitInfo();
+		bool hasNestedSources= source->HasNestedSources();
+		bool isSelectedSource= (dilateSourceType==-1 || sourceType==dilateSourceType);
+		bool addToPSList= (
+			hasFitInfo && 
+			psSubtractionMethod==ePS_MODELSUBTRACTION &&
+			(dilateSourceType==-1 || dilateSourceType==Source::ePointLike || dilateSourceType==Source::eCompact)
+		);
+		
+		//Check is source stats are available
+		bool hasStats= source->HasStats();
+		if(!hasStats){
+			WARN_LOG("No stats computed for input source "<<source->GetName()<<"...computing!");
+			source->ComputeStats(true,true);
+		}
+
+		//Check if bright source
+		Pixel* seedPixel= source->GetSeedPixel();
+		if(!seedPixel){
+			WARN_LOG("Failed to find seed pixel for source "<<source->GetName()<<", skip to next!");
+			continue;
+		}
+		std::pair<double,double> bkgInfo= seedPixel->GetBkg();
+		double bkgLevel= bkgInfo.first;
+		double noiseLevel= bkgInfo.second;
+		double S= seedPixel->S;
+		double Z= (S-bkgLevel)/noiseLevel;
+		bool isDilatedSource= false;
+		bool isBrightSource= false;
+		if(fabs(Z)>zThr) isDilatedSource= true;
+		if(fabs(Z)>zBrightThr) isBrightSource= true;
+		
+		INFO_LOG("Source "<<source->GetName()<<" sourceType="<<sourceType<<", hasFitInfo?"<<hasFitInfo<<", hasNestedSources?"<<hasNestedSources<<", isSelectedSource?"<<isSelectedSource<<", addToPSList? "<<addToPSList<<" (psSubtractionMethod="<<psSubtractionMethod<<", dilateSourceType="<<dilateSourceType<<"), isDilatedSource? "<<isDilatedSource<<", isBrightSource? "<<isBrightSource);
+
+
+		//Select source
+		if(!isDilatedSource) continue;
+
+		//If bright source add to dilate list (if not a fitted point-source), otherwise check nested
+		if(isBrightSource){
+			if(addToPSList) psSources.push_back(source);
+			else dilatedSources.push_back(source);
+		}
+		else{
+			if(hasNestedSources && skipToNested){
+				std::vector<Source*> nestedSources= source->GetNestedSources();
+				for(size_t k=0;k<nestedSources.size();k++){
+					int nestedSourceType= nestedSources[k]->Type;
+					bool hasFitInfo_nested= source->HasFitInfo();
+					bool isSelectedSource_nested= (dilateSourceType==-1 || nestedSourceType==sourceType);
+					if(!isSelectedSource_nested) continue;
+					bool addToPSList_nested= (
+						hasFitInfo_nested && 
+						psSubtractionMethod==ePS_MODELSUBTRACTION &&
+						(dilateSourceType==-1 || dilateSourceType==Source::ePointLike || dilateSourceType==Source::eCompact)
+					);
+					
+					if(addToPSList_nested) psSources.push_back(nestedSources[k]);
+					else dilatedSources.push_back(nestedSources[k]);
+
+				}//end loop nested sources
+			}//close if has nested
+			else{
+				if(!isSelectedSource) continue;
+				if(addToPSList) psSources.push_back(source);
+				else dilatedSources.push_back(source);			
+			}//close else mother source
+		}//close else bright source
+	}//end loop sources
+
+	INFO_LOG("#"<<psSources.size()<<" point-sources selected for subtraction...");
+	
+	//Subtract point-source using fit information?
+	if( psSubtractionMethod==ePS_MODELSUBTRACTION ){
+		INFO_LOG("Subtracting "<<psSources.size()<<" point-source from input map...");
+		bool subtractNested= false;
+		bool recomputeStats= false;
+		if(residualImg->SubtractFittedSources(psSources,subtractNested,recomputeStats)<0){
+			ERROR_LOG("Failed to subtract point-sources from input map!");
+			if(residualImg) {
+				delete residualImg;
+				residualImg= 0;
+			}
+			return nullptr;
+		}
+	}//close if point source subtraction
+
+	//Dilate sources from input map (consider only non-point source if PS_MODELSUBTRACTION flag is used)
+	INFO_LOG("#"<<dilatedSources.size()<<" sources to be dilated from input map...");
+	for(size_t i=0;i<dilatedSources.size();i++){
+		//Dilate source from image
+		int status= MorphFilter::DilateAroundSource(
+			residualImg,dilatedSources[i],
+			kernSize,dilateModel,
+			bkgData,useLocalBkg,
+			randomize
+		);
+
+		if(status<0){
+			ERROR_LOG("Failed to dilate source "<<dilatedSources[i]->GetName()<<"!");
+			if(residualImg) {
+				delete residualImg;
+				residualImg= 0;
+			}
+			return nullptr;		
+		}//close if
+	}//end loop dilated sources
+
+	//Re-compute stats of residual image
+	INFO_LOG("Recomputing stats of residual image...");
+	residualImg->ComputeStats(true,true,false);
+
+	return residualImg;
+
+}//close GetSourceResidual()
+
+/*
+Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int KernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr,int psSubtractionMethod)
+{
 	//Check thresholds
 	if(zBrightThr<zThr){
 		ERROR_LOG("Invalid z threshold given (hint: zBrightThr shall be >= than zThr)!");
@@ -2407,7 +2724,12 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int KernSize,
 	}
 
 	//Dilate source pixels
-	int status= MorphFilter::DilateAroundSources(residualImg,sources,KernSize,dilateModel,dilateSourceType,skipToNested,bkgData,useLocalBkg,randomize,zThr,zBrightThr);
+	int status= MorphFilter::DilateAroundSources(
+		residualImg,sources,
+		KernSize,dilateModel,dilateSourceType,skipToNested,
+		bkgData,useLocalBkg,randomize,
+		zThr,zBrightThr
+	);
 
 	if(status<0){
 		ERROR_LOG("Failed to dilate sources!");
@@ -2424,6 +2746,7 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int KernSize,
 	return residualImg;
 
 }//close GetSourceResidual()
+*/
 
 Image* Image::GetNormalizedImage(std::string normScale,int normmin,int normmax,bool skipEmptyBins){
 

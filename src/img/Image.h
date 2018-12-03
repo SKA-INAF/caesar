@@ -662,7 +662,7 @@ class Image : public TNamed {
 			double ymin= GetYmin();
 			double ymax= GetYmax();
 			if(x<xmin || x>xmax || y<ymin || y>ymax){
-				WARN_LOG("Cannot find bin (x,y)=("<<x<<","<<y<<") (hint: overflow/underflow bins)!");
+				DEBUG_LOG("Cannot find bin (x,y)=("<<x<<","<<y<<") (hint: overflow/underflow bins)!");
 				return -1;
 			}
 			long int binx= static_cast<long int>( (m_Nx-1)*(x-xmin)/(xmax-xmin) );
@@ -959,7 +959,7 @@ class Image : public TNamed {
 		/**
 		* \brief Find extended sources with ChanVese method
 		*/
-		int FindExtendedSource_CV(std::vector<Source*>&,Image* initSegmImg=0,ImgBkgData* bkgData=0,int minPixels=10,bool findNegativeExcess=false,double dt=0.1,double h=1,double lambda1=1.0,double lambda2=2.0,double mu=0.5,double nu=0,double p=1,int niters=1000);
+		int FindExtendedSource_CV(std::vector<Source*>&,Image* initSegmImg=0,ImgBkgData* bkgData=0,int minPixels=10,bool findNegativeExcess=false,double dt=0.1,double h=1,double lambda1=1.0,double lambda2=2.0,double mu=0.5,double nu=0,double p=1,int niters=1000,double tol=1.e-2,int niters_inner=1,int niters_reinit=10);
 
 		/**
 		* \brief Find extended sources with Hierarchical Clustering method
@@ -985,16 +985,36 @@ class Image : public TNamed {
 		*/
 		int MaskSources(std::vector<Source*>const& source,float maskValue=0.);
 
+		/**
+		* \brief Create image with bin contents equal to fitted sources
+		*/
+		Image* GetSourceFitModelImage(const std::vector<Source*>& sources,bool useNested=true,double nsigmaTrunc=5);
+
+		/**
+		* \brief Fill image bins from source fit model
+		*/
+		int FillFromSourceFitModel(Source* source,bool useNested=true,double nsigmaTrunc=5);
+
+		/**
+		* \brief Subtract fitted sources from image
+		*/
+		int SubtractFittedSources(const std::vector<Source*>& sources,bool subtractNested=true,bool recomputeStats=true,double nsigmaTrunc=5);
 		
+		/**
+		* \brief Subtract fitted source from image
+		*/
+		int SubtractFittedSource(Source* source,bool subtractNested=true,bool recomputeStats=true,double nsigmaTrunc=5);
+		
+
 		/**
 		* \brief Returns a residual image obtained by dilating given sources with a random background
 		*/
-		Image* GetSourceResidual(std::vector<Source*>const& sources,int KernSize=5,int dilateModel=MorphFilter::eDilateWithBkg,int dilateSourceType=-1,bool skipToNested=false,ImgBkgData* bkgData=0,bool useLocalBkg=false,bool randomize=false,double zThr=5,double zBrightThr=20);
+		//Image* GetSourceResidual(std::vector<Source*>const& sources,int KernSize=5,int dilateModel=MorphFilter::eDilateWithBkg,int dilateSourceType=-1,bool skipToNested=false,ImgBkgData* bkgData=0,bool useLocalBkg=false,bool randomize=false,double zThr=5,double zBrightThr=20,int psSubtractionMethod=ePS_DILATION);
+		Image* GetSourceResidual(std::vector<Source*>const& sources,int KernSize=5,int dilateModel=eDilateWithBkg,int dilateSourceType=-1,bool skipToNested=false,ImgBkgData* bkgData=0,bool useLocalBkg=false,bool randomize=false,double zThr=5,double zBrightThr=20,int psSubtractionMethod=ePS_DILATION);
 
 		/**
 		* \brief Find image peaks
 		*/
-		//int FindPeaks(std::vector<TVector2>& peakPoints,std::vector<int> kernelSizes={3,5,7},int peakShiftTolerance=1,bool skipBorders=true,int multiplicityThr=-1);
 		int FindPeaks(std::vector<ImgPeak>& peakPoints,std::vector<int> kernelSizes={3,5,7},int peakShiftTolerance=1,bool skipBorders=true,int multiplicityThr=-1);
 
 		/**
