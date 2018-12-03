@@ -30,6 +30,7 @@
 #include <Image.h>
 #include <Contour.h>
 #include <CodeUtils.h>
+#include <MathUtils.h>
 
 #include <TObject.h>
 #include <TEllipse.h>
@@ -507,6 +508,100 @@ TEllipse* AstroUtils::PixelToWCSEllipse(TEllipse* ellipse,WorldCoor* wcs,int pix
 	return ellipse_wcs;
 
 }//close PixelToWCSEllipse()
+
+
+int AstroUtils::GetBeamDeconvolvedEllipsePars (
+	double& bmaj_deconv,double& bmin_deconv,double& bpa_deconv,
+	double bmaj,double bmin,double bpa,
+	double bmaj_beam,double bmin_beam,double bpa_beam
+)
+{
+	int status= 0;
+	bmaj_deconv= 0;
+	bmin_deconv= 0;
+	bpa_deconv= 0;
+
+	double sum2= bmaj*bmaj + bmin*bmin;
+	double diff2= bmaj*bmaj - bmin*bmin;
+	double sum2_beam= bmaj_beam*bmaj_beam + bmin_beam*bmin_beam;
+	double diff2_beam= bmaj_beam*bmaj_beam - bmin_beam*bmin_beam;
+	double bpa_rad= bpa*TMath::DegToRad();//in rad
+	double bpa_beam_rad= bpa_beam*TMath::DegToRad();//in rad
+
+	double beta2= pow(diff2,2) + pow(diff2_beam,2) - 2*diff2*diff2_beam*cos(2*(bpa_rad-bpa_beam_rad));
+	if(beta2<0) {
+		WARN_LOG("Numerical error (beta^2 is <0 in formula)!");
+		status= -1;
+	}
+	double beta= sqrt(beta2);
+	
+	double bmaj2_deconv= 0.5*(sum2 - sum2_beam + beta);
+	double bmin2_deconv= 0.5*(sum2 - sum2_beam - beta);
+	if(bmaj2_deconv<0 || bmin2_deconv) {
+		WARN_LOG("Numerical error (bmaj^2/bmin^2 deconvolved are <0 in formula)!");	
+		status= -1;
+	}
+	bmaj_deconv= sqrt(bmaj2_deconv);
+	bmin_deconv= sqrt(bmin2_deconv);
+
+	double arg= (diff2*sin(2*bpa))/(diff2*cos(2*bpa-diff2_beam));
+	bpa_deconv= 0.5*atan(arg)*TMath::RadToDeg();
+
+	return status;
+
+}//close GetBeamDeconvolvedEllipsePars()
+
+
+TEllipse* AstroUtils::GetBeamDeconvolvedEllipse(TEllipse* ellipse,TEllipse* beam)
+{
+	//Check input data
+	if(!ellipse || !beam){
+		WARN_LOG("Null ptr to input ellipses given, returning nullptr!");
+		return nullptr;
+	}
+
+	//Get ellipse axis pars
+	double X0= ellipse->GetX1();
+	double Y0= ellipse->GetY1();
+	double D1= 2*ellipse->GetR1();//ellipse axis along x
+	double D2= 2*ellipse->GetR2();//ellipse axis along y
+	double theta= ellipse->GetTheta();//rotation angle (wrt x axis)
+	double bmaj= std::max(D1,D2);
+	double bmin= std::min(D1,D2);
+	double bpa= MathUtils::Mod(theta,180.);
+	if(D2>D1) bpa= MathUtils::Mod(theta-90.,180.);
+
+	//Get beam ellipse axis pars
+	double D1_beam= 2*beam->GetR1();//ellipse axis along x
+	double D2_beam= 2*beam->GetR2();//ellipse axis along y
+	double theta_beam= beam->GetTheta();//rotation angle (wrt x axis)
+	double bmaj_beam= std::max(D1,D2);
+	double bmin_beam= std::min(D1,D2);
+	double bpa_beam= MathUtils::Mod(theta_beam,180.);
+	if(D2_beam>D1_beam) bpa_beam= MathUtils::Mod(theta_beam-90.,180.);
+
+	double bmaj_deconv= 0;
+	double bmin_deconv= 0;
+	double bpa_deconv= 0;
+	int status= GetBeamDeconvolvedEllipsePars(
+		bmaj_deconv,bmin_deconv,bpa_deconv,
+		bmaj,bmin,bpa,
+		bmaj_beam,bmin_beam,bpa_beam
+	);
+
+	if(status<0){
+		WARN_LOG("Failed to compute deconvolved ellipse pars (check given ellipse/beam pars)!");
+		return nullptr;
+	}
+
+	double R1_deconv= bmaj_deconv/2.;
+	double R2_deconv= bmin_deconv/2.;
+	double theta_deconv= bpa_deconv;
+	TEllipse* ellipse_deconv= new TEllipse(X0,Y0,R1_deconv,R2_deconv,theta_deconv);
+
+	return ellipse_deconv;
+
+}//close GetBeamDeconvolvedEllipse()
 
 
 double AstroUtils::GetWCSPointDist_Haversine(double ra1,double dec1,double ra2,double dec2)

@@ -60,6 +60,11 @@ class ImgMetaData;
 class ImgStatsData;
 class Contour;
 
+
+
+//========================================
+//==   ASTRO UTILS
+//========================================
 class AstroUtils : public TObject {
 
   public:
@@ -154,6 +159,21 @@ class AstroUtils : public TObject {
 		* \brief Convert ellipse from pixel coordinates to sky coordinates
 		*/
 		static TEllipse* PixelToWCSEllipse(TEllipse* ellipse,WorldCoor* wcs,int pixOffset=0);
+
+		/**
+		* \brief Compute ellipse deconvolved from ellipse beam
+		*/
+		static TEllipse* GetBeamDeconvolvedEllipse(TEllipse* ellipse,TEllipse* beam);
+
+		/**
+		* \brief Compute ellipse pars deconvolved from ellipse beam
+		*/
+		static int GetBeamDeconvolvedEllipsePars(double& bmaj_deconv,double& bmin_deconv,double& bpa_deconv,double bmaj,double bmin,double bpa,double bmaj_beam,double bmin_beam,double bpa_beam);
+
+		/**
+		* \brief Compute WCS beam ellipse pars from pixel ellipse pars
+		*/
+		//static int GetBeamEllipsePars(double& x0_wcs,double& y0_wcs,double& bmaj_wcs,double& bmin_wcs,double& bpa_wcs,double x0,double y0,double bmaj,double bmin,double bpa);
 
 		/**
 		* \brief Get distance (in degrees) between two points on the sky using Haversine formula
