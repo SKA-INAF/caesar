@@ -30,7 +30,7 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 if on_rtd:
   #from subprocess import call 
   #call('doxygen ../doxygen/Doxyfile')
-  subprocess.call('doxygen ../doxygen/Doxyfile', shell=True)
+  subprocess.call('doxygen ../doxygen/Doxyfile.in', shell=True)
 
 # -- General configuration ------------------------------------------------
 
