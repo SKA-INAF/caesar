@@ -494,6 +494,29 @@ class CodeUtils : public TObject {
 		}
 
 		/**
+		* \brief Strip blank spaces from string
+		*/
+		static int StripBlankSpaces(std::string& s){
+			try {
+				s.erase( 
+					std::remove_if(
+						s.begin(),
+						s.end(),
+						[](char c){ 
+      				return std::isspace(static_cast<unsigned char>(c));
+      			}
+					),
+					s.end()
+				);
+			}//close try
+			catch(std::exception& e){
+				ERROR_LOG("C++ exception ("<<e.what()<<") occurred while stripping blank spaces from string!");
+				return -1;
+			}
+			return 0;
+		}//close StripBlankSpaces()
+
+		/**
 		* \brief Extract filename from path
 		*/
 		static std::string ExtractFileNameFromPath(const std::string& s,bool strip_extension=false){
