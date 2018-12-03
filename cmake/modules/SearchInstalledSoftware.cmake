@@ -245,6 +245,16 @@ if (NOT DOXYGEN_FOUND)
 endif()
 option(BUILD_DOC "Create and install the HTML based API documentation (requires Doxygen)" ${DOXYGEN_FOUND})
 
+#==================================
+#==   Check for Sphinx          ===
+#==================================
+MESSAGE(STATUS "Looking for Sphinx")
+find_package(Sphinx)
+if (NOT SPHINX_FOUND)
+	MESSAGE(STATUS "Sphinx not found, cannot generate sphinx project documentation!")
+endif()
+option(BUILD_WIKI_DOC "Create and install the HTML based API & wiki documentation (requires Sphinx)" ${SPHINX_FOUND})
+
 #======================================
 #==   Check for VTK                 ===
 #======================================

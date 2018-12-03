@@ -506,8 +506,34 @@ if(BUILD_DOC)
 		VERBATIM
 	)
 
+	# -- Generate sphinx doc files
+	configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/conf.py"
+    "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/conf.py"
+    @ONLY)
+	configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/index.rst"
+    "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/index.rst"
+    @ONLY)
+
+	if(SPHINX_FOUND)
+		macro(add_sphinx_target TARGET_NAME BUILDER COMMENT_STR)
+    	add_custom_target(${TARGET_NAME}
+    	COMMAND sphinx-build -b ${BUILDER} . sphinx/${BUILDER}
+			#COMMAND sphinx-build -b ${BUILDER} ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx sphinx/build/${BUILDER}
+    	    #WORKING_DIRECTORY .
+					WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx
+    	    DEPENDS doc
+    	    COMMENT ${COMMENT_STR}
+    	)
+		endmacro(add_sphinx_target)
+		add_sphinx_target(doc-sphinx html "Build Sphinx html documentation")
+	endif()
+
+
   # -- Install doc files
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc DESTINATION ${SHARE_INSTALL_DIR})
+
 
 endif()
 
