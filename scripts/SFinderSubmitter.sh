@@ -1193,6 +1193,8 @@ generate_config(){
     echo '//============================='
     echo 'isInteractiveRun = false                            | Is interactive run (graph plots enabled) (T/F)'
     echo "outputFile = $outputfile                            | Output filename (.root)"
+		echo "outputCatalogFile = $catalog_file										| Output catalog ascii filename"
+		echo "outputComponentCatalogFile = $catalog_fitcomp_file	| Output fitted component catalog ascii filename"
     echo "ds9RegionFile = $ds9region_file					            | DS9 region file (.reg) where to store source catalog"	
 		echo "ds9FitRegionFile = $ds9fitregion_file					      | DS9 region file (.reg) where to store fitted source catalog"
     echo 'DS9RegionFormat = 2                                 | DS9 region format (1=ellipse, 2=polygon)'
@@ -1205,6 +1207,7 @@ generate_config(){
 		echo 'noiseMapFITSFile = noise_map.fits					          | Output filename where to store noise map in FITS format (.fits)'
     echo 'significanceMapFITSFile = significance_map.fits	    | Output filename where to store significance map in FITS format (.fits)' 
     echo 'saveToFile = true																	  | Save results & maps to output ROOT file (T/F)'
+		echo 'saveToCatalogFile = true														! Save sources to catalog files (island, fitted components) (T/F)'
     echo 'saveToFITSFile = false														  | Save results to output FITS file(s) (T/F)'
 		echo "saveDS9Region = $SAVE_DS9REGIONS									  | Save DS9 region files (T/F) (default=T)"
     echo 'saveConfig = true																	  | Save config options to ROOT file (T/F)'
@@ -1445,14 +1448,14 @@ generate_config(){
 		echo 'spMergingIncludeSpatialPars = false          | Include spatial pars in region dissimilarity measure (default=false)'
 		echo '###'
 		echo '###'
-		echo '//spHierMergingPars = 1  0.3  0.5  3         | Hierarch algo pars: MIN_SEGMENTS, MERGING_RATIO, DIST_REGULARIZATION, DIST_THRESHOLD es 0.25 (value,value,value,value)'
-		echo '//spHierMergingMaxDissRatio = 1000  1.05     | Maximum mutual dissimilarity among regions for merging 1st and 2nd neighbors es. 1.15 (value)'
-		echo '//spMergingEdgeModel = 2                     | Edge model (1=Kirsch,2=Chan-Vese) (value)'
-		echo '//use2ndNeighborsInSPMerging  T              | Use 2nd-order neighbors in superpixel merging (T/F)'
-		echo '//useCurvatureInSPMerging  T                 | Use curvature params in superpixel merging (T/F)'
-		echo '//useLogContrastInSPGeneration  F            | Use logarithmic contrast to generate initial partition (T/F)'
-		echo '//usePixelRatioCut  T  0.4                   | Use pixel ratio to tag background regions (if npix/npixtot>cut)  (T/F,value)'
-		echo '//tagSignificantSP  T  1  0.5                | Tag significant superpixels if fraction of significant subregions is above cut (1=saliency,2=Mahalanobis) (T/F,method,cut)'
+		echo '###spHierMergingPars = 1  0.3  0.5  3         | Hierarch algo pars: MIN_SEGMENTS, MERGING_RATIO, DIST_REGULARIZATION, DIST_THRESHOLD es 0.25 (value,value,value,value)'
+		echo '###spHierMergingMaxDissRatio = 1000  1.05     | Maximum mutual dissimilarity among regions for merging 1st and 2nd neighbors es. 1.15 (value)'
+		echo '###spMergingEdgeModel = 2                     | Edge model (1=Kirsch,2=Chan-Vese) (value)'
+		echo '###use2ndNeighborsInSPMerging  T              | Use 2nd-order neighbors in superpixel merging (T/F)'
+		echo '###useCurvatureInSPMerging  T                 | Use curvature params in superpixel merging (T/F)'
+		echo '###useLogContrastInSPGeneration  F            | Use logarithmic contrast to generate initial partition (T/F)'
+		echo '###usePixelRatioCut  T  0.4                   | Use pixel ratio to tag background regions (if npix/npixtot>cut)  (T/F,value)'
+		echo '###tagSignificantSP  T  1  0.5                | Tag significant superpixels if fraction of significant subregions is above cut (1=saliency,2=Mahalanobis) (T/F,method,cut)'
 		echo '###'
 		echo '###'
 
@@ -1598,9 +1601,11 @@ if [ "$FILELIST_GIVEN" = true ]; then
 
 		## Define input/output filenames
   	inputfile=$filename
-		outputfile="Out_$filename_base_noext"'.root'
- 		ds9region_file="DS9_$filename_base_noext"'.reg'
-		ds9fitregion_file="DS9_FittedSources_$filename_base_noext"'.reg'
+		outputfile="out-$filename_base_noext"'.root'
+ 		ds9region_file="ds9-$filename_base_noext"'.reg'
+		ds9fitregion_file="ds9_fitcomp-$filename_base_noext"'.reg'
+		catalog_file="catalog-$filename_base_noext"'.dat'
+		catalog_fitcomp_file="catalog_fitcomp-$filename_base_noext"'.dat'
 
 		## Define output log filename
 		logfile="output_$filename_base_noext"'.log'
@@ -1672,9 +1677,12 @@ else
 
 	## Define input/output filenames
   inputfile=$INPUTFILE
-	outputfile="Out_$filename_base_noext"'.root'
- 	ds9region_file="DS9_$filename_base_noext"'.reg'
-	ds9fitregion_file="DS9_FittedSources_$filename_base_noext"'.reg'
+	outputfile="out-$filename_base_noext"'.root'
+ 	ds9region_file="ds9-$filename_base_noext"'.reg'
+	ds9fitregion_file="ds9_fitcomp-$filename_base_noext"'.reg'
+	catalog_file="catalog-$filename_base_noext"'.dat'
+	catalog_fitcomp_file="catalog_fitcomp-$filename_base_noext"'.dat'
+
 
 	## Define output log filename
 	logfile="output_$filename_base_noext"'.log'
