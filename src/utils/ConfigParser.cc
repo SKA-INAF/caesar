@@ -141,14 +141,18 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(inputFile,std::string,"","","");
 		REGISTER_OPTION(inputImage,std::string,"img","","");
 		REGISTER_OPTION(fitsHDUId,int,1,1,1000);
-		REGISTER_OPTION(outputFile,std::string,"Output.root","","");
-		REGISTER_OPTION(ds9RegionFile,std::string,"DS9SourceRegion.reg","","");
+		REGISTER_OPTION(outputFile,std::string,"output.root","","");
+		REGISTER_OPTION(ds9RegionFile,std::string,"ds9.reg","","");
 		REGISTER_OPTION(saveDS9Region,bool,true,false,true);
 		REGISTER_OPTION(DS9RegionFormat,int,2,0,3);
-		REGISTER_OPTION(ds9FitRegionFile,std::string,"DS9SourceFitRegion.reg","","");
+		REGISTER_OPTION(ds9FitRegionFile,std::string,"ds9_fitcomp.reg","","");
 		REGISTER_OPTION(convertDS9RegionsToWCS,bool,false,false,true);
 		REGISTER_OPTION(ds9WCSType,int,0,-0.001,3);
+		REGISTER_OPTION(outputCatalogFile,std::string,"catalog.dat","","");
+		REGISTER_OPTION(outputComponentCatalogFile,std::string,"catalog_fitcomp.dat","","");
+		
 		REGISTER_OPTION(saveToFile,bool,true,false,true);
+		REGISTER_OPTION(saveToCatalogFile,bool,true,false,true);
 		REGISTER_OPTION(saveConfig,bool,true,false,true);
 		REGISTER_OPTION(saveResidualMap,bool,true,false,true);
 		REGISTER_OPTION(saveBkgMap,bool,true,false,true);
@@ -161,12 +165,12 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(saveCurvatureMap,bool,false,false,true);
 		REGISTER_OPTION(saveSegmentedMap,bool,true,false,true);
 		REGISTER_OPTION(saveToFITSFile,bool,false,false,true);
-		REGISTER_OPTION(residualMapFITSFile,std::string,"ResidualMap.fits","","");
-		REGISTER_OPTION(inputMapFITSFile,std::string,"InputMap.fits","","");
-		REGISTER_OPTION(saliencyMapFITSFile,std::string,"SaliencyMap.fits","","");
-		REGISTER_OPTION(bkgMapFITSFile,std::string,"BkgMap.fits","","");
-		REGISTER_OPTION(noiseMapFITSFile,std::string,"NoiseMap.fits","","");
-		REGISTER_OPTION(significanceMapFITSFile,std::string,"SignificanceMap.fits","","");
+		REGISTER_OPTION(residualMapFITSFile,std::string,"residual_map.fits","","");
+		REGISTER_OPTION(inputMapFITSFile,std::string,"input_map.fits","","");
+		REGISTER_OPTION(saliencyMapFITSFile,std::string,"saliency_map.fits","","");
+		REGISTER_OPTION(bkgMapFITSFile,std::string,"bkg_map.fits","","");
+		REGISTER_OPTION(noiseMapFITSFile,std::string,"rms_map.fits","","");
+		REGISTER_OPTION(significanceMapFITSFile,std::string,"significance_map.fits","","");
 		REGISTER_OPTION(isInteractiveRun,bool,false,false,true);		
 
 		REGISTER_OPTION(readTileImage,bool,false,false,true);
