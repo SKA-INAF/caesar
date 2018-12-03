@@ -27,6 +27,7 @@
 
 #include <SFinder.h>
 #include <BlobFinder.h>
+#include <SourceExporter.h>
 #include <Image.h>
 #include <Source.h>
 #include <Contour.h>
@@ -525,7 +526,10 @@ int SFinder::Configure(){
 
 	//Get output file options
 	GET_OPTION_VALUE(outputFile,m_OutputFileName);
+	GET_OPTION_VALUE(outputCatalogFile,m_catalogOutFileName);
+	GET_OPTION_VALUE(outputComponentCatalogFile,m_catalogComponentsOutFileName);
 	GET_OPTION_VALUE(saveToFile,m_saveToFile);
+	GET_OPTION_VALUE(saveToCatalogFile,m_saveToCatalogFile);
 	GET_OPTION_VALUE(saveConfig,m_saveConfig);
 	GET_OPTION_VALUE(saveDS9Region,m_saveDS9Region);
 	GET_OPTION_VALUE(ds9RegionFile,m_DS9CatalogFileName);
@@ -2936,6 +2940,8 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	fitOptions.fitPrintLevel= m_fitPrintLevel;
 	fitOptions.fitParBoundIncreaseStepSize= m_fitParBoundIncreaseStepSize;
 
+	fitOptions.wcsType= m_ds9WCSType;
+
 	//## Check minimizer support
 	if(fitOptions.fitMinimizer=="Minuit2" || fitOptions.fitMinimizer=="minuit2"){
 		#ifndef MINUIT2_ENABLED
@@ -3360,6 +3366,39 @@ int SFinder::SaveDS9RegionFile()
 }//close SaveDS9RegionFile()
 
 
+int SFinder::SaveCatalogFile()
+{
+	//Return if no sources are found
+	if(m_SourceCollection.empty()){
+		WARN_LOG("[PROC "<<m_procId<<"] - No sources detected, no catalog file will be written!");
+		return 0;
+	}
+
+	//Retrieve source WCS
+	WorldCoor* wcs= m_SourceCollection[0]->GetWCS(m_ds9WCSType);
+	if(!wcs) {
+		WARN_LOG("[PROC "<<m_procId<<"] - Failed to compute WCS from sources!");
+	}	
+
+	//Saving island/blob catalog to ascii file
+	INFO_LOG("[PROC "<<m_procId<<"] - Writing source catalog to file "<<m_catalogOutFileName<<" ...");
+	bool dumpNestedSourceInfo= true;
+	int status= SourceExporter::WriteToAscii(m_catalogOutFileName,m_SourceCollection,dumpNestedSourceInfo,m_ds9WCSType,wcs);
+	if(status<0){
+		WARN_LOG("[PROC "<<m_procId<<"] - Writing source catalog to file "<<m_catalogOutFileName<<" failed!");
+	}
+	
+	//Saving source fitted components to ascii file
+	INFO_LOG("[PROC "<<m_procId<<"] - Writing source catalog to file "<<m_catalogComponentsOutFileName<<" ...");
+	status= SourceExporter::WriteComponentsToAscii(m_catalogComponentsOutFileName,m_SourceCollection,dumpNestedSourceInfo,m_ds9WCSType,wcs);
+	if(status<0){
+		WARN_LOG("[PROC "<<m_procId<<"] - Writing source fitted component catalog to file "<<m_catalogOutFileName<<" failed!");
+	}
+
+	return 0;
+
+}//close SaveCatalogFile()
+
 int SFinder::Save(){
 
 	INFO_LOG("[PROC "<<m_procId<<"] - Storing results to file & catalog...");
@@ -3367,6 +3406,11 @@ int SFinder::Save(){
 	//Save DS9 regions?
 	if(m_saveDS9Region && SaveDS9RegionFile()<0){
 		WARN_LOG("[PROC "<<m_procId<<"] - Failed to save sources to DS9 region file!");
+	}
+
+	//Save ascii catalogs?
+	if(m_saveToCatalogFile && SaveCatalogFile()<0){
+		WARN_LOG("[PROC "<<m_procId<<"] - Failed to save sources to catalog ascii file!");
 	}
 
 	//Check ROOT output file

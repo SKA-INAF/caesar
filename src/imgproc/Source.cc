@@ -1565,6 +1565,28 @@ int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WorldCoor* 
 
 }//close GetWCSPos()
 
+int Source::GetSpectralAxisInfo(double& val,double& dval,std::string& units)
+{
+	//Init values
+	val= -999;
+	dval= -999;
+	units= "";
+
+	//Check if metadata are available
+	if(!m_imgMetaData){
+		WARN_LOG("No metadata available to get spectral axis info!");
+		return -1;
+	}
+
+	//Get info
+	val= m_imgMetaData->Freq;	
+	dval= m_imgMetaData->dFreq;
+	units= m_imgMetaData->FreqUnit;
+
+	return 0;
+
+}//close GetSpectralAxisInfo()
+
 }//close namespace
 
 

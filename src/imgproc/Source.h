@@ -561,12 +561,34 @@ class Source : public Blob {
 		{
 			return GetWCSCoords(xwcs,ywcs,m_Sx,m_Sy,wcs,coordSystem);
 		}
+
+		/**
+		* \brief Return bounding box in WCS coordinates
+		*/
+		int GetWCSSourceRange(double& xmin_wcs,double& xmax_wcs,double& ymin_wcs,double& ymax_wcs,WorldCoor* wcs=0,int coordSystem=eJ2000)
+		{
+			xmin_wcs= -999;
+			xmax_wcs= -999;
+			ymin_wcs= -999;
+			ymax_wcs= -999;
+			int status= GetWCSCoords(xmin_wcs,ymin_wcs,m_Xmin,m_Ymin,wcs,coordSystem);
+			if(status<0) return -1;
+			status= GetWCSCoords(xmax_wcs,ymax_wcs,m_Xmax,m_Ymax,wcs,coordSystem);
+			if(status<0) return -1;	
+			return 0;
+		}
 	
 		/**
 		* \brief Return source name following IAU convention
 		*/
 		std::string GetIAUName(bool useWeightedPos=false,WorldCoor* wcs=0,int coordSystem=eJ2000);
 		
+		/**
+		* \brief Return spectral axis info
+		*/
+		int GetSpectralAxisInfo(double& val,double& dval,std::string& units);
+
+
 	protected:
 		/**
 		* \brief Find source match by position

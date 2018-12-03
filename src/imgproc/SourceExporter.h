@@ -73,6 +73,29 @@ class SourceExporter : public TObject
 	public:
 
 		//=======================================
+		//==      ASCII EXPORT
+		//=======================================
+		/**
+		* \brief Write ascii file from source collection
+		*/
+		static int WriteToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WorldCoor* wcs=0);
+		
+		/**
+		* \brief Get source ascii string
+		*/
+		static const std::vector<std::string> SourceToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WorldCoor* wcs=0);
+
+		/**
+		* \brief Write ascii file from source component collection
+		*/
+		static int WriteComponentsToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WorldCoor* wcs=0);
+		
+		/**
+		* \brief Get source component ascii string
+		*/
+		static const std::vector<std::string> SourceComponentsToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WorldCoor* wcs=0);
+
+		//=======================================
 		//==      DS9 EXPORT
 		//=======================================
 		/**

@@ -2007,7 +2007,46 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	INFO_LOG("Fit residual stats: min/max="<<residualMin<<"/"<<residualMax<<", mean="<<residualMean<<", rms="<<residualRMS<<", median="<<residualMedian<<", mad="<<residualMAD);
 	
 	//==============================================
-	//==             PRINT FIT RESULTS
+	//==     COMPUTE FIT ELLIPSE PARS
+	//==============================================
+	//Compute ellipse pars
+	if(m_sourceFitPars.ComputeComponentEllipsePars()<0){
+		WARN_LOG("Failed to compute fit component ellipse pars!");
+	}
+
+	//Compute WCS ellipse pars
+	if(aSource->HasImageMetaData()){
+		//Retrieve WCS
+		ImgMetaData* metadata= aSource->GetImageMetaData();
+		WorldCoor* wcs= metadata->GetWorldCoord(fitOptions.wcsType);
+		if(wcs){
+			if(m_sourceFitPars.ComputeComponentWCSEllipsePars(wcs)<0){
+				WARN_LOG("Failed to compute WCS fit component ellipse pars!");
+			}
+
+			//Set beam info
+			double beam_bmaj= metadata->Bmaj*3600;//in arcsec
+			double beam_bmin= metadata->Bmin*3600;//in arcsec
+			double beam_pa= metadata->Bpa;
+			m_sourceFitPars.SetComponentBeamEllipsePars(beam_bmaj,beam_bmin,beam_pa);
+			INFO_LOG("Setting beam pars ("<<beam_bmaj<<","<<beam_bmin<<","<<beam_pa<<")");
+			
+			//Compute deconvolved ellipse pars
+			if(m_sourceFitPars.ComputeComponentWCSDeconvolvedEllipsePars()<0){
+				WARN_LOG("Failed to compute WCS fit component beam-deconvolved ellipse pars!");
+			}
+		}
+		else{
+			WARN_LOG("Failed to get WCS system from metadata!");
+		}
+	}//close if
+	else{
+		WARN_LOG("Source has no image metadata, cannot compute WCS ellipse pars!");
+	}
+	
+
+	//==============================================
+	//==       PRINT FIT RESULTS
 	//==============================================
 	m_sourceFitPars.Print();
 	

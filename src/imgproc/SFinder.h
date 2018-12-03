@@ -150,9 +150,14 @@ class SFinder : public TObject {
 		Image* ReadImage(Caesar::FileInfo& info,std::string filename,std::string imgname="",long int ix_min=-1,long int ix_max=-1,long int iy_min=-1,long int iy_max=-1);
 
 		/**
-		* \brief Save source region file
+		* \brief Save detected sources to DS9 region file
 		*/
 		int SaveDS9RegionFile();
+
+		/**
+		* \brief Save detected source to catalog ascii file
+		*/
+		int SaveCatalogFile();
 
 		/**
 		* \brief Get smoothed image
@@ -306,7 +311,10 @@ class SFinder : public TObject {
 		bool m_IsInteractiveRun;
 		std::string m_OutputFileName;
 		TFile* m_OutputFile;
+		std::string m_catalogOutFileName;
+		std::string m_catalogComponentsOutFileName;
 		bool m_saveToFile;
+		bool m_saveToCatalogFile;
 		bool m_saveConfig;
 		bool m_saveDS9Region;
 		bool m_convertDS9RegionsToWCS;
