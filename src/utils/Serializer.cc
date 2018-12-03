@@ -97,6 +97,78 @@ int Serializer::EncodeSourceComponentParsToProtobuf(CaesarPB::SourceComponentPar
 			fitParErr_pb->set_val(parErr);
 		}//end loop par errors
 
+		sourceCompPars_pb->set_m_hasbeampars(sourceCompPars.HasBeamEllipsePars());
+
+		double beam_bmaj= 0;
+		double beam_bmin= 0;
+		double beam_pa= 0;		
+		sourceCompPars.GetBeamEllipsePars(beam_bmaj,beam_bmin,beam_pa);
+		sourceCompPars_pb->set_m_beam_bmaj(beam_bmaj);
+		sourceCompPars_pb->set_m_beam_bmin(beam_bmin);
+		sourceCompPars_pb->set_m_beam_pa(beam_pa);
+
+		sourceCompPars_pb->set_m_hasellipsepars(sourceCompPars.HasEllipsePars());
+		double x0= 0;
+		double y0= 0;
+		double bmaj= 0;
+		double bmin= 0;
+		double pa= 0;
+		sourceCompPars.GetEllipsePars(x0,y0,bmaj,bmin,pa);
+		sourceCompPars_pb->set_m_x0(x0);
+		sourceCompPars_pb->set_m_y0(y0);
+		sourceCompPars_pb->set_m_bmaj(bmaj);
+		sourceCompPars_pb->set_m_bmin(bmin);
+		sourceCompPars_pb->set_m_pa(pa);
+
+		double x0_err= 0;
+		double y0_err= 0;
+		double bmaj_err= 0;
+		double bmin_err= 0;
+		double pa_err= 0;
+		sourceCompPars.GetEllipseParErrors(x0_err,y0_err,bmaj_err,bmin_err,pa_err);
+		sourceCompPars_pb->set_m_x0_err(x0_err);
+		sourceCompPars_pb->set_m_y0_err(y0_err);
+		sourceCompPars_pb->set_m_bmaj_err(bmaj_err);
+		sourceCompPars_pb->set_m_bmin_err(bmin_err);
+		sourceCompPars_pb->set_m_pa_err(pa_err);
+
+
+		sourceCompPars_pb->set_m_haswcsellipsepars(sourceCompPars.HasWCSEllipsePars());
+		double x0_wcs= 0;
+		double y0_wcs= 0;
+		double bmaj_wcs= 0;
+		double bmin_wcs= 0;
+		double pa_wcs= 0;
+		sourceCompPars.GetWCSEllipsePars(x0_wcs,y0_wcs,bmaj_wcs,bmin_wcs,pa_wcs);
+		sourceCompPars_pb->set_m_x0_wcs(x0_wcs);
+		sourceCompPars_pb->set_m_y0_wcs(y0_wcs);
+		sourceCompPars_pb->set_m_bmaj_wcs(bmaj_wcs);
+		sourceCompPars_pb->set_m_bmin_wcs(bmin_wcs);
+		sourceCompPars_pb->set_m_pa_wcs(pa_wcs);
+
+
+		double x0_err_wcs= 0;
+		double y0_err_wcs= 0;
+		double bmaj_err_wcs= 0;
+		double bmin_err_wcs= 0;
+		double pa_err_wcs= 0;
+		sourceCompPars.GetWCSEllipseParErrors(x0_err_wcs,y0_err_wcs,bmaj_err_wcs,bmin_err_wcs,pa_err_wcs);
+		sourceCompPars_pb->set_m_x0_err_wcs(x0_err_wcs);
+		sourceCompPars_pb->set_m_y0_err_wcs(y0_err_wcs);
+		sourceCompPars_pb->set_m_bmaj_err_wcs(bmaj_err_wcs);
+		sourceCompPars_pb->set_m_bmin_err_wcs(bmin_err_wcs);
+		sourceCompPars_pb->set_m_pa_err_wcs(pa_err_wcs);
+
+
+		sourceCompPars_pb->set_m_haswcsdeconvolvedellipsepars(sourceCompPars.HasWCSDeconvolvedEllipsePars());
+		double bmaj_deconv_wcs= 0;
+		double bmin_deconv_wcs= 0;
+		double pa_deconv_wcs= 0;
+		sourceCompPars.GetWCSDeconvolvedEllipsePars(bmaj_deconv_wcs,bmin_deconv_wcs,pa_deconv_wcs);
+		sourceCompPars_pb->set_m_bmaj_deconv_wcs(bmaj_deconv_wcs);
+		sourceCompPars_pb->set_m_bmin_deconv_wcs(bmin_deconv_wcs);
+		sourceCompPars_pb->set_m_pa_deconv_wcs(pa_deconv_wcs);
+
 	}//close try block
 	catch(std::exception const & e) {
 		ERROR_LOG("Source component pars encoding to protobuf failed with status "<<e.what());
@@ -114,11 +186,25 @@ int Serializer::EncodeSourceFitParsToProtobuf(CaesarPB::SourceFitPars& sourceFit
 	sourceFitPars_pb.set_chi2(sourceFitPars.GetChi2());
 	sourceFitPars_pb.set_ndof(sourceFitPars.GetNDF());
 	sourceFitPars_pb.set_npars_free(sourceFitPars.GetNFreePars());
+	sourceFitPars_pb.set_npars_component(sourceFitPars.GetNComponentPars());
 	sourceFitPars_pb.set_nfit_points(sourceFitPars.GetNFitPoints());
 	sourceFitPars_pb.set_status(sourceFitPars.GetStatus());
 	sourceFitPars_pb.set_minimizer_status(sourceFitPars.GetMinimizerStatus());
 	sourceFitPars_pb.set_offset(sourceFitPars.GetOffsetPar());
 	sourceFitPars_pb.set_offset_err(sourceFitPars.GetOffsetParErr());
+
+	sourceFitPars_pb.set_residualmean(sourceFitPars.GetResidualMean());
+	sourceFitPars_pb.set_residualrms(sourceFitPars.GetResidualRMS());
+	sourceFitPars_pb.set_residualmedian(sourceFitPars.GetResidualMedian());
+	sourceFitPars_pb.set_residualmad(sourceFitPars.GetResidualMAD());
+	sourceFitPars_pb.set_residualmin(sourceFitPars.GetResidualMin());
+	sourceFitPars_pb.set_residualmax(sourceFitPars.GetResidualMax());
+
+	sourceFitPars_pb.set_thetafixed(sourceFitPars.IsThetaFixed());
+	sourceFitPars_pb.set_offsetfixed(sourceFitPars.IsOffsetFixed());
+	sourceFitPars_pb.set_sigmafixed(sourceFitPars.IsSigmaFixed());
+	sourceFitPars_pb.set_fluxdensity(sourceFitPars.GetFluxDensity());
+	sourceFitPars_pb.set_fluxdensityerr(sourceFitPars.GetFluxDensityErr());
 
 	//Add component fit pars
 	std::vector<SourceComponentPars> pars= sourceFitPars.GetPars();
@@ -129,6 +215,7 @@ int Serializer::EncodeSourceFitParsToProtobuf(CaesarPB::SourceFitPars& sourceFit
 			return -1;
 		}
 	}//end loop component fit pars
+
 
 	return 0;
 
@@ -847,6 +934,47 @@ int Serializer::EncodeProtobufToSourceComponentPars(SourceComponentPars& sourceC
 			float parVal= par_pb.val();
 			float parErr= parErr_pb.val();
 			sourceComponentPars.SetParValueAndError(parName,parVal,parErr);
+
+			//bool m_hasBeamPars= sourceComponentPars_pb.m_hasbeampars();
+			double m_beam_bmaj= sourceComponentPars_pb.m_beam_bmaj();
+			double m_beam_bmin= sourceComponentPars_pb.m_beam_bmin();
+			double m_beam_pa= sourceComponentPars_pb.m_beam_pa();
+			sourceComponentPars.SetBeamEllipsePars(m_beam_bmaj,m_beam_bmin,m_beam_pa);
+		
+			double m_x0= sourceComponentPars_pb.m_x0();
+			double m_y0= sourceComponentPars_pb.m_y0();
+			double m_bmaj= sourceComponentPars_pb.m_bmaj();
+			double m_bmin= sourceComponentPars_pb.m_bmin();
+			double m_pa= sourceComponentPars_pb.m_pa();
+			sourceComponentPars.SetEllipsePars(m_x0,m_y0,m_bmaj,m_bmin,m_pa);
+
+			double m_x0_err= sourceComponentPars_pb.m_x0_err();
+			double m_y0_err= sourceComponentPars_pb.m_y0_err();
+			double m_bmaj_err= sourceComponentPars_pb.m_bmaj_err();
+			double m_bmin_err= sourceComponentPars_pb.m_bmin_err();
+			double m_pa_err= sourceComponentPars_pb.m_pa_err();
+			sourceComponentPars.SetEllipseParErrors(m_x0_err,m_y0_err,m_bmaj_err,m_bmin_err,m_pa_err);
+
+			double m_x0_wcs= sourceComponentPars_pb.m_x0_wcs();
+			double m_y0_wcs= sourceComponentPars_pb.m_y0_wcs();
+			double m_bmaj_wcs= sourceComponentPars_pb.m_bmaj_wcs();
+			double m_bmin_wcs= sourceComponentPars_pb.m_bmin_wcs();
+			double m_pa_wcs= sourceComponentPars_pb.m_pa_wcs();
+			sourceComponentPars.SetWCSEllipsePars(m_x0_wcs,m_y0_wcs,m_bmaj_wcs,m_bmin_wcs,m_pa_wcs);
+
+			double m_x0_err_wcs= sourceComponentPars_pb.m_x0_err_wcs();
+			double m_y0_err_wcs= sourceComponentPars_pb.m_y0_err_wcs();
+			double m_bmaj_err_wcs= sourceComponentPars_pb.m_bmaj_err_wcs();
+			double m_bmin_err_wcs= sourceComponentPars_pb.m_bmin_err_wcs();
+			double m_pa_err_wcs= sourceComponentPars_pb.m_pa_err_wcs();
+			sourceComponentPars.SetWCSEllipseParErrors(m_x0_err_wcs,m_y0_err_wcs,m_bmaj_err_wcs,m_bmin_err_wcs,m_pa_err_wcs);
+
+			double m_bmaj_deconv_wcs= sourceComponentPars_pb.m_bmaj_deconv_wcs();
+			double m_bmin_deconv_wcs= sourceComponentPars_pb.m_bmin_deconv_wcs();
+			double m_pa_deconv_wcs= sourceComponentPars_pb.m_pa_deconv_wcs();
+			sourceComponentPars.SetWCSDeconvolvedEllipsePars(m_bmaj_deconv_wcs,m_bmin_deconv_wcs,m_pa_deconv_wcs);
+			
+
 		}//end loop fit pars
 
 	}//close try blocl
@@ -865,12 +993,27 @@ int Serializer::EncodeProtobufToSourceFitPars(SourceFitPars& sourceFitPars,Caesa
 		if(sourceFitPars_pb.has_ncomponents()) sourceFitPars.SetNComponents(sourceFitPars_pb.ncomponents());	
 		if(sourceFitPars_pb.has_chi2()) sourceFitPars.SetChi2(sourceFitPars_pb.chi2());	
 		if(sourceFitPars_pb.has_ndof()) sourceFitPars.SetNDF(sourceFitPars_pb.ndof());	
+		if(sourceFitPars_pb.has_npars_component()) sourceFitPars.SetNComponentPars(sourceFitPars_pb.npars_component());
 		if(sourceFitPars_pb.has_npars_free()) sourceFitPars.SetNFreePars(sourceFitPars_pb.npars_free());	
 		if(sourceFitPars_pb.has_nfit_points()) sourceFitPars.SetNFitPoints(sourceFitPars_pb.nfit_points());	
 		if(sourceFitPars_pb.has_status()) sourceFitPars.SetStatus(sourceFitPars_pb.status());	
 		if(sourceFitPars_pb.has_minimizer_status()) sourceFitPars.SetMinimizerStatus(sourceFitPars_pb.minimizer_status());	
 		if(sourceFitPars_pb.has_offset()) sourceFitPars.SetOffsetPar(sourceFitPars_pb.offset());	
 		if(sourceFitPars_pb.has_offset_err()) sourceFitPars.SetOffsetParErr(sourceFitPars_pb.offset_err());	
+		
+		if(sourceFitPars_pb.has_residualmean()) sourceFitPars.SetResidualMean(sourceFitPars_pb.residualmean());
+		if(sourceFitPars_pb.has_residualrms()) sourceFitPars.SetResidualRMS(sourceFitPars_pb.residualrms());	
+		if(sourceFitPars_pb.has_residualmedian()) sourceFitPars.SetResidualMedian(sourceFitPars_pb.residualmedian());	
+		if(sourceFitPars_pb.has_residualmad()) sourceFitPars.SetResidualMAD(sourceFitPars_pb.residualmad());	
+		if(sourceFitPars_pb.has_residualmin()) sourceFitPars.SetResidualMin(sourceFitPars_pb.residualmin());	
+		if(sourceFitPars_pb.has_residualmax()) sourceFitPars.SetResidualMax(sourceFitPars_pb.residualmax());	
+	
+		if(sourceFitPars_pb.has_thetafixed()) sourceFitPars.SetThetaFixed(sourceFitPars_pb.thetafixed());
+		if(sourceFitPars_pb.has_offsetfixed()) sourceFitPars.SetOffsetFixed(sourceFitPars_pb.offsetfixed());
+		if(sourceFitPars_pb.has_sigmafixed()) sourceFitPars.SetSigmaFixed(sourceFitPars_pb.sigmafixed());
+		
+		if(sourceFitPars_pb.has_fluxdensity()) sourceFitPars.SetFluxDensity(sourceFitPars_pb.fluxdensity());
+		if(sourceFitPars_pb.has_fluxdensityerr()) sourceFitPars.SetFluxDensityErr(sourceFitPars_pb.fluxdensityerr());
 		
 		//Set fit component pars	
 		for(int i=0;i<sourceFitPars_pb.pars_size();i++){
