@@ -8,9 +8,6 @@ Welcome to caesar's documentation!
 
 CAESAR is a C++ software tool for automated source finding in astronomical maps. It is distributed for research use only under the GNU General Public License v3.0. 
 
-#.. toctree::
-#   :maxdepth: 2
-#   :caption: Contents:
 
 .. toctree::
    :maxdepth: 1
@@ -22,7 +19,7 @@ CAESAR is a C++ software tool for automated source finding in astronomical maps.
    :caption: API REFERENCE
    :maxdepth: 2
 
-   #api/image
+   api/image
 
 Indices and tables
 ==================
