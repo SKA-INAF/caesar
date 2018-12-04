@@ -16,8 +16,8 @@
 // * Caesar. If not, see http://www.gnu.org/licenses/.                   *
 // ***********************************************************************
 /**
-* @file SourceFinder.cc
-* @class SourceFinder
+* @file SFinder.cc
+* @class SFinder
 * @brief Source finder class
 *
 * Class to perform source finding 
