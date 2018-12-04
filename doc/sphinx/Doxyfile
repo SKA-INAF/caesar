@@ -1,19 +1,38 @@
 PROJECT_NAME      = "caesar"
+DOXYFILE_ENCODING      = UTF-8
+OUTPUT_DIRECTORY       = .
+#INPUT             = ../../src/utils \
+#										../../src/img \
+#										../../src/imgio \
+#										../../src/imgfilt	\
+#										../../src/imgproc
+INPUT             = ../../src
+#INPUT             = src/utils \
+#										src/img \
+#										src/imgio \
+#										src/imgfilt	\
+#										src/imgproc	
+FULL_PATH_NAMES    = YES
+#SEARCH_INCLUDES   = YES		
+RECURSIVE         = YES		
+EXTRACT_ALL            = YES	
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES				
+GENERATE_HTML     = YES
+HTML_OUTPUT       = html
+GENERATE_XML      = YES
 XML_OUTPUT        = xml
-INPUT             = ../../src/utils \
-										../../src/img \
-										../../src/imgio \
-										../../src/imgfilt	\
-										../../src/imgproc										
 GENERATE_LATEX    = NO
 GENERATE_MAN      = NO
 GENERATE_RTF      = NO
+ALPHABETICAL_INDEX = YES
+BRIEF_MEMBER_DESC      = YES
+REPEAT_BRIEF           = YES
 CASE_SENSE_NAMES  = NO
-GENERATE_HTML     = NO
-GENERATE_XML      = YES
-RECURSIVE         = YES
-QUIET             = YES
+QUIET             = NO
 JAVADOC_AUTOBRIEF = YES
 WARN_IF_UNDOCUMENTED = NO
 MACRO_EXPANSION = YES
+HAVE_DOT = YES
 DOT_GRAPH_MAX_NODES = 100

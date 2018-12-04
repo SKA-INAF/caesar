@@ -494,49 +494,139 @@ if(BUILD_DOC)
   	MESSAGE(FATAL_ERROR "Doxygen is needed to build the documentation.")
   endif()
 
-	# -- Generate doxygen doc files
-  set(doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/doc/doxygen/Doxyfile.in)
+
+	# -- Copy Doxygen doc tree in build dir	
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/doc/doxygen DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/doc)
+
+	# -- Generate doxygen doc files (replace cmake variables)
+  #set(doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/doc/doxygen/Doxyfile.in)
+  #set(doxyfile ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen/Doxyfile)
+  #configure_file(${doxyfile_in} ${doxyfile} @ONLY)
+	set(doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/doc/doxygen/Doxyfile.in)
   set(doxyfile ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen/Doxyfile)
   configure_file(${doxyfile_in} ${doxyfile} @ONLY)
 
+
   add_custom_target(doc
     COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+		#COMMAND ${DOXYGEN_EXECUTABLE} Doxyfile.in
+    #WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen
     COMMENT "Generating API documentation with Doxygen"
 		VERBATIM
 	)
 
 	# -- Generate sphinx doc files
-	configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/conf.py"
-    "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/conf.py"
-    @ONLY)
-	configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/index.rst"
-    "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/index.rst"
-    @ONLY)
+	#configure_file(
+  #  "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/conf.py"
+  #  "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/conf.py"
+  #  @ONLY)
+	#configure_file(
+  #  "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/index.rst"
+  #  "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/index.rst"
+  #  @ONLY)
+	#configure_file(
+  #  "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/installation.rst"
+  #  "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/installation.rst"
+  #  @ONLY)
+	#configure_file(
+  #  "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/api/image_index.rst"
+  #  "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/api/image_index.rst"
+  #  @ONLY)
+	#configure_file(
+  #  "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/api/image.rst"
+  #  "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/api/image.rst"
+  #  @ONLY)			
 
-	if(SPHINX_FOUND)
-		macro(add_sphinx_target TARGET_NAME BUILDER COMMENT_STR)
-    	add_custom_target(${TARGET_NAME}
-    	COMMAND sphinx-build -b ${BUILDER} . sphinx/${BUILDER}
-			#COMMAND sphinx-build -b ${BUILDER} ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx sphinx/build/${BUILDER}
-    	    #WORKING_DIRECTORY .
-					WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx
-    	    DEPENDS doc
-    	    COMMENT ${COMMENT_STR}
-    	)
-		endmacro(add_sphinx_target)
-		add_sphinx_target(doc-sphinx html "Build Sphinx html documentation")
-	endif()
-
+	#if(SPHINX_FOUND)
+	#	macro(add_sphinx_target TARGET_NAME BUILDER COMMENT_STR)
+  #  	add_custom_target(${TARGET_NAME}
+  #  		COMMAND sphinx-build -b ${BUILDER} . sphinx/${BUILDER}
+	#			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx
+  #  	  DEPENDS doc
+  #  	  COMMENT ${COMMENT_STR}
+  #  	)
+	#	endmacro(add_sphinx_target)
+	#	add_sphinx_target(doc-sphinx html "Build Sphinx html documentation")
+	#endif()
 
   # -- Install doc files
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc DESTINATION ${SHARE_INSTALL_DIR})
 
-
 endif()
 
+
+if(BUILD_WIKI_DOC)
+	if(NOT DOXYGEN_FOUND)
+  	MESSAGE(FATAL_ERROR "Doxygen is needed to build the Sphinx documentation via breathe.")
+  endif()
+	if(NOT SPHINX_FOUND)
+  	MESSAGE(FATAL_ERROR "Sphinx is needed to build the documentation.")
+  endif()
+
+	# -- Copy Sphinx doc tree in build dir	
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/doc)
+
+	# -- Generate doxygen config files
+  set(doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/Doxyfile.in)
+  set(doxyfile ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/Doxyfile_gen)
+  configure_file(${doxyfile_in} ${doxyfile} @ONLY)
+
+	#add_custom_target(copysphinxdoc
+	#	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx
+  #  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+  #  COMMENT "Copying sphinx doc tree in build dir"
+	#	VERBATIM
+	#)
+
+  add_custom_target(doxydoc
+		COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx
+    COMMENT "Generating XML Doxygen documentation to be used by sphinx breathe"
+		VERBATIM
+	)
+
+	# -- Generate sphinx doc files
+#	configure_file(
+#    "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/conf.py"
+#    "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/conf.py"
+#    @ONLY)
+#	configure_file(
+#    "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/index.rst"
+#    "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/index.rst"
+#    @ONLY)
+#	configure_file(
+#    "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/installation.rst"
+#    "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/installation.rst"
+#    @ONLY)
+#	configure_file(
+#    "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/api/image_index.rst"
+#    "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/api/image_index.rst"
+#    @ONLY)
+#	configure_file(
+#    "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/api/image.rst"
+#    "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/api/image.rst"
+#    @ONLY)			
+
+	# -- Configure sphinx builder
+	macro(add_sphinx_target TARGET_NAME BUILDER COMMENT_STR)
+    add_custom_target(${TARGET_NAME}
+    	COMMAND sphinx-build -b ${BUILDER} . sphinx/${BUILDER}
+			#COMMAND sphinx-build -b ${BUILDER} ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx sphinx/build/${BUILDER}
+    	#WORKING_DIRECTORY .
+			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx
+   		DEPENDS doxydoc
+   		COMMENT ${COMMENT_STR}
+  	)
+	endmacro(add_sphinx_target)
+
+	add_sphinx_target(doc-sphinx html "Build Sphinx html documentation")
+
+  # -- Install doc files
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc DESTINATION ${SHARE_INSTALL_DIR})
+
+endif()
+	
 
 #==============================================================================================
 #===              INSTALL STUFF
