@@ -312,13 +312,13 @@ ExternalProject_Add(LINTERP
 	add_custom_command(
   	OUTPUT proto_generation
     COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} --proto_path=${PROTO_DIR} --cpp_out=${CMAKE_BINARY_DIR} ${PROTO_FILES}
-    DEPENDS always_rebuild  ### Decomment this to always generate protobuf files
-		#DEPENDS ${PROTO_FILES}
+    #DEPENDS always_rebuild  ### Decomment this to always generate protobuf files
+		DEPENDS ${PROTO_FILES}
   )
 
 	add_custom_target(ProtobufSchema ALL 
-		DEPENDS proto_generation
-		#DEPENDS ${PROTO_FILES}  ## Will generate source files only when proto files are changed
+		#DEPENDS proto_generation
+		DEPENDS ${PROTO_FILES}  ## Will generate source files only when proto files are changed
   )
 
 	
@@ -498,60 +498,46 @@ if(BUILD_DOC)
 	# -- Copy Doxygen doc tree in build dir	
 	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/doc/doxygen DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/doc)
 
-	# -- Generate doxygen doc files (replace cmake variables)
-  #set(doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/doc/doxygen/Doxyfile.in)
-  #set(doxyfile ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen/Doxyfile)
-  #configure_file(${doxyfile_in} ${doxyfile} @ONLY)
-	set(doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/doc/doxygen/Doxyfile.in)
+	# -- Generate doxygen config file (replace cmake variables)
+  set(doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/doc/doxygen/Doxyfile.in)
   set(doxyfile ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen/Doxyfile)
   configure_file(${doxyfile_in} ${doxyfile} @ONLY)
 
-
-  add_custom_target(doc
+	# -- Generate doxygen doc
+	add_custom_target(generate_doc
     COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
-		#COMMAND ${DOXYGEN_EXECUTABLE} Doxyfile.in
-    #WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen
     COMMENT "Generating API documentation with Doxygen"
 		VERBATIM
 	)
 
-	# -- Generate sphinx doc files
-	#configure_file(
-  #  "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/conf.py"
-  #  "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/conf.py"
-  #  @ONLY)
-	#configure_file(
-  #  "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/index.rst"
-  #  "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/index.rst"
-  #  @ONLY)
-	#configure_file(
-  #  "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/installation.rst"
-  #  "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/installation.rst"
-  #  @ONLY)
-	#configure_file(
-  #  "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/api/image_index.rst"
-  #  "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/api/image_index.rst"
-  #  @ONLY)
-	#configure_file(
-  #  "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/api/image.rst"
-  #  "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/api/image.rst"
-  #  @ONLY)			
+  #add_custom_target(doc
+  #  COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
+	#	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen
+  #  COMMENT "Generating API documentation with Doxygen"
+	#	VERBATIM
+	#)
 
-	#if(SPHINX_FOUND)
-	#	macro(add_sphinx_target TARGET_NAME BUILDER COMMENT_STR)
-  #  	add_custom_target(${TARGET_NAME}
-  #  		COMMAND sphinx-build -b ${BUILDER} . sphinx/${BUILDER}
-	#			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx
-  #  	  DEPENDS doc
-  #  	  COMMENT ${COMMENT_STR}
-  #  	)
-	#	endmacro(add_sphinx_target)
-	#	add_sphinx_target(doc-sphinx html "Build Sphinx html documentation")
-	#endif()
+	
 
   # -- Install doc files
-  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc DESTINATION ${SHARE_INSTALL_DIR})
+  #install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc DESTINATION ${SHARE_INSTALL_DIR})
+	#install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen/html DESTINATION ${SHARE_INSTALL_DIR}/doc/doxygen)
+	#install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen/man DESTINATION ${SHARE_INSTALL_DIR}/doc/doxygen)
+	#install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen/rtf DESTINATION ${SHARE_INSTALL_DIR}/doc/doxygen)
+	#install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen/latex DESTINATION ${SHARE_INSTALL_DIR}/doc/doxygen)
+	#install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen/xml DESTINATION ${SHARE_INSTALL_DIR}/doc/doxygen)
+
+	add_custom_target(doc
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen/html ${SHARE_INSTALL_DIR}/doc/doxygen/html
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen/man ${SHARE_INSTALL_DIR}/doc/doxygen/man
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen/latex ${SHARE_INSTALL_DIR}/doc/doxygen/latex
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen/rtf ${SHARE_INSTALL_DIR}/doc/doxygen/rtf
+		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen
+    COMMENT "Installing API Doxygen documentation in directory ${SHARE_INSTALL_DIR}/doc/doxygen"
+		DEPENDS generate_doc
+		VERBATIM
+	)
 
 endif()
 
@@ -572,58 +558,47 @@ if(BUILD_WIKI_DOC)
   set(doxyfile ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/Doxyfile_gen)
   configure_file(${doxyfile_in} ${doxyfile} @ONLY)
 
-	#add_custom_target(copysphinxdoc
-	#	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx
-  #  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  #  COMMENT "Copying sphinx doc tree in build dir"
-	#	VERBATIM
-	#)
-
-  add_custom_target(doxydoc
+  ##add_custom_target(doxydoc
+	add_custom_target(generate_doxygen_doc
 		COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx
     COMMENT "Generating XML Doxygen documentation to be used by sphinx breathe"
 		VERBATIM
 	)
 
-	# -- Generate sphinx doc files
-#	configure_file(
-#    "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/conf.py"
-#    "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/conf.py"
-#    @ONLY)
-#	configure_file(
-#    "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/index.rst"
-#    "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/index.rst"
-#    @ONLY)
-#	configure_file(
-#    "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/installation.rst"
-#    "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/installation.rst"
-#    @ONLY)
-#	configure_file(
-#    "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/api/image_index.rst"
-#    "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/api/image_index.rst"
-#    @ONLY)
-#	configure_file(
-#    "${CMAKE_CURRENT_SOURCE_DIR}/doc/sphinx/api/image.rst"
-#    "${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/api/image.rst"
-#    @ONLY)			
+	# -- Generate Sphinx html documentation
+	add_custom_target(generate_sphinx_doc
+		COMMAND sphinx-build -b html . html
+		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx
+   	DEPENDS generate_doxygen_doc
+   	COMMENT "Build Sphinx html documentation"
+		VERBATIM
+	)	
 
 	# -- Configure sphinx builder
-	macro(add_sphinx_target TARGET_NAME BUILDER COMMENT_STR)
-    add_custom_target(${TARGET_NAME}
-    	COMMAND sphinx-build -b ${BUILDER} . sphinx/${BUILDER}
-			#COMMAND sphinx-build -b ${BUILDER} ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx sphinx/build/${BUILDER}
-    	#WORKING_DIRECTORY .
-			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx
-   		DEPENDS doxydoc
-   		COMMENT ${COMMENT_STR}
-  	)
-	endmacro(add_sphinx_target)
+	#macro(add_sphinx_target TARGET_NAME BUILDER COMMENT_STR)
+  #  add_custom_target(${TARGET_NAME}
+  #  	COMMAND sphinx-build -b ${BUILDER} . sphinx/${BUILDER}
+	#		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx
+  # 		DEPENDS doxydoc
+  # 		COMMENT ${COMMENT_STR}
+  #	)
+	#endmacro(add_sphinx_target)
 
-	add_sphinx_target(doc-sphinx html "Build Sphinx html documentation")
-
+	##add_sphinx_target(doc-sphinx html "Build Sphinx html documentation")
+	
   # -- Install doc files
-  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc DESTINATION ${SHARE_INSTALL_DIR})
+  #install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc DESTINATION ${SHARE_INSTALL_DIR})
+	#install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/sphinx/html DESTINATION ${SHARE_INSTALL_DIR}/doc/sphinx)
+	
+	add_custom_target(doc-sphinx
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/doc/sphinx/html ${SHARE_INSTALL_DIR}/doc/sphinx/html
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Installing sphinx generated html doc tree in ${SHARE_INSTALL_DIR}/doc/sphinx dir"
+		DEPENDS generate_sphinx_doc
+		VERBATIM
+	)
+	
 
 endif()
 	

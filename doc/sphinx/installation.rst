@@ -20,6 +20,7 @@ Install the project mandatory dependencies:
 * cmake (>=2.8) [https://cmake.org]  
   
 Optional dependencies are:
+
 * MPICH [https://www.mpich.org/] or OpenMPI [https://www.open-mpi.org/], needed when the build option ENABLE_MPI=ON    
 * OpenMP [http://www.openmp.org/], needed when the build option BUILD_WITH_OPENMP=ON
 * GoogleTest [https://github.com/google/googletest], needed for unit testing when the build option ENABLE_TEST=ON
@@ -27,6 +28,7 @@ Optional dependencies are:
 * Sphinx [http://www.sphinx-doc.org] & Breathe [https://pypi.org/project/breathe], needed to generate the Sphinx API & wiki documentation
 
 Make sure you have set the following environment variables to the external library installation dirs:
+
 * ROOTSYS
 * OPENCV_DIR
 * R_DIR
@@ -35,6 +37,7 @@ Make sure you have set the following environment variables to the external libra
 * JSONCPP_ROOT
 
 Add also the following paths to the PKG_CONFIG_PATH environment var: 
+
 * $LOG4CXX_ROOT/lib/pkgconfig
 * $JSONCPP_ROOT/lib/pkgconfig
 
@@ -59,20 +62,31 @@ To build and install the project:
 * Create the build and install directories: $BUILD_DIR, $INSTALL_DIR  
 
 * In the build directory:
-      
-	``cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DBUILD_WITH_OPENMP=ON -DENABLE_MPI=ON -DBUILD_APPS=ON -DENABLE_TEST=ON $SOURCE_DIR``
-	``make``
-	``make install``
+
+|	``cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DBUILD_WITH_OPENMP=ON -DENABLE_MPI=ON``
+|	         ``-DBUILD_APPS=ON -DENABLE_TEST=ON $SOURCE_DIR``
+|	``make``
+|	``make install``
+
 
 
 ----------------------------
 **Documentation generation**
 ----------------------------
-To generate the documentation you must have Doxygen installed. Enter the build directory and type:
+
+To generate and install the API documentation you must have Doxygen installed. Enter the build directory and type:
 
 
 ``make doc``
-``make install``
+
+
+To generate and install the Sphinx wiki documentation you must have sphinx+breathe installed. Enter the build directory and type:
+
+
+``make doc-sphinx``
+
+
+The generated documentation will be installed in the $INSTALL_DIR/doc directory.
 
 
 ----------------------
