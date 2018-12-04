@@ -29,7 +29,7 @@ import sphinx_rtd_theme
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 if on_rtd:
   print 'Generating Doxygen documentation ...'
-  subprocess.call('doxygen ../doxygen/Doxyfile.in', shell=True)
+  subprocess.call('doxygen Doxyfile', shell=True)
 
 # -- General configuration ------------------------------------------------
 
