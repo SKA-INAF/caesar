@@ -44,7 +44,8 @@ if on_rtd:
 extensions = [
   'sphinx.ext.intersphinx','breathe','sphinx.ext.imgmath', 'sphinx.ext.todo'
 ]
-breathe_projects = { "caesar": "../xml" }
+#breathe_projects = { "caesar": "../xml" }
+breathe_projects = { "caesar": "xml/" }
 breathe_default_project = "caesar"
 
 # Add any paths that contain templates here, relative to this directory.
