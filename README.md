@@ -65,7 +65,7 @@ cmake should find all needed include dirs and libraries used to build the projec
 To build and install the project:
 
 * Clone this repository into your local $SOURCE_DIR  
-  ```git clone https://github.com/simoneriggi/ska-dsh_lmc.git $SOURCE_DIR```
+  ```git clone https://github.com/SKA-INAF/caesar.git $SOURCE_DIR```
 * Create the build and install directories: $BUILD_DIR, $INSTALL_DIR  
 * In the build directory:  
   ```cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DENABLE_TEST=ON -DBUILD_WITH_OPENMP=ON -DENABLE_MPI=ON -DBUILD_APPS=ON $SOURCE_DIR```   
@@ -73,9 +73,13 @@ To build and install the project:
   ```make install```  
   
 ### **Documentation generation**
-To generate the documentation you must have Doxygen installed. Enter the build directory and type:
+To generate and install the API documentation you must have Doxygen (+dot) installed on your system. Enter the build directory and type:
   ```make doc```  
-  ```make install``` 
+
+To generate and install the Sphinx API and wiki documentation you must have Sphinx + Breathe installed on your system. Enter the build directory and type:
+  ```make doc-sphinx``` 
+  
+Online documentation is available at: https://caesar-doc.readthedocs.io/en/latest/  
   
 ### **Running unit tests**
 To build the unit tests you must have Google Test installed and the ENABLE_TEST option set to ON when building Caesar.
