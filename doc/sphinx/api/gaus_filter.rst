@@ -1,7 +1,8 @@
 
 Gaussian Filter
 ===============
-This class defines the metadata structure stored in image. 
+
+This class provides methods to apply a gaussian filter to an image.
 Defined in ``src/imgfilt/GausFilter.h``
 
 .. doxygenclass:: Caesar::GausFilter
