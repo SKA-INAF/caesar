@@ -58,7 +58,11 @@ using namespace std;
 namespace Caesar {
 
 
-struct DistPars {
+struct DistPars 
+{
+	/** 
+	\brief DistPars struct constructor
+ 	*/
 	DistPars(){
 		dist2= 0;
 		dist2_curv= 0;

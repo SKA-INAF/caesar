@@ -25,8 +25,8 @@
 * @date 20/01/2015
 */
 
-#ifndef SLICData_h
-#define SLICData_h 1
+#ifndef _SLICData_h
+#define _SLICData_h 1
 
 #include <Region.h>
 #include <Contour.h>
@@ -332,22 +332,35 @@ typedef std::vector< std::vector<int> > SLICConnectedRegions;
 class SLICContourData : public TObject {
 
 	public:
-	
+		/** 
+		\brief SLIC contour data constructor
+ 		*/
 		SLICContourData(){
 			contour= 0;
 			ResetList();
 		}
+	
+		/** 
+		\brief SLIC contour data destructor
+ 		*/
 		virtual ~SLICContourData() { 
 			ResetContour();		
 			ResetList();
 		}
 
 	public:
+		/** 
+		\brief Reset SLIC contour
+ 		*/
 		void ResetContour(){
 			if(!contour) return;
 			delete contour;
 			contour= 0;	
 		}
+
+		/** 
+		\brief Reset connected regions list and clear SLIC boundary data
+ 		*/
 		void ResetList(){
 			connectedRegionIds.clear();
 			boundaryData.clear();
@@ -366,6 +379,9 @@ class SLICContourData : public TObject {
 class SLICNeighborData : public TObject {
 	
 	public:
+		/** 
+		\brief SLIC neighbor data constructor
+ 		*/
 		SLICNeighborData(){
 			Order= 0;
 			Id= -1;
@@ -379,13 +395,23 @@ class SLICNeighborData : public TObject {
 			Dtot_n= 0;
 			Dsym= 0;
 		};
+
+		/** 
+		\brief SLIC neighbor data destructor
+ 		*/
 		virtual ~SLICNeighborData(){};
 
 	public:
+		/** 
+		\brief SLIC neighbor data equality operator for comparison
+ 		*/
 		bool operator==(const SLICNeighborData& aNeighborData) const {
     	return ( (aNeighborData.Id==Id) && (aNeighborData.Index==Index) );
     }
 	
+		/** 
+		\brief Print neighbor data info
+ 		*/
 		void Print(){
 			cout<<"** NEIGHBOR DATA #"<<Index<<" **"<<endl;
 			cout<<"Id="<<Id<<", D="<<D<<" Dtot="<<Dtot<<" Dsym="<<Dsym<<endl;
@@ -414,12 +440,22 @@ typedef std::vector< std::vector<SLICNeighborData> > SLICNeighbors;
 class SLICNeighborCollection : public TObject {
 	
 	public:
+		/** 
+		\brief SLIC neighbor collection constructor
+ 		*/
 		SLICNeighborCollection(){
 			m_neighbors.clear();
 		};
+
+		/** 
+		\brief SLIC neighbor collection destructor
+ 		*/
 		virtual ~SLICNeighborCollection(){};
 
 	private:
+		/** 
+		\brief SLIC neighbor data comparator by id 
+ 		*/
 		struct MatchId {
  			MatchId(const int& id) : m_id(id) {}
  			bool operator()(const SLICNeighborData& obj) const {
@@ -428,6 +464,10 @@ class SLICNeighborCollection : public TObject {
  			private:
    			const int& m_id;
 		};
+
+		/** 
+		\brief SLIC neighbor data comparator by index
+ 		*/
 		struct MatchIndex {
  			MatchIndex(const int& index) : m_index(index) {}
  			bool operator()(const SLICNeighborData& obj) const {
@@ -437,29 +477,63 @@ class SLICNeighborCollection : public TObject {
    			const int& m_index;
 		};
 
+		/** 
+		\brief SLIC neighbor data comparator by dissimilarity measure 
+ 		*/
 		static bool compareByDiss(const SLICNeighborData &a, const SLICNeighborData &b) {
    		return ( (a.D) < (b.D) );
 		}
+
+		/** 
+		\brief SLIC neighbor data comparator by edgeness measure 
+ 		*/
 		static bool compareByEdgeness(const SLICNeighborData &a, const SLICNeighborData &b) {
    		return ( (a.E) < (b.E) );
 		}
+		
+		/** 
+		\brief SLIC neighbor data comparator by total dissimilarity measure 
+ 		*/
 		static bool compareByTotDiss(const SLICNeighborData &a, const SLICNeighborData &b) {
    		return ( (a.Dtot) < (b.Dtot) );
 		}
 
 	public: 
+
+		/** 
+		\brief Add a SLIC neighbor data to collection
+ 		*/
 		void Add(SLICNeighborData nn){m_neighbors.push_back(nn);}
+
+		/** 
+		\brief Sort SLIC neighbor data in collection by dissimilarity measure
+ 		*/
 		void SortByDiss(){
 			std::sort(m_neighbors.begin(), m_neighbors.end(), compareByDiss);
 		};
+
+		/** 
+		\brief Sort SLIC neighbor data in collection by edgeness measure
+ 		*/
 		void SortByEdgeness(){
 			std::sort(m_neighbors.begin(), m_neighbors.end(), compareByEdgeness);
 		};
+
+		/** 
+		\brief Sort SLIC neighbor data in collection by total dissimilarity measure
+ 		*/
 		void SortByTotDiss(){
 			std::sort(m_neighbors.begin(), m_neighbors.end(), compareByTotDiss);
 		};
+
+		/** 
+		\brief Get number of neighbor data present in collection
+ 		*/
 		int GetN(){return (int)(m_neighbors.size());}
 
+		/** 
+		\brief Find a SLIC neighbor data in collection by id
+ 		*/
 		int FindById(int id){
 			if(GetN()<=0) return -1;
 			std::vector<SLICNeighborData>::iterator it = std::find_if(m_neighbors.begin(), m_neighbors.end(), MatchId(id));
@@ -467,6 +541,10 @@ class SLICNeighborCollection : public TObject {
 			int pos = it-m_neighbors.begin();
 			return pos;
 		}
+
+		/** 
+		\brief Find a SLIC neighbor data in collection by index
+ 		*/
 		int FindByIndex(int index){
 			if(GetN()<=0) return -1;
 			std::vector<SLICNeighborData>::iterator it = std::find_if(m_neighbors.begin(), m_neighbors.end(), MatchIndex(index));
@@ -475,12 +553,19 @@ class SLICNeighborCollection : public TObject {
 			return pos;
 		}
 
+		/** 
+		\brief Find the closest neighbor data in collection wrt dissimilarity
+ 		*/
 		int FindCloserByDiss(){
 			if(GetN()<=0) return -1;
 			std::vector<SLICNeighborData>::iterator it= std::min_element(m_neighbors.begin(),m_neighbors.end(),compareByDiss);
 			size_t pos = it-m_neighbors.begin();
 			return pos;
 		}
+
+		/** 
+		\brief Find the closest neighbor data in collection wrt total dissimilarity
+ 		*/
 		int FindCloserByDissTot(){
 			if(GetN()<=0) return -1;
 			std::vector<SLICNeighborData>::iterator it= std::min_element(m_neighbors.begin(),m_neighbors.end(),compareByTotDiss);
@@ -488,6 +573,9 @@ class SLICNeighborCollection : public TObject {
 			return pos;
 		}
 
+		/** 
+		\brief Find the closest neighbor data in collection in dissimilarity
+ 		*/
 		std::vector<SLICNeighborData> GetNSortedByDiss(int N){
 			std::vector<SLICNeighborData> topSorted;
 			topSorted.clear();
@@ -505,6 +593,9 @@ class SLICNeighborCollection : public TObject {
 			return topSorted;
 		}
 
+		/** 
+		\brief Returns the number of SLIC neighbor data sorted by total dissimilarity
+ 		*/
 		std::vector<SLICNeighborData> GetNSortedByTotDiss(int N){
 			std::vector<SLICNeighborData> topSorted;
 			topSorted.clear();
@@ -522,6 +613,9 @@ class SLICNeighborCollection : public TObject {
 			return topSorted;
 		}
 
+		/** 
+		\brief Check if neighbor data with given id is among the closest N in collection wrt dissimilarity measure
+ 		*/
 		bool IsIdAmongNClosersByDiss(int id,int N){		
 			//Get first N sorted in a new collection
 			std::vector<SLICNeighborData> topSorted= GetNSortedByDiss(N);
@@ -534,6 +628,9 @@ class SLICNeighborCollection : public TObject {
 			return false;
 		}
 
+		/** 
+		\brief Check if neighbor data with given id is among the closest N in collection wrt total dissimilarity measure
+ 		*/
 		bool IsIdAmongNClosersByTotDiss(int id,int N){		
 			//Get first N sorted in a new collection
 			std::vector<SLICNeighborData> topSorted= GetNSortedByTotDiss(N);
@@ -546,6 +643,9 @@ class SLICNeighborCollection : public TObject {
 			return false;
 		}
 
+		/** 
+		\brief Check if neighbor data with given index is among the closest N in collection wrt dissimilarity measure
+ 		*/
 		bool IsIndexAmongNClosersByDiss(int index,int N){
 			//Get first N sorted in a new collection
 			std::vector<SLICNeighborData> topSorted= GetNSortedByDiss(N);
@@ -558,6 +658,9 @@ class SLICNeighborCollection : public TObject {
 			return false;
 		}		
 
+		/** 
+		\brief Check if neighbor data with given index is among the closest N in collection wrt total dissimilarity measure
+ 		*/
 		bool IsIndexAmongNClosersByTotDiss(int index,int N){
 			//Get first N sorted in a new collection
 			std::vector<SLICNeighborData> topSorted= GetNSortedByTotDiss(N);
@@ -570,18 +673,29 @@ class SLICNeighborCollection : public TObject {
 			return false;
 		}		
 
+		/** 
+		\brief Print neighbor data collection info
+ 		*/
 		void Print(){
 			for(int i=0;i<GetN();i++) m_neighbors[i].Print();
 		}
 
-		//std::vector<SLICNeighborData> GetNeighbors(){return m_neighbors;}
+		/** 
+		\brief Returns SLIC neighbor data collection
+ 		*/
 		const std::vector<SLICNeighborData>& GetNeighbors() const { return m_neighbors; }
 
+		/** 
+		\brief Returns SLIC neighbor data with given index in collection
+ 		*/
 		SLICNeighborData* GetNeighbor(int index){
 			if(index<0 || index>=GetN()) return 0;
 			return (m_neighbors.data()+index);
 		}
 
+		/** 
+		\brief Set total dissimilarity info of neighbor data with the given index in collection
+ 		*/
 		int SetDtot(int index,double Dtot,double Dtot_n){
 			//Check index
 			if(index<0 || index>=GetN()) {
@@ -611,11 +725,17 @@ class SLICSimilarityData : public TObject {
 
 	public:
 	
+		/** 
+		\brief SLIC similarity data constructor
+ 		*/
 		SLICSimilarityData()
 		{
 			AdjacencyMatrix= 0;
 		}
 
+		/** 
+		\brief SLIC similarity data destructor
+ 		*/
 		virtual ~SLICSimilarityData() 
 		{ 
 			//Clear matrix

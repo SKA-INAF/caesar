@@ -20,7 +20,7 @@
 * @class SourceFitter
 * @brief SourceFitter
 *
-* Class to fit a source image with a mixture of gaussian/skew normal/skew-t bivariate functions
+* Class to fit a source image with a mixture of gaussian functions
 * @author S. Riggi
 * @date 01/09/2017
 */

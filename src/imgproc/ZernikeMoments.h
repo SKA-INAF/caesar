@@ -62,9 +62,21 @@ class ZernikeMoments {
 		
 	public:
     
+		/**
+		\brief Compute zernike 2D moments with direct method
+		*/
 		static std::vector<double> GetZernike2D_Direct(Image* img, double order, double radius);
+		/**
+		\brief Compute zernike 2D moments
+		*/
 		static std::vector<double> GetZernike2D (Image* img, double order, double rad);
+		/**
+		\brief Compute zernike 2D moments (TO BE DEPRECATED)
+		*/
 		static std::vector<double> GetZernike2DOld(Image* img, double D, double R);
+		/**
+		\brief Define Zernike moment generating function
+		*/
 		static std::vector<double> mb_Znl(double *X, double *Y, double *P, int size, double D, double m10_m00, double m01_m00, double R, double psum);
 
 	private:
