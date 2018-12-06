@@ -20,7 +20,14 @@ CAESAR is a C++ software tool for automated source finding in astronomical maps.
    :caption: USAGE
    :maxdepth: 1
 
-   usage/usage.rst 		
+   usage/usage.rst
+   usage/app_options.rst		
+
+.. toctree::
+   :caption: EXAMPLES
+   :maxdepth: 2
+
+   tutorials/tutorials_index.rst
 
 .. toctree::
    :caption: API REFERENCE
