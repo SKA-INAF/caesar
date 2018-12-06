@@ -53,11 +53,21 @@ namespace Caesar {
 
 class ImgMetaData;
 
-class SBuffer : public TObject {
+class SBuffer : public TObject 
+{
 	public:
+		/** 
+		\brief SBuffer constructor
+ 		*/
 		SBuffer(){};
+		
+		/** 
+		\brief SBuffer destructor
+ 		*/
 		virtual ~SBuffer(){};
+
 	public: 
+
 		std::string data;
 		long int size;
 

@@ -688,19 +688,51 @@ inline std::string getClassNamePrefix(std::string fullFuncName,std::string funcN
 	ScopedLogger(Level,LOG_PREFIX,DeviceName).stream() << What
 
 /**
-* \brief Shortcut macro to get actual Tango device class name
+* \brief Shortcut macro to emit a log message with desired log level
+* \param Level - Message log level
+* \param What - Message stream to be sent
 */
 #define LOG(Level, What) CAESAR_LOG(DEVICE_NAME,Level,What)
 
+/**
+* \brief Shortcut macro to emit a log message with INFO log level
+* \param What - Message stream to be sent
+*/
 #define INFO_LOG(What) LOG("INFO",What)
+
+/**
+* \brief Shortcut macro to emit a log message with WARN log level
+* \param What - Message stream to be sent
+*/
 #define WARN_LOG(What) LOG("WARN",What)
+
+/**
+* \brief Shortcut macro to emit a log message with DEBUG log level
+* \param What - Message stream to be sent
+*/
 #define DEBUG_LOG(What) LOG("DEBUG",What)
+
+/**
+* \brief Shortcut macro to emit a log message with ERROR log level
+* \param What - Message stream to be sent
+*/
 #define ERROR_LOG(What) LOG("ERROR",What)
+
+/**
+* \brief Shortcut macro to emit a log message with FATAL log level
+* \param What - Message stream to be sent
+*/
 #define FATAL_LOG(What) LOG("FATAL",What)
 
 
 
 //--> DEVICE LOG MACROS ===
+/**
+* \brief Shortcut macro to emit a log message with desired log level inside a Tango device server instance
+* \param What - Message stream to be sent
+* \param Level - Message log level
+* \param deviceInstance - Tango device server class instance
+*/
 #define DEV_LOG(deviceInstance,Level, What) \
 	ScopedLogger(Level,LOG_PREFIX,__DEVICE_NAME(deviceInstance)).stream() << What
 
