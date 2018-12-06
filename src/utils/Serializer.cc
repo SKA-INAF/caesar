@@ -52,7 +52,6 @@
 using namespace std;
 
 ClassImp(Caesar::SBuffer)
-//ClassImp(Caesar::Serializer)
 
 namespace Caesar {
 

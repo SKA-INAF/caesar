@@ -81,14 +81,25 @@ namespace Caesar {
 class Logger : public TObject {
 
 	public:
+		/**
+		* \brief Constructor
+		*/
 		Logger(std::string level="OFF",std::string tag="logger")
 			: m_level(level), m_tag(tag)		
 		{
 
 		};
+
+		/**
+		* \brief Destructor
+		*/
 		virtual ~Logger(){};
 
 	public:
+
+		/**
+		* \brief Returns log4cxx log level from log4tango log level
+		*/
 		#ifdef USE_TANGO
 			static log4cxx::LevelPtr GetMappedLogLevel(int level) {	
 				if(level==log4tango::Level::DEBUG) return log4cxx::Level::getDebug();
@@ -100,6 +111,9 @@ class Logger : public TObject {
 				return log4cxx::Level::getOff();
 			}//close GetMappedLogLevel()
 			
+			/**
+			* \brief Returns log4tango log level from string 
+			*/
 			static log4tango::Level::Value GetTangoLogLevelFromString(std::string sLevel) {
   			if (sLevel == "DEBUG") return log4tango::Level::DEBUG;
 				else if (sLevel == "INFO") return log4tango::Level::INFO; 
@@ -112,11 +126,15 @@ class Logger : public TObject {
 			}	
 		#endif
 
-		
-
 	public:
+		/**
+		* \brief Pure abstract method to initialize logger
+		*/
 		virtual int Init() = 0;
-
+		
+		/**
+		* \brief Get machine host name
+		*/
 		virtual std::string GetHost() const {
 			char hostname[HOST_NAME_MAX];
 			gethostname(hostname, HOST_NAME_MAX);
@@ -124,7 +142,9 @@ class Logger : public TObject {
 			return syslog_host;
 		}
 
-		
+		/**
+		* \brief Log a message (optionally prepended by a prefix) at given log level in string format
+		*/
 		virtual void Log(const std::string sLevel, const std::string msg, const std::string msg_prefix=""){
 			log4cxx::LevelPtr logLevel= log4cxx::Level::toLevel(sLevel,log4cxx::Level::getOff());
 			if(logger && logger->isEnabledFor(logLevel) ){
@@ -132,25 +152,19 @@ class Logger : public TObject {
       	logger->forcedLog(logLevel, oss_.str(oss_ << msg_prefix << msg), log4cxx::spi::LocationInfo(m_tag.c_str(),__LOG4CXX_FUNC__,__LINE__) );
 			}
 		}	
-		
-		/*
-		virtual void Log(const std::string sLevel, const std::string msg, const std::string msg_prefix=""){
-			logging::core_ptr syslogger= logging::core::get();
-			boost_severity_level syslevel= GetMappedLogLevelFromString(sLevel);
-					
-			if(syslogger && syslogger->get_logging_enabled() ){
-				src::severity_logger_mt<boost_severity_level> lg(keywords::severity = boost_off);
-				BOOST_LOG_SEV(lg, syslevel) << msg_prefix << msg;
-			}
-		}//close Log()
-		*/
 
+		/**
+		* \brief Set logger log level threshold
+		*/
 		virtual void SetLogLevel(const std::string sLevel){
 			log4cxx::LevelPtr thisLogLevel= logger->getLevel();//retrieve the current log level
 			if(!thisLogLevel) thisLogLevel= log4cxx::Level::getOff();
 			logger->setLevel(log4cxx::Level::toLevel(sLevel,thisLogLevel));// In case of wrong string the Log level is set to the old or to OFF
 		}//close SetLogLevel()
 
+		/**
+		* \brief Log a message (optionally prepended by a prefix) at given Tango log level
+		*/
 		#ifdef USE_TANGO
 			virtual void Log(int level, const std::string msg, const std::string msg_prefix=""){
 				log4cxx::LevelPtr logLevel= GetMappedLogLevel(level);					
@@ -159,7 +173,12 @@ class Logger : public TObject {
       		logger->forcedLog(logLevel, oss_.str(oss_ << msg_prefix << msg), log4cxx::spi::LocationInfo(m_tag.c_str(),__LOG4CXX_FUNC__,__LINE__) );
 				}
 			}//close Log()
+		#endif
 
+		/**
+		* \brief Set logger log level threshold from Tango log level
+		*/
+		#ifdef USE_TANGO	
 			virtual void SetLogLevel(int level){
 				log4cxx::LevelPtr logLevel= GetMappedLogLevel(level);
 				logger->setLevel(logLevel);
@@ -187,18 +206,27 @@ class Logger : public TObject {
 class SysLogger : public Logger {
 
 	public:
+		/**
+		* \brief Syslog logger constructor
+		*/
 		SysLogger(const std::string level,const std::string tag,const std::string facility)
 			: Logger(level,tag), m_facility(facility)
 		{
 			
 		};
 
+		/**
+		* \brief Destructor
+		*/
 		virtual ~SysLogger(){};
 
 	private:
 		
 
 	public:
+		/**
+		* \brief Initialize syslog logger
+		*/
 		virtual int Init(){
 			//Create logger
 			logger= log4cxx::LoggerPtr(log4cxx::Logger::getLogger(m_tag.c_str()));
@@ -225,25 +253,14 @@ class SysLogger : public Logger {
 			return 0;
 		}//close Init()
 
-		
+		/**
+		* \brief Returns syslog facility code
+		*/
 		virtual int GetFacilityCode(const std::string syslog_facility) const {
 			std::string default_syslog_facility= "LOCAL6";
 			int syslog_facility_code= log4cxx::net::SyslogAppender::getFacility(syslog_facility);
 			if(syslog_facility_code==-1) syslog_facility_code= log4cxx::net::SyslogAppender::getFacility(default_syslog_facility);
 			
-			/*
-			if(syslog_facility=="local0") syslog_facility_code= LOG_LOCAL0;
-			else if(syslog_facility=="local1") syslog_facility_code= LOG_LOCAL1;
-			else if(syslog_facility=="local2") syslog_facility_code= LOG_LOCAL2;
-			else if(syslog_facility=="local3") syslog_facility_code= LOG_LOCAL3;
-			else if(syslog_facility=="local4") syslog_facility_code= LOG_LOCAL4;
-			else if(syslog_facility=="local5") syslog_facility_code= LOG_LOCAL5;
-			else if(syslog_facility=="local6") syslog_facility_code= LOG_LOCAL6;
-			else if(syslog_facility=="local7") syslog_facility_code= LOG_LOCAL7;
-			else if(syslog_facility=="syslog") syslog_facility_code= LOG_SYSLOG;
-			else if(syslog_facility=="user") syslog_facility_code= LOG_USER;
-			else syslog_facility_code= LOG_LOCAL6;
-			*/
 			return syslog_facility_code;
 		}//close GetFacilityCode()
 		
@@ -262,18 +279,25 @@ class SysLogger : public Logger {
 class FileLogger : public Logger {
 
 	public:
+		/**
+		* \brief File logger constructor
+		*/
 		FileLogger(const std::string level,const std::string tag,const std::string filename,bool appendFlag,const std::string maxFileSize,int maxBackupFiles)
 			: Logger(level,tag), m_filename(filename), m_appendFlag(appendFlag), m_maxFileSize(maxFileSize), m_maxBackupFiles(maxBackupFiles)
 		{
 			
 		};
 
+		/**
+		* \brief Destructor
+		*/
 		virtual ~FileLogger(){};
 
-	private:
-		
-
 	public:
+
+		/**
+		* \brief Initialize file logger
+		*/
 		virtual int Init(){
 			//Create logger
 			logger= log4cxx::LoggerPtr(log4cxx::Logger::getLogger(m_tag));
@@ -322,17 +346,24 @@ class FileLogger : public Logger {
 class ConsoleLogger : public Logger {
 
 	public:
+		/**
+		* \brief Console logger constructor
+		*/
 		ConsoleLogger(const std::string level,const std::string tag,const std::string target)
 			: Logger(level,tag), m_target(target)
 		{
 			
 		};
 
+		/**
+		* \brief Destructor
+		*/
 		virtual ~ConsoleLogger(){};
 
-	private:
-		
 	public:
+		/**
+		* \brief Initialize console logger
+		*/
 		virtual int Init(){
 			//Create logger
 			logger= log4cxx::LoggerPtr(log4cxx::Logger::getLogger(m_tag));
@@ -368,6 +399,9 @@ class ConsoleLogger : public Logger {
 #pragma link C++ class ConsoleLogger+;
 #endif
 
+/**
+* \brief Logger target enumerations
+*/
 enum LoggerTarget {
 	eCONSOLE_TARGET= 1,
 	eFILE_TARGET= 2,
@@ -377,6 +411,9 @@ enum LoggerTarget {
 class LoggerManager : public TObject {
 	
 	public:
+		/**
+		* \brief Returns unique instance of logger
+		*/
 		static LoggerManager& Instance() {
     	// Since it's a static variable, if the class has already been created,
       // It won't be created again.
@@ -393,10 +430,17 @@ class LoggerManager : public TObject {
     LoggerManager& operator=(LoggerManager const&) = delete;  // Copy assign
     LoggerManager& operator=(LoggerManager &&) = delete;      // Move assign
 
-	public:
+	public:	
+		/**
+		* \brief Define log target enumerations
+		*/
 		enum LogTarget{eSysLog=1,eConsole=2,eFile=3};
 
-  	static int CreateSysLogger(const std::string level,const std::string tag="syslogger",const std::string facility="local6") {
+		/**
+		* \brief Create a syslog logger
+		*/
+  	static int CreateSysLogger(const std::string level,const std::string tag="syslogger",const std::string facility="local6") 
+		{
 			//Skip if already created
 			if(m_logger) {	
 				cerr<<"CreateSysLogger(): WARN: Already created...skip!"<<endl;
@@ -426,8 +470,11 @@ class LoggerManager : public TObject {
 			return 0;
 		}//close CreateFileLogger()
 
-		static int CreateConsoleLogger(const std::string level,const std::string tag="consolelogger",const std::string target="System.out") {
-				
+		/**
+		* \brief Create a console logger
+		*/
+		static int CreateConsoleLogger(const std::string level,const std::string tag="consolelogger",const std::string target="System.out") 
+		{				
 			//Skip if already created
 			if(m_logger) {	
 				return -1;
@@ -447,16 +494,17 @@ class LoggerManager : public TObject {
 		
 
 	protected:
+		/**
+		* \brief Logger manager protected constructor
+		*/
 		LoggerManager(){
 			
 		};
+		/**
+		* \brief Destructor
+		*/
 		virtual ~LoggerManager(){
-			/*
-			if(m_logger){
-				delete m_logger;
-				m_logger= 0;
-			}	
-			*/	
+			
 		};
 
 	private:
@@ -473,13 +521,17 @@ class LoggerManager : public TObject {
 
 class ScopedLogger {
 	public:
-		//--> Constructor
+		/**
+		* \brief Scoped logger constructor
+		*/
 		ScopedLogger(std::string level,std::string prefix="",std::string device_name="")
   		: m_level(level), m_msgprefix(prefix), m_deviceName(device_name) 
 		{}
 
 			
-		//--> Destructor
+		/**
+		* \brief Destructor
+		*/
   	~ScopedLogger(){ 
 			//logging command
 			Logger* logger= LoggerManager::Instance().GetLogger();
@@ -502,8 +554,10 @@ class ScopedLogger {
 		}//close destructor
 
 	public:
-		//Get stream
-  	std::stringstream& stream(){ 	
+		/**
+		* \brief Returns message string stream to be logged
+		*/
+		std::stringstream& stream(){ 	
 			return m_sstream; 
 		}	
 	
@@ -515,7 +569,9 @@ class ScopedLogger {
 
 };//close ScopedLogger
 
-
+/**
+* \brief Returns Tango device name in which log is emitted
+*/
 #ifdef USE_TANGO	
 inline std::string GetDeviceName(){	
 	std::string dev_name= "";
@@ -543,7 +599,9 @@ inline bool areInTangoServer(){
 }
 #endif
 
-
+/**
+* \brief Returns class name in which log is emitted
+*/
 inline std::string getClassName(std::string fullFuncName,std::string funcName){
 
 	//Init pattern to be searched
@@ -573,6 +631,9 @@ inline std::string getClassName(std::string fullFuncName,std::string funcName){
 
 }//close function
 
+/**
+* \brief Returns class name prefix in which log is emitted
+*/
 inline std::string getClassNamePrefix(std::string fullFuncName,std::string funcName){
 	std::string className= getClassName(fullFuncName,funcName);
 	std::string sprefix= "::";
@@ -580,12 +641,32 @@ inline std::string getClassNamePrefix(std::string fullFuncName,std::string funcN
 	return className+sprefix;
 }
 
+/**
+* \brief Shortcut macro to get actual class name
+*/
 #define __CLASS__ getClassName(__PRETTY_FUNCTION__,__FUNCTION__)
+
+/**
+* \brief Shortcut macro to get actual class name prefix
+*/
 #define __CLASS_PREFIX__ getClassNamePrefix(__PRETTY_FUNCTION__,__FUNCTION__)
+
+/**
+* \brief Shortcut macro to get actual Tango device class name
+* \param deviceInstance - Tango device server class instance
+*/
 #define __DEVICE_CLASS(deviceInstance) deviceInstance->get_device_class()->get_name()
+
+/**
+* \brief Shortcut macro to get actual Tango device name
+* \param deviceInstance - Tango device server class instance
+*/
 #define __DEVICE_NAME(deviceInstance) deviceInstance->get_name()
 
 //== LOG MACROS ===
+/**
+* \brief Shortcut macro to set a prefix for log message
+*/
 #define LOG_PREFIX \
 	__CLASS_PREFIX__ + __FUNCTION__ + std::string("() - ")
 
@@ -597,9 +678,18 @@ inline std::string getClassNamePrefix(std::string fullFuncName,std::string funcN
 	#define __INSIDE_TANGO_SERVER std::string("")
 #endif
 
+/**
+* \brief Shortcut macro to emit a log message with desired log level inside a given device
+* \param DeviceName - Tango device server name
+* \param Level - Message log level
+* \param What - Message stream to be sent
+*/
 #define CAESAR_LOG(DeviceName, Level, What) \
 	ScopedLogger(Level,LOG_PREFIX,DeviceName).stream() << What
 
+/**
+* \brief Shortcut macro to get actual Tango device class name
+*/
 #define LOG(Level, What) CAESAR_LOG(DEVICE_NAME,Level,What)
 
 #define INFO_LOG(What) LOG("INFO",What)

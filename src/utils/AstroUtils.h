@@ -193,7 +193,7 @@ class AstroUtils : public TObject {
 		* \brief Convert ellipse to DS9 format
 		*/
 		static std::string EllipseToDS9Region(TEllipse* ellipse,std::string text="",std::string color="white",std::vector<std::string> tags={},bool useImageCoords=true);
-
+		
 		/**
 		* \brief Convert contour to DS9 format
 		*/
