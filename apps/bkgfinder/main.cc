@@ -39,41 +39,53 @@
 using namespace std;
 using namespace Caesar;
 
-void Usage(char* exeName){
+void Usage(char* exeName)
+{
 	cout<<"=========== USAGE ==========="<<endl;
 	cout<<"Usage: "<<exeName<<" [options]"<<endl;
 	cout<<endl;
-	cout<<"Options:"<<endl;
-  cout<<"-h, --help \t Show help message and exit"<<endl;
-	cout<<"-i, --input \t Input file name containing image to be read (only .fits/.root supported)"<<endl;
-	cout<<"-b, --boxsize \t Size of sampling box in pixels (often a multiple of the image beam size)"<<endl;
-	cout<<"-g, --gridsize \t Granularity size of the interpolation grid in pixels (i.e. half the box size)"<<endl;
-	cout<<"-e, --estimator \t Bkg estimator used in the sampling box (1=mean, 2=median, 3=biweight, 4=clipped median)"<<endl;
-	cout<<"-f, --fitsout \t Write results in FITS files"<<endl;
-	cout<<"-o, --output \t Output file name (1 file for ROOT out and multiple files if FITS out option is selected)"<<endl;
-	cout<<"-I, --imgname \t Image name in input ROOT file (if non standard)"<<endl;
-	cout<<"-s, --significance \t Compute and store also the significance map (along with bkg and noise maps)"<<endl;
-	cout<<"-P, --2ndpass \t If given, perform a 2nd pass in bkg calculation (default=no)"<<endl;
-	cout<<"-S, --skipblobs \t If given, skip blobs using a flood-fill algorithm (default=no)"<<endl;
-	cout<<"-T, --seedthr \t Seed threshold in flood-fill algorithm in nsigmas significance (typical value=5)"<<endl;
-	cout<<"-t, --mergethr \t Merge threshold in flood-fill algorithm in nsigmas significance (typical value=2.6)"<<endl;
-	cout<<"-m, --minnpixels \t Minimum number of pixels in a blob (typical value=5)"<<endl;
-	cout<<"-n, --nthreads \t Number of threads to be used for reading (-1=all available threads)"<<endl;
-	cout<<"-p, --parallel \t Use parallel std algorithms for median "<<endl;
-	cout<<"-v, --verbosity \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG)"<<endl;
+	cout<<"*** Mandatory options ***"<<endl;
+	cout<<"--input=[FILENAME] - Input file name containing image to be read (NB: .fits/.root supported)"<<endl;
+	cout<<endl;
+	cout<<"*** Optional options ***"<<endl;
+  cout<<"-h, --help - Show help message and exit"<<endl;
+	cout<<"--boxsize=[SIZE] - Size of sampling box in pixels or expressed as a multiple of the image beam size (if --sizeinbeam option is given) (default=100 pixels)"<<endl;
+	cout<<"--sizeinbeam - Consider box size option expressed in multiple of beam size (beam info read from image) (default=no)"<<endl;
+	cout<<"--gridsize=[SIZE] - Size of the interpolation grid expressed as fraction of the sampling box (default=0.25)"<<endl;
+	cout<<"--estimator=[ESTIMATOR] - Bkg estimator used in the sampling box (1=mean, 2=median, 3=biweight, 4=clipped median) (default=2)"<<endl;
+	cout<<"--2ndpass - If given, perform a 2nd pass in bkg calculation (default=no)"<<endl;
+	cout<<"--skipblobs - If given, skip blobs using a flood-fill algorithm (default=no)"<<endl;
+	cout<<"--seedthr=[NSIGMAS] - Seed threshold in flood-fill algorithm in nsigmas significance (default=5)"<<endl;
+	cout<<"--mergethr=[NSIGMAS] - Merge threshold in flood-fill algorithm in nsigmas significance (default=2.6)"<<endl;
+	cout<<"--minnpixels=[NPIX] - Minimum number of pixels in a blob (default=5)"<<endl;
+	cout<<"--nthreads=[N] - Number of threads to be used for reading (-1=all available threads) (default=1)"<<endl;
+	cout<<"--output=[FILENAME] - ROOT file where to save output maps (default=bkg.root)"<<endl;
+	cout<<"--output-bkg=[FILENAME] - FITS file where to save bkg map (if --fitsout is given) (default=bkg.fits)"<<endl;	
+	cout<<"--output-rms=[FILENAME] - FITS file where to save rms map (if --fitsout is given) (default=rms.fits)"<<endl;
+	cout<<"--significance - Save the significance map (along with bkg and noise maps) in output file (default=no)"<<endl;
+	cout<<"--output-significance=[FILENAME] - FITS file where to save significance map (if --fitsout is given) (default=significance.fits)"<<endl;
+	cout<<"--fitsout - Write results in FITS files (default=no)"<<endl;
+	cout<<"--imgname=[NAME] - Image name to be read in input ROOT file (if non standard) (default=img)"<<endl;
+	cout<<"--parallel - Use parallel std algorithms for median (default=no)"<<endl;
+	cout<<"-v [LEVEL], --verbosity=[LEVEL] - Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	cout<<"=============================="<<endl;
+
 }//close Usage()
 
 static const struct option options_tab[] = {
   { "help", no_argument, 0, 'h' },
 	{ "input", required_argument, 0, 'i' },
-	{ "output", optional_argument, 0, 'o' },
+	{ "output", required_argument, 0, 'o' },
+	{ "output-bkg", required_argument, 0, 'F' },
+	{ "output-rms", required_argument, 0, 'R' },
+	{ "significance", no_argument, 0, 's' },
+	{ "output-significance", required_argument, 0, 'O' },
 	{ "fitsout", no_argument, 0, 'f' },
 	{ "gridsize", required_argument, 0, 'g' },
-	{ "boxsize", required_argument, 0, 'b' },
+	{ "boxsize", required_argument, 0, 'b' },	
+	{ "sizeinbeam", no_argument, 0, 'B' },
 	{ "estimator", required_argument, 0, 'e' },
-	{ "significance", no_argument, 0, 's' },
-	{ "imgname", optional_argument, 0, 'I' },
+	{ "imgname", required_argument, 0, 'I' },
 	{ "verbosity", required_argument, 0, 'v'},
 	{ "2ndpass", no_argument, 0, 'P'},
 	{ "skipblobs", no_argument, 0, 'S'},
@@ -88,6 +100,9 @@ static const struct option options_tab[] = {
 
 //Options
 bool useDefaultOutput= true;
+bool useDefaultOutput_bkg= true;
+bool useDefaultOutput_rms= true;
+bool useDefaultOutput_significance= true;
 bool computeSignificance= false;
 int verbosity= 4;//INFO level
 bool use2ndPass= false;
@@ -96,28 +111,29 @@ double seedThr= 5;
 double mergeThr= 2.6;
 int minPixels= 5;
 bool writeToFITS= false;
-double boxSize= 0;
-double gridSize= 0;
-int bkgEstimator= 0;
+bool boxSizeInBeam= false;
+double boxSize= 100;
+double gridSize= 0.25;
+int bkgEstimator= 2;
 Caesar::BkgEstimator estimator;
-int nthreads= -1;
+int nthreads= 1;
 bool useParallelVersion= false;
 
 //Globar vars
 TFile* outputFile= 0;
 std::string inputFileName= "";
-std::string outputFileName= "";
-std::string outputFileName_bkg= "";
-std::string outputFileName_noise= "";
-std::string outputFileName_significance= "";
+std::string outputFileName= "bkg.root";
+std::string outputFileName_bkg= "bkg.fits";
+std::string outputFileName_rms= "rms.fits";
+std::string outputFileName_significance= "significance.fits";
 std::string imageName= "img";
 Caesar::Image* inputImg= 0;
 Caesar::ImgBkgData* bkgData= 0;
 Caesar::FileInfo info;
 
-
 //Functions
 int ParseOptions(int argc, char *argv[]);
+int CheckOptions();
 std::string GetStringLogLevel(int verbosity);
 int OpenOutputFile();
 int ReadImage();
@@ -129,8 +145,9 @@ void Save();
 //=======================================
 //===             MAIN               ====
 //=======================================
-int main(int argc, char *argv[]){
-
+int main(int argc, char *argv[])
+{
+	//Start timer
 	auto t0 = chrono::steady_clock::now();
 	
 	//================================
@@ -259,7 +276,7 @@ void Save(){
 	
 	if(writeToFITS){
 		BkgMap->WriteFITS(outputFileName_bkg);
-		NoiseMap->WriteFITS(outputFileName_noise);
+		NoiseMap->WriteFITS(outputFileName_rms);
 		if(computeSignificance && SignificanceMap) SignificanceMap->WriteFITS(outputFileName_significance);
 	}
 	else{
@@ -292,7 +309,8 @@ int ParseOptions(int argc, char *argv[])
 	//## Parse options
 	int c = 0;
   int option_index = 0;
-	while((c = getopt_long(argc, argv, "hfsi:o::b:g:e:I::v:PST:t:m:n:p",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hfsi:o:O:F:R:b:Bg:e:I:v:PST:t:m:n:p",options_tab, &option_index)) != -1) 
+	{
     
     switch (c) {
 			case 0 : 
@@ -306,13 +324,51 @@ int ParseOptions(int argc, char *argv[])
 			}
     	case 'i':	
 			{
+				if(!optarg){
+					cerr<<"ERROR: Null string to input file argument given!"<<endl;
+					exit(1);
+				}
 				inputFileName= std::string(optarg);	
 				break;	
 			}
 			case 'o':	
 			{
+				if(!optarg){
+					cerr<<"ERROR: Null string to output file argument given!"<<endl;
+					exit(1);
+				}
 				outputFileName= std::string(optarg);	
 				useDefaultOutput= false;
+				break;	
+			}
+			case 'O':	
+			{
+				if(!optarg){
+					cerr<<"ERROR: Null string to significance output file argument given!"<<endl;
+					exit(1);
+				}
+				outputFileName_significance= std::string(optarg);	
+				useDefaultOutput_significance= false;
+				break;	
+			}
+			case 'F':	
+			{
+				if(!optarg){
+					cerr<<"ERROR: Null string to output bkg FITS file argument given!"<<endl;
+					exit(1);
+				}
+				outputFileName_bkg= std::string(optarg);	
+				useDefaultOutput_bkg= false;
+				break;	
+			}
+			case 'R':	
+			{
+				if(!optarg){
+					cerr<<"ERROR: Null string to output rms FITS file argument given!"<<endl;
+					exit(1);
+				}
+				outputFileName_rms= std::string(optarg);	
+				useDefaultOutput_rms= false;
 				break;	
 			}
 			case 'f':
@@ -323,6 +379,11 @@ int ParseOptions(int argc, char *argv[])
 			case 'b':
 			{
 				boxSize= atof(optarg);
+				break;
+			}
+			case 'B':
+			{
+				boxSizeInBeam= true;
 				break;
 			}
 			case 'g':
@@ -342,6 +403,10 @@ int ParseOptions(int argc, char *argv[])
 			}
 			case 'I':	
 			{
+				if(!optarg){
+					cerr<<"ERROR: Null string to output image name argument given!"<<endl;
+					exit(1);
+				}
 				imageName= std::string(optarg);	
 				break;	
 			}
@@ -393,29 +458,14 @@ int ParseOptions(int argc, char *argv[])
     }//close switch
 	}//close while
 
+	
 	//## Set logging level
 	std::string sloglevel= GetStringLogLevel(verbosity);
 	LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
 	
-	//## Set number of threads
-	if(nthreads>0) SysUtils::SetOMPThreads(nthreads);
-	
-	//## Set bkg estimator
-	estimator= Caesar::eMedianBkg;
-	if(bkgEstimator==Caesar::eMedianBkg){
-		estimator= Caesar::eMedianBkg;
-	}
-	else if(bkgEstimator==Caesar::eMeanBkg){
-		estimator= Caesar::eMeanBkg;
-	}
-	else if(bkgEstimator==Caesar::eBiWeightBkg){
-		estimator= Caesar::eBiWeightBkg;
-	}	
-	else if(bkgEstimator==Caesar::eMedianClippedBkg){
-		estimator= Caesar::eMedianClippedBkg;
-	}
-	else{
-		ERROR_LOG("Invalid bkg estimator specified!");
+	//## Check options
+	if(CheckOptions()<0){
+		ERROR_LOG("Invalid program options given, see logs!");
 		return -1;
 	}
 
@@ -442,8 +492,95 @@ int ParseOptions(int argc, char *argv[])
 
 }//close ParseOptions()
 
-std::string GetStringLogLevel(int verbosity){
+int CheckOptions()
+{
+	//Check mandatory options
+	if(inputFileName==""){
+		ERROR_LOG("Missing or empty input file argument!");
+		return -1;
+	}
 
+	//Check optional options
+	//- Output file option
+	if(!useDefaultOutput && outputFileName==""){
+		ERROR_LOG("Empty output file argument given!");
+		return -1;
+	}
+	if(!useDefaultOutput_bkg && outputFileName_bkg==""){
+		ERROR_LOG("Empty fits output file for bkg map argument given!");
+		return -1;
+	}
+	if(!useDefaultOutput_rms && outputFileName_rms==""){
+		ERROR_LOG("Empty fits output file for rms map argument given!");
+		return -1;
+	}	
+	if(!useDefaultOutput_significance && outputFileName_significance==""){
+		ERROR_LOG("Empty fits output file for significance map argument given!");
+		return -1;
+	}
+	
+	//- Detection options
+	if(seedThr<=0 || mergeThr<=0 || minPixels<=0){
+		ERROR_LOG("Invalid blob detection options given (hint: they must be positive)!");
+		return -1;
+	}
+
+	//- Sampling box options
+	if(boxSize<=0 ){
+		ERROR_LOG("Invalid sampling box size option given (hint: must be positive)!");
+		return -1;
+	}
+	if(gridSize<=0 || gridSize>1){
+		ERROR_LOG("Invalid sampling grid size option given (hint: must be positive and smaller than 1)!");
+		return -1;
+	}
+
+	//- Set bkg estimator
+	estimator= Caesar::eMedianBkg;
+	if(bkgEstimator==Caesar::eMedianBkg){
+		estimator= Caesar::eMedianBkg;
+	}
+	else if(bkgEstimator==Caesar::eMeanBkg){
+		estimator= Caesar::eMeanBkg;
+	}
+	else if(bkgEstimator==Caesar::eBiWeightBkg){
+		estimator= Caesar::eBiWeightBkg;
+	}	
+	else if(bkgEstimator==Caesar::eMedianClippedBkg){
+		estimator= Caesar::eMedianClippedBkg;
+	}
+	else{
+		ERROR_LOG("Invalid/unknown bkg estimator specified!");
+		return -1;
+	}
+
+	//- Number of threads
+	if(nthreads<=0){
+		ERROR_LOG("Invalid number of threads given (hint: must be positive)!");
+		return -1;
+	}
+	if(nthreads>SysUtils::GetOMPMaxThreads()){
+		WARN_LOG("A number of threads exceeding detected machine core capacity ("<<SysUtils::GetOMPMaxThreads()<<") was given...");
+	}
+	SysUtils::SetOMPThreads(nthreads);
+
+	//- Check given input file and get info
+	if(!Caesar::SysUtils::CheckFile(inputFileName,info,false)){
+		ERROR_LOG("Invalid input file ("<<inputFileName<<") specified!");
+		return -1;
+	}
+	std::string file_extension= info.extension;
+	if(file_extension!= ".fits" && file_extension!=".root") {
+		ERROR_LOG("Invalid file extension ("<<file_extension<<")...nothing to be done!");
+		return -1;
+	}
+
+	return 0;
+
+}//close CheckOptions()
+
+std::string GetStringLogLevel(int verbosity)
+{
 	std::string slevel= "";
 	if(verbosity<=0) slevel= "FATAL";
 	else if(verbosity==1) slevel= "FATAL";
@@ -458,11 +595,18 @@ std::string GetStringLogLevel(int verbosity){
 }//close GetStringLogLevel()
 
 
-int OpenOutputFile(){
-
+int OpenOutputFile()
+{
 	// Set output filenames
+	if(!writeToFITS){//ROOT output
+		outputFile= new TFile(outputFileName.c_str(),"RECREATE");
+	}
+
+	/*
 	if(useDefaultOutput){
 		std::string basefilename_wext= info.filename_wext;
+		INFO_LOG("basefilename_wext="<<basefilename_wext);
+
 		if(writeToFITS){//FITS output
 			std::string outputFileNamePrefix= basefilename_wext;
 			outputFileName_bkg= outputFileNamePrefix + std::string("bkg.fits");
@@ -485,27 +629,16 @@ int OpenOutputFile(){
 			outputFile= new TFile(outputFileName.c_str(),"RECREATE");
 		}
 	}//close else
+	*/
 
 	return 0;
 
 }//close OpenOutputFile()
 
-int ReadImage(){
-
-	// Check given input file and get info
-	Caesar::FileInfo info;
-	if(!Caesar::SysUtils::CheckFile(inputFileName,info,false)){
-		ERROR_LOG("Invalid input file ("<<inputFileName<<") specified!");
-		return -1;
-	}
-	std::string file_extension= info.extension;
-	if(file_extension!= ".fits" && file_extension!=".root") {
-		ERROR_LOG("Invalid file extension ("<<file_extension<<")...nothing to be done!");
-		return -1;
-	}
-
+int ReadImage()
+{
 	//--> ROOT reading
-	if(file_extension==".root"){// Read image from ROOT file
+	if(info.extension==".root"){// Read image from ROOT file
 		INFO_LOG("Reading ROOT input file "<<inputFileName<<"...");
 		TFile* inputFile = new TFile(inputFileName.c_str(),"READ");
 		if(!inputFile || inputFile->IsZombie()){
@@ -520,7 +653,7 @@ int ReadImage(){
 	}//close if
 
 	//--> FITS reading
-	if(file_extension==".fits"){// Read image from FITS file
+	if(info.extension==".fits"){// Read image from FITS file
 		INFO_LOG("Reading FITS input file "<<inputFileName<<"...");
 		inputImg= new Caesar::Image;
 		inputImg->SetName(imageName);
@@ -558,22 +691,46 @@ int ComputeStats(){
 
 }//close ComputeStats()
 
-int ComputeBkg(){
-
+int ComputeBkg()
+{
 	//## Compute background 
 	INFO_LOG("Starting background finder ...");
+	
+	//Compute sampling box size in pixels 
+	//If box size is given as a beam multiple find first the beam size from image
+	double boxSize_pix= boxSize;
+	
+	if(boxSizeInBeam){
+		//Check if image has metadata with beam info
+		if(!inputImg->HasMetaData()){
+			ERROR_LOG("Requested to use sampling box size as multiple of image beam but input image has no metadata with beam information stored!");
+			return -1;
+		}
+	
+		//Compute box size in pixels
+		int pixelWidthInBeam= inputImg->GetMetaData()->GetBeamWidthInPixel();	
+		INFO_LOG("Read a beam size of "<<pixelWidthInBeam<<" pixels from input image ...");
+
+		boxSize_pix= pixelWidthInBeam*boxSize;
+		
+	}//close if
+
+	//Compute grid size in pixels
+	double gridSize_pix= gridSize*boxSize_pix;
+
+	INFO_LOG("Computing background assuming sampling box of size "<<boxSize_pix<<" pixels and a grid size of "<<gridSize_pix<<" pixels ...");
 	
 	//Check grid & box size
 	long int Nx= inputImg->GetNx();
 	long int Ny= inputImg->GetNy();
-	if(boxSize>=min(Nx,Ny) || gridSize>=min(Nx,Ny) ){
+	if(boxSize_pix>=min(Nx,Ny) || gridSize_pix>=min(Nx,Ny) ){
 		ERROR_LOG("Box/grid size are too large compared to image size ("<<Nx<<","<<Ny<<")");
 		return -1;
 	}
 
 	//Compute bkg & noise maps
 	bool computeLocalBkg= true;
-	bkgData= inputImg->ComputeBkg(estimator,computeLocalBkg,boxSize,boxSize,gridSize,gridSize,use2ndPass,skipOutliers,seedThr,mergeThr,minPixels);
+	bkgData= inputImg->ComputeBkg(estimator,computeLocalBkg,boxSize_pix,boxSize_pix,gridSize_pix,gridSize_pix,use2ndPass,skipOutliers,seedThr,mergeThr,minPixels);
 	if(!bkgData){
 		ERROR_LOG("Failed to compute bkg data!");
 		return -1;
