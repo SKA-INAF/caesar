@@ -41,6 +41,26 @@ Defined in ``src/utils/Logger.h``
 .. doxygendefine:: __CLASS_PREFIX__
    :project: caesar
 
+.. doxygendefine:: CAESAR_LOG
+   :project: caesar
+
+.. doxygendefine:: LOG
+   :project: caesar
+
+.. doxygendefine:: INFO_LOG
+   :project: caesar
+
+.. doxygendefine:: WARN_LOG
+   :project: caesar
+
+.. doxygendefine:: ERROR_LOG
+   :project: caesar
+
+.. doxygendefine:: FATAL_LOG
+   :project: caesar
+
+.. doxygendefine:: DEBUG_LOG
+   :project: caesar
 
 
 
