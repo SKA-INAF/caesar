@@ -20,7 +20,7 @@ CAESAR is specifically developed for Linux OS. It was used on Ubuntu and RedHat/
 **4. Does CAESAR support distributed or parallel processing?**   
 
 Yes, CAESAR source finding supports two level of parallelism since 2018. Images can be partitioned in adjacent/overlapping tiles and source findind can be carried out on different computing processors using MPI library. Source finding tasks per each tile can be splitted among different threads using OpenMP library. Alternative programming models will be explored
-in the future.
+in the future. Scripts are provided for workload submission on a batch system (PBS/SLURM).
 
 **5. What data input formats can be handled?**
 
@@ -41,18 +41,18 @@ Cubes are not supported.
 
 **6. What data outputs are delivered to user?**
 
-CAESAR returns the following outputs to user at the end of processing:
+CAESAR returns the following outputs to user at the end of processing: 
 
 - A ROOT file containing the following information:
     - Computed maps (bkg, rms, significance, residual, etc) stored as Caesar::Image objects
     - Detected sources stored as a ROOT TTree of Caesar::Source objects
     - Run configuration options stored as a ROOT TTree
 
-- Two DS9 file regions containing:
+- Two DS9 file regions containing: 
     - Detected sources (also called islands in other finders)
     - Gaussian components fitted to detected sources
- 
-- Two ascii catalog files containing parameters relative to:
+
+- Two ascii catalog files containing parameters relative to: 
     - Detected sources (also called islands in other finders)
     - Gaussian components fitted to detected sources
 
