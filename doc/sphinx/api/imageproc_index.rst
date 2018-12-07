@@ -1,6 +1,6 @@
 
-**Image Processing API**
-========================
+Image Processing API
+====================
 This section reports the image processing API.
 
 .. toctree::

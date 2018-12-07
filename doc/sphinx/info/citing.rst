@@ -1,6 +1,6 @@
-========================
-**Citing and Citations**
-========================
+====================
+Citing and Citations
+====================
 
 When using CAESAR for a publication, **please cite the following article** in you paper:
 

@@ -1,6 +1,6 @@
 
-**Configuration API**
-=====================
+Configuration API
+=================
 This section reports the configuration functions API.
 
 .. toctree::

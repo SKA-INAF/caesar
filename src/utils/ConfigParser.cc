@@ -144,7 +144,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(outputFile,std::string,"output.root","","");
 		REGISTER_OPTION(ds9RegionFile,std::string,"ds9.reg","","");
 		REGISTER_OPTION(saveDS9Region,bool,true,false,true);
-		REGISTER_OPTION(DS9RegionFormat,int,2,0,3);
+		REGISTER_OPTION(ds9RegionFormat,int,2,0,3);
 		REGISTER_OPTION(ds9FitRegionFile,std::string,"ds9_fitcomp.reg","","");
 		REGISTER_OPTION(convertDS9RegionsToWCS,bool,false,false,true);
 		REGISTER_OPTION(ds9WCSType,int,0,-0.001,3);
@@ -165,12 +165,12 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(saveCurvatureMap,bool,false,false,true);
 		REGISTER_OPTION(saveSegmentedMap,bool,true,false,true);
 		REGISTER_OPTION(saveToFITSFile,bool,false,false,true);
-		REGISTER_OPTION(residualMapFITSFile,std::string,"residual_map.fits","","");
-		REGISTER_OPTION(inputMapFITSFile,std::string,"input_map.fits","","");
-		REGISTER_OPTION(saliencyMapFITSFile,std::string,"saliency_map.fits","","");
-		REGISTER_OPTION(bkgMapFITSFile,std::string,"bkg_map.fits","","");
-		REGISTER_OPTION(noiseMapFITSFile,std::string,"rms_map.fits","","");
-		REGISTER_OPTION(significanceMapFITSFile,std::string,"significance_map.fits","","");
+		REGISTER_OPTION(residualMapFITSFile,std::string,"residual.fits","","");
+		REGISTER_OPTION(inputMapFITSFile,std::string,"input.fits","","");
+		REGISTER_OPTION(saliencyMapFITSFile,std::string,"saliency.fits","","");
+		REGISTER_OPTION(bkgMapFITSFile,std::string,"bkg.fits","","");
+		REGISTER_OPTION(noiseMapFITSFile,std::string,"rms.fits","","");
+		REGISTER_OPTION(significanceMapFITSFile,std::string,"significance.fits","","");
 		REGISTER_OPTION(isInteractiveRun,bool,false,false,true);		
 
 		REGISTER_OPTION(readTileImage,bool,false,false,true);

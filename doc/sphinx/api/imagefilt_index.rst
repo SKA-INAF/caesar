@@ -1,6 +1,6 @@
 
-**Image Filtering API**
-=======================
+Image Filtering API
+===================
 This section reports the image filtering API.
 
 .. toctree::

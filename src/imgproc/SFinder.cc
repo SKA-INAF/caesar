@@ -534,7 +534,7 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(saveDS9Region,m_saveDS9Region);
 	GET_OPTION_VALUE(ds9RegionFile,m_DS9CatalogFileName);
 	GET_OPTION_VALUE(ds9FitRegionFile,m_DS9FitCatalogFileName);
-	GET_OPTION_VALUE(DS9RegionFormat,m_DS9RegionFormat);
+	GET_OPTION_VALUE(ds9RegionFormat,m_DS9RegionFormat);
 	GET_OPTION_VALUE(convertDS9RegionsToWCS,m_convertDS9RegionsToWCS);
 	GET_OPTION_VALUE(ds9WCSType,m_ds9WCSType);
 	GET_OPTION_VALUE(saveSources,m_saveSources);

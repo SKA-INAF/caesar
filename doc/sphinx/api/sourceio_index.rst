@@ -1,6 +1,6 @@
 
-**Source IO API**
-=================
+Source IO API
+=============
 
 This section reports the source exporter and serialization API.
 

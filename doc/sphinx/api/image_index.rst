@@ -1,6 +1,6 @@
 
-**Image API**
-=============
+Image API
+=========
 
 .. toctree::
 

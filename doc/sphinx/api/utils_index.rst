@@ -1,6 +1,6 @@
 
-**Utility API**
-===============
+Utilities API
+=============
 This section reports the utility functions API.
 
 .. toctree::

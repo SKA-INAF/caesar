@@ -27,10 +27,12 @@ You can use the executable ``FindBkg`` installed in the CAESAR `bin` directory t
     --mergethr=[NSIGMAS] - Merge threshold in flood-fill algorithm in nsigmas significance (default=2.6)
     --minnpixels=[NPIX] - Minimum number of pixels in a blob (default=5)
     --nthreads=[N] - Number of threads to be used for reading (-1=all available threads) (default=1)
-    --output=[FILENAME] - Output file name (1 file for ROOT out and multiple files if FITS out option is selected) (default=name derived from input name)
+    --output=[FILENAME] - ROOT file where to save output maps (default=bkg.root)
+    --output-bkg=[FILENAME] - FITS file where to save bkg map (if --fitsout is given) (default=bkg.fits)
+    --output-rms=[FILENAME] - FITS file where to save rms map (if --fitsout is given) (default=rms.fits)
     --significance - Save the significance map (along with bkg and noise maps) in output file (default=no)
+    --output-significance=[FILENAME] - FITS file where to save significance map (if --fitsout is given) (default=significance.fits)
     --fitsout - Write results in FITS files (default=no)
-    --imgname=[NAME] - Image name to be read in input ROOT file (if non standard) (default=img)
     --parallel - Use parallel std algorithms for median (default=no)
     -v [LEVEL], --verbosity=[LEVEL] - Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)
     ==============================
@@ -50,10 +52,10 @@ You can access (read, plot, manipulate) these maps using ROOT CLI or macros. if 
 .. code::
 
     //Open file (you can see file content in ROOT CLI by typing '.ls' at the root prompt)
-    TFile* inputFile= new TFile("BkgOutput.root","READ");
+    TFile* inputFile= new TFile("bkg.root","READ");
 
     //Get access to significance map   
-    Image* zmap= (Image*)inputFile->Get("SignificanceMap");
+    Image* zmap= (Image*)inputFile->Get("significanceMap");
 
     //Draw the map with COLZ option
     zmap->SetStats(0);//disable drawing of stats box in canvas   
@@ -61,20 +63,18 @@ You can access (read, plot, manipulate) these maps using ROOT CLI or macros. if 
 
     //Do whatever you want with Image API, e.g. compute & print stats    
     zmap->ComputeStats(true);   
-    zmap->DumpStats();   
+    zmap->PrintStats();   
 
 
 If the ``--fitsout`` option is given three distinct fits files are produced with background, rms and significance maps (if ``--significance`` option is given). 
-   
-The images below show the results of the background finder run on a sample image provided in this repository (`data/ScorpioSNRField.fits`). 
+The images below show the results of this background finder run on a sample image provided in this repository (`data/ScorpioSNRField.fits`):
 
-
+``FindBkg --input=ScorpioSNRField.fits --boxsize=20 --sizeinbeam --significance --fitsout``
 
 .. figure:: ../images/SCORPIO_SNRField.jpg
     :width: 49%
     
     Input image (units: mJy/beam)
-
 
 .. figure:: ../images/SCORPIO_SNRField_BkgMap.jpg
     :width: 49%
@@ -90,5 +90,4 @@ The images below show the results of the background finder run on a sample image
     :width: 49%
     
     Significance map (units: nsigmas)
-
 

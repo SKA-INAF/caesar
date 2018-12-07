@@ -1,10 +1,10 @@
-=================
-**Installation**
-=================
+============
+Installation
+============
 
------------------
-**Prerequisites**
------------------
+-------------
+Prerequisites
+-------------
 
 Install the project mandatory dependencies:  
 
@@ -49,9 +49,9 @@ CAESAR depends also on the wcstools and linterp libraries which are already prov
 
 cmake should find all needed include dirs and libraries used to build the project.
 
----------------------
-**Build and install**
----------------------
+-----------------
+Build and install
+-----------------
 
 To build and install the project:
 
@@ -85,9 +85,9 @@ In the installation directory you should find the following directories:
 * `data`: Directory in which test data images are installed.
 
 
-----------------------------
-**Documentation generation**
-----------------------------
+------------------------
+Documentation generation
+------------------------
 
 To generate and install the API documentation you must have Doxygen installed. Enter the build directory and type:
 
@@ -104,9 +104,9 @@ To generate and install the Sphinx wiki documentation you must have sphinx+breat
 The generated documentation will be installed in the $INSTALL_DIR/doc directory.
 
 
-----------------------
-**Running unit tests**
-----------------------
+------------------
+Running unit tests
+------------------
 
 To build the unit tests you must have Google Test installed and the ENABLE_TEST option set to ON when building Caesar. To run the test:   
 

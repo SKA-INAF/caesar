@@ -1,6 +1,6 @@
-=====================
-**How to use CAESAR**
-=====================
+=================
+How to use CAESAR
+=================
 
 I managed to build the project with success or I got a copy of CAESAR container. Now what should I do?   
 CAESAR library is built upon the ROOT framework and can be used in Linux OS (in principle usable also in MacOS but not tested) in different ways for simple tasks as well to build more complex applications:   
@@ -15,9 +15,9 @@ CAESAR library is built upon the ROOT framework and can be used in Linux OS (in 
 If you have worked with ROOT you will find these guidelines familiar.
 
 
-----------------------------------
-**Using CAESAR from the ROOT CLI**
-----------------------------------
+------------------------------
+Using CAESAR from the ROOT CLI
+------------------------------
 
 CAESAR generates dictionaries for all relevant classes, including the `Image` class. This enables to use the CAESAR classes in the ROOT CLI. For this you should put these lines in your ``.rootlogon.C`` file.   
 
@@ -45,9 +45,9 @@ The `.rootlogon.C` is loaded every time the ROOT console is started from Linux p
 
 This is useful for simple tasks or for drawing purposes. For more complex tasks, you should actually write macros or higher level classes/applications using CAESAR API, like it is briefly discussed below and done in the examples reported in the Tutorial section.
 
--------------------------------
-**Using CAESAR in ROOT macros**
--------------------------------
+---------------------------
+Using CAESAR in ROOT macros
+---------------------------
 
 ROOT macros are simply C/C++ code run by the ROOT interpreter. Once you have followed the configuration steps illustrated in the previous paragraph you should be able to run a macro using CAESAR objects in ROOT. Let's prepare a simple macro (file named ``MyMacro.C``) below:   
     
@@ -96,9 +96,9 @@ To execute this macro in ROOT you can do the following:
 We refer the reader to the ROOT manual for more details on running macros, passing arguments to them, etc.
 
 
-------------------------------------
-**Using CAESAR in C++ applications**
-------------------------------------
+--------------------------------
+Using CAESAR in C++ applications
+--------------------------------
 
 To use CAESAR library in your C++ application you just need to add the CAESAR headers (in the _include_ directory) in your compilation and link against CAESAR library (_libCaesar.so_). Let's prepare a simple C++ program (file named ``MyApp.cc``:   
 
@@ -139,9 +139,9 @@ Now compile and execute the program:
     ./MyApp
 
 
---------------------------------------
-**Using CAESAR in python CLI/scripts**
---------------------------------------
+----------------------------------
+Using CAESAR in python CLI/scripts
+----------------------------------
 
 PyROOT interface enables using Caesar classes in python. For example:
 
@@ -158,9 +158,9 @@ PyROOT interface enables using Caesar classes in python. For example:
 
 python support is currently experimental and not fully tested. 
 
-------------------------
-**Running CAESAR tasks**
-------------------------
+--------------------
+Running CAESAR tasks
+--------------------
 
 Long-running tasks and applications such as source finding should be run in batch mode directly on the operating system or inside a Singularity container. A number of applications are available in the `bin` installation directory. Task run can be customized via a configuration file passed as argument. For example to run source finding:
 
