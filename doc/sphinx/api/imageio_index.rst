@@ -1,6 +1,6 @@
 
-**Image IO API**
-================
+Image IO API
+============
 This section reports the image IO API.
 
 .. toctree::
