@@ -519,136 +519,6 @@ Image* MorphFilter::ComputeMorphFilter(Image* img,int morphOp,int KernSize,int s
 
 }//close ComputeTopHatFilter()
 
-/*
-int MorphFilter::FindPeaks(std::vector<TVector2>& peakPoints,Image* img,std::vector<int> kernelSizes,int peakShiftTolerance,bool skipBorders,int peakKernelMultiplicityThr)
-{
-	//Check input image
-	if(!img){
-		ERROR_LOG("Null ptr to input image given!");
-		return -1;
-	}
-
-	//Check multiplicity thr
-	int nKernels= static_cast<int>(kernelSizes.size());
-	if(peakKernelMultiplicityThr==-1){
-		peakKernelMultiplicityThr= nKernels;
-	}
-	if(peakKernelMultiplicityThr>nKernels){
-		WARN_LOG("Multiplicy thr ("<<peakKernelMultiplicityThr<<") larger than nkernels ("<<nKernels<<"), set it to "<<nKernels<<"...");
-		peakKernelMultiplicityThr= nKernels;
-	}
-	if(peakKernelMultiplicityThr==0 || (peakKernelMultiplicityThr<0 && peakKernelMultiplicityThr!=-1)){
-		ERROR_LOG("Invalid multiplicity thr ("<<peakKernelMultiplicityThr<<") given!");
-		return -1;
-	}
-
-	//Init data
-	peakPoints.clear();
-	struct PeakData{
-		float x;
-		float y;
-		int id;
-		PeakData(float _x,float _y,float _id): x(_x), y(_y), id(_id) {}
-	};
-	std::vector<PeakData> peaks;
-
-	//## Find peaks with different kernel sizes
-	bool hasPeaks= true;
-	for(int k=0;k<nKernels;k++){
-
-		//Find peaks for this kernel
-		std::vector<long int> peakPixelIds;
-		Image* dilatedImg= MorphFilter::Dilate(peakPixelIds,img,kernelSizes[k],skipBorders);
-		if(!dilatedImg){
-			ERROR_LOG("Failed to compute dilated image for kernel no. "<<k<<" (size="<<kernelSizes[k]<<")!");
-			return -1;
-		}
-		delete dilatedImg;
-		dilatedImg= 0;		
-		
-		//Stop if no peaks are detected
-		if(peakPixelIds.empty()){
-			hasPeaks= false;
-			break;
-		}
-		INFO_LOG("#"<<peakPixelIds.size()<<" peak pixels found with kernel no. "<<k<<" (size="<<kernelSizes[k]<<")!");
-
-		//Store peak points for current kernel
-		for(size_t j=0;j<peakPixelIds.size();j++){
-			long int gBin= peakPixelIds[j];
-			long int binX= img->GetBinX(gBin); 
-			long int binY= img->GetBinY(gBin); 
-			double x= img->GetX(binX);
-			double y= img->GetY(binY);
-			//points[k].push_back(TVector2(x,y));
-			peaks.push_back(PeakData(x,y,k));
-		}//end loop peak points
-
-	}//end loop kernels
-
-	if(!hasPeaks) {
-		DEBUG_LOG("No peaks detected in one or all dilated kernel runs.");
-		return 0;
-	}
-
-	//## Create graph with "matching/adjacent" peaks
-	Graph linkGraph(peaks.size());
-	for(size_t i=0;i<peaks.size()-1;i++) {
-		for(size_t j=i+1;j<peaks.size();j++) {	
-			float distX= peaks[i].x - peaks[j].x;
-			float distY= peaks[i].y - peaks[j].y;
-			bool areAdjacent= (fabs(distX)<=peakShiftTolerance && fabs(distY)<=peakShiftTolerance);
-			if(!areAdjacent) continue;
-			linkGraph.AddEdge(i,j);
-		}
-	}
-	
-	//Find connected peaks
-	std::vector<std::vector<int>> connected_indexes;
-	linkGraph.GetConnectedComponents(connected_indexes);
-
-	
-	//Match peaks found with different kernels (given a tolerance)
-	int npeaks= 0;
-	for(size_t i=0;i<connected_indexes.size();i++){
-		std::set<int> id_list;
-
-		for(size_t j=0;j<connected_indexes[i].size();j++){
-			int index= connected_indexes[i][j];
-			id_list.insert(peaks[index].id);
-		}//end loop items in cluster
-		
-		//Check multiplicity
-		int multiplicity= static_cast<int>(id_list.size());
-		if( multiplicity<peakKernelMultiplicityThr ) {
-			DEBUG_LOG("Skip peak group no. "<<i+1<<" as below multiplicity thr ("<<multiplicity<<"<"<<peakKernelMultiplicityThr<<")");
-			continue;
-		}
-
-		//Compute peak mean and fill final peaks list
-		TVector2 peakMean(0,0);
-		for(size_t j=0;j<connected_indexes[i].size();j++){
-			int index= connected_indexes[i][j];
-			peakMean+= TVector2(peaks[index].x,peaks[index].y);
-		}
-		peakMean*= 1./(float)(connected_indexes[i].size());
-		peakPoints.push_back(peakMean);
-		DEBUG_LOG("Peak no. "<<npeaks+1<<" C("<<peakMean.X()<<","<<peakMean.Y()<<")");
-		npeaks++;	
-
-	}//end loop clusters
-
-	if(npeaks<=0){
-		WARN_LOG("No matching peaks across the three dilate kernels detected!");
-		return 0;
-	}
-	INFO_LOG("#"<<npeaks<<" peaks detected!");
-
-	return 0;
-
-}//close FindPeaks()
-*/
-
 
 int MorphFilter::FindPeaks(std::vector<ImgPeak>& peakPoints,Image* img,std::vector<int> kernelSizes,int peakShiftTolerance,bool skipBorders,int peakKernelMultiplicityThr)
 {
@@ -1038,8 +908,197 @@ int MorphFilter::FindDilatedSourcePixels(Image* img,Source* source,int KernSize,
 }//close FindDilatedSourcePixels()
 
 
-int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr){
+int MorphFilter::FindDilatedSourcePixels(std::vector<long int>& pixelsToBeDilated,Image* img,Source* source,int kernSize)
+{
+	//## Check input source
+	if(!source) {
+		ERROR_LOG("Null ptr to input source given!");
+		return -1;
+	}
+	
+	//## Init dilation kernel
+	if(kernSize%2==0){
+		kernSize++;
+		WARN_LOG("kern size argument given was converted to an odd number ("<<kernSize<<") ...");
+	}
+	int dilateSize= kernSize/2;
+	cv::Mat element= cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(kernSize,kernSize));
+	long int Nx= img->GetNx();
+	long int Ny= img->GetNy();
 
+	//## Add source pixels to dilated pixel list
+	std::set<long int> dilatedPixelIds;
+	for(long int l=0;l<source->GetNPixels();l++){
+		Pixel* thisPixel= source->GetPixel(l);
+		long int id= thisPixel->id;
+		dilatedPixelIds.insert(id);
+	}
+
+	//## Get source contours
+	std::vector<Contour*> contours= source->GetContours();
+	if(contours.empty()){
+		WARN_LOG("No contours available for source "<<source->GetName()<<" (hint: check if contours were computed)!");
+	}
+
+	for(size_t k=0;k<contours.size();k++){
+		Contour* contour= contours[k];
+		if(!contour) continue;
+		double contx= 0;
+		double conty= 0;
+		
+		for(int i=0;i<contour->GetN();i++){
+			contour->GetPointXY(contx,conty,i);
+			long int id= img->FindBin(contx,conty);
+			if(id<0) continue;
+			long int binx= img->GetBinX(id);
+			long int biny= img->GetBinY(id);
+
+			for(int tx=-dilateSize;tx<=dilateSize;tx++){
+				long int binx_next= binx + tx;
+				long int colId= tx + dilateSize;
+
+				for(int ty=-dilateSize;ty<=dilateSize;ty++){	
+					long int biny_next= biny+ty;
+					long int rowId= tx + dilateSize;
+					long int gBinId= img->GetBin(binx_next,biny_next);
+					if(gBinId<0) continue;
+					double kernValue= (double)element.at<char>(rowId,colId);
+					if(kernValue>0) dilatedPixelIds.insert(gBinId);	
+				}//end loop kernel
+			}//end loop kernel
+		}//end loop contour points	
+	}//end loop contours
+
+	//Add additional pixel to list
+	std::copy(dilatedPixelIds.begin(), dilatedPixelIds.end(), std::back_inserter(pixelsToBeDilated));
+	DEBUG_LOG("#"<<pixelsToBeDilated.size()<<" pixels to be dilated...");
+	
+	return 0;
+
+}//close FindDilatedSourcePixels()
+
+
+int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int dilateModel,ImgBkgData* bkgData,bool useLocalBkg,bool randomize)
+{
+	//## Check input source
+	if(!source) {
+		ERROR_LOG("Null ptr to input source given!");
+		return -1;
+	}
+
+	//## Check if source has stats computed, if not compute
+	bool hasStats= source->HasStats();
+	if(!hasStats){
+		WARN_LOG("No stats computed for input source...computing!");
+		source->ComputeStats(true,true);
+	}
+	double sourceMedian= source->Median;
+	double sourceMedianRMS= source->MedianRMS;
+	
+	//## Initialize GSL random init
+	DEBUG_LOG("Initialize GSL random engine...");
+  gsl_rng_env_setup();                          // Read variable environnement
+  const gsl_rng_type* type = gsl_rng_default;   // Default algorithm 'twister'
+  gsl_rng* rand_generator = gsl_rng_alloc (type); 
+
+	//## Find pixels to be dilated
+	std::vector<long int> pixelsToBeDilated;
+	FindDilatedSourcePixels(pixelsToBeDilated,img,source,KernSize);
+
+	//## Replace dilated pixels with model
+	double sigmaTrunc= 1;//trunc random gaussian to +-sigmaTrunc	
+	
+	if(dilateModel==eDilateWithSourceMedian){
+		double BkgRealization= sourceMedian;
+		double BkgRMS= sourceMedianRMS;
+		if(randomize){
+			#ifdef OPENMP_ENABLED
+			#pragma omp parallel for
+			#endif
+			for(size_t l=0;l<pixelsToBeDilated.size();l++){
+				long int id= pixelsToBeDilated[l];	
+				double r= 0;
+				RtNorm_ns::RtNorm::get_random(r,rand_generator,-sigmaTrunc,sigmaTrunc,0.,1.);
+				double bkg= BkgRealization + r*BkgRMS;
+				img->SetPixelValue(id,bkg);
+			}//end loop pixels 	
+		}
+		else{
+			#ifdef OPENMP_ENABLED
+			#pragma omp parallel for
+			#endif
+			for(size_t l=0;l<pixelsToBeDilated.size();l++){
+				long int id= pixelsToBeDilated[l];	
+				img->SetPixelValue(id,BkgRealization);
+			}//end loop pixels 
+		}
+	}//close if
+  else if(dilateModel==eDilateWithBkg){
+		if(useLocalBkg){
+			if(randomize){
+				#ifdef OPENMP_ENABLED
+				#pragma omp parallel for
+				#endif
+				for(size_t l=0;l<pixelsToBeDilated.size();l++){
+					long int id= pixelsToBeDilated[l];	
+					double BkgRealization= (bkgData->BkgMap)->GetPixelValue(id);
+					double BkgRMS= (bkgData->NoiseMap)->GetPixelValue(id);
+					double r= 0;
+					RtNorm_ns::RtNorm::get_random(r,rand_generator,-sigmaTrunc,sigmaTrunc,0.,1.);
+					double bkg= BkgRealization + r*BkgRMS;
+					img->SetPixelValue(id,bkg);
+				}//end loop pixels
+			}
+			else{
+				#ifdef OPENMP_ENABLED
+				#pragma omp parallel for
+				#endif
+				for(size_t l=0;l<pixelsToBeDilated.size();l++){
+					long int id= pixelsToBeDilated[l];	
+					double BkgRealization= (bkgData->BkgMap)->GetPixelValue(id);
+					img->SetPixelValue(id,BkgRealization);
+				}//end loop pixels
+			}
+		}//close if
+		else{
+			double BkgRealization= bkgData->gBkg;
+			double BkgRMS= bkgData->gNoise;	
+			if(randomize){
+				#ifdef OPENMP_ENABLED
+				#pragma omp parallel for
+				#endif
+				for(size_t l=0;l<pixelsToBeDilated.size();l++){
+					long int id= pixelsToBeDilated[l];	
+					double r= 0;
+					RtNorm_ns::RtNorm::get_random(r,rand_generator,-sigmaTrunc,sigmaTrunc,0.,1.);
+					double bkg= BkgRealization + r*BkgRMS;
+					img->SetPixelValue(id,bkg);
+				}//end loop pixels
+			}
+			else{
+				#ifdef OPENMP_ENABLED
+				#pragma omp parallel for
+				#endif
+				for(size_t l=0;l<pixelsToBeDilated.size();l++){
+					long int id= pixelsToBeDilated[l];	
+					img->SetPixelValue(id,BkgRealization);
+				}//end loop pixels
+			}
+		}//close else
+	}//close else if
+
+	// GSL rand generator deallocation
+	gsl_rng_free(rand_generator); 
+
+	return 0;
+
+}//close DilateAroundSource()
+
+
+
+
+int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr)
+{
 	//## Check input source
 	if(!source) {
 		ERROR_LOG("Null ptr to input source given!");

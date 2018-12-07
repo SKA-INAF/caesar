@@ -50,6 +50,7 @@
 #include <iostream>
 #include <time.h>
 #include <ctime>
+#include <set>
 
 using namespace std;
 
@@ -77,7 +78,7 @@ class MorphFilter : public TObject {
 		*/
     virtual ~MorphFilter();
 
-		enum DilationModel {eDilateWithBkg=1,eDilateWithSourceMedian=2};
+		//enum DilationModel {eDilateWithBkg=1,eDilateWithSourceMedian=2};
 
 	public:
 			
@@ -119,8 +120,6 @@ class MorphFilter : public TObject {
 		/**
 		* \brief Find peaks in image by combining local peaks found with different dilation kernel sizes
 		*/
-		//static int FindPeaks(std::vector<TVector2>& peakPoints,Image* img,std::vector<int> kernelSizes={3,5},int peakShiftTolerance=1,bool skipBorders=true,int peakKernelMultiplicityThr=-1);
-		
 		static int FindPeaks(std::vector<ImgPeak>& peakPoints,Image* img,std::vector<int> kernelSizes={3,5},int peakShiftTolerance=1,bool skipBorders=true,int peakKernelMultiplicityThr=-1);
 
 		/**
@@ -136,6 +135,10 @@ class MorphFilter : public TObject {
 		*/
 		static int DilateAroundSources(Image* img,std::vector<Source*>const& sources,int KernSize=5,int dilateModel=eDilateWithBkg,int dilateSourceType=-1,bool skipToNested=false,ImgBkgData* bkgData=0,bool useLocalBkg=false,bool randomize=false,double zThr=5,double zBrightThr=20);
 	
+		/**
+		* \brief Dilate image around a given source
+		*/
+		static int DilateAroundSource(Image* img,Source* source,int KernSize=21,int dilateModel=eDilateWithBkg,ImgBkgData* bkgData=0,bool useLocalBkg=true,bool randomize=false);
 		
 	private:
 
@@ -148,6 +151,10 @@ class MorphFilter : public TObject {
 		*/
 		static int FindDilatedSourcePixels(Image* img,Source* source,int KernSize,std::vector<long int>& pixelsToBeDilated);
 		
+		/**
+		* \brief Find pixels to be dilated
+		*/
+		static int FindDilatedSourcePixels(std::vector<long int>& pixelsToBeDilated,Image* img,Source* source,int kernSize);
 
 	private:
 
