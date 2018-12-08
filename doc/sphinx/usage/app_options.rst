@@ -6,7 +6,24 @@ Most of the example applications provided can be configured from command line ar
 Some applications, like source finding, however, require a large set of configuration options, specified inside a configuration file, passed to the application
 as a command line argument ``--config=[FILE]``.
 
-In this section we report a list of the configuration options defined in CAESAR to customize tasks.
+In this section we report a list of the main configuration options defined in CAESAR to customize tasks. The full list of options defined is kept in ``ConfigParser.cc`` class.
+To print the full list of defined options use the `ConfigParser::PrintOptions()` method. For example from ROOT prompt type:
+
+
+``Caesar::ConfigParser::Instance().PrintOptions()``
+
+
+or from the python CLI:
+
+.. code:: python
+
+    from ROOT import gSystem                     
+    gSystem.Load('libCaesar')
+    from ROOT import Caesar
+    
+    Caesar.ConfigParser.Instance().PrintOptions()
+
+
 
 -------------
 Input Options
@@ -134,6 +151,12 @@ Run & Distributed Processing Options
 +--------------------------------+----------------------------------+-----------------------+-------------+
 |       Option                   |             Description          |      Default          |   Values    |
 +================================+==================================+=======================+=============+
+| ``logLevel``                   | Log level threshold              |        INFO           | | DEBUG     |
+|                                |                                  |                       | | INFO      |
+|                                |                                  |                       | | WARN      |
+|                                |                                  |                       | | ERROR     |
+|                                |                                  |                       | | FATAL     |
++--------------------------------+----------------------------------+-----------------------+-------------+
 | ``nThreads``                   | | Number of threads used if      |        -1             |             |
 |                                | | OPENMP is enabled. If set to   |                       |             |
 |                                | | -1 a number of threads equal   |                       |             |
@@ -164,19 +187,160 @@ Run & Distributed Processing Options
 |                                | | processing (1=no overlap,      |                       |             |
 |                                | | 0.5=half overlap)              |                       |             |
 +--------------------------------+----------------------------------+-----------------------+-------------+
-| ``mergeSourcesAtEdge``         | | Merge sources found at tile    |         true          | | true      |
-|                                | | edge by each worker            |                       | | false     |
+| ``mergeSourcesAtEdge``         | | Merge overlapping sources      |         true          | | true      |
+|                                | | found at tile edge by each     |                       | | false     |
+|                                | | worker when aggregating the    |                       |             |
+|                                | | final catalog                  |                       |             |
 +--------------------------------+----------------------------------+-----------------------+-------------+
 | ``mergeSources``               | | Merge overlapping sources      |         false         | | true      |
-|                                | | found by workers.              |                       | | false     |
+|                                | | found in each tile. If true    |                       | | false     |
+|                                | | compact and extended sources   |                       |             |
+|                                | | found by different algorithms  |                       |             |
+|                                | | in a tile are merged if        |                       |             |
+|                                | | overlapping. If you want to    |                       |             |
+|                                | | keep sources distinct set      |                       |             |
+|                                | | option to false                |                       |             |
 +--------------------------------+----------------------------------+-----------------------+-------------+
-| ``mergeCompactSources``        | | Merge overlapping compact      |         false         | | true      |
-|                                | | sources found by workers       |                       | | false     |
-+--------------------------------+----------------------------------+-----------------------+-------------+
-| ``mergeExtendedSources``       | | Merge overlapping compact-     |         false         | | true      |
-|                                | | extended sources found by      |                       | | false     |
-|                                | | workers                        |                       |             |
-+--------------------------------+----------------------------------+-----------------------+-------------+
+
+
+----------------------------------
+Stats & Background Compute Options
+----------------------------------
+
++--------------------------------+----------------------------------+-----------+------------------------+
+|       Option                   |             Description          |  Default  |   Values               |
++================================+==================================+===========+========================+
+| ``bkgEstimator``               | | Stat estimator used to compute |    2      | | 1=Mean/RMS           |
+|                                | | image background & noise       |           | | 2=Median/MAD         |
+|                                | | image background & noise       |           | | 3=BiWeight           |
+|                                | | image background & noise       |           | | 4=Clipped Median/RMS |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``useParallelMedianAlgo``      | | Use C++ parallel algorithm     |   true    | | true                 |
+|                                | | to compute median estimator    |           | | false                |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``useLocalBkg``                | | Compute local background       |   true    | | true                 |
+|                                | | and noise maps and use them    |           | | false                |
+|                                | | instead of global bkg info     |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``use2ndPassInLocalBkg``       | | Use 2nd pass to refine local   |   true    | | true                 |
+|                                | | noise map                      |           | | false                |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``skipOutliersInLocalBkg``     | | Exclude pixels belonging to    |   false   | | true                 |
+|                                | | detected bright blobs when     |           | | false                |
+|                                | | computing local background     |           |                        |
+|                                | | estimators. Blob find seed thr |           |                        |
+|                                | | parameters are reported in     |           |                        |
+|                                | | source finding option table    |           |                        |
+|                                | | below                          |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``boxSizeX``                   | | Size of sampling box along x   |    20     |                        |
+|                                | | coordinate for local bkg       |           |                        |
+|                                | | calculation in pixels. Size is |           |                        |
+|                                | | instead assumed as multiple of |           |                        |
+|                                | | beam size if                   |           |                        |
+|                                | | ``useBeamInfoInBkg`` is true   |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``boxSizeY``                   | | Size of sampling box along y   |    20     |                        |
+|                                | | coordinate for local bkg       |           |                        |
+|                                | | calculation in pixels. Size is |           |                        |
+|                                | | instead assumed as multiple of |           |                        |
+|                                | | beam size if                   |           |                        |
+|                                | | ``useBeamInfoInBkg`` is true   |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``gridSizeX``                  | | Size of grid along x           |    0.2    |                        |
+|                                | | coordinate used for local bkg  |           |                        |
+|                                | | interpolation expressed as     |           |                        |
+|                                | | fraction of sampling box x     |           |                        |
+|                                | | size                           |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``gridSizeY``                  | | Size of grid along y           |    0.2    |                        |
+|                                | | coordinate used for local bkg  |           |                        |
+|                                | | interpolation expressed as     |           |                        |
+|                                | | fraction of sampling box y     |           |                        |
+|                                | | size                           |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``useBeamInfoInBkg``           | | Use beam information in bkg    |   true    | | true                 |
+|                                | | sampling box size definition.  |           | | false                |
+|                                | | Beam info are taken from image |           |                        |
+|                                | | when available, otherwise from |           |                        |
+|                                | | user beam parameter below.     |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``pixSize``                    | | User-supplied map pixel area   |     1     |                        |
+|                                | | in arcsec. Used when CDELT     |           |                        |
+|                                | | info is not available in       |           |                        |
+|                                | | image metadata                 |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``beamFWHM``                   | | User-supplied circular beam    |    6.5    |                        |
+|                                | | FWHM in arcsec (BMAJ=BMIN).    |           |                        |
+|                                | | Used when beam info is not     |           |                        |
+|                                | | available in image metadata    |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``beamBmaj``                   | | User-supplied beam ellipse     |    10     |                        |
+|                                | | major axis in arcsec.          |           |                        |
+|                                | | Used when beam info is not     |           |                        |
+|                                | | available in image metadata    |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``beamBmin``                   | | User-supplied beam ellipse     |     5     |                        |
+|                                | | minor axis in arcsec.          |           |                        |
+|                                | | Used when beam info is not     |           |                        |
+|                                | | available in image metadata    |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``beamTheta``                  | | User-supplied beam position    |     0     |                        |
+|                                | | angle in degrees and measured  |           |                        |
+|                                | | CCW from North (pa=0 North).   |           |                        |
+|                                | | Used when beam info is not     |           |                        |
+|                                | | available in image metadata    |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+
+
+----------------------
+Source Finding Options
+----------------------
+
++--------------------------------+----------------------------------+-----------+------------------------+
+|       Option                   |             Description          |  Default  |   Values               |
++================================+==================================+===========+========================+
+| ``searchCompactSources``       | | Enable/disable search of       |   true    | | true                 |
+|                                | | compact sources                |           | | false                |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``minNPix``                    | | Minimum number of pixels       |    5      |                        |
+|                                | | to consider a blob as source   |           |                        |
+|                                | | candidate                      |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``seedThr``                    | | Seed threshold in blob finding |    5      |                        |
+|                                | | given as number of sigmas      |           |                        |
+|                                | | above background               |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``mergeThr``                   | | Merge/aggregation threshold    |   2.6     |                        |
+|                                | | in blob finding given as       |           |                        |
+|                                | | number of sigmas above         |           |                        |
+|                                | | background. Pixels above this  |           |                        |
+|                                | | threshold are added to the blob|           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``mergeBelowSeed``             | | Add to blob only pixels above  |   false   | | true                 |
+|                                | | merge threshold but below seed |           | | false                |
+|                                | | threshold                      |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``searchNegativeExcess``       | | Search for holes (i.e. blobs   |   false   | | true                 |
+|                                | | with negative significance)    |           | | false                |
+|                                | | along with "positive" blobs    |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``compactSourceSearchNIters``  | | Number of iterations to be     |     1     |                        |
+|                                | | performed in compact source    |           |                        |
+|                                | | search. At each iteration the  |           |                        |
+|                                | | seed threshold is decreased by |           |                        |
+|                                | | ``seedThrStep``                |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+| ``seedThrStep``                | | Seed threshold decrease step   |    0.5    |                        |
+|                                | | size between iterations.       |           |                        |
+|                                | | Effective only when            |           |                        |
+|                                | |``compactSourceSearchNIters``>1 |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
+
+		
+-----------------------------
+Nested Source Finding Options
+-----------------------------
 
 
 
