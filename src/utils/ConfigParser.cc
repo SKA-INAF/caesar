@@ -250,13 +250,13 @@ int ConfigParser::RegisterPredefinedOptions(){
 		//==  Source finding options  ==
 		//==============================
 		REGISTER_OPTION(searchCompactSources,bool,true,false,true);
-		REGISTER_OPTION(minNPix,int,10,0,10000);
+		REGISTER_OPTION(minNPix,int,5,0,10000);
 		REGISTER_OPTION(seedThr,double,5,0,10000);
 		REGISTER_OPTION(mergeThr,double,2.6,0,10000);
 		REGISTER_OPTION(mergeBelowSeed,bool,false,false,true);
 		REGISTER_OPTION(searchNegativeExcess,bool,false,false,true);
-		REGISTER_OPTION(compactSourceSearchNIters,int,10,0,100);
-		REGISTER_OPTION(seedThrStep,double,1,0,10);
+		REGISTER_OPTION(compactSourceSearchNIters,int,1,0,100);
+		REGISTER_OPTION(seedThrStep,double,0.5,0,10);
 		
 		//=====================================
 		//==  Nested Source finding options  ==
