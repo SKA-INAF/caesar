@@ -55,7 +55,8 @@ To enter the container type:
 ``singularity shell caesar.simg``
 
 
-CAESAR is installed in the ``/opt/Software/CAESAR/trunk/`` container directory. Software dependencies are installed under the ``/opt/Software`` directory. 
+CAESAR is installed in the ``/opt/Software/CAESAR/trunk/`` container directory. Software dependencies are installed under the ``/opt/Software`` directory.
+
 CAESAR applications are available for batch processing as Singularity apps. To list available apps type:
 
 
