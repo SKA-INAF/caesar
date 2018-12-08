@@ -12,7 +12,7 @@ Docker base container
 We assume here that Docker is available in your system. If not, install it following the instruction at https://docs.docker.com.
 
 Recipe files to build a base Docker image with all CAESAR dependencies installed can be downloaded at: https://github.com/SKA-INAF/caesar-base-docker.
-For example the following command builds a Docker image on your system with name `caesar/base` (tag=latest) 
+For example the following command builds a Docker image on your system with name `caesar/base` (tag=latest) from `Dockerfile.xenial`: 
 
 
 ``docker build -t 'caesar/base:latest' -f 'Dockerfile.xenial' .``
