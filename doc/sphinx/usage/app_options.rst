@@ -430,3 +430,71 @@ compact/point-source located inside the extended one will be included in the mot
 
 
 
+
+------------------------
+Source Selection Options
+------------------------
+
+These options enable control of quality selection cuts applied to detected blobs to select good source candidates and tag point-source candidates
+(used later in source residual map and fitting stage). Options are also provided to select sources to be stored in the final catalog. 
+
++---------------------------------------+----------------------------------+-----------+------------------------+
+|       Option                          |             Description          |  Default  |   Values               |
++=======================================+==================================+===========+========================+
+| ``applySourceSelection``              | | Enable/disable source          |   true    | | true                 |
+|                                       | | selection                      |           | | false                |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``useMinBoundingBoxCut``              | | Apply minimum bounding box cut |   false   | | true                 |
+|                                       | | to detected blobs              |           | | false                |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``sourceMinBoundingBox``              | | Minimum bounding box cut value |    2      |                        |
+|                                       | | in pixel. Blobs with minimum   |           |                        |
+|                                       | | bounding box size below the    |           |                        |
+|                                       | | threshold are tagged as bad    |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``useCircRatioCut``                   | | Apply cut on blob circular     |   false   | | true                 |
+|                                       | | ratio param to detected blobs  |           | | false                |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``psCircRatioThr``                    | | Circular ratio cut value.      |    0.4    | 0                      |
+|                                       | | in pixel. Blobs with circ      |           | 1                      |
+|                                       | | ratio above this threshold     |           |                        |
+|                                       | | passed the point-like cut      |           |                        |
+|                                       | | (1=circle, 0=line)             |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``useElongCut``                       | | Apply cut on blob elongation   |   false   | | true                 |
+|                                       | | param to detected blobs        |           | | false                |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``psElongThr``                        | | Elongation cut value.          |    0.7    | 0                      |
+|                                       | | Blobs with elongation param    |           | 1                      |
+|                                       | | below this threshold           |           |                        |
+|                                       | | passed the point-like cut      |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``useMaxNPixCut``                     | | Apply cut on blob maximum      |   false   | | true                 |
+|                                       | | number of pixels.              |           | | false                |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``psMaxNPix``                         | | Max number of pixels cut value.|   1000    |                        |
+|                                       | | Blobs with a number of pixels  |           |                        |
+|                                       | | below this threshold           |           |                        |
+|                                       | | passed the point-like cut      |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``useEllipseAreaRatioCut``            | | Apply cut on ratio between     |   false   | | true                 |
+|                                       | | blob area and blob ellipse     |           | | false                |
+|                                       | | bounding box area.             |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| | ``psEllipseAreaRatioMinThr``        | | Area/EllipseArea ratio min and |   0.6     |                        |
+| | ``psEllipseAreaRatioMaxThr``        | | max cut values.                |   1.4     |                        |
+|                                       | | Blobs in cut range passes the  |           |                        |
+|                                       | | point-like cut                 |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``useNBeamsCut``                      | | Apply cut on number of beams   |   false   | | true                 |
+|                                       | | found in detected blob         |           | | false                |
+|                                       | | (NBeams=blob npix/beam npix)   |           | | false                |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``psNBeamsThr``                       | | Max number of beams cut value. |   5       |                        |
+|                                       | | Blobs with a number of beams   |           |                        |
+|                                       | | below this threshold           |           |                        |
+|                                       | | passed the point-like cut      |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
+
+		
+
