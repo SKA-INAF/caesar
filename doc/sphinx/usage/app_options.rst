@@ -29,6 +29,8 @@ or from the python CLI:
 Input Options
 -------------
 
+These options enable control of input data to be given to CAESAR applications.  
+
 +------------------------+-------------------------------------------+--------------+------------+
 |       Option           |             Description                   |   Default    |   Values   |
 +========================+===========================================+==============+============+
@@ -55,6 +57,8 @@ Input Options
 --------------
 Output Options
 --------------
+
+These options enable control of information & data reported in output by CAESAR applications.  
 
 +--------------------------------+----------------------------------+-----------------------+-------------+
 |       Option                   |             Description          |      Default          |   Values    |
@@ -148,6 +152,8 @@ Output Options
 Run & Distributed Processing Options
 ------------------------------------
 
+These options enable control of application run (e.g. logging levels) and distributed processing (e.g. number of threads). 
+
 +--------------------------------+----------------------------------+-----------------------+-------------+
 |       Option                   |             Description          |      Default          |   Values    |
 +================================+==================================+=======================+=============+
@@ -206,6 +212,9 @@ Run & Distributed Processing Options
 ----------------------------------
 Stats & Background Compute Options
 ----------------------------------
+
+These options enable control of image background calculation. Background can be either computed globally or locally.
+Local background maps (bkg, rms) are obtained by interpolating background estimator values computed on a grid of sampling image rectangular boxes.
 
 +--------------------------------+----------------------------------+-----------+------------------------+
 |       Option                   |             Description          |  Default  |   Values               |
@@ -297,6 +306,10 @@ Stats & Background Compute Options
 Source Finding Options
 ----------------------
 
+These options enable control of source detection. This is performed using a flood-fill algorithm
+aggregating pixels around significant seeds if above a given merge threshold. Detected blobs form a collection
+of candidate sources.
+
 +--------------------------------+----------------------------------+-----------+------------------------+
 |       Option                   |             Description          |  Default  |   Values               |
 +================================+==================================+===========+========================+
@@ -334,13 +347,86 @@ Source Finding Options
 | ``seedThrStep``                | | Seed threshold decrease step   |    0.5    |                        |
 |                                | | size between iterations.       |           |                        |
 |                                | | Effective only when            |           |                        |
-|                                | |``compactSourceSearchNIters``>1 |           |                        |
+|                                | | ``compactSourceSearchNIters``>1|           |                        |
 +--------------------------------+----------------------------------+-----------+------------------------+
 
 		
 -----------------------------
 Nested Source Finding Options
 -----------------------------
+
+These options enable control of nested source detection. Nested sources are blobs inside another mother blobs.
+Detection of nested blob uses a blob detection algorithm, based on the thresholding of a filter blob map (LoG or Gaus2D smoothed),
+which increases the computation time, particularly if blob search is done at multiple spatial scales. In presence of extended/diffuse object you can consider turning off
+this calculation. If however you have extended and bright object and you turn off nested source search you may see that 
+compact/point-source located inside the extended one will be included in the mother and not fitted.
+
++---------------------------------------+----------------------------------+-----------+------------------------+
+|       Option                          |             Description          |  Default  |   Values               |
++=======================================+==================================+===========+========================+
+| ``searchNestedSources``               | | Enable/disable search of       |   true    | | true                 |
+|                                       | | compact nested sources         |           | | false                |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``blobMaskMethod``                    | | Filter map used in nested      |    2      | | 1=gaus smoothed Lapl |
+|                                       | | blob finder to search blobs    |           | | 2=multi-scale LoG    |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``nestedBlobKernFactor``              | | Filter kernel size factor par  |    1      |                        |
+|                                       | | so that kern size=             |           |                        |
+|                                       | | factor x sigma (sigma is the   |           |                        |
+|                                       | | filter scale par in pixels)    |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``sourceToBeamAreaThrToSearchNested`` | | Mother source area/beam thr to |    0      |                        |
+|                                       | | add nested sources. If         |           |                        |
+|                                       | | npix<=thr*beamArea no nested   |           |                        |
+|                                       | | sources are added to the       |           |                        |
+|                                       | | mother source even if detected.|           |                        |
+|                                       | | If thr=0 nested sources are    |           |                        |
+|                                       | | always added if                |           |                        |
+|                                       | | ``searchNestedSources`` is     |           |                        |
+|                                       | | enabled                        |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``nestedBlobThrFactor``               | | Threshold factor param used in |    0      |                        |
+|                                       | | blob filter map to create mask |           |                        |
+|                                       | | (thr=thrFactor*<img>).         |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``minNestedMotherDist``               | | Minimum distance in pixels     |    2      |                        |
+|                                       | | (in x or y) between nested and |           |                        |
+|                                       | | parent blob centroids below    |           |                        |
+|                                       | | which nested source is skipped |           |                        |
+|                                       | | as most probably equal to the  |           |                        |
+|                                       | | parent (avoid duplicates)      |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``maxMatchingPixFraction``            | | Maximum fraction of matching   |   0.5     |                        |
+|                                       | | pixels between nested and      |           |                        |
+|                                       | | parent blob above which nested |           |                        |
+|                                       | | is skipped as most probably    |           |                        |
+|                                       | | equal to the parent (avoid     |           |                        |
+|                                       | | duplicates)                    |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``nestedBlobPeakZThr``                | | Nested blob significance       |    5      |                        |
+|                                       | | seed thr in sigmas (in filter  |           |                        |
+|                                       | | blob map) below which nested   |           |                        |
+|                                       | | blob is skipped                |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``nestedBlobPeakZMergeThr``           | | Nested blob peak significance  |   2.5     |                        |
+|                                       | | merge thr in sigmas (in filter |           |                        |
+|                                       | | blob map) below which nested   |           |                        |
+|                                       | | blob is skipped                |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``nestedBlobMinScale``                | | Nested blob min search scale   |    1      |                        |
+|                                       | | factor parameter so that blob  |           |                        |
+|                                       | | filter scale in pixels is      |           |                        |
+|                                       | | = scaleFactor x beam width     |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``nestedBlobMaxScale``                | | Nested blob max search scale   |    3      |                        |
+|                                       | | factor parameter so that blob  |           |                        |
+|                                       | | filter scale in pixels is      |           |                        |
+|                                       | | = scaleFactor x beam width     |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
+| ``nestedBlobScaleStep``               | | Nested blob scale factor step  |    1      |                        |
+|                                       | | so that scaleFactor=           |           |                        |
+|                                       | | minScaleFactor + step          |           |                        |
++---------------------------------------+----------------------------------+-----------+------------------------+
 
 
 
