@@ -307,13 +307,22 @@ int ConfigParser::RegisterPredefinedOptions(){
 		//================================
 		//==  Source residual options   ==
 		//================================
-		REGISTER_OPTION(dilateZBrightThr,double,10,0,10000);
-		REGISTER_OPTION(dilateZThr,double,5,0,10000);
-		REGISTER_OPTION(dilateNestedSources,bool,true,false,true);		
-		REGISTER_OPTION(dilateKernelSize,int,9,1,1001);		
-		REGISTER_OPTION(dilatedSourceType,int,2,-1,3);
-		REGISTER_OPTION(dilateSourceModel,int,1,1,2);
-		REGISTER_OPTION(dilateRandomize,bool,false,false,true);
+		REGISTER_OPTION(residualZHighThr,double,10,0,10000);
+		REGISTER_OPTION(residualZThr,double,5,0,10000);
+		REGISTER_OPTION(removeNestedSources,bool,true,false,true);
+		REGISTER_OPTION(dilateKernelSize,int,9,1,1001);	
+		REGISTER_OPTION(removedSourceType,int,2,-1,3);
+		REGISTER_OPTION(residualModel,int,1,0,3);
+		REGISTER_OPTION(residualModelRandomize,bool,false,false,true);
+		REGISTER_OPTION(psSubtractionMethod,int,1,0,3);
+
+		//REGISTER_OPTION(dilateZBrightThr,double,10,0,10000);
+		//REGISTER_OPTION(dilateZThr,double,5,0,10000);
+		//REGISTER_OPTION(dilateNestedSources,bool,true,false,true);		
+		//REGISTER_OPTION(dilateKernelSize,int,9,1,1001);		
+		//REGISTER_OPTION(dilatedSourceType,int,2,-1,3);
+		//REGISTER_OPTION(dilateSourceModel,int,1,1,2);
+		//REGISTER_OPTION(dilateRandomize,bool,false,false,true);
 
 		//==================================
 		//==  Source fitting options   ==
