@@ -1197,7 +1197,7 @@ generate_config(){
 		echo "outputComponentCatalogFile = $catalog_fitcomp_file	| Output fitted component catalog ascii filename"
     echo "ds9RegionFile = $ds9region_file					            | DS9 region file (.reg) where to store source catalog"	
 		echo "ds9FitRegionFile = $ds9fitregion_file					      | DS9 region file (.reg) where to store fitted source catalog"
-    echo 'DS9RegionFormat = 2                                 | DS9 region format (1=ellipse, 2=polygon)'
+    echo 'ds9RegionFormat = 2                                 | DS9 region format (1=ellipse, 2=polygon)'
 		echo "convertDS9RegionsToWCS = $CONVERT_DS9REGIONS_TO_WCS | Convert DS9 regions (contours & ellipses) to WCS (default=false)"
 		echo "ds9WCSType = $DS9REGION_WCSTYPE                     | DS9 region WCS output format (0=J2000,1=B1950,2=GAL) (default=0)"
     echo 'inputMapFITSFile = 	input_map.fits				          | Output filename where to store input map in FITS format (.fits)'
@@ -1286,12 +1286,12 @@ generate_config(){
 		echo '###'
 		echo '###'
 		echo '//=================================='
-		echo '//==  SOURCE FITTING OPTIONS  =='
+		echo '//==  SOURCE FITTING OPTIONS      =='
 		echo '//=================================='
 		echo "fitSources = $FIT_SOURCES                             | Deblend and fit point-like sources with multi-component gaus fit (T/F)"
 		echo "fitUseThreads = $FIT_USETHREADS                       | Use multithread in source fitting (default=false) (T/F)"
 		echo "fitMinimizer = $FIT_MINIMIZER                         | Minimizer {Minuit,Minuit2} (default=Minuit) (T/F)"
-		echo "fitMinimizerAlgo = $FIT_MINIMIZER_ALGO         				| Minimizer algorithm: {Migrad,Simplex,Scan,Combined,Fumili} (default=Migrad)"
+		echo "fitMinimizerAlgo = $FIT_MINIMIZER_ALGO         				| Minimizer algorithm: {Migrad,Simplex,Scan,Combined,Fumili} (default=Combined)"
 		echo "fitPrintLevel = $FIT_PRINTLEVEL                				| Minimizer print level (default=1)"
 		echo "fitStrategy = $FIT_STRATEGY                    				| Minimizer strategy (higher means more accurate but more fcn calls) (default=2)"
 		echo "nBeamsMaxToFit = $FIT_MAX_NBEAMS							 				| Maximum number of beams in compact source for fitting (if above thr fitting not performed)"
@@ -1323,7 +1323,7 @@ generate_config(){
     echo "fitImproveConvergence = $FIT_IMPROVE_CONVERGENCE      | Try to improve convergence by iterating fit if not converged or converged with pars at limits (default=true)"
 		echo "fitNRetries = $FIT_NRETRIES                           | Number of times fit is repeated (with enlarged limits) if improve convergence flag is enabled (default=1000)"
 		echo "fitDoFinalMinimizerStep = true                        | Switch on/off running of final minimizer step after fit convergence with MIGRAD (default=true)"
-		echo "fitFinalMinimizer = 2                                 | Final minimizer (1=MIGRAD,2=HESS,3=MINOS) (default=2)"
+		echo "###fitFinalMinimizer = 2                                 | Final minimizer (1=MIGRAD,2=HESS,3=MINOS) (default=2)"
 		echo "fitChi2RegPar = 1															 				| Chi2 regularization par chi2=chi2_signal + regpar*chi2_bkg (default=1)"	
 		echo "fitParBoundIncreaseStepSize = $FIT_PARBOUNDINCREASE_STEPSIZE    | Par bound increase step size (e.g. parmax= parmax_old+(1+nretry)*fitParBoundIncreaseStepSize*0.5*|max-min| (default=0.1)"
 		echo '###'

@@ -657,7 +657,7 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(fitImproveConvergence,m_fitImproveConvergence);
 	GET_OPTION_VALUE(fitNRetries,m_fitNRetries);
 	GET_OPTION_VALUE(fitDoFinalMinimizerStep,m_fitDoFinalMinimizerStep);
-	GET_OPTION_VALUE(fitFinalMinimizer,m_fitFinalMinimizer);
+	//GET_OPTION_VALUE(fitFinalMinimizer,m_fitFinalMinimizer);
 	GET_OPTION_VALUE(fitUseNestedAsComponents,m_fitUseNestedAsComponents);
 	GET_OPTION_VALUE(fitChi2RegPar,m_fitChi2RegPar);
 		
@@ -2930,7 +2930,7 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	fitOptions.fitImproveConvergence= m_fitImproveConvergence;
 	fitOptions.fitNRetries= m_fitNRetries;
 	fitOptions.fitDoFinalMinimizerStep= m_fitDoFinalMinimizerStep;
-	fitOptions.fitFinalMinimizer= m_fitFinalMinimizer;
+	//fitOptions.fitFinalMinimizer= m_fitFinalMinimizer;
 	fitOptions.useNestedAsComponents= m_fitUseNestedAsComponents;
 	fitOptions.chi2RegPar= m_fitChi2RegPar;
 

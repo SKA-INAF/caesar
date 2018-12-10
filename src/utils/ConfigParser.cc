@@ -320,7 +320,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		//==================================
 		REGISTER_OPTION(fitSources,bool,false,false,true);
 		REGISTER_OPTION(nBeamsMaxToFit,double,20,0,100000);
-		REGISTER_OPTION(fitMaxNComponents,int,3,0,100);		
+		REGISTER_OPTION(fitMaxNComponents,int,5,0,100);		
 		REGISTER_OPTION(fitWithCentroidLimits,bool,true,false,true);
 		REGISTER_OPTION(fixCentroidInPreFit,bool,false,false,true);
 		REGISTER_OPTION(fitCentroidLimit,double,3,0,1000);
@@ -352,7 +352,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(fitImproveConvergence,bool,true,false,true);
 		REGISTER_OPTION(fitNRetries,long int,1000,0,100000);
 		REGISTER_OPTION(fitDoFinalMinimizerStep,bool,true,false,true);
-		REGISTER_OPTION(fitFinalMinimizer,int,2,0,6);
+		//REGISTER_OPTION(fitFinalMinimizer,int,2,0,6);
 		REGISTER_OPTION(fitUseNestedAsComponents,bool,false,false,true);	
 		REGISTER_OPTION(fitChi2RegPar,double,0,-0.001,1.001);
 		
@@ -361,7 +361,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(fitPrintLevel,int,1,0,3);
 		REGISTER_OPTION(fitStrategy,int,2,0,3);
 		REGISTER_OPTION(fitUseThreads,bool,false,false,true);
-		REGISTER_OPTION(fitParBoundIncreaseStepSize,double,0,0.1,10);
+		REGISTER_OPTION(fitParBoundIncreaseStepSize,double,0.1,0,10);
 
 		//=============================================
 		//==  Active-Contour algorithm main options  ==
