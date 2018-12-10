@@ -2978,13 +2978,6 @@ Image* Image::GetMultiResoSaliencyMap(int resoMin,int resoMax,int resoStep,doubl
 
 }//close GetMultiResoSaliencyMap()
 
-/*
-int Image::FindPeaks(std::vector<TVector2>& peakPoints,std::vector<int> kernelSizes, int peakShiftTolerance,bool skipBorders,int multiplicityThr)
-{
-	return MorphFilter::FindPeaks(peakPoints,this,kernelSizes,peakShiftTolerance,skipBorders,multiplicityThr);
-
-}//close FindPeaks()
-*/
 
 int Image::FindPeaks(std::vector<ImgPeak>& peakPoints,std::vector<int> kernelSizes, int peakShiftTolerance,bool skipBorders,int multiplicityThr)
 {

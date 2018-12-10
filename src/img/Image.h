@@ -110,7 +110,7 @@ class ImgBkgPars : public TObject {
 		void SetLocalBkg(bool choice){computeLocalBkg=choice;}
 
 		/** 
-		\brief Turn on/off local bkg
+		\brief Set data range thresholds (min/max) 
  		*/
 		void SetDataRange(double minVal=-std::numeric_limits<double>::infinity(),double maxVal=std::numeric_limits<double>::infinity()){
 			useRange= true;
@@ -925,7 +925,7 @@ class Image : public TNamed {
 		/**
 		* \brief Apply threshold to image and replace pixel outside thr range with masked value
 		*/	
-		int ApplyThreshold(double thr_min,double thr_max=1.e+99,double maskedValue=0.);
+		int ApplyThreshold(double thr_min,double thr_max=1.e+99,double maskedValue=0);
 
 
 		/**
@@ -1007,21 +1007,23 @@ class Image : public TNamed {
 		
 
 		/**
-		* \brief Returns a residual image obtained by dilating given sources with a random background
-		*/
-		//Image* GetSourceResidual(std::vector<Source*>const& sources,int KernSize=5,int dilateModel=MorphFilter::eDilateWithBkg,int dilateSourceType=-1,bool skipToNested=false,ImgBkgData* bkgData=0,bool useLocalBkg=false,bool randomize=false,double zThr=5,double zBrightThr=20,int psSubtractionMethod=ePS_DILATION);
-		Image* GetSourceResidual(std::vector<Source*>const& sources,int KernSize=5,int dilateModel=eDilateWithBkg,int dilateSourceType=-1,bool skipToNested=false,ImgBkgData* bkgData=0,bool useLocalBkg=false,bool randomize=false,double zThr=5,double zBrightThr=20,int psSubtractionMethod=ePS_DILATION);
-
-		/**
 		* \brief Find image peaks
 		*/
-		int FindPeaks(std::vector<ImgPeak>& peakPoints,std::vector<int> kernelSizes={3,5,7},int peakShiftTolerance=1,bool skipBorders=true,int multiplicityThr=-1);
+		int FindPeaks(std::vector<Caesar::ImgPeak>& peakPoints,std::vector<int> kernelSizes={3,5,7},int peakShiftTolerance=1,bool skipBorders=true,int multiplicityThr=-1);
+
 
 		/**
 		* \brief Find graph with image peaks
 		*/
 		TGraph* ComputePeakGraph(std::vector<int> kernelSizes={3,5,7},int peakShiftTolerance=1,bool skipBorders=true,int multiplicityThr=-1);
 
+
+		/**
+		* \brief Returns a residual image obtained by dilating given sources with a random background
+		*/
+		Image* GetSourceResidual(std::vector<Source*>const& sources,int KernSize=5,int dilateModel=eDilateWithBkg,int dilateSourceType=-1,bool skipToNested=false,ImgBkgData* bkgData=0,bool useLocalBkg=false,bool randomize=false,double zThr=5,double zBrightThr=20,int psSubtractionMethod=ePS_DILATION);
+
+		
 
 		/**
 		* \brief Scale image by a factor 'c'
