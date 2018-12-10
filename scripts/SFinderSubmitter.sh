@@ -1362,13 +1362,14 @@ generate_config(){
 		echo '//================================'
 		echo '//==  SOURCE RESIDUAL OPTIONS   =='
 		echo '//================================'
-		echo "dilateNestedSources = $DILATE_NESTED								| Dilate sources nested inside bright sources (T/F)"
-		echo "dilateZThr = $DILATE_THR                            | Significance threshold (in sigmas) above which sources of selected type are dilated"
-		echo "dilateZBrightThr = $DILATE_BRIGHT_THR               | Significance threshold (in sigmas) above which sources are always dilated (even if they have nested or different type)"
+		echo "removeNestedSources = $DILATE_NESTED								| Dilate sources nested inside bright sources (T/F)"
+		echo "residualZThr = $DILATE_THR                          | Significance threshold (in sigmas) above which sources of selected type are dilated"
+		echo "residualZHighThr = $DILATE_BRIGHT_THR               | Significance threshold (in sigmas) above which sources are always dilated (even if they have nested or different type)"
 		echo "dilateKernelSize = $DILATE_KERNEL_SIZE							| Size of kernel (odd) to be used in dilation operation"
-		echo "dilatedSourceType = $DILATED_SOURCE									| Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"
-		echo 'dilateSourceModel = 1																| Dilate source model  (1=bkg,2=median)'
-		echo 'dilateRandomize = false															| Randomize dilated values (T/F)'
+		echo "removedSourceType = $DILATED_SOURCE									| Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"
+		echo 'residualModel = 1																    | Dilate source model  (1=bkg,2=median)'
+		echo 'residualModelRandomize = false											| Randomize dilated values (T/F)'
+		echo "psSubtractionMethod = 2                             | Point-source subtraction method (1=dilation, 2=model subtraction (default=1)"
 		echo '###'
 		echo '###'
 		echo '//=============================================='
