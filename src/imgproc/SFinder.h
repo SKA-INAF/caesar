@@ -446,13 +446,20 @@ class SFinder : public TObject {
 		//Residual map
 		Image* m_ResidualImg;
 		ImgBkgData* m_ResidualBkgData;
-		double m_DilateZBrightThr;
-		double m_DilateZThr;
-		bool m_DilateNestedSources;
-		int m_DilateKernelSize;
-		int m_DilatedSourceType;
-		int m_DilateSourceModel;
-		bool m_DilateRandomize;
+		//double m_DilateZBrightThr;
+		double m_residualZHighThr;
+		//double m_DilateZThr;
+		double m_residualZThr;
+		//bool m_DilateNestedSources;
+		bool m_removeNestedSources;
+		int m_dilateKernelSize;
+		//int m_DilatedSourceType;		
+		int m_removedSourceType;
+		//int m_DilateSourceModel;
+		int m_residualModel;
+		//bool m_DilateRandomize;
+		bool m_residualModelRandomize;
+		int m_psSubtractionMethod;
 		bool m_UseResidualInExtendedSearch;
 
 		//Smoothing

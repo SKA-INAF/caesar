@@ -614,13 +614,20 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(psNBeamsThr,m_psNBeamsThr);
 	
 	//Get source residual options
-	GET_OPTION_VALUE(dilateZBrightThr,m_DilateZBrightThr);
-	GET_OPTION_VALUE(dilateZThr,m_DilateZThr);
-	GET_OPTION_VALUE(dilateNestedSources,m_DilateNestedSources);
-	GET_OPTION_VALUE(dilateKernelSize,m_DilateKernelSize);
-	GET_OPTION_VALUE(dilatedSourceType,m_DilatedSourceType);
-	GET_OPTION_VALUE(dilateSourceModel,m_DilateSourceModel);
-	GET_OPTION_VALUE(dilateRandomize,m_DilateRandomize);
+	GET_OPTION_VALUE(residualZHighThr,m_residualZHighThr);	
+	//GET_OPTION_VALUE(dilateZBrightThr,m_DilateZBrightThr);
+	GET_OPTION_VALUE(residualZThr,m_residualZThr);
+	//GET_OPTION_VALUE(dilateZThr,m_DilateZThr);
+	GET_OPTION_VALUE(removeNestedSources,m_removeNestedSources);
+	//GET_OPTION_VALUE(dilateNestedSources,m_DilateNestedSources);
+	GET_OPTION_VALUE(dilateKernelSize,m_dilateKernelSize);
+	//GET_OPTION_VALUE(dilatedSourceType,m_DilatedSourceType);
+	GET_OPTION_VALUE(removedSourceType,m_removedSourceType);
+	//GET_OPTION_VALUE(dilateSourceModel,m_DilateSourceModel);	
+	GET_OPTION_VALUE(residualModel,m_residualModel);
+	//GET_OPTION_VALUE(dilateRandomize,m_DilateRandomize);
+	GET_OPTION_VALUE(residualModelRandomize,m_residualModelRandomize);
+	GET_OPTION_VALUE(psSubtractionMethod,m_psSubtractionMethod);
 	
 	//Get source fitting options
 	GET_OPTION_VALUE(fitSources,m_fitSources);
@@ -1575,8 +1582,8 @@ Image* SFinder::FindCompactSources(Image* inputImg, ImgBkgData* bkgData, TaskDat
 
 
 
-Image* SFinder::FindResidualMap(Image* inputImg,ImgBkgData* bkgData,std::vector<Source*> const & sources){
-
+Image* SFinder::FindResidualMap(Image* inputImg,ImgBkgData* bkgData,std::vector<Source*> const & sources)
+{
 	//Check input image
 	if(!inputImg){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Null ptr to given input image!");
@@ -1596,10 +1603,19 @@ Image* SFinder::FindResidualMap(Image* inputImg,ImgBkgData* bkgData,std::vector<
 		INFO_LOG("[PROC "<<m_procId<<"] - Computing residual image (#"<<sources.size()<<" sources present)...");
 		residualImg= inputImg->GetSourceResidual(
 			sources,
-			m_DilateKernelSize,m_DilateSourceModel,m_DilatedSourceType,m_DilateNestedSources,	
+			m_dilateKernelSize,m_residualModel,m_removedSourceType,m_removeNestedSources,	
 			bkgData,m_UseLocalBkg,
-			m_DilateRandomize,m_DilateZThr,m_DilateZBrightThr
+			m_residualModelRandomize,m_residualZThr,m_residualZHighThr,m_psSubtractionMethod
 		);
+
+		/*
+		residualImg= inputImg->GetSourceResidual(
+			sources,
+			m_dilateKernelSize,m_DilateSourceModel,m_DilatedSourceType,m_DilateNestedSources,	
+			bkgData,m_UseLocalBkg,
+			m_DilateRandomize,m_DilateZThr,m_DilateZBrightThr,m_psSubtractionMethod
+		);
+		*/
 	}//close if
 	else{
 		INFO_LOG("[PROC "<<m_procId<<"] - Setting residual image to input image...");
