@@ -429,8 +429,6 @@ compact/point-source located inside the extended one will be included in the mot
 +---------------------------------------+----------------------------------+-----------+------------------------+
 
 
-
-
 ------------------------
 Source Selection Options
 ------------------------
@@ -496,5 +494,198 @@ These options enable control of quality selection cuts applied to detected blobs
 |                                       | | passed the point-like cut      |           |                        |
 +---------------------------------------+----------------------------------+-----------+------------------------+
 
-		
 
+
+----------------------
+Source Fitting Options
+----------------------
+
+These options enable control of source fitting stage: minimization algorithm and relative parameters, starting parameters and limits, etc.
+
++---------------------------------+----------------------------------+-----------+------------------------+
+|       Option                    |             Description          |  Default  |   Values               |
++=================================+==================================+===========+========================+
+| ``fitSources``                  | | Enable/disable source          |   false   | | true                 |
+|                                 | | fitting stage                  |           | | false                |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitUseThreads``               | | Split source fitting among     |   false   | | true                 |
+|                                 | | multiple threads. Multithread  |           | | false                |
+|                                 | | is not supported by Minuit     |           |                        |
+|                                 | | minimizer                      |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitMinimizer``                | | Minimizer used in source       |   Minuit  | | Minuit               |
+|                                 | | fitting                        |           | | Minuit2              |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitMinimizerAlgo``            | | Minimization algorithm used in |  Combined | | Migrad               |
+|                                 | | source fitting                 |           | | Simplex              |
+|                                 |                                  |           | | Scan                 |
+|                                 |                                  |           | | Combined             |
+|                                 |                                  |           | | Fumili               |
+|                                 |                                  |           | | Simplex              |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitPrintLevel``               | | Minimizer printout level       |     1     |                        |
+|                                 | |                                |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitStrategy``                 | | Minimizer strategy parameter   |     2     |                        |
+|                                 | | (larger means more accurate    |           |                        |
+|                                 | | minimization but more fcn      |           |                        |
+|                                 | | calls)                         |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitFcnTolerance``             | | Fit function minimization      |   1.e-2   |                        |
+|                                 | | tolerance (smaller means more  |           |                        |
+|                                 | | accurate minimization but more |           |                        |
+|                                 | | fcn calls)                     |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitMaxIters``                 | | Maximum number of iterations   |   100000  |                        |
+|                                 | | that can be done by minimizer  |           |                        |
+|                                 | | before giving up and returning |           |                        |
+|                                 | | not converged fit              |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitImproveConvergence``       | | Try to improve convergence by  |   true    | | true                 |
+|                                 | | iterating fit if not converged |           | | false                |
+|                                 | | or converged with pars at      |           |                        |
+|                                 | | limits                         |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitNRetries``                 | | Number of times fit is         |   1000    |                        |
+|                                 | | repeated (with enlarged        |           |                        |
+|                                 | | limits) if improve convergence |           |                        |
+|                                 | | flag is enabled                |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitParBoundIncreaseStepSize`` | | Par bound rel increase step    |   0.1     |                        |
+|                                 | | size set when trying to improve|           |                        |
+|                                 | | convergence:                   |           |                        |
+|                                 | | parmax= parmax_old+(1+nretry)* |           |                        |
+|                                 | |  *fitParBoundIncreaseStepSize* |           |                        |
+|                                 | |  *0.5*|max-min|                |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitDoFinalMinimizerStep``     | | If enabled run HESSE minimizer |   true    | | true                 |
+|                                 | | at convergence to improve      |           | | false                |
+|                                 | | minimum and par error estimate |           |                        |
+|                                 | | limits                         |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``nBeamsMaxToFit``              | | Maximum number of beams        |    20     |                        |
+|                                 | | for a compact source to be     |           |                        |
+|                                 | | fitted (if above this threshold|           |                        |
+|                                 | | the fit is not performed)      |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitUseNestedAsComponents``    | | If true use nested sources     |   false   | | true                 |
+|                                 | | (if any) as starting fit       |           | | false                |
+|                                 | | components, otherwise estimate |           |                        |
+|                                 | | blended components in blob     |           |                        |
+|                                 | | using a peak finding +         |           |                        |
+|                                 | | segmentation algorithm         |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitMaxNComponents``           | | Maximum number of components   |     5     |                        |
+|                                 | | fitted in a blob               |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``peakMinKernelSize``           | | Minimum dilation kernel size   |     3     |                        |
+|                                 | | in pixels used to detect start |           |                        |
+|                                 | | fit components                 |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``peakMaxKernelSize``           | | Maximum dilation kernel size   |     7     |                        |
+|                                 | | in pixels used to detect start |           |                        |
+|                                 | | fit components                 |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``peakKernelMultiplicityThr``   | | Requested peak multiplicity    |     1     |                        |
+|                                 | | across different dilation      |           |                        |
+|                                 | | kernels. A multiplicity=-1     |           |                        |
+|                                 | | imposes that a peak must be    |           |                        |
+|                                 | | found in all given dilation    |           |                        |
+|                                 | | kernels (within a tolerance)   |           |                        |
+|                                 | | to be considered a component   |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``peakShiftTolerance``          | | Peak max position offset in    |     1     |                        |
+|                                 | | pixels above which two peaks   |           |                        |
+|                                 | | are considered distincs.       |           |                        |
+|                                 | | Used to compare peaks found    |           |                        |
+|                                 | | in different dilation kernels  |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``peakZThrMin``                 | | Minimum peak flux significance |     1     |                        |
+|                                 | | (in nsigmas wrt source avg     |           |                        |
+|                                 | | bkg and rms) below which peak  |           |                        |
+|                                 | | is skipped and not considered  |           |                        |
+|                                 | | as a fit component             |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitWithCentroidLimits``       | | Apply limits to source         |   true    | | true                 |
+|                                 | | centroid pars in fit           |           | | false                |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fixCentroidInPreFit``         | | Fix source centroid pars       |   false   | | true                 |
+|                                 | | in pre-fit                     |           | | false                |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitCentroidLimit``            | | Source centroid par limits     |     3     |                        |
+|                                 | | given as max offset in pixel   |           |                        |
+|                                 | | with respect to starting fit   |           |                        |
+|                                 | | centroid pars                  |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitWithFixedBkg``             | | Fix bkg level par in fit       |   true    | | true                 |
+|                                 |                                  |           | | false                |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitWithBkgLimits``            | | Apply limits to bkg level par  |   true    | | true                 |
+|                                 | | in fit                         |           | | false                |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitUseEstimatedBkgLevel``     | | Use estimated (avg bkg) as     |   true    | | true                 |
+|                                 | | starting bkg level par in fit  |           | | false                |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitBkgLevel``                 | | Starting bkg level par in fit  |     0     |                        |
+|                                 | | (used when option              |           |                        |
+|                                 | | fitParBoundIncreaseStepSize is |           |                        |
+|                                 | | false                          |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitWithAmplLimits``           | | Apply limits to amplitude par  |   true    | | true                 |
+|                                 | | in fit                         |           | | false                |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fixAmplInPreFit``             | | Fix amplitude par in pre-fit   |   false   | | true                 |
+|                                 | |                                |           | | false                |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitAmplLimit``                | | Amplitude par limit given as   |   0.3     |                        |
+|                                 | | max relative offset with       |           |                        |
+|                                 | | respect to starting source     |           |                        |
+|                                 | | component peak                 |           |                        |
+|                                 | | Speak*(1+-fitAmplLimit))       |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitWithSigmaLimits``          | | Apply limits to sigma pars     |   true    | | true                 |
+|                                 | | in fit                         |           | | false                |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fixSigmaInPreFit``            | | Fix sigma pars in pre-fit      |   true    | | true                 |
+|                                 | |                                |           | | false                |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitSigmaLimit``               | | Sigma par limit given as max   |   0.3     |                        |
+|                                 | | relative offset with respect   |           |                        |
+|                                 | | to starting component sigma    |           |                        |
+|                                 | | pars                           |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitWithFixedSigma``           | | Fix sigma pars in fit          |   false   | | true                 |
+|                                 | |                                |           | | false                |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitWithThetaLimits``          | | Apply limits to theta par      |   true    | | true                 |
+|                                 | | in fit                         |           | | false                |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fixThetaInPreFit``            | | Fix theta par in pre-fit       |   true    | | true                 |
+|                                 | |                                |           | | false                |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitWithFixedTheta``           | | Fix theta par in fit           |   false   | | true                 |
+|                                 | |                                |           | | false                |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitThetaLimit``               | | Theta par limit given as max   |     5     |                        |
+|                                 | | offset in degrees with respect |           |                        |
+|                                 | | to starting component theta    |           |                        |
+|                                 | | par                            |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``useFluxZCutInFit``            | | If enabled only blob pixels    |   false   | | true                 |
+|                                 | | above a significance threshold |           | | false                |
+|                                 | | are included in chi2. Pixels   |           |                        |
+|                                 | | below threshold are included   |           |                        |
+|                                 | | in a regularization chi2 term  |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitZCutMin``                  | | Blob significance              |    2.5    |                        |
+|                                 | | threshold below which pixels   |           |                        |
+|                                 | | are included in the            |           |                        |
+|                                 | | regularization chi2 term but   |           |                        |
+|                                 | | not in the chi2                |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitChi2RegPar``               | | Fit chi2 regularization par    |     0     |                        |
+|                                 | | so that total chi2 is given by |           |                        |
+|                                 | | chi2(Z>thr)+regPar*chi2(Z<thr) |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+
+	
