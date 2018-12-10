@@ -689,3 +689,78 @@ These options enable control of source fitting stage: minimization algorithm and
 +---------------------------------+----------------------------------+-----------+------------------------+
 
 	
+-----------------------
+Source Residual Options
+-----------------------
+
+These options enable control of source residual map. Residual map is made by removing and/or subtracting detected sources from the input map. 
+Source removal is done by replacing source pixel flux values (along with surrounding pixel around them, controlled by a dilation filter) with a residual model value, chosen among: average estimated background, median of source pixels. Residual model value can be randomized if desired. Source removal is controlled by two significance thresholds. 
+Sources with fluxes above the higher threshold are removed regardless of any other conditions (e.g. on source type, etc). Sources with fluxes above the lower threshold (but below the higher threshold) are removed conditionally on chosen source type assigned in the finding process (e.g. point-like, compact, extended). Sources tagged as point-like can be removed with two different algorithms. The first one is described above and consists of replacing source pixel values by model values. The second method uses source fit model (if available) and subtract flux model from the input image. Removal of sources with nested components is controlled by the ``removeNestedSources`` flag. If enabled, the removal/subtraction process is done
+on nested sources and not on parent source pixels. On the contrary, sources are removed as described above and nested sources are removed, being part of the parent.
+
++----------------------------+----------------------------------+-----------+------------------------+
+|       Option               |             Description          |  Default  |   Values               |
++============================+==================================+===========+========================+
+| ``residualZHighThr``       | | High source significance       |    10     |                        |
+|                            | | threshold (in nsigmas wrt bkg) |           |                        |
+|                            | | used to remove sources         |           |                        |
++----------------------------+----------------------------------+-----------+------------------------+
+| ``residualZThr``           | | Source significance            |     5     |                        |
+|                            | | threshold (in nsigmas wrt bkg) |           |                        |
+|                            | | used to remove sources         |           |                        |
++----------------------------+----------------------------------+-----------+------------------------+
+| ``removeNestedSources``    | | Remove nested sources instead  |   true    | | true                 |
+|                            | | of parent source               |           | | false                |
+|                            | | is not supported by Minuit     |           |                        |
+|                            | | minimizer                      |           |                        |
++----------------------------+----------------------------------+-----------+------------------------+
+| ``dilateKernelSize``       | | Dilation filter kernel size in |     9     |                        |
+|                            | | pixels used to remove sources. |           |                        |
+|                            | | NB: Must be an odd number >1   |           |                        |
+|                            | | This option controls the halo  |           |                        |
+|                            | | size around source to be       |           |                        |
+|                            | | removed                        |           |                        |
++----------------------------+----------------------------------+-----------+------------------------+
+| ``removedSourceType``      | | Type of sources to be removed  |     2     | | -1=all types         |
+|                            | | threshold (in nsigmas wrt bkg) |           | | 1=compact            |
+|                            | | used to remove sources         |           | | 2=point-like         |
+|                            |                                  |           | | 3=extended           |
++----------------------------+----------------------------------+-----------+------------------------+
+| ``residualModel``          | | Residual model used to replace |     1     | | 1=bkg                |
+|                            | | source pixel values            |           | | 2=source median      |
++----------------------------+----------------------------------+-----------+------------------------+
+| ``residualModelRandomize`` | | Randomize residual model pixel |   false   | | true                 |
+|                            | | values                         |           | | false                |
++----------------------------+----------------------------------+-----------+------------------------+
+| ``psSubtractionMethod``    | | Method used to subtract point  |     1     | | 1=model removal      |
+|                            | | sources                        |           | | 2=fit model subtract |
++----------------------------+----------------------------------+-----------+------------------------+
+
+
+-------------------------------
+Extended Source Finding Options
+-------------------------------
+
+TO BE ADDED
+
+
+--------------------------------
+Active Contour Algorithm Options
+--------------------------------
+
+TO BE ADDED
+
+------------------------------------
+Saliency Filtering Algorithm Options
+------------------------------------
+
+TO BE ADDED
+
+-----------------------------------
+Wavelet Transform Algorithm Options
+-----------------------------------
+
+TO BE ADDED
+
+
+
