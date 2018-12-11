@@ -1425,7 +1425,7 @@ generate_config(){
 		echo "saliencyUseBkgMap = $USE_BKG_MAP_IN_SALIENCY    		     | Use bkg map in saliency map computation (T/F)"
 		echo "saliencyUseNoiseMap = $USE_RMS_MAP_IN_SALIENCY					 | Use noise map in saliency map computation (T/F)"
 		echo "saliencyNNFactor = $SALIENCY_NN_PAR   							     | Fraction of most similar neighbors used in saliency map computation"
-		echo 'saliencySpatialRegFactor = 6												     | Spatial regularization factor (ruling exp decay in saliency spatial weighting)'
+		echo '###saliencySpatialRegFactor = 6												     | Spatial regularization factor (ruling exp decay in saliency spatial weighting)'
 		echo 'saliencyMultiResoCombThrFactor = 0.7								     | Fraction of combined salient multi-resolution maps to consider global saliency'
 		echo 'saliencyDissExpFalloffPar = 100                          | Dissimilarity exponential cutoff parameter (value)'
 		echo 'saliencySpatialDistRegPar = 1                            | Spatial-color distance regularization par (value, 1=equal weights)'
