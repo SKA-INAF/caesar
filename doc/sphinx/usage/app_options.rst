@@ -867,8 +867,86 @@ provided: Chan-Vese, Linear Region-based Active Contour (LRAC).
 Saliency Filtering Algorithm Options
 ------------------------------------
 
-TO BE ADDED
+These options enable control of extended source search with the Saliency Filtering method. 
 
-
++------------------------------------+-------------------------------+-----------+------------------------+
+|            Option                  |         Description           |  Default  |   Values               |
++====================================+===============================+===========+========================+
+| ``spBeta``                         | | Superpixel regularization   |    1      |                        |
+|                                    | | parameter                   |           |                        |
++------------------------------------+-------------------------------+-----------+------------------------+
+| ``spMinArea``                      | | Superpixel min area         |    10     |                        |
+|                                    | | parameter in pixels         |           |                        |
++------------------------------------+-------------------------------+-----------+------------------------+
+| ``saliencyResoMin``                | | Superpixel min scale par in |    20     |                        |
+|                                    | | pixels used in multi-scale  |           |                        |
+|                                    | | saliency calculation        |           |                        |
++------------------------------------+-------------------------------+-----------+------------------------+
+| ``saliencyResoMax``                | | Superpixel max scale par in |    60     |                        |
+|                                    | | pixels used in multi-scale  |           |                        |
+|                                    | | saliency calculation        |           |                        |
++------------------------------------+-------------------------------+-----------+------------------------+
+| ``saliencyResoStep``               | | Superpixel scale step par in|    10     |                        |
+|                                    | | pixels used in multi-scale  |           |                        |
+|                                    | | saliency calculation        |           |                        |
++------------------------------------+-------------------------------+-----------+------------------------+
+| ``saliencyNNFactor``               | | Fraction of most similar    |    0.2    | | 0                    |
+|                                    | | superpixel neighbors used   |           | | 1                    |
+|                                    | | in saliency map computation |           |                        |
++------------------------------------+-------------------------------+-----------+------------------------+
+| ``saliencyUseRobustPars``          | | Use robust stats pars in    |   false   | | true                 |
+|                                    | | saliency map computation    |           | | false                |
++------------------------------------+-------------------------------+-----------+------------------------+
+| ``saliencyDissExpFalloffPar``      | | Superpixel dissimilarity    |    100    |                        |
+|                                    | | exponential decay parameter |           |                        |
+|                                    | | used in saliency map        |           |                        |
+|                                    | | computation                 |           |                        |
++------------------------------------+-------------------------------+-----------+------------------------+
+| ``saliencySpatialDistRegPar``      | | Regularization parameter    |     1     |                        |
+|                                    | | controlling superpixel      |           |                        |
+|                                    | | spatial-intensity balance in|           |                        |
+|                                    | | in distance measure used for|           |                        |
+|                                    | | saliency map computation    |           |                        |
+|                                    | | (1 means equal weights)     |           |                        |
++------------------------------------+-------------------------------+-----------+------------------------+
+| ``saliencyMultiResoCombThrFactor`` | | Fraction of resolution      |    0.7    | | 0                    |
+|                                    | | scales required             |           | | 1                    |
+|                                    | | above threshold to          |           |                        |
+|                                    | | consider a pixel salient.   |           |                        |
+|                                    | | If set to 1 a pixel is      |           |                        |
+|                                    | | considered salient if its   |           |                        |
+|                                    | | saliency value at all       |           |                        |
+|                                    | | scales is above threshold   |           |                        |
++------------------------------------+-------------------------------+-----------+------------------------+
+| ``saliencyUseBkgMap``              | | Add background map to       |   false   | | true                 |
+|                                    | | total saliency map          |           | | false                |
++------------------------------------+-------------------------------+-----------+------------------------+
+| ``saliencyUseNoiseMap``            | | Add noise map to            |   false   | | true                 |
+|                                    | | total saliency map          |           | | false                |
++------------------------------------+-------------------------------+-----------+------------------------+
+| ``saliencyThrFactor``              | | Saliency threshold factor   |    2.8    |                        |
+|                                    | | parameter. Threshold is     |           |                        |
+|                                    | | computed as:                |           |                        |
+|                                    | | thr=<saliency>*factor       |           |                        |
+|                                    | | (<saliency> is the median)  |           |                        |
+|                                    | | if ``saliencyUseOptimalThr``|           |                        |
+|                                    | | disabled                    |           |                        |
++------------------------------------+-------------------------------+-----------+------------------------+
+| ``saliencyUseOptimalThr``          | | Use optimal threshold in    |   true    | | true                 |
+|                                    | | multiscale saliency         |           | | false                |
+|                                    | | thresholding. If true the   |           |                        |
+|                                    | | threshold is computed as    |           |                        |
+|                                    | | max(min(otsuThr,valleyThr), |           |                        |
+|                                    | | medianThr)                  |           |                        |
++------------------------------------+-------------------------------+-----------+------------------------+
+| ``saliencyImgThrFactor``           | | Threshold factor on input   |    1      |                        |
+|                                    | | map to consider a pixel as  |           |                        |
+|                                    | | salient. Threshold is set as|           |                        |
+|                                    | | thr=<img>*factor (<img> is  |           |                        |
+|                                    | | the median). Pixel below    |           |                        |
+|                                    | | threshold are not set as    |           |                        |
+|                                    | | salient even if saliency is |           |                        |
+|                                    | | above saliency threshold    |           |                        |
++------------------------------------+-------------------------------+-----------+------------------------+
 
 
