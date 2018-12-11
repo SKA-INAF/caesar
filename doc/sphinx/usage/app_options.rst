@@ -741,14 +741,127 @@ on nested sources and not on parent source pixels. On the contrary, sources are 
 Extended Source Finding Options
 -------------------------------
 
-TO BE ADDED
+These options enable control of extended source search. Specific options for the available algorithms are 
+reported in the Tables below. Superpixel Hierarchical Clustering algorithm is not currently available (not ported yet 
+from CAESAR old repository).
 
++---------------------------------+----------------------------------+-----------+------------------------+
+|       Option                    |             Description          |  Default  |   Values               |
++=================================+==================================+===========+========================+
+| ``searchExtendedSources``       | | Enable/disable search of       |   false   | | true                 |
+|                                 | | extended sources after compact |           | | false                |
+|                                 | | source finding                 |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``extendedSearchMethod``        | | Extended source search method  |     4     | | 1=Wavelet Transform  |
+|                                 | |                                |           | | 2=SP Hier Clustering |
+|                                 | |                                |           | | 3=Active Contour     |
+|                                 | |                                |           | | 4=Saliency Filter    |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``useResidualInExtendedSearch`` | | Use residual map as input for  |   true    | | true                 |
+|                                 | | extended source search         |           | | false                |
+|                                 | | source finding                 |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``usePreSmoothing``             | | Apply smoothing to residual    |   true    | | true                 |
+|                                 | | map before performing extended |           | | false                |
+|                                 | | source finding                 |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``smoothFilter``                | | Filter used to smooth residual |    2      | | 1=gaus               |
+|                                 | | map                            |           | | 2=guided             |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``gausFilterKernSize``          | | Gaussian filter kernel size    |    5      |                        |
+|                                 | | in pixels. NB: Must be an odd  |           |                        |
+|                                 | | value                          |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``gausFilterSigma``             | | Gaussian filter sigma par      |    1      |                        |
+|                                 | | in pixels                      |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``guidedFilterRadius``          | | Guided filter radius par       |    12     |                        |
+|                                 | | in pixels                      |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``guidedFilterColorEps``        | | Guided filter epsilon par      |   0.04    |                        |
+|                                 | | (regularization parameter)     |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
 
+		
+		
+		
+-----------------------------------
+Wavelet Transform Algorithm Options
+-----------------------------------
+
+These options enable control of extended source search with the Wavelet Transform method. 
+
++-----------------------+----------------------------------+-----------+------------------+
+|       Option          |           Description            |  Default  |   Values         |
++=======================+==================================+===========+==================+
+| ``wtScaleSearchMin``  | | Minimum Wavelet scale to be    |    3      |                  |
+|                       | | used for extended source       |           |                  |
+|                       | | search                         |           |                  |
++-----------------------+----------------------------------+-----------+------------------+
+| ``wtScaleSearchMax``  | | Maximum Wavelet scale to be    |    6      |                  |
+|                       | | used for extended source       |           |                  |
+|                       | | search                         |           |                  |
++-----------------------+----------------------------------+-----------+------------------+
+
+	
+	
 --------------------------------
 Active Contour Algorithm Options
 --------------------------------
 
-TO BE ADDED
+These options enable control of extended source search with the Active Contour method. Two algorithms are 
+provided: Chan-Vese, Linear Region-based Active Contour (LRAC).
+
++---------------------------------+----------------------------------+-----------+------------------------+
+|       Option                    |             Description          |  Default  |   Values               |
++=================================+==================================+===========+========================+
+| ``acMethod``                    | | Active contour method          |    1      | | 1=Chan-Vese          |
+|                                 | |                                |           | | 2=LRAC               |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``acNIters``                    | | Maximum number of iterations   |   1000    |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``acInitLevelSetMethod``        | | Level set initialization       |     1     | | 1=circle             |
+|                                 | | method                         |           | | 2=checkerboard       |
+|                                 |                                  |           | | 3=saliency           |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``acInitLevelSetSizePar``       | | Level set size fraction wrt    |    0.1    |                        |
+|                                 | | to minimum image size (e.g.    |           |                        |
+|                                 | | circle radius=fraction x image |           |                        |
+|                                 | | size)                          |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``acTolerance``                 | | Tolerance parameter to stop    |    0.1    | | 0                    |
+|                                 | | main iteration loop            |           | | 1                    |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``cvNItersInner``               | | Number of iteration done in    |     5     |                        |
+|                                 | | inner cycle in Chan-Vese algo  |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``cvNItersReInit``              | | Number of iteration done in    |     5     |                        |
+|                                 | | re-initialization step in      |           |                        |
+|                                 | | Chan-Vese algo                 |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``cvTimeStepPar``               | | Chan-Vese time step par        |   0.007   |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``cvWindowSizePar``             | | Chan-Vese window size par      |     1     |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``cvLambda1Par``                | | Chan-Vese lambda1 par          |     1     |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``cvLambda2Par``                | | Chan-Vese lambda2 par          |     2     |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``cvMuPar``                     | | Chan-Vese mu par               |    0.5    |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``cvNuPar``                     | | Chan-Vese nu par               |     0     |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``cvPPar``                      | | Chan-Vese p par                |     1     |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``lracLambdaPar``               | | LRAC regularization par        |    0.1    |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``lracRadiusPar``               | | LRAC radius of locatization    |    10     |                        |
+|                                 | | ball par                       |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``lracEpsPar``                  | | LRAC convergence par           |   0.01    |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+
+	
 
 ------------------------------------
 Saliency Filtering Algorithm Options
@@ -756,11 +869,6 @@ Saliency Filtering Algorithm Options
 
 TO BE ADDED
 
------------------------------------
-Wavelet Transform Algorithm Options
------------------------------------
-
-TO BE ADDED
 
 
 
