@@ -1328,17 +1328,6 @@ generate_config(){
 		echo "fitParBoundIncreaseStepSize = $FIT_PARBOUNDINCREASE_STEPSIZE    | Par bound increase step size (e.g. parmax= parmax_old+(1+nretry)*fitParBoundIncreaseStepSize*0.5*|max-min| (default=0.1)"
 		echo '###'
 		echo '###'
-		echo '//============================================='
-		echo '//==  EXTENDED SOURCE FINDING OPTIONS        =='
-		echo '//============================================='
-		echo "searchExtendedSources = $SEARCH_EXTENDED_SOURCES		| Search extended sources after bright source removal (T/F)"
-		echo "extendedSearchMethod = $EXT_SFINDER_METHOD					| Extended source search method (1=WT-thresholding,2=SPSegmentation,3=ActiveContour,4=Saliency thresholding)"
-		echo 'useResidualInExtendedSearch = true									| Use residual image (with selected sources dilated) as input for extended source search'
-		echo "activeContourMethod = $AC_METHOD										| Active contour method (1=Chanvese, 2=LRAC)"
-		echo "wtScaleSearchMin = $WTSCALE_MIN									    | Minimum Wavelet scale to be used for extended source search"
-		echo "wtScaleSearchMax = $WTSCALE_MAX											| Maximum Wavelet scale to be used for extended source search"
-		echo '###'
-		echo '###'
 		echo '//================================'
 		echo '//==  SOURCE SELECTION OPTIONS  =='
 		echo '//================================'
@@ -1358,7 +1347,6 @@ generate_config(){
 		echo "psNBeamsThr = $NBEAMS_THR                               | nBeams threshold (sources passes point-like cut if nBeams<thr)"
 		echo '###'
 		echo '###'
-
 		echo '//================================'
 		echo '//==  SOURCE RESIDUAL OPTIONS   =='
 		echo '//================================'
@@ -1372,9 +1360,25 @@ generate_config(){
 		echo "psSubtractionMethod = 2                             | Point-source subtraction method (1=dilation, 2=model subtraction (default=1)"
 		echo '###'
 		echo '###'
+		echo '//============================================='
+		echo '//==  EXTENDED SOURCE FINDING OPTIONS        =='
+		echo '//============================================='
+		echo "searchExtendedSources = $SEARCH_EXTENDED_SOURCES		| Search extended sources after bright source removal (T/F)"
+		echo "extendedSearchMethod = $EXT_SFINDER_METHOD					| Extended source search method (1=WT-thresholding,2=SPSegmentation,3=ActiveContour,4=Saliency thresholding)"
+		echo 'useResidualInExtendedSearch = true									| Use residual image (with selected sources dilated) as input for extended source search'
+		echo '###'
+		echo '###'
+		echo '//================================================'
+		echo '//==  WAVELET TRANSFORM ALGORITHM MAIN OPTIONS  =='
+		echo '//================================================'
+		echo "wtScaleSearchMin = $WTSCALE_MIN									    | Minimum Wavelet scale to be used for extended source search"
+		echo "wtScaleSearchMax = $WTSCALE_MAX											| Maximum Wavelet scale to be used for extended source search"		
+		echo '###'
+		echo '###'
 		echo '//=============================================='
 		echo '//==  ACTIVE CONTOUR ALGORITHMS MAIN OPTIONS  =='
 		echo '//=============================================='
+		echo "acMethod = $AC_METHOD										            | Active contour method (1=Chanvese, 2=LRAC)"
 		echo "acNIters = $AC_NITERS																| Maximum number of iterations"
 		echo "acInitLevelSetMethod = $AC_LEVELSET_METHOD          | Level set initialization method (1=circle,2=checkerboard,3=saliency)"
 		echo "acInitLevelSetSizePar = $AC_LEVELSET_SIZE           | Level set size fraction wrt to minimum image size (e.g. circle radius=fraction x image size)"
