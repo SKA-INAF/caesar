@@ -401,7 +401,8 @@ Image* SaliencyFilter::ComputeMultiResoSaliencyMap(Image* img,int resoMin,int re
 		double medianThr= saliencyThrFactor*salMedian;
 		double salThr= medianThr;
 		if(useOptimalThr){
-			salThr= salMap_norm->FindMedianThreshold(saliencyThrFactor);
+			//salThr= salMap_norm->FindMedianThreshold(saliencyThrFactor);
+			salThr= salMap_norm->FindOptimalGlobalThreshold(saliencyThrFactor);
 		}
 		salMapsThresholds.push_back(salThr);
 
