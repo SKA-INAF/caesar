@@ -568,9 +568,9 @@ class SFinder : public TObject {
 		bool m_SaliencyUseRobustPars;
 		bool m_SaliencyUseBkgMap;
 		bool m_SaliencyUseNoiseMap;
-		bool m_SaliencyUseCurvInDiss;
+		//bool m_SaliencyUseCurvInDiss;
 		double m_SaliencyNNFactor;
-		double m_SaliencySpatialRegFactor;
+		//double m_SaliencySpatialRegFactor;
 		double m_SaliencyMultiResoCombThrFactor;
 		double m_SaliencyDissExpFalloffPar;
 		double m_SaliencySpatialDistRegPar;

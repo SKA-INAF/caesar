@@ -704,9 +704,9 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(saliencyUseRobustPars,m_SaliencyUseRobustPars);
 	GET_OPTION_VALUE(saliencyUseBkgMap,m_SaliencyUseBkgMap);
 	GET_OPTION_VALUE(saliencyUseNoiseMap,m_SaliencyUseNoiseMap);
-	GET_OPTION_VALUE(saliencyUseCurvInDiss,m_SaliencyUseCurvInDiss);
+	//GET_OPTION_VALUE(saliencyUseCurvInDiss,m_SaliencyUseCurvInDiss);
 	GET_OPTION_VALUE(saliencyNNFactor,m_SaliencyNNFactor);
-	GET_OPTION_VALUE(saliencySpatialRegFactor,m_SaliencySpatialRegFactor);
+	//GET_OPTION_VALUE(saliencySpatialRegFactor,m_SaliencySpatialRegFactor);
 	GET_OPTION_VALUE(saliencyMultiResoCombThrFactor,m_SaliencyMultiResoCombThrFactor);
 	GET_OPTION_VALUE(saliencyDissExpFalloffPar,m_SaliencyDissExpFalloffPar);
 	GET_OPTION_VALUE(saliencySpatialDistRegPar,m_SaliencySpatialDistRegPar);
@@ -2307,8 +2307,8 @@ Image* SFinder::ComputeEdgeImage(Image* inputImg,int edgeModel){
 
 }//close ComputeEdgeImage()
 
-Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskData* taskData,Image* searchedImg,bool storeData){
-
+Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskData* taskData,Image* searchedImg,bool storeData)
+{
 	//## Check input image
 	if(!inputImg || !bkgData || !taskData){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Null ptr to input image and/or to bkg/task data given!");
@@ -2413,21 +2413,21 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 	//## Compute segmented image
 	Image* segmentedImg= 0;
 	bool returnContourImg= false;
-	if(m_activeContourMethod==eChanVeseAC){//Standard ChanVese algorithm
+	if(m_acMethod==eChanVeseAC){//Standard ChanVese algorithm
 		segmentedImg= ChanVeseSegmenter::FindSegmentation (
 			img, signalMarkerImg, returnContourImg,
 			m_cvTimeStepPar,m_cvWindowSizePar,m_cvLambda1Par,m_cvLambda2Par,m_cvMuPar,m_cvNuPar,m_cvPPar,m_acNIters,
 			m_acTolerance,m_cvNItersInner,m_cvNItersReInit
 		);
 	}
-	else if(m_activeContourMethod==eLRAC){//LRAC algorithm (with Chan-vese energy)
+	else if(m_acMethod==eLRAC){//LRAC algorithm (with Chan-vese energy)
 		segmentedImg= LRACSegmenter::FindSegmentation (
 			img, signalMarkerImg,
 			m_acNIters,m_lracLambdaPar,m_lracRadiusPar,m_lracEpsPar
 		);
 	}
 	else{
-		ERROR_LOG("[PROC "<<m_procId<<"] - Invalid active contour method specified ("<<m_activeContourMethod<<")!");
+		ERROR_LOG("[PROC "<<m_procId<<"] - Invalid active contour method specified ("<<m_acMethod<<")!");
 		if(signalMarkerImg){		
 			delete signalMarkerImg;
 			signalMarkerImg= 0;
