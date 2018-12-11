@@ -719,11 +719,9 @@ int SFinder::Configure(){
 	//Get extended source options
 	GET_OPTION_VALUE(searchExtendedSources,m_SearchExtendedSources);
 	GET_OPTION_VALUE(extendedSearchMethod,m_ExtendedSearchMethod);
-	GET_OPTION_VALUE(wtScaleExtended,m_wtScaleExtended);
 	GET_OPTION_VALUE(wtScaleSearchMin,m_wtScaleSearchMin);
 	GET_OPTION_VALUE(wtScaleSearchMax,m_wtScaleSearchMax);
 	GET_OPTION_VALUE(useResidualInExtendedSearch,m_UseResidualInExtendedSearch);
-	GET_OPTION_VALUE(activeContourMethod,m_activeContourMethod);
 			
 	if(m_wtScaleSearchMin>m_wtScaleSearchMax){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Invalid wt scale min/max given (hint: wtscale max shall be >= wtscale min)!");
@@ -737,6 +735,7 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(spUseLogContrast,m_spUseLogContrast);
 
 	//Active-contour main options
+	GET_OPTION_VALUE(acMethod,m_acMethod);
 	GET_OPTION_VALUE(acNIters,m_acNIters);
 	GET_OPTION_VALUE(acInitLevelSetMethod,m_acInitLevelSetMethod);
 	GET_OPTION_VALUE(acInitLevelSetSizePar,m_acInitLevelSetSizePar);
@@ -2531,11 +2530,6 @@ Image* SFinder::FindExtendedSources_WT(Image* inputImg,TaskData* taskData,Image*
 	if(searchedImg) img= searchedImg;
 	
 	//## Find extended sources in the scales of the residual image (with POINT-LIKE SOURCES removed)
-	//INFO_LOG("[PROC "<<m_procId<<"] - Find extended sources in the residual image WT-"<<m_wtScaleExtended<<"  scale ...");
-	//std::vector<Image*> wt_extended= img->GetWaveletDecomposition(m_wtScaleExtended);
-	//std::vector<Source*> sources;
-	//int status= FindSources(sources,inputImg,m_SeedThr,m_MergeThr,wt_extended[m_wtScaleExtended]);
-
 	INFO_LOG("[PROC "<<m_procId<<"] - Find extended sources in the residual image Wavelet scales min/max="<<m_wtScaleSearchMin<<"/"<<m_wtScaleSearchMax<<" ...");
 	std::vector<Image*> wt_extended= img->GetWaveletDecomposition(m_wtScaleSearchMax);
 	

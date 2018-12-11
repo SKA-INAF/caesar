@@ -578,19 +578,20 @@ class SFinder : public TObject {
 		//Extended sources
 		bool m_SearchExtendedSources;
 		int m_ExtendedSearchMethod;
-		int m_wtScaleExtended;
+
+		//Wavelet Transform
 		int m_wtScaleSearchMin;
 		int m_wtScaleSearchMax;
-		int m_activeContourMethod;
 		
-
+		
 		//Superpixel options
 		int m_spSize;
 		double m_spBeta;
 		int m_spMinArea;
 		bool m_spUseLogContrast;
 
-		//Active-Contour main options
+		//Active-Contour main options	
+		int m_acMethod;
 		long int m_acNIters;
 		int m_acInitLevelSetMethod;
 		float m_acInitLevelSetSizePar;
