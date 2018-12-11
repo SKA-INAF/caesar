@@ -279,12 +279,9 @@ int ConfigParser::RegisterPredefinedOptions(){
 		//==  Extended Source finding options  ==
 		//=======================================
 		REGISTER_OPTION(searchExtendedSources,bool,false,false,true);
-		REGISTER_OPTION(extendedSearchMethod,int,2,0,10);		
+		REGISTER_OPTION(extendedSearchMethod,int,4,0,10);		
 		REGISTER_OPTION(useResidualInExtendedSearch,bool,true,false,true);
-		REGISTER_OPTION(wtScaleExtended,int,6,1,10);
-		REGISTER_OPTION(wtScaleSearchMin,int,3,1,10);
-		REGISTER_OPTION(wtScaleSearchMax,int,6,1,10);
-		REGISTER_OPTION(activeContourMethod,int,2,0,3);		
+		
 		
 		//================================
 		//==  Source selection options  ==
@@ -375,10 +372,18 @@ int ConfigParser::RegisterPredefinedOptions(){
 		//=============================================
 		//==  Active-Contour algorithm main options  ==
 		//=============================================
+		REGISTER_OPTION(acMethod,int,1,0,3);		
 		REGISTER_OPTION(acNIters,long int,1000,0,100000);
 		REGISTER_OPTION(acInitLevelSetMethod,int,1,0,5);
 		REGISTER_OPTION(acInitLevelSetSizePar,float,0.1,0,1);
 		REGISTER_OPTION(acTolerance,double,0.1,0,1);
+
+		//===========================================
+		//==  Wavelet Transform algorithm options  ==
+		//===========================================
+		REGISTER_OPTION(wtScaleSearchMin,int,3,1,10);
+		REGISTER_OPTION(wtScaleSearchMax,int,6,1,10);
+		
 
 		//===================================
 		//==  Chan-Vese algorithm options  ==
