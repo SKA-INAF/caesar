@@ -381,7 +381,6 @@ int FindSaliency(){
 	}
 
 	double saliencyNNFactor;
-	double saliencySpatialRegFactor;
 	bool saliencyUseRobustPars;
 	double saliencyMultiResoCombThrFactor;
 	double saliencyDissExpFalloffPar;
@@ -396,10 +395,6 @@ int FindSaliency(){
 	}
 	if(GET_OPTION_VALUE(saliencyMultiResoCombThrFactor,saliencyMultiResoCombThrFactor)<0){
 		ERROR_LOG("Failed to get saliencyMultiResoCombThrFactor option!");
-		return -1;
-	}
-	if(GET_OPTION_VALUE(saliencySpatialRegFactor,saliencySpatialRegFactor)<0){
-		ERROR_LOG("Failed to get saliencySpatialRegFactor option!");
 		return -1;
 	}
 	if(GET_OPTION_VALUE(saliencyDissExpFalloffPar,saliencyDissExpFalloffPar)<0){
