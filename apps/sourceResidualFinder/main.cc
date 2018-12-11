@@ -367,42 +367,56 @@ int ParseOptions(int argc, char *argv[])
 }//close ParseOptions()
 
 
-int ComputeSourceResidual(){
-
+int ComputeSourceResidual()
+{
 	//Get options
-	bool dilateNestedSources;
+	bool removeNestedSources;
 	int dilateKernelSize;
-	int dilatedSourceType;
-	int dilateSourceModel;
-	double dilateZThr;
-	bool dilateRandomize;
-	if(GET_OPTION_VALUE(dilateNestedSources,dilateNestedSources)<0){
-		ERROR_LOG("Failed to get dilateNestedSources option!");
+	int removedSourceType;
+	int residualModel;
+	double residualZHighThr;
+	double residualZThr;
+	bool residualModelRandomize;	
+	int psSubtractionMethod;
+
+	if(GET_OPTION_VALUE(removeNestedSources,removeNestedSources)<0){
+		ERROR_LOG("Failed to get removeNestedSources option!");
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(dilateKernelSize,dilateKernelSize)<0){
 		ERROR_LOG("Failed to get dilateKernelSize option!");
 		return -1;
 	}	
-	if(GET_OPTION_VALUE(dilatedSourceType,dilatedSourceType)<0){
-		ERROR_LOG("Failed to get dilatedSourceType option!");
+	
+	if(GET_OPTION_VALUE(removedSourceType,removedSourceType)<0){
+		ERROR_LOG("Failed to get removedSourceType option!");
 		return -1;
 	}
-	if(GET_OPTION_VALUE(dilateSourceModel,dilateSourceModel)<0){
-		ERROR_LOG("Failed to get dilateSourceModel option!");
+	
+	if(GET_OPTION_VALUE(residualModel,residualModel)<0){
+		ERROR_LOG("Failed to get residualModel option!");
 		return -1;
 	}
-	if(GET_OPTION_VALUE(dilateRandomize,dilateRandomize)<0){
-		ERROR_LOG("Failed to get dilateRandomize option!");
+	
+	if(GET_OPTION_VALUE(residualModelRandomize,residualModelRandomize)<0){
+		ERROR_LOG("Failed to get residualModelRandomize option!");
 		return -1;
 	}	
-	if(GET_OPTION_VALUE(dilateZThr,dilateZThr)<0){
-		ERROR_LOG("Failed to get dilateZThr option!");
+	if(GET_OPTION_VALUE(residualZThr,residualZThr)<0){
+		ERROR_LOG("Failed to get residualZThr option!");
+		return -1;
+	}
+	if(GET_OPTION_VALUE(residualZHighThr,residualZHighThr)<0){
+		ERROR_LOG("Failed to get residualZHighThr option!");
+		return -1;
+	}	
+	if(GET_OPTION_VALUE(psSubtractionMethod,psSubtractionMethod)<0){
+		ERROR_LOG("Failed to get psSubtractionMethod option!");
 		return -1;
 	}	
 
 	//Compute residual
-	residualImg= inputImg->GetSourceResidual(sources,dilateKernelSize,dilateSourceModel,dilatedSourceType,dilateNestedSources,bkgData,useLocalBkg,dilateRandomize,dilateZThr);
+	residualImg= inputImg->GetSourceResidual(sources,dilateKernelSize,residualModel,removedSourceType,removeNestedSources,bkgData,useLocalBkg,residualModelRandomize,residualZThr,residualZHighThr,psSubtractionMethod);
 	if(!residualImg){
 		ERROR_LOG("Failed to compute residual map!");
 		return -1;
