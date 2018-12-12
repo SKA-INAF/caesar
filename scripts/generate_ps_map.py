@@ -393,7 +393,7 @@ class SkyMapSimulator(object):
 				continue
 
 			index+= 1
-			source_name= 'S' + str(index+1)
+			source_name= 'S' + str(index)
 			#self.model_data[iy,ix]+= S
 			self.model_data[ix][iy][0][0]+= S
 			self.ps_list.append([source_name,x0,y0,S])
