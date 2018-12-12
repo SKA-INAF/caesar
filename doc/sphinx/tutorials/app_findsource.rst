@@ -48,14 +48,14 @@ A sample configuration file to search sources in the test image `ScorpioSNRField
     //===========================================
     //==  NESTED SOURCE FINDING OPTIONS        ==
     //===========================================
-    searchNestedSources = true													| Search for nested sources inside candidate sources (T/F)
+    searchNestedSources = false													| Search for nested sources inside candidate sources (T/F)
     //==================================
     //==  SOURCE FITTING OPTIONS      ==
     //==================================
     fitSources = false                                  | Fit sources with multi-component gaus fit (T/F)
 
 
-With the above configuration, after computing the significance map, the image is scanned for compact sources with a flood-fill algorithm, assuming a seed significance threshold of 5 sigmas and an aggregation threshold of 2.6 sigmas. A minimum number of pixels equal to 5 is considered in blob finding. No negative excess wrt background are searched. No nested sources are searched. No fitting is performed over the detected sources.   
+With the above configuration, after computing the significance map, the image is scanned for compact sources with a flood-fill algorithm, assuming a seed significance threshold of 5 sigmas and an aggregation threshold of 2.6 sigmas. A minimum number of pixels equal to 5 is considered in blob finding. Two search iterations are performed, decreasing detection threshold by 0.5 sigmas at each iterations. No negative excess wrt background are searched. No nested sources are searched. No fitting is performed over the detected sources.   
 
 A region file is created with the detected source as well as a ROOT file with full source information stored in the `SourceInfo` ROOT TTree. Each source in the tree is a `Source` object. You can view the original image with detected sources in DS9 as:
 
