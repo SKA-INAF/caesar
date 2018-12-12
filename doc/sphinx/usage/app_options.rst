@@ -72,7 +72,7 @@ These options enable control of information & data reported in output by CAESAR 
 | ``saveSources``                | | Save sources to output ROOT    |        true           | | true      |
 |                                | | file                           |                       | | false     |
 +--------------------------------+----------------------------------+-----------------------+-------------+
-| ``saveInputMap``               | | Save input map to output       |        true           | | true      |
+| ``saveInputMap``               | | Save input map to output       |        false          | | true      |
 |                                | | ROOT file                      |                       | | false     |
 +--------------------------------+----------------------------------+-----------------------+-------------+
 | ``saveBkgMap``                 | | Save computed background map   |        true           | | true      |
@@ -370,12 +370,12 @@ compact/point-source located inside the extended one will be included in the mot
 | ``blobMaskMethod``                    | | Filter map used in nested      |    2      | | 1=gaus smoothed Lapl |
 |                                       | | blob finder to search blobs    |           | | 2=multi-scale LoG    |
 +---------------------------------------+----------------------------------+-----------+------------------------+
-| ``nestedBlobKernFactor``              | | Filter kernel size factor par  |    1      |                        |
+| ``nestedBlobKernFactor``              | | Filter kernel size factor par  |    6      |                        |
 |                                       | | so that kern size=             |           |                        |
 |                                       | | factor x sigma (sigma is the   |           |                        |
 |                                       | | filter scale par in pixels)    |           |                        |
 +---------------------------------------+----------------------------------+-----------+------------------------+
-| ``sourceToBeamAreaThrToSearchNested`` | | Mother source area/beam thr to |    0      |                        |
+| ``sourceToBeamAreaThrToSearchNested`` | | Mother source area/beam thr to |    10     |                        |
 |                                       | | add nested sources. If         |           |                        |
 |                                       | | npix<=thr*beamArea no nested   |           |                        |
 |                                       | | sources are added to the       |           |                        |
@@ -486,9 +486,9 @@ These options enable control of quality selection cuts applied to detected blobs
 +---------------------------------------+----------------------------------+-----------+------------------------+
 | ``useNBeamsCut``                      | | Apply cut on number of beams   |   false   | | true                 |
 |                                       | | found in detected blob         |           | | false                |
-|                                       | | (NBeams=blob npix/beam npix)   |           | | false                |
+|                                       | | (NBeams=blob npix/beam npix)   |           |                        |
 +---------------------------------------+----------------------------------+-----------+------------------------+
-| ``psNBeamsThr``                       | | Max number of beams cut value. |   5       |                        |
+| ``psNBeamsThr``                       | | Max number of beams cut value. |    10     |                        |
 |                                       | | Blobs with a number of beams   |           |                        |
 |                                       | | below this threshold           |           |                        |
 |                                       | | passed the point-like cut      |           |                        |
@@ -594,7 +594,7 @@ These options enable control of source fitting stage: minimization algorithm and
 |                                 | | kernels (within a tolerance)   |           |                        |
 |                                 | | to be considered a component   |           |                        |
 +---------------------------------+----------------------------------+-----------+------------------------+
-| ``peakShiftTolerance``          | | Peak max position offset in    |     1     |                        |
+| ``peakShiftTolerance``          | | Peak max position offset in    |     2     |                        |
 |                                 | | pixels above which two peaks   |           |                        |
 |                                 | | are considered distincs.       |           |                        |
 |                                 | | Used to compare peaks found    |           |                        |
