@@ -349,6 +349,8 @@ class SourceComponentPars : public TObject {
 			//Compute ellipse pars
 			m_x0= FitPars["x0"];
 			m_y0= FitPars["y0"];
+			m_x0_err= FitParsErr["x0"];
+			m_y0_err= FitParsErr["y0"];
 			double sigmaX= FitPars["sigmaX"];
 			double sigmaY= FitPars["sigmaY"];
 			double theta= FitPars["theta"];	
