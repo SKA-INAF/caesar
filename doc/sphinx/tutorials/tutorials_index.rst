@@ -7,3 +7,4 @@ In this wiki section you find some guidance on how to run the examples provided 
 .. toctree::
 
    app_bkgfinder.rst
+   app_findsource.rst
