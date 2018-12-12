@@ -202,7 +202,7 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 	//Compute IAU name
 	bool useWeightedPos= false;
 	std::string iauName= source->GetName();
-	if(wcs) source->GetIAUName(useWeightedPos,wcs,wcsType);
+	if(wcs) iauName= source->GetIAUName(useWeightedPos,wcs,wcsType);
 
 	//Compute WCS centroid
 	double X0_wcs= 0;
