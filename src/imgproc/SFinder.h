@@ -639,9 +639,10 @@ class SFinder : public TObject {
 		int m_workerRanks;
 		int m_nWorkers;
 		bool m_mpiEnabled;
+		bool m_mpiGroupsInitialized;
 		#ifdef MPI_ENABLED
 			MPI_Group m_WorldGroup;
-			MPI_Group m_WorkerGroup;
+			MPI_Group m_WorkerGroup;			
 			MPI_Comm m_WorkerComm;
 		#endif	
 

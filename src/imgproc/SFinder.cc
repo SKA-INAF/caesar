@@ -88,6 +88,7 @@ SFinder::SFinder()
 	//NB: When MPI is not used this should define only 1 process and 1 master
 	m_nProc= 1;
 	m_procId= 0;
+	m_mpiGroupsInitialized= false;
 
 }//close costructor
 
@@ -97,6 +98,8 @@ SFinder::~SFinder(){
 	//Clearup
 	INFO_LOG("[PROC "<<m_procId<<"] - Clearup source finder allocated data...");
 	Clear();
+	INFO_LOG("[PROC "<<m_procId<<"] - Clearup completed...");
+	
 
 }//close destructor
 
@@ -188,11 +191,21 @@ void SFinder::Clear()
 
 	//## Free comm & groups	
 	#ifdef MPI_ENABLED
-		if(m_mpiEnabled){
-			DEBUG_LOG("[PROC "<<m_procId<<"] - Freeing worker & world MPI groups...");
-			MPI_Group_free(&m_WorkerGroup);
-			if(m_WorkerComm!=MPI_COMM_NULL) MPI_Comm_free(&m_WorkerComm);
-			MPI_Group_free(&m_WorldGroup);
+		if(m_mpiEnabled && m_mpiGroupsInitialized){
+			if( (m_WorkerGroup!=MPI_GROUP_NULL) && (&m_WorkerGroup!=NULL) && (m_WorkerGroup!=NULL) && (m_WorkerGroup!=MPI_GROUP_EMPTY) ) {
+				INFO_LOG("[PROC "<<m_procId<<"] - Freeing worker MPI groups...");				
+				MPI_Group_free(&m_WorkerGroup);
+			}
+			
+			if(m_WorkerComm!=MPI_COMM_NULL) {
+				INFO_LOG("[PROC "<<m_procId<<"] - Freeing worker MPI comm...");
+				MPI_Comm_free(&m_WorkerComm);
+			}
+
+			if( (m_WorldGroup!=MPI_GROUP_NULL) && (&m_WorldGroup!=NULL) && (m_WorldGroup!=MPI_GROUP_EMPTY) ) {
+				INFO_LOG("[PROC "<<m_procId<<"] - Freeing world MPI group...");	
+				MPI_Group_free(&m_WorldGroup);
+			}
 		}
 	#endif
 
@@ -942,7 +955,11 @@ int SFinder::RunTask(TaskData* taskData,bool storeData){
 
 
 
-int SFinder::Run(){
+int SFinder::Run()
+{
+	//Check is MPI run is enabled at build & runtime
+	m_mpiEnabled= SysUtils::IsMPIInitialized();
+	INFO_LOG("MPI enabled? "<<m_mpiEnabled);
 
 	//Start timer
 	#ifdef MPI_ENABLED
@@ -3747,6 +3764,7 @@ int SFinder::PrepareWorkerTasks()
 		int commTag= 10;
 		MPI_Comm_create_group(MPI_COMM_WORLD, m_WorkerGroup, commTag, &m_WorkerComm);
 
+		m_mpiGroupsInitialized= true;
 		m_workerRanks = -1;
 		m_nWorkers = -1;
 	
