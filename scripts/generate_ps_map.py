@@ -208,7 +208,12 @@ class SkyMapSimulator(object):
 			x= self.ps_list[i][1]
 			y= self.ps_list[i][2]
 			S= self.ps_list[i][3]
-			data= (("%s %s %s %s") % (name,x,y,S) )
+			x_wcs= self.model_im.toworld([x,y])['numeric'][0]
+			y_wcs= self.model_im.toworld([x,y])['numeric'][1]
+			x_wcs= np.rad2deg(x_wcs)
+			y_wcs= np.rad2deg(y_wcs)
+			
+			data= (("%s %s %s %s %s %s") % (name,x,y,x_wcs,y_wcs,S) )
 
 			fout.write(data)
 			fout.write('\n')			

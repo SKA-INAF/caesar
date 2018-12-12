@@ -28,6 +28,7 @@ if [ "$NARGS" -lt 2 ]; then
 
 	echo "=== RUN OPTIONS ==="	
 	echo "--envfile=[ENV_FILE] - File (.sh) with list of environment variables to be loaded by each processing node"
+	echo "--nruns=[RUN_ID] - Number of runs (default: 1)"	
 	echo "--startid=[START_ID] - Run start id (default: 1)"	
 	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"
 	echo "--addrunindex - Append a run index to submission script (in case of list execution) (default=no)"	
