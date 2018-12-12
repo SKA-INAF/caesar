@@ -180,7 +180,12 @@
 
 #pragma link C++ class Caesar::OptionFactory+;
 #pragma link C++ class Caesar::ConfigParser+;
-#pragma link C++ MACRO REGISTER_OPTION defined_in Caesar;
+//#pragma link C++ MACRO REGISTER_OPTION defined_in Caesar;
+#pragma link C++ global REGISTER_OPTION defined_in Caesar;
+#pragma link C++ global GET_OPTION defined_in Caesar;
+#pragma link C++ global SET_OPTION defined_in Caesar;
+#pragma link C++ global PRINT_OPTIONS defined_in Caesar;
+#pragma link C++ global GET_OPTION_VALUE defined_in Caesar;
 
 #pragma link C++ class Caesar::SBuffer+;
 #pragma link C++ class Caesar::TaskData+;

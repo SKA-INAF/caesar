@@ -922,11 +922,20 @@ class OptionFactory : public TObject {
 #pragma link C++ class Option<std::string>+;
 #pragma link C++ class Option<bool>+;
 #pragma link C++ class OptionFactory+;
-#pragma link C++ MACRO REGISTER_OPTION;
-#pragma link C++ MACRO GET_OPTION;
-#pragma link C++ MACRO SET_OPTION;
-#pragma link C++ MACRO PRINT_OPTIONS;
-#pragma link C++ MACRO GET_OPTION_VALUE;
+
+/*
+#pragma link C++ MACRO REGISTER_OPTION defined_in Caesar;
+#pragma link C++ MACRO GET_OPTION defined_in Caesar;
+#pragma link C++ MACRO SET_OPTION defined_in Caesar;
+#pragma link C++ MACRO PRINT_OPTIONS defined_in Caesar;
+#pragma link C++ MACRO GET_OPTION_VALUE defined_in Caesar;
+*/
+
+#pragma link C++ global REGISTER_OPTION;
+#pragma link C++ global GET_OPTION;
+#pragma link C++ global SET_OPTION;
+#pragma link C++ global PRINT_OPTIONS;
+#pragma link C++ global GET_OPTION_VALUE;
 #endif
 
 
