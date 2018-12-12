@@ -158,7 +158,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(saveBkgMap,bool,true,false,true);
 		REGISTER_OPTION(saveNoiseMap,bool,true,false,true);
 		REGISTER_OPTION(saveSignificanceMap,bool,true,false,true);
-		REGISTER_OPTION(saveInputMap,bool,true,false,true);
+		REGISTER_OPTION(saveInputMap,bool,false,false,true);
 		REGISTER_OPTION(saveSaliencyMap,bool,true,false,true);
 		REGISTER_OPTION(saveSources,bool,true,false,true);
 		REGISTER_OPTION(saveEdgenessMap,bool,false,false,true);
@@ -262,7 +262,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		//==  Nested Source finding options  ==
 		//=====================================
 		REGISTER_OPTION(searchNestedSources,bool,true,false,true);
-		REGISTER_OPTION(sourceToBeamAreaThrToSearchNested,double,0,-0.001,1000000);
+		REGISTER_OPTION(sourceToBeamAreaThrToSearchNested,double,10,-0.001,1000000);
 		REGISTER_OPTION(nestedBlobThrFactor,double,0,-0.001,100);
 		REGISTER_OPTION(minNestedMotherDist,double,2,0,100);
 		REGISTER_OPTION(maxMatchingPixFraction,double,0.5,0,1);
@@ -271,7 +271,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(nestedBlobMinScale,double,1,0,10000);
 		REGISTER_OPTION(nestedBlobMaxScale,double,3,0,10000);
 		REGISTER_OPTION(nestedBlobScaleStep,double,1,0,10000);
-		REGISTER_OPTION(nestedBlobKernFactor,double,1,0,1000);
+		REGISTER_OPTION(nestedBlobKernFactor,double,6,0,1000);
 		REGISTER_OPTION(blobMaskMethod,int,2,0,5);
 		
 		
@@ -299,7 +299,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(useMaxNPixCut,bool,false,false,true);
 		REGISTER_OPTION(psMaxNPix,double,1000,0,1.e+7);
 		REGISTER_OPTION(useNBeamsCut,bool,false,false,true);
-		REGISTER_OPTION(psNBeamsThr,double,5,-0.0001,1000);
+		REGISTER_OPTION(psNBeamsThr,double,10,-0.0001,1000);
 				
 		//================================
 		//==  Source residual options   ==
@@ -350,7 +350,7 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(peakMinKernelSize,int,3,0,101);
 		REGISTER_OPTION(peakMaxKernelSize,int,7,0,101);
 		REGISTER_OPTION(peakKernelMultiplicityThr,int,1,0,100);
-		REGISTER_OPTION(peakShiftTolerance,int,1,0,20);
+		REGISTER_OPTION(peakShiftTolerance,int,2,0,20);
 		REGISTER_OPTION(peakZThrMin,double,1,0,1000);
 		
 		REGISTER_OPTION(fitFcnTolerance,double,1.e-2,0,100);
@@ -420,12 +420,12 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(saliencyResoMin,int,20,1,1000);
 		REGISTER_OPTION(saliencyResoMax,int,60,1,1000);
 		REGISTER_OPTION(saliencyResoStep,int,10,1,100);
-		REGISTER_OPTION(saliencyUseRobustPars,bool,true,false,true);
-		REGISTER_OPTION(saliencyUseBkgMap,bool,true,false,true);
-		REGISTER_OPTION(saliencyUseNoiseMap,bool,true,false,true);
+		REGISTER_OPTION(saliencyUseRobustPars,bool,false,false,true);
+		REGISTER_OPTION(saliencyUseBkgMap,bool,false,false,true);
+		REGISTER_OPTION(saliencyUseNoiseMap,bool,false,false,true);
 		REGISTER_OPTION(saliencyUseCurvInDiss,bool,true,false,true);
 		REGISTER_OPTION(saliencyNNFactor,double,0.2,0,1.0001);
-		REGISTER_OPTION(saliencySpatialRegFactor,double,6,0,100);
+		//REGISTER_OPTION(saliencySpatialRegFactor,double,6,0,100);
 		REGISTER_OPTION(saliencyMultiResoCombThrFactor,double,0.7,0,1);
 		REGISTER_OPTION(saliencyDissExpFalloffPar,double,100,1.e-6,1.e+6);
 		REGISTER_OPTION(saliencySpatialDistRegPar,double,1,0,1.e+6);
