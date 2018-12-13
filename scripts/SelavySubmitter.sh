@@ -478,7 +478,7 @@ generate_config(){
 		echo '############################################'
 		echo "Selavy.flagDS9 = $SAVE_DS9REGIONS"
 		echo "Selavy.ds9File = $ds9region_file"
-
+		echo "Selavy.resultsFile = $catalog_file"
 
 		echo "############################################"
 		echo "##     RUN OPTIONS"
