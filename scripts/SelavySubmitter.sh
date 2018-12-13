@@ -716,11 +716,11 @@ if [ "$FILELIST_GIVEN" = true ]; then
 			fi
 		fi
 		if [ "$RUN_IN_CONTAINER" = true ] ; then
-			EXE="$CMD singularity exec $CONTAINER_OPTIONS $CONTAINER_IMG"		
+			EXE="$CMD singularity exec $CONTAINER_OPTIONS $CONTAINER_IMG 'selavy "		
 		else
-			EXE="$CMD selavy"
+			EXE="$CMD selavy "
 		fi
-		EXE_ARGS="-c $configfile"
+		EXE_ARGS="-c $BASEDIR/$configfile '"
 
 		generate_exec_script "$shfile" "$index" "$EXE" "$EXE_ARGS" "$logfile"
 
@@ -788,11 +788,11 @@ else
 	fi
 
 	if [ "$RUN_IN_CONTAINER" = true ] ; then
-		EXE="$CMD singularity exec $CONTAINER_OPTIONS $CONTAINER_IMG"		
+		EXE="$CMD singularity exec $CONTAINER_OPTIONS $CONTAINER_IMG 'selavy "		
 	else
-		EXE="$CMD salavy"
+		EXE="$CMD selavy "
 	fi
-	EXE_ARGS="-c $configfile"
+	EXE_ARGS="-c $BASEDIR/$configfile '"
 
 
 	echo "INFO: Creating script file $shfile for input file: $inputfile ..."
