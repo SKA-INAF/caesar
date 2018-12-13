@@ -96,10 +96,20 @@ void ImgMetaData::SetFITSCards(Caesar::FITSFileInfo& fits_info){
 }//close SetFITSCards()
 
 
-WorldCoor* ImgMetaData::GetWorldCoord(int coordSystem){
-
-	//Compute the wcs from vars
-	WorldCoor* wcs= wcskinit(Nx,Ny,(char*)CoordTypeX.c_str(),(char*)CoordTypeY.c_str(),Cx,Cy,Xc,Yc,NULL,dX,dY,RotY,(int)(Epoch),Epoch);
+WorldCoor* ImgMetaData::GetWorldCoord(int coordSystem)
+{
+	//## Compute the wcs from vars
+	//## NB: FITS keywords CRPIX are defined from [1,N] not 0-based
+	//##     Since we use 0-based convention we set Cx->Cx-1 Cy->Cy-1
+	WorldCoor* wcs= wcskinit(
+		Nx, Ny,
+		(char*)CoordTypeX.c_str(),(char*)CoordTypeY.c_str(),
+		Cx-1, Cy-1,
+		Xc, Yc,
+		NULL,
+		dX,dY,
+		RotY,(int)(Epoch),Epoch
+	);
 	std::string wcsType= std::string(getwcsout(wcs));
 	
 	//Convert wcs to desired type

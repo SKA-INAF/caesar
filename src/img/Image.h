@@ -391,6 +391,18 @@ class Image : public TNamed {
 		int SetSize(long int Nx,long int Ny,float xlow=0,float ylow=0);
 
 		/**
+		* \brief Set image Xmin
+		*/
+		void SetXmin(float val){m_Xmin=val;}
+		void SetXmin(double val){m_Xmin=val;}
+
+		/**
+		* \brief Set image Ymin
+		*/
+		void SetYmin(float val){m_Ymin=val;}
+		void SetYmin(double val){m_Ymin=val;}
+
+		/**
 		* \brief Get size
 		*/
 		void GetSize(long int& Nx,long int& Ny){Nx=m_Nx; Ny=m_Ny;}
