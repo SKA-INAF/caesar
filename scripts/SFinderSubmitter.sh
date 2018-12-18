@@ -130,7 +130,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--fitsources - Fit compact point-like sources found (default=false)"
 	echo "--fit-usethreads - Enable multithread in source fitting (NB: use Minuit2 minimizer if enabled) (default=disabled)"
 	echo "--fit-minimizer=[FIT_MINIMIZER] - Fit minimizer {Minuit,Minuit2} (default=Minuit2)"
-	echo "--fit-minimizeralgo=[FIT_MINIMIZER_ALGO] - Fit minimizer algo {Migrad,Combined,Simplex,Scan,Fumili (Minuit2)} (default=Combined)"
+	echo "--fit-minimizeralgo=[FIT_MINIMIZER_ALGO] - Fit minimizer algo {migrad,simplex,minimize,scan,fumili (Minuit2)} (default=minimize)"
 	echo "--fit-printlevel=[FIT_PRINTLEVEL] - Fit print level (default=1)"
 	echo "--fit-strategy=[FIT_STRATEGY] - Fit strategy (default=2)"
 	echo "--fit-maxnbeams=[FIT_MAX_NBEAMS] - Maximum number of beams for fitting if compact source (default=20)"
@@ -348,8 +348,8 @@ SEARCH_EXTENDED_SOURCES="true"
 
 FIT_SOURCES="false"
 FIT_USETHREADS="false"
-FIT_MINIMIZER="Minuit"
-FIT_MINIMIZER_ALGO="Combined"
+FIT_MINIMIZER="Minuit2"
+FIT_MINIMIZER_ALGO="minimize"
 FIT_PRINTLEVEL="1"
 FIT_STRATEGY="2"
 FIT_MAX_NBEAMS="20"
@@ -1062,8 +1062,8 @@ if [ "$FIT_MINIMIZER" != "Minuit" ] && [ "$FIT_MINIMIZER" != "Minuit2" ]; then
   echo "ERROR: Empty or invalid fit minimizer option given (hint: valid choices are {Minuit, Minuit2})!"
   exit 1
 fi
-if [ "$FIT_MINIMIZER_ALGO" != "Migrad" ] && [ "$FIT_MINIMIZER_ALGO" != "Combined" ] && [ "$FIT_MINIMIZER_ALGO" != "Simplex" ] && [ "$FIT_MINIMIZER_ALGO" != "Scan" ]; then
-  echo "ERROR: Empty or invalid fit minimizer algo option given (hint: valid choices are {Migrad, Combined, Simplex, Scan})!"
+if [ "$FIT_MINIMIZER_ALGO" != "migrad" ] && [ "$FIT_MINIMIZER_ALGO" != "minimize" ] && [ "$FIT_MINIMIZER_ALGO" != "simplex" ] && [ "$FIT_MINIMIZER_ALGO" != "fumili" ] && [ "$FIT_MINIMIZER_ALGO" != "scan" ]; then
+  echo "ERROR: Empty or invalid fit minimizer algo option given (hint: valid choices are {migrad, minimize, simplex, scan, fumili})!"
   exit 1
 fi
 
@@ -1311,7 +1311,7 @@ generate_config(){
 		echo "fitSources = $FIT_SOURCES                             | Deblend and fit point-like sources with multi-component gaus fit (T/F)"
 		echo "fitUseThreads = $FIT_USETHREADS                       | Use multithread in source fitting (default=false) (T/F)"
 		echo "fitMinimizer = $FIT_MINIMIZER                         | Minimizer {Minuit,Minuit2} (default=Minuit) (T/F)"
-		echo "fitMinimizerAlgo = $FIT_MINIMIZER_ALGO         				| Minimizer algorithm: {Migrad,Simplex,Scan,Combined,Fumili} (default=Combined)"
+		echo "fitMinimizerAlgo = $FIT_MINIMIZER_ALGO         				| Minimizer algorithm: {migrad,simplex,scan,minimize,fumili} (default=minimize)"
 		echo "fitPrintLevel = $FIT_PRINTLEVEL                				| Minimizer print level (default=1)"
 		echo "fitStrategy = $FIT_STRATEGY                    				| Minimizer strategy (higher means more accurate but more fcn calls) (default=2)"
 		echo "nBeamsMaxToFit = $FIT_MAX_NBEAMS							 				| Maximum number of beams in compact source for fitting (if above thr fitting not performed)"
