@@ -147,6 +147,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--fit-noampllimits - Do not apply limits in Gaussian amplitude parameters in fit (default=fit with limits)"
 	echo "--fit-nosigmalimits - Do not apply limits in Gaussian sigma parameters in fit (default=fit with limits)"	
 	echo "--fit-noposlimits - Do not apply limits in Gaussian mean parameters in fit (default=fit with limits)"
+	echo "--fit-poslimit=[FIT_POS_LIMIT] - Source centroid limits in pixel (default=3)"
 	echo "--fit-nothetalimits - Do not apply limits in Gaussian ellipse pos angle parameters in fit (default=fit with limits)"
 	echo "--fit-fixsigma - Fit with sigma parameters fixed to start value (beam bmaj/bmin) (default=fit with sigma free and constrained)"
 	echo "--prefit-fixsigma - Fix sigma parameters in pre-fit (default=free)"	
@@ -361,6 +362,7 @@ FIT_WITH_BKG_LIMITS="true"
 FIT_WITH_AMPL_LIMITS="true"
 FIT_AMPL_LIMIT="0.3"
 FIT_WITH_POS_LIMITS="true"
+FIT_POS_LIMIT="3"
 FIT_WITH_SIGMA_LIMITS="true"
 FIT_SIGMA_LIMIT="0.3"
 FIT_WITH_THETA_LIMITS="true"
@@ -806,6 +808,9 @@ do
     ;;
 		--fit-noposlimits*)
     	FIT_WITH_POS_LIMITS="false"
+    ;;
+		--fit-poslimit=*)
+    	FIT_POS_LIMIT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--fit-thetalimit=*)
     	FIT_THETA_LIMIT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
@@ -1318,6 +1323,7 @@ generate_config(){
 		echo "fitUseNestedAsComponents = $FIT_USE_NESTED_AS_COMPONENTS  | If true use nested sources (if any) to estimate fitted components, otherwise estimate blended blobs (default=false)"
 		echo "fitMaxNComponents = $FIT_MAX_COMPONENTS               | Maximum number of components fitted in a blob"
 		echo "fitWithCentroidLimits = $FIT_WITH_POS_LIMITS          | Use limits when fitting gaussian centroid (T/F)"
+		echo "fitCentroidLimit = $FIT_POS_LIMIT                     | Source centroid limits in pixels "
 		echo "fitWithBkgLimits = $FIT_WITH_BKG_LIMITS			          | Use limits when fitting bkg offset (T/F)"
 		echo "fitWithFixedBkg = $FIT_WITH_FIXED_BKG                 | Fix bkg level parameter in fit (T/F)"
 		echo "fitUseEstimatedBkgLevel = $FIT_WITH_ESTIMATED_BKG     | Use estimated (avg bkg) as bkg level par in fit (T/F)"
