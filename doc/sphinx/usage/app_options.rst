@@ -634,7 +634,7 @@ These options enable control of source fitting stage: minimization algorithm and
 | ``fitWithAmplLimits``           | | Apply limits to amplitude par  |   true    | | true                 |
 |                                 | | in fit                         |           | | false                |
 +---------------------------------+----------------------------------+-----------+------------------------+
-| ``fixAmplInPreFit``             | | Fix amplitude par in pre-fit   |   false   | | true                 |
+| ``fixAmplInPreFit``             | | Fix amplitude par in pre-fit   |   true    | | true                 |
 |                                 | |                                |           | | false                |
 +---------------------------------+----------------------------------+-----------+------------------------+
 | ``fitAmplLimit``                | | Amplitude par limit given as   |   0.3     |                        |
@@ -646,7 +646,7 @@ These options enable control of source fitting stage: minimization algorithm and
 | ``fitWithSigmaLimits``          | | Apply limits to sigma pars     |   true    | | true                 |
 |                                 | | in fit                         |           | | false                |
 +---------------------------------+----------------------------------+-----------+------------------------+
-| ``fixSigmaInPreFit``            | | Fix sigma pars in pre-fit      |   true    | | true                 |
+| ``fixSigmaInPreFit``            | | Fix sigma pars in pre-fit      |   false   | | true                 |
 |                                 | |                                |           | | false                |
 +---------------------------------+----------------------------------+-----------+------------------------+
 | ``fitSigmaLimit``               | | Sigma par limit given as max   |   0.3     |                        |
@@ -660,7 +660,7 @@ These options enable control of source fitting stage: minimization algorithm and
 | ``fitWithThetaLimits``          | | Apply limits to theta par      |   true    | | true                 |
 |                                 | | in fit                         |           | | false                |
 +---------------------------------+----------------------------------+-----------+------------------------+
-| ``fixThetaInPreFit``            | | Fix theta par in pre-fit       |   true    | | true                 |
+| ``fixThetaInPreFit``            | | Fix theta par in pre-fit       |   false   | | true                 |
 |                                 | |                                |           | | false                |
 +---------------------------------+----------------------------------+-----------+------------------------+
 | ``fitWithFixedTheta``           | | Fix theta par in fit           |   false   | | true                 |
