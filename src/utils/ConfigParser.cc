@@ -365,8 +365,8 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(fitUseNestedAsComponents,bool,false,false,true);	
 		REGISTER_OPTION(fitChi2RegPar,double,0,-0.001,1.001);
 		
-		REGISTER_OPTION(fitMinimizer,std::string,"Minuit","","");
-		REGISTER_OPTION(fitMinimizerAlgo,std::string,"Combined","","");
+		REGISTER_OPTION(fitMinimizer,std::string,"Minuit2","","");
+		REGISTER_OPTION(fitMinimizerAlgo,std::string,"minimize","","");
 		REGISTER_OPTION(fitPrintLevel,int,1,0,3);
 		REGISTER_OPTION(fitStrategy,int,2,0,3);
 		REGISTER_OPTION(fitUseThreads,bool,false,false,true);
