@@ -140,6 +140,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--fit-estimatedbkg - Set bkg par starting value to estimated bkg (average over source pixels) (default=use fixed bkg start value)"
 	echo "--fit-bkg=[FIT_BKG] - Bkg par starting value (NB: ineffective when -fit-estimatedbkg is enabled) (default=0)"
 	echo "--fit-ampllimit=[FIT_AMPL_LIMIT] - Limit amplitude range par (Speak*(1+-FIT_AMPL_LIMIT)) (default=0.3)"
+	echo "--prefit-freeampl - Set free amplitude par in pre-fit (default=fixed)"
 	echo "--fit-sigmalimit=[FIT_SIGMA_LIMIT] - Gaussian sigma limit around psf or beam (Bmaj*(1+-FIT_SIGMA_LIMIT)) (default=0.3)"
 	echo "--fit-thetalimit=[FIT_THETA_LIMIT] - Gaussian theta limit around psf or beam in degrees (e.g. Bpa +- FIT_THETA_LIMIT) (default=5)"
 	echo "--fit-nobkglimits - Do not apply limits in bkg offset parameter in fit (default=fit with limits when par is free)"
@@ -148,7 +149,9 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--fit-noposlimits - Do not apply limits in Gaussian mean parameters in fit (default=fit with limits)"
 	echo "--fit-nothetalimits - Do not apply limits in Gaussian ellipse pos angle parameters in fit (default=fit with limits)"
 	echo "--fit-fixsigma - Fit with sigma parameters fixed to start value (beam bmaj/bmin) (default=fit with sigma free and constrained)"
+	echo "--prefit-fixsigma - Fix sigma parameters in pre-fit (default=free)"	
 	echo "--fit-fixtheta - Fit with theta parameters fixed to start value (beam bpa) (default=fit with theta free and constrained)"
+	echo "--prefit-fixtheta - Fix theta parameter in pre-fit (default=free)"	
 	echo "--fit-peakminkern=[PEAK_MIN_KERNEL_SIZE] - Minimum dilation kernel size (in pixels) used to detect peaks (default=3)"
 	echo "--fit-peakmaxkern=[PEAK_MAX_KERNEL_SIZE] - Maximum dilation kernel size (in pixels) used to detect peaks (default=7)"
 	echo "--fit-peakmultiplicitythr=[PEAK_KERNEL_MULTIPLICITY_THR] - Requested peak multiplicity across different dilation kernels (-1=peak found in all given kernels,1=only in one kernel, etc) (default=1)"
@@ -159,6 +162,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--fit-noimproveconvergence - Do not use iterative fitting to try to achieve fit convergence (default=use)"
 	echo "--fit-nretries=[FIT_NRETRIES] - Maximum number of fit retries if fit failed or has parameters at bound (default 10)"
 	echo "--fit-parboundincreasestep - Fit par bound increase step size (e.g. parmax= parmax_old+(1+nretry)*fitParBoundIncreaseStepSize*0.5*|max-min|). Used in iterative fitting. (default=0.1)"
+	echo "--fit-improveerrors - Run final minimizer step (e.g. HESS) to improve fit error estimates (default=no)"
 	echo ""
 
 	echo "=== SFINDER SMOOTHING FILTER OPTIONS ==="
@@ -374,6 +378,10 @@ FIT_PARBOUNDINCREASE_STEPSIZE="0.1"
 FIT_MAXNITERS="10000"
 FIT_NRETRIES="10"
 FIT_FCNTOL="1.e-2"
+FIT_IMPROVE_ERRORS="false"
+PREFIT_FIX_AMPL="true"
+PREFIT_FIX_SIGMA="false"
+PREFIT_FIX_THETA="false"
 
 WTSCALE_MIN="3"
 WTSCALE_MAX="6"
@@ -783,9 +791,15 @@ do
     ;;	
 		--fit-noampllimits*)
     	FIT_WITH_AMPL_LIMITS="false"
+    ;;
+		--prefit-freeampl*)
+    	PREFIT_FIX_AMPL="false"
     ;;	
 		--fit-sigmalimit=*)
     	FIT_SIGMA_LIMIT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--prefit-fixsigma*)
+    	PREFIT_FIX_SIGMA="true"
     ;;
 		--fit-nosigmalimits*)
     	FIT_WITH_SIGMA_LIMITS="false"
@@ -795,6 +809,9 @@ do
     ;;
 		--fit-thetalimit=*)
     	FIT_THETA_LIMIT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+		--prefit-fixtheta*)
+    	PREFIT_FIX_THETA="true"
     ;;
 		--fit-nothetalimits*)
     	FIT_WITH_THETA_LIMITS="false"
@@ -823,6 +840,9 @@ do
 
 		--fit-noimproveconvergence*)
 			FIT_IMPROVE_CONVERGENCE="false"
+		;;
+		--fit-improveerrors*)
+			FIT_IMPROVE_ERRORS="true"
 		;;
 		--fit-parboundincreasestep=*)
 			FIT_PARBOUNDINCREASE_STEPSIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
@@ -1303,12 +1323,14 @@ generate_config(){
 		echo "fitUseEstimatedBkgLevel = $FIT_WITH_ESTIMATED_BKG     | Use estimated (avg bkg) as bkg level par in fit (T/F)"
 		echo "fitBkgLevel = $FIT_BKG                                | Fixed bkg level used when fitWithFixedBkg=true"
 		echo "fitWithAmplLimits = $FIT_WITH_AMPL_LIMITS             | Use limits when fitting gaussian amplitude (T/F)"
+		echo "fixAmplInPreFit = $PREFIT_FIX_AMPL                    | Fix amplitude par in pre-fit (T/F)"
 		echo "fitAmplLimit = $FIT_AMPL_LIMIT                        | Flux amplitude limit around source peak (e.g. Speak*(1+-fitAmplLimit))"
-		echo 'fixSigmaInPreFit = true                               | Fix sigma in prefit (T/F)'
+		echo "fixSigmaInPreFit = $PREFIT_FIX_SIGMA                  | Fix sigma in prefit (T/F)"
 		echo "fitWithFixedSigma = $FIT_WITH_SIGMA_FIXED             | Fix sigmas in fit (T/F)"
 		echo "fitWithSigmaLimits = $FIT_WITH_SIGMA_LIMITS           | Use limits when fitting gaussian sigmas (T/F)"
 		echo "fitSigmaLimit = $FIT_SIGMA_LIMIT                      | Gaussian sigma limit around psf or beam (e.g. Bmaj*(1+-fitSigmaLimit))"
 		echo "fitWithFixedTheta = $FIT_WITH_THETA_FIXED             | Fix gaussian ellipse theta par in fit (T/F)"
+		echo "fixThetaInPreFit = $PREFIT_FIX_THETA                  | Fix theta in prefit (T/F)"
 		echo "fitWithThetaLimits = $FIT_WITH_THETA_LIMITS           | Use limits when fitting gaussian theta par (T/F)"
 		echo "fitThetaLimit = $FIT_THETA_LIMIT                      | Gaussian theta limit around psf or beam in degrees (e.g. Bpa +- fitThetaLimit)"
 		echo 'useFluxZCutInFit = false                              | Include in fit only source pixels above a given flux significance level (T/F)'
@@ -1322,8 +1344,8 @@ generate_config(){
 		echo "fitMaxIters = $FIT_MAXNITERS                          | Fit max number of iterations (default=100000)"
     echo "fitImproveConvergence = $FIT_IMPROVE_CONVERGENCE      | Try to improve convergence by iterating fit if not converged or converged with pars at limits (default=true)"
 		echo "fitNRetries = $FIT_NRETRIES                           | Number of times fit is repeated (with enlarged limits) if improve convergence flag is enabled (default=1000)"
-		echo "fitDoFinalMinimizerStep = true                        | Switch on/off running of final minimizer step after fit convergence with MIGRAD (default=true)"
-		echo "###fitFinalMinimizer = 2                                 | Final minimizer (1=MIGRAD,2=HESS,3=MINOS) (default=2)"
+		echo "fitDoFinalMinimizerStep = $FIT_IMPROVE_ERRORS         | Switch on/off running of final minimizer step after fit convergence with MIGRAD (default=true)"
+		echo "###fitFinalMinimizer = 2                              | Final minimizer (1=MIGRAD,2=HESS,3=MINOS) (default=2)"
 		echo "fitChi2RegPar = 1															 				| Chi2 regularization par chi2=chi2_signal + regpar*chi2_bkg (default=1)"	
 		echo "fitParBoundIncreaseStepSize = $FIT_PARBOUNDINCREASE_STEPSIZE    | Par bound increase step size (e.g. parmax= parmax_old+(1+nretry)*fitParBoundIncreaseStepSize*0.5*|max-min| (default=0.1)"
 		echo '###'

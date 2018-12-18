@@ -335,14 +335,17 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(fitUseEstimatedBkgLevel,bool,true,false,true);
 		REGISTER_OPTION(fitBkgLevel,double,0.,-1.e+6,1.e+6);
 		REGISTER_OPTION(fitWithAmplLimits,bool,true,false,true);
-		REGISTER_OPTION(fixAmplInPreFit,bool,false,false,true);
+		//REGISTER_OPTION(fixAmplInPreFit,bool,false,false,true);
+		REGISTER_OPTION(fixAmplInPreFit,bool,true,false,true);
 		REGISTER_OPTION(fitAmplLimit,double,0.3,0,2);
 		REGISTER_OPTION(fitWithSigmaLimits,bool,true,false,true);
-		REGISTER_OPTION(fixSigmaInPreFit,bool,true,false,true);
+		//REGISTER_OPTION(fixSigmaInPreFit,bool,true,false,true);
+		REGISTER_OPTION(fixSigmaInPreFit,bool,false,false,true);
 		REGISTER_OPTION(fitSigmaLimit,double,0.3,0,2);
 		REGISTER_OPTION(fitWithFixedSigma,bool,false,false,true);
 		REGISTER_OPTION(fitWithThetaLimits,bool,true,false,true);
-		REGISTER_OPTION(fixThetaInPreFit,bool,true,false,true);
+		//REGISTER_OPTION(fixThetaInPreFit,bool,true,false,true);
+		REGISTER_OPTION(fixThetaInPreFit,bool,false,false,true);
 		REGISTER_OPTION(fitWithFixedTheta,bool,false,false,true);
 		REGISTER_OPTION(fitThetaLimit,double,5,0,360);
 		REGISTER_OPTION(useFluxZCutInFit,bool,false,false,true);
@@ -368,6 +371,9 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(fitStrategy,int,2,0,3);
 		REGISTER_OPTION(fitUseThreads,bool,false,false,true);
 		REGISTER_OPTION(fitParBoundIncreaseStepSize,double,0.1,0,10);
+		REGISTER_OPTION(fitScaleDataToMax,bool,false,false,true);
+		
+		
 
 		//=============================================
 		//==  Active-Contour algorithm main options  ==
