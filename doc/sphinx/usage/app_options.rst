@@ -513,15 +513,14 @@ These options enable control of source fitting stage: minimization algorithm and
 |                                 | | is not supported by Minuit     |           |                        |
 |                                 | | minimizer                      |           |                        |
 +---------------------------------+----------------------------------+-----------+------------------------+
-| ``fitMinimizer``                | | Minimizer used in source       |   Minuit  | | Minuit               |
+| ``fitMinimizer``                | | Minimizer used in source       |  Minuit2  | | Minuit               |
 |                                 | | fitting                        |           | | Minuit2              |
 +---------------------------------+----------------------------------+-----------+------------------------+
-| ``fitMinimizerAlgo``            | | Minimization algorithm used in |  Combined | | Migrad               |
-|                                 | | source fitting                 |           | | Simplex              |
-|                                 |                                  |           | | Scan                 |
-|                                 |                                  |           | | Combined             |
-|                                 |                                  |           | | Fumili               |
-|                                 |                                  |           | | Simplex              |
+| ``fitMinimizerAlgo``            | | Minimization algorithm used in |  minimize | | migrad               |
+|                                 | | source fitting                 |           | | simplex              |
+|                                 |                                  |           | | scan                 |
+|                                 |                                  |           | | minimize             |
+|                                 |                                  |           | | fumili               |
 +---------------------------------+----------------------------------+-----------+------------------------+
 | ``fitPrintLevel``               | | Minimizer printout level       |     1     |                        |
 |                                 | |                                |           |                        |
