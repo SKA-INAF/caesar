@@ -217,8 +217,7 @@ void SFinder::InitOptions()
 {
 	//Check is MPI run is enabled at build & runtime
 	m_mpiEnabled= SysUtils::IsMPIInitialized();
-	INFO_LOG("MPI enabled? "<<m_mpiEnabled);
-
+	
 	//MPI vars (initialized after to actual value)
 	//NB: When MPI is not used this should define only 1 process and 1 master
 	m_nProc= 1;
@@ -230,7 +229,7 @@ void SFinder::InitOptions()
 		MPI_Comm_rank(MPI_COMM_WORLD, &m_procId);
 	}
 	#endif
-	INFO_LOG("[PROC "<<m_procId<<"] - #"<<m_nProc<<" processors for this run...");
+	INFO_LOG("[PROC "<<m_procId<<"] - Using #"<<m_nProc<<" processors for this run (MPI enabled? "<<m_mpiEnabled<<") ...");
 	
 	//Input file options
 	m_InputFileName= "";
@@ -379,7 +378,7 @@ int SFinder::Init(){
 	//## Create output file
 	//## NB: Done only by processor 0 in MPI run
 	if(m_saveToFile && m_procId==MASTER_ID){
-		INFO_LOG("[PROC "<<m_procId<<"] - Opening ROOT output file "<<m_OutputFileName<<" ...");
+		DEBUG_LOG("[PROC "<<m_procId<<"] - Opening ROOT output file "<<m_OutputFileName<<" ...");
 		if(!m_OutputFile) m_OutputFile= new TFile(m_OutputFileName.c_str(),"RECREATE");	
 		m_OutputFile->cd();
 	
@@ -387,7 +386,7 @@ int SFinder::Init(){
 		if(m_saveSources){
 			m_Source= 0;
 			if(!m_SourceTree) {
-				INFO_LOG("[PROC "<<m_procId<<"] - Creating ROOT source tree ...");	
+				DEBUG_LOG("[PROC "<<m_procId<<"] - Creating ROOT source tree ...");	
 				m_SourceTree= new TTree("SourceInfo","SourceInfo");
 			}
 			m_SourceTree->Branch("Source",&m_Source);
@@ -396,7 +395,7 @@ int SFinder::Init(){
 
 		//Init task info tree
 		if(!m_TaskInfoTree) {
-			INFO_LOG("[PROC "<<m_procId<<"] - Creating ROOT task data tree ...");	
+			DEBUG_LOG("[PROC "<<m_procId<<"] - Creating ROOT task data tree ...");	
 			m_TaskInfoTree= new TTree("TaskInfo","TaskInfo");
 		}
 		m_TaskInfoTree->Branch("xmin",&m_xmin);
@@ -407,7 +406,7 @@ int SFinder::Init(){
 
 		//Init time performance tree
 		if(!m_PerfTree) {
-			INFO_LOG("[PROC "<<m_procId<<"] - Creating ROOT run performance stats tree ...");	
+			DEBUG_LOG("[PROC "<<m_procId<<"] - Creating ROOT run performance stats tree ...");	
 			m_PerfTree= new TTree("PerformanceInfo","PerformanceInfo");
 		}
 		m_PerfTree->Branch("tot",&totTime,"tot/D");
@@ -465,7 +464,7 @@ int SFinder::Init(){
 
 	//## Init and fill task data
 	//## NB: Done by all processors in MPI run
-	INFO_LOG("[PROC "<<m_procId<<"] - Initializing and filling task data ...");	
+	DEBUG_LOG("[PROC "<<m_procId<<"] - Initializing and filling task data ...");	
 	for(int i=0;i<m_nProc;i++){
 		m_taskDataPerWorkers.push_back( std::vector<TaskData*>() );
 	}
@@ -535,7 +534,7 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(beamBmin,m_beamFWHMMin);
 	GET_OPTION_VALUE(beamTheta,m_beamTheta);
 	m_fluxCorrectionFactor= AstroUtils::GetBeamAreaInPixels(m_beamFWHMMax,m_beamFWHMMin,m_pixSize,m_pixSize);
-	INFO_LOG("[PROC "<<m_procId<<"] - User-supplied beam info (bmaj="<<m_beamFWHMMax<<", bmin="<<m_beamFWHMMin<<", theta="<<m_beamTheta<<", dx="<<m_pixSize<<", fluxCorrFactor="<<m_fluxCorrectionFactor<<")");
+	DEBUG_LOG("[PROC "<<m_procId<<"] - User-supplied beam info (bmaj="<<m_beamFWHMMax<<", bmin="<<m_beamFWHMMin<<", theta="<<m_beamTheta<<", dx="<<m_pixSize<<", fluxCorrFactor="<<m_fluxCorrectionFactor<<")");
 
 	//Get output file options
 	GET_OPTION_VALUE(outputFile,m_OutputFileName);
@@ -687,7 +686,7 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(fitPrintLevel,m_fitPrintLevel);
 	GET_OPTION_VALUE(fitParBoundIncreaseStepSize,m_fitParBoundIncreaseStepSize);
 	GET_OPTION_VALUE(fitUseThreads,m_fitUseThreads);
-	
+	GET_OPTION_VALUE(fitScaleDataToMax,m_fitScaleDataToMax);
 
 	if(m_peakMinKernelSize>m_peakMaxKernelSize){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Invalid peak kernel size option given (hint: min kernel must be larger or equal to max kernel size)!");
@@ -791,8 +790,8 @@ int SFinder::Configure(){
 }//close Configure()
 
 
-int SFinder::RunTask(TaskData* taskData,bool storeData){
-
+int SFinder::RunTask(TaskData* taskData,bool storeData)
+{
 	//Check task data
 	if(!taskData){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Null ptr to task data given!");
@@ -816,7 +815,7 @@ int SFinder::RunTask(TaskData* taskData,bool storeData){
 	//==================================
 	//==   Read task input image
 	//==================================
-	INFO_LOG("[PROC "<<m_procId<<"] - Reading input image ["<<ix_min<<","<<ix_max<<"] ["<<iy_min<<","<<iy_max<<"]...");
+	DEBUG_LOG("[PROC "<<m_procId<<"] - Reading input image ["<<ix_min<<","<<ix_max<<"] ["<<iy_min<<","<<iy_max<<"]...");
 	auto t0_read = chrono::steady_clock::now();	
 	
 	FileInfo info;
@@ -842,7 +841,7 @@ int SFinder::RunTask(TaskData* taskData,bool storeData){
 	//== Find image stats & bkg
 	//============================
 	if(!stopTask){
-		INFO_LOG("[PROC "<<m_procId<<"] - Computing image bkg...");
+		INFO_LOG("[PROC "<<m_procId<<"] - Computing image stats and bkg...");
 		bkgData= ComputeStatsAndBkg(taskImg);
 		if(!bkgData){
 			ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute bkg for input image!");
@@ -959,8 +958,7 @@ int SFinder::Run()
 {
 	//Check is MPI run is enabled at build & runtime
 	m_mpiEnabled= SysUtils::IsMPIInitialized();
-	INFO_LOG("MPI enabled? "<<m_mpiEnabled);
-
+	
 	//Start timer
 	#ifdef MPI_ENABLED
 		if(m_mpiEnabled) MPI_Barrier(MPI_COMM_WORLD);
@@ -970,7 +968,7 @@ int SFinder::Run()
 	//================================================
 	//== Init options & data (done by all processors)
 	//================================================
-	INFO_LOG("[PROC "<<m_procId<<"] - Initializing source finder...");
+	INFO_LOG("[PROC "<<m_procId<<"] - Initializing source finder run ...");
 	auto t0_init = chrono::steady_clock::now();
 	if(Init()<0){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Initialization failed!");
@@ -989,11 +987,12 @@ int SFinder::Run()
 	//if(m_mpiEnabled) storeData= false;
 	if(m_taskDataPerWorkers.size()>1) storeData= false;
 	size_t nTasks= m_taskDataPerWorkers[m_procId].size(); 
-	INFO_LOG("[PROC "<<m_procId<<"] - Start processing of #"<<nTasks<<" tasks...");
 	
 	for(size_t j=0;j<nTasks;j++){
 
 		//Run task
+		INFO_LOG("[PROC "<<m_procId<<"] - Start processing of task "<<j+1<<"/"<<nTasks<<" ...");
+		
 		if(RunTask(m_taskDataPerWorkers[m_procId][j],storeData)<0){
 			ERROR_LOG("[PROC "<<m_procId<<"] - Failed to run task no. "<<j<<", skip to next!");
 			status= -1;
@@ -1263,7 +1262,7 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	//## Compute blob mask
 	auto t0_blobmask = chrono::steady_clock::now();	
 	if(!m_blobMask && m_SearchNestedSources){
-		INFO_LOG("[PROC "<<m_procId<<"] - Computing multi-scale blob mask...");
+		DEBUG_LOG("[PROC "<<m_procId<<"] - Computing multi-scale blob mask...");
 		m_blobMask= ComputeBlobMaskImage(inputImg);
 		if(!m_blobMask){
 			ERROR_LOG("[PROC "<<m_procId<<"] - Failed to compute blob mask map!");
@@ -1375,7 +1374,7 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		sources.insert(sources.end(),sources_iter.begin(),sources_iter.end());
 
 		//## Mask sources found (replace pixels with zeros) at this iteration
-		INFO_LOG("[PROC "<<m_procId<<"] - Masking #"<<sources_iter.size()<<" sources found at iter "<<k+1<<"...");
+		DEBUG_LOG("[PROC "<<m_procId<<"] - Masking #"<<sources_iter.size()<<" sources found at iter "<<k+1<<"...");
 		img->MaskSources(sources_iter,0.);		
 
 		//## Clear iter data
@@ -1461,6 +1460,7 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	
 	//## Apply source selection?
 	if(m_ApplySourceSelection && nSources>0){
+		INFO_LOG("[PROC "<<m_procId<<"] - Applying source selection to the "<<nSources<<" compact sources detected ...");
 		if(SelectSources(sources_merged)<0){
 			ERROR_LOG("[PROC "<<m_procId<<"] - Failed to select sources!");
 			CodeUtils::DeletePtr<Image>(significanceMap);
@@ -2708,18 +2708,18 @@ int SFinder::SelectSources(std::vector<Source*>& sources)
 		
 		//Is bad source (i.e. line-like blob, etc...)?
 		if(!IsGoodSource(sources[i])) {
-			INFO_LOG("[PROC "<<m_procId<<"] - Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as bad source, skipped!");
+			DEBUG_LOG("[PROC "<<m_procId<<"] - Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as bad source, skipped!");
 			sources[i]->SetGoodSourceFlag(false);
 			continue;
 		}
 			
 		//Is point-like source?
 		if( IsPointLikeSource(sources[i]) ){
-			INFO_LOG("[PROC "<<m_procId<<"] - Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as a point-like source ...");
+			DEBUG_LOG("[PROC "<<m_procId<<"] - Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as a point-like source ...");
 			sources[i]->SetType(Source::ePointLike);
 		}
 		else{
-			INFO_LOG("[PROC "<<m_procId<<"] - Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) NOT tagged as point-like source ...");
+			DEBUG_LOG("[PROC "<<m_procId<<"] - Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) NOT tagged as point-like source ...");
 		}
 
 		//Tag nested sources
@@ -2736,14 +2736,14 @@ int SFinder::SelectSources(std::vector<Source*>& sources)
 
 			//Check if good source
 			if(!isGoodSource_nested) {
-				INFO_LOG("[PROC "<<m_procId<<"] - Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as bad source, skipped!");
+				DEBUG_LOG("[PROC "<<m_procId<<"] - Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as bad source, skipped!");
 				nestedSources[j]->SetGoodSourceFlag(false);
 				continue;
 			}
 
 			//Check if point-source
 			if(isPointSource_nested){
-				INFO_LOG("[PROC "<<m_procId<<"] - Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as a point-like source ...");
+				DEBUG_LOG("[PROC "<<m_procId<<"] - Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as a point-like source ...");
 				nestedSources[j]->SetType(Source::ePointLike);
 			}
 			
@@ -2764,7 +2764,7 @@ int SFinder::SelectSources(std::vector<Source*>& sources)
 	}//end loop sources
 
 	
-	INFO_LOG("[PROC "<<m_procId<<"] - Added "<<nSelSources<<" sources to the selected list...");
+	INFO_LOG("[PROC "<<m_procId<<"] - Selected "<<nSelSources<<"/"<<nSources<<" sources after cuts ...");
 
 	//Clear initial vector (DO NOT CLEAR MEMORY!) and fill with selection (then reset selection)
 	sources.clear();
@@ -2795,7 +2795,7 @@ bool SFinder::IsGoodSource(Source* aSource)
 
 	double BoundingBoxMin= ((aSource->GetContours())[0])->BoundingBoxMin;
 	if(m_useMinBoundingBoxCut && BoundingBoxMin<m_SourceMinBoundingBox) {
-		INFO_LOG("[PROC "<<m_procId<<"] - BoundingBox cut not passed (BoundingBoxMin="<<BoundingBoxMin<<"<"<<m_SourceMinBoundingBox<<")");
+		DEBUG_LOG("[PROC "<<m_procId<<"] - BoundingBox cut not passed (BoundingBoxMin="<<BoundingBoxMin<<"<"<<m_SourceMinBoundingBox<<")");
 		return false;
 	}
 
@@ -2864,7 +2864,7 @@ bool SFinder::IsPointLikeSource(Source* aSource)
 	if(m_useNBeamsCut && beamArea>0){	
 		double nBeams= (double)(NPix)/beamArea;
 		if(nBeams>m_psNBeamsThr){
-			INFO_LOG("[PROC "<<m_procId<<"] - Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass nBeams cut (beamArea="<<beamArea<<", NPix="<<NPix<<", nBeams="<<nBeams<<">"<<m_psNBeamsThr<<")");
+			DEBUG_LOG("[PROC "<<m_procId<<"] - Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass nBeams cut (beamArea="<<beamArea<<", NPix="<<NPix<<", nBeams="<<nBeams<<">"<<m_psNBeamsThr<<")");
 			isPointLike= false;
 		}
 	}
@@ -2966,7 +2966,7 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	fitOptions.fitStrategy= m_fitStrategy;
 	fitOptions.fitPrintLevel= m_fitPrintLevel;
 	fitOptions.fitParBoundIncreaseStepSize= m_fitParBoundIncreaseStepSize;
-
+	fitOptions.fitScaleDataToMax= m_fitScaleDataToMax;
 	fitOptions.wcsType= m_ds9WCSType;
 
 	//## Check minimizer support
@@ -3198,8 +3198,8 @@ Image* SFinder::ReadImage(FileInfo& info,std::string filename,std::string imgnam
 
 
 
-ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,double maxThr){
-
+ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,double maxThr)
+{
 	//## Check input img
 	if(!img){
 		ERROR_LOG("[PROC "<<m_procId<<"] - Null ptr to input image given!");
@@ -3207,7 +3207,7 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 	}
 
 	//## Compute stats
-	INFO_LOG("[PROC "<<m_procId<<"] - Computing image stats...");
+	DEBUG_LOG("[PROC "<<m_procId<<"] - Computing image stats...");
 	auto t0_stats = chrono::steady_clock::now();	
 	bool computeRobustStats= true;
 	bool forceRecomputing= false;
@@ -3219,7 +3219,7 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 	auto t1_stats = chrono::steady_clock::now();	
 	imageStatsTime+= chrono::duration <double, milli> (t1_stats-t0_stats).count();
 		
-	img->LogStats("INFO");
+	img->LogStats("DEBUG");
 
 	//## Set local bkg grid/box
 	//## If MetaData & beam info are available, interpret grid & box options as multiple of beam
@@ -3634,7 +3634,7 @@ int SFinder::PrepareWorkerTasks()
 		return -1;
 	}
 
-	INFO_LOG("[PROC "<<m_procId<<"] - Image size: "<<Nx<<"x"<<Ny<<", Image coord origin("<<m_ImgXmin<<","<<m_ImgYmin<<")");
+	DEBUG_LOG("[PROC "<<m_procId<<"] - Image size: "<<Nx<<"x"<<Ny<<", Image coord origin("<<m_ImgXmin<<","<<m_ImgYmin<<")");
 	
 	//==========================================
 	//==    IMAGE PARTITION IN TILES
@@ -3661,23 +3661,23 @@ int SFinder::PrepareWorkerTasks()
 		}
 	}
 
-	INFO_LOG("[PROC "<<m_procId<<"] - Computing tile partition: tileSize("<<tileSizeX<<","<<tileSizeY<<"), tileOverlap("<<tileOverlapX<<","<<tileOverlapY<<")");
+	INFO_LOG("[PROC "<<m_procId<<"] - Computing tile partition for distributed run: tileSize("<<tileSizeX<<","<<tileSizeY<<"), tileOverlap("<<tileOverlapX<<","<<tileOverlapY<<")");
 	if(MathUtils::Compute2DGrid(ix_min,ix_max,iy_min,iy_max,Nx,Ny,tileSizeX,tileSizeY,tileStepSizeX,tileStepSizeY)<0){
 		WARN_LOG("[PROC "<<m_procId<<"] - Failed to compute a 2D partition from input image!");
 		return -1;
 	}
 	int nExpectedTasks= ix_min.size()*iy_min.size();
-	INFO_LOG("[PROC "<<m_procId<<"] - #"<<nExpectedTasks<<" expected number of tasks ("<<ix_min.size()<<"x"<<iy_min.size()<<")");
+	INFO_LOG("[PROC "<<m_procId<<"] - #"<<nExpectedTasks<<" expected number of distributed tasks ("<<ix_min.size()<<"x"<<iy_min.size()<<")");
 
 	//## Compute worker tasks (check max number of tasks per worker)
-	INFO_LOG("[PROC "<<m_procId<<"] - Computing worker task list...");
+	DEBUG_LOG("[PROC "<<m_procId<<"] - Computing worker task list...");
 	TaskData* aTaskData= 0;
 	long int workerCounter= 0;
 
 	for(size_t j=0;j<iy_min.size();j++){
 		for(size_t i=0;i<ix_min.size();i++){
 			//Assign worker
-			INFO_LOG("[PROC "<<m_procId<<"] - Assign task ("<<i<<","<<j<<") to worker no. "<<workerCounter<<"...");
+			DEBUG_LOG("[PROC "<<m_procId<<"] - Assign task ("<<i<<","<<j<<") to worker no. "<<workerCounter<<"...");
 				
 			aTaskData= new TaskData;
 			aTaskData->workerId= workerCounter;
@@ -3743,7 +3743,7 @@ int SFinder::PrepareWorkerTasks()
 		ss<<workerIds[i]<<",";
 	}
 	ss<<"}";
-	INFO_LOG(ss.str());
+	DEBUG_LOG(ss.str());
 	
 
 	
@@ -3782,7 +3782,7 @@ int SFinder::PrepareWorkerTasks()
 	}//close if	
 	#endif
 	
-	INFO_LOG("[PROC "<<m_procId<<"] - WORLD RANK/SIZE: "<<m_procId<<"/"<<m_nProc<<" WORKER RANK/SIZE: "<<m_workerRanks<<"/"<<m_nWorkers);
+	DEBUG_LOG("[PROC "<<m_procId<<"] - WORLD RANK/SIZE: "<<m_procId<<"/"<<m_nProc<<" WORKER RANK/SIZE: "<<m_workerRanks<<"/"<<m_nWorkers);
 
 
 	//Print

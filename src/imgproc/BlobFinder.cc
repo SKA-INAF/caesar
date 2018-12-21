@@ -1098,7 +1098,7 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 		if(kernelSize%2==0) kernelSize++;
 		
 		//Compute LoG filter
-		INFO_LOG("Computing LoG map @ scale "<<sigma<<" (step="<<sigmaStep<<", kernsize="<<kernelSize<<")");
+		INFO_LOG("Computing LoG map @ scale "<<sigma<<" (step="<<sigmaStep<<", kernsize="<<kernelSize<<") ...");
 		bool invert= true;
 		Image* filterMap= img->GetNormLoGImage(kernelSize,sigma,invert);
 		filterMaps.push_back(filterMap);
@@ -1123,7 +1123,7 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 		filterMap->ApplyThreshold(thrLevel);
 
 		//Compute bkg map
-		INFO_LOG("Computing bkg map @ scale "<<sigma<<"...");
+		INFO_LOG("Computing bkg map of LoG map @ scale "<<sigma<<"...");
 		bool use2ndPass= true;
 		bool skipOutliers= false;
 		bool useRangeInBkg= true;
@@ -1142,7 +1142,7 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 		}
 
 		//Compute significance map
-		INFO_LOG("Computing significance map @ scale "<<sigma<<"...");
+		DEBUG_LOG("Computing significance map of LoG map @ scale "<<sigma<<"...");
 		Image* filterSignificanceMap= filterMap->GetSignificanceMap(bkgData,useLocalBkg);
 		if(!filterSignificanceMap){
 			ERROR_LOG("Failed to compute significance map @ scale "<<sigma<<"!");
@@ -1155,7 +1155,7 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 		bkgData= 0;
 
 		//Find peaks in filter map
-		INFO_LOG("Finding peaks in significance map @ scale "<<sigma<<" ...");
+		INFO_LOG("Finding peaks in significance map of LoG map @ scale "<<sigma<<" ...");
 		std::vector<ImgPeak> peakPoints;
 		bool skipBorders= true;
 		double peakKernelMultiplicityThr= 1;
@@ -1287,7 +1287,7 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 			//Check blob size against min size required
 			int nPixInBlob= (int)(clusterPixelIds.size());
 			if(nPixInBlob<minBlobSize){
-				INFO_LOG("Skip blob @ scale "<<i+1<<" (id="<<seedPixelId<<") as below min size threshold (npix="<<nPixInBlob<<"<"<<minBlobSize<<")");
+				DEBUG_LOG("Skip blob @ scale "<<i+1<<" (id="<<seedPixelId<<") as below min size threshold (npix="<<nPixInBlob<<"<"<<minBlobSize<<")");
 				continue;
 			}
 			long int ix= filterSignificanceMaps[i]->GetBinX(seedPixelId);
@@ -1304,7 +1304,7 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 		}//end loop blobs per scale
 	}//end loop scales
 
-	INFO_LOG("#"<<nBlobs<<" blobs present in mask");
+	INFO_LOG("#"<<nBlobs<<" blobs found in mask");
 
 	//## Clear memory 
 	CodeUtils::DeletePtrCollection<Image>(filterSignificanceMaps);

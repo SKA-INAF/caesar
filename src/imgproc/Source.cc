@@ -208,6 +208,7 @@ int Source::Draw(int pixMargin,ImgType imgType,bool drawImg,bool drawContours,bo
 		else htemp->Draw("COLZ");
 
 		//Append Caesar image to current pad
+		INFO_LOG("Appending source "<<this->GetName()<<" image to current pad ...");
 		simg->AppendPad();
 
 		//Draw main source info
@@ -244,7 +245,7 @@ int Source::Draw(int pixMargin,ImgType imgType,bool drawImg,bool drawContours,bo
 
 	//Drawing contours?
 	if(drawContours){
-		DEBUG_LOG("#"<<m_Contours.size()<<" contours present for source "<<this->GetName()<<"...");
+		INFO_LOG("Drawing #"<<m_Contours.size()<<" contours present for source "<<this->GetName()<<"...");
 		for(size_t i=0;i<m_Contours.size();i++){		
 			TGraph* thisContourGraph= m_Contours[i]->GetGraph();
 			if(thisContourGraph) {
@@ -262,7 +263,7 @@ int Source::Draw(int pixMargin,ImgType imgType,bool drawImg,bool drawContours,bo
 	//Draw fitted components (if any)
 	if(drawFitComponents && m_HasFitInfo){
 		std::vector<TEllipse*> ellipses= m_fitPars.GetFittedEllipses();
-		DEBUG_LOG("#"<<ellipses.size()<<" fitted components present for source "<<this->GetName()<<"...");
+		INFO_LOG("Drawing #"<<ellipses.size()<<" fitted components present for source "<<this->GetName()<<"...");
 		for(size_t i=0;i<ellipses.size();i++){
 			ellipses[i]->SetLineColor(lineColor);
 			ellipses[i]->SetLineStyle(kDotted);
@@ -271,13 +272,12 @@ int Source::Draw(int pixMargin,ImgType imgType,bool drawImg,bool drawContours,bo
 			ellipses[i]->SetFillStyle(0);
 			ellipses[i]->Draw("lsame");
 		}//end loop fit ellipses
-
-		
 	}//close if
 
 
 	//Drawing nested sources recursively?
 	if(drawNested){
+		INFO_LOG("Draw source nested ...");
 		bool drawNestedImage= false;
 		for(size_t i=0;i<m_NestedSources.size();i++){
 			if(m_NestedSources[i]) {

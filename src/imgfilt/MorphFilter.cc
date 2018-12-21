@@ -571,7 +571,7 @@ int MorphFilter::FindPeaks(std::vector<ImgPeak>& peakPoints,Image* img,std::vect
 			hasPeaks= false;
 			break;
 		}
-		INFO_LOG("#"<<peakPixelIds.size()<<" peak pixels found with kernel no. "<<k<<" (size="<<kernelSizes[k]<<")!");
+		DEBUG_LOG("#"<<peakPixelIds.size()<<" peak pixels found with kernel no. "<<k<<" (size="<<kernelSizes[k]<<")!");
 
 		//Store peak points for current kernel
 		for(size_t j=0;j<peakPixelIds.size();j++){
@@ -656,7 +656,7 @@ int MorphFilter::FindPeaks(std::vector<ImgPeak>& peakPoints,Image* img,std::vect
 		WARN_LOG("No matching peaks across the three dilate kernels detected!");
 		return 0;
 	}
-	INFO_LOG("#"<<npeaks<<" peaks detected!");
+	DEBUG_LOG("#"<<npeaks<<" peaks detected!");
 
 	return 0;
 

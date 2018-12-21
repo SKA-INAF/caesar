@@ -134,7 +134,7 @@ bool SysUtils::CheckFile(std::string path,Caesar::FileInfo& info,bool match_exte
 		//Dump file info
 		//info.Print();
 		std::string info_printable= info.GetPrintable();
-		INFO_LOG(info_printable);
+		DEBUG_LOG(info_printable);
 
   }//close try block
 
@@ -245,7 +245,7 @@ bool SysUtils::IsMPIInitialized(){
 		int mpi_init_flag= 0;
 		MPI_Initialized(&mpi_init_flag);
 		if(mpi_init_flag==1) {
-			INFO_LOG("MPI is initialized for this run...");
+			DEBUG_LOG("MPI is initialized for this run...");
 			isInitialized= true;	
 		}
 		else {

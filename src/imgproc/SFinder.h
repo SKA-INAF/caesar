@@ -555,6 +555,7 @@ class SFinder : public TObject {
 		int m_fitPrintLevel;
 		double m_fitParBoundIncreaseStepSize;
 		bool m_fitUseThreads;
+		bool m_fitScaleDataToMax;
 
 		//Saliency computation
 		Image* m_SaliencyImg;

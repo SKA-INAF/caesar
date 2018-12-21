@@ -103,7 +103,7 @@ int FITSReader::Read(Caesar::Image& img,Caesar::FITSFileInfo& fits_info,std::str
 		ss<<filename<<"["<<ix_min+1<<":"<<ix_max+1<<","<<iy_min+1<<":"<<iy_max+1<<"]";
 		filename_wfilter= ss.str();
 	}
-	INFO_LOG("Reading image "<<filename_wfilter<<"...");
+	DEBUG_LOG("Reading image "<<filename_wfilter<<"...");
 
 	//## Init vars
 	fitsfile* fp= 0;
@@ -122,7 +122,7 @@ int FITSReader::Read(Caesar::Image& img,Caesar::FITSFileInfo& fits_info,std::str
   fits_get_hdu_num(fp, &hdu_number);
 	
 	//## Move to the desired HDU in input file
-	INFO_LOG("Reading hdu no. "<<hdu_id<<"/"<<hdu_number<<" in FITS file "<<filename<<"...");
+	DEBUG_LOG("Reading hdu no. "<<hdu_id<<"/"<<hdu_number<<" in FITS file "<<filename<<"...");
 	int hdutype;
   if ( fits_movabs_hdu(fp, hdu_id, &hdutype, &status) ){
 		ERROR_LOG("Failed to access HDU "<<filename<<" (hint: check if HDU exists)!");
@@ -147,7 +147,7 @@ int FITSReader::Read(Caesar::Image& img,Caesar::FITSFileInfo& fits_info,std::str
 	}
 
   //## Read HDU header records
-	INFO_LOG("Reading HDU header ...");
+	DEBUG_LOG("Reading HDU header ...");
   if(ReadHeader(fits_info,fp)<0){
 		ERROR_LOG("Failed to read header of FITS file "<<filename<<"!");
 		if (fp) fits_close_file(fp, &status);
@@ -156,9 +156,8 @@ int FITSReader::Read(Caesar::Image& img,Caesar::FITSFileInfo& fits_info,std::str
 
 	
   //## Read HDU's image data
-	INFO_LOG("Reading HDU image data ...");
+	DEBUG_LOG("Reading HDU image data ...");
 		
-	
 	#ifdef OPENMP_ENABLED
 		//Multi-thread reading
 		if(ReadImageMT(img,fits_info,fp,filename,ix_min,ix_max,iy_min,iy_max)<0){
@@ -218,7 +217,7 @@ int FITSReader::ReadImage(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile* f
 		ss<<filename<<"["<<ix_min+1<<":"<<ix_max+1<<","<<iy_min+1<<":"<<iy_max+1<<"]";
 		filename_wfilter= ss.str();
 	}
-	INFO_LOG("Reading image data (Nx x Ny)=("<<ImgSizeX<<","<<ImgSizeY<<")");
+	DEBUG_LOG("Reading image data (Nx x Ny)=("<<ImgSizeX<<","<<ImgSizeY<<")");
 	
 	//Set image size (Allocate memory for image pixels)	
 	if(img.SetSize(ImgSizeX,ImgSizeY,xlow,ylow)<0){
@@ -238,7 +237,7 @@ int FITSReader::ReadImage(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile* f
 	int errflag= 0;	
 	int readdata_errflag= 0;
 
-	INFO_LOG("Starting serial-version image data reading ...");
+	DEBUG_LOG("Starting serial-version image data reading ...");
 
 	//For serial single thread use the already opened file ptr
 	fp_safe= fp;
@@ -260,7 +259,7 @@ int FITSReader::ReadImage(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile* f
 	//Stop timer
 	auto end = chrono::steady_clock::now();
 	double dt= chrono::duration <double, milli> (end-start).count();
-	INFO_LOG("Image read in "<<dt<<" ms");
+	DEBUG_LOG("Image read in "<<dt<<" ms");
 	
 	return 0;
 

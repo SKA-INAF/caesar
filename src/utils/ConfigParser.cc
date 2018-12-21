@@ -57,8 +57,8 @@ ConfigParser::~ConfigParser(){
 
 }//close destructor
 
-int ConfigParser::Parse(std::string filename){
-	
+int ConfigParser::Parse(std::string filename)
+{	
 	//## Check and read file
 	if(filename==""){
 		cerr<<"ConfigParser::Parse(): ERROR: Empty filename string given!"<<endl;
@@ -81,7 +81,7 @@ int ConfigParser::Parse(std::string filename){
 
 	//## Parsing file
 	m_ConfigFile= filename;
-	cout<<"ConfigParser::Parse(): INFO: Reading and parsing file: "<<filename<<endl;
+	cout<<"ConfigParser::Parse(): INFO: Reading and parsing config file "<<filename<<" ..."<<endl;
 
 	std::string parsedline= "";
 
@@ -115,8 +115,7 @@ int ConfigParser::Parse(std::string filename){
 			cerr<<"ConfigParser::Parse(): WARN: Failed to set option "<<optionKey<<" (unregistered?)...skip it!"<<endl;
 			continue;
 		}
-		//cout<<"ConfigParser::Parse(): INFO: optionName: "<<optionKey<<", val="<<optionValue<<endl;
-
+		
 		if (!in.good()) break;
 		
 	}//close while
@@ -129,11 +128,11 @@ int ConfigParser::Parse(std::string filename){
 }//close Parse()
 
 
-int ConfigParser::RegisterPredefinedOptions(){
-
-	cout<<"ConfigParser::RegisterPredefinedOptions(): INFO: Registering pre-defined options..."<<endl;
-
+int ConfigParser::RegisterPredefinedOptions()
+{	
 	//Register pre-defined options
+	//cout<<"ConfigParser::RegisterPredefinedOptions(): INFO: Registering pre-defined options ..."<<endl;
+
 	try {
 		//=====================
 		//==  Main options   ==
@@ -460,8 +459,6 @@ int ConfigParser::RegisterPredefinedOptions(){
 		REGISTER_OPTION(spMergingUseRobustPars,bool,false,false,true);
 		REGISTER_OPTION(spMergingUse2ndNeighbours,bool,true,false,true);
 		
-		
-
 		//Set has_registered flag (otherwise options are re-built)
 		m_HasRegisteredOptions= true;
 

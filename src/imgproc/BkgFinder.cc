@@ -91,7 +91,7 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 
 	
 	//## Compute global bkg
-	INFO_LOG("Computing global bkg...");
+	DEBUG_LOG("Computing global bkg...");
 	if(ComputeGlobalBkg(bkgData,img,estimator,useRange,minThr,maxThr)<0){
 		ERROR_LOG("Failed to compute global bkg!");
 		delete bkgData;
@@ -101,7 +101,7 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 
 	//## Compute local bkg?		
 	if(computeLocalBkg){
-		INFO_LOG("Computing local bkg ...");
+		DEBUG_LOG("Computing local bkg ...");
 		int status= FindLocalGridBkg(bkgData,img,estimator,boxSizeX,boxSizeY,gridStepSizeX,gridStepSizeY,use2ndPass,useRange,minThr,maxThr);
 		if(status<0){
 			ERROR_LOG("Failed to compute local grid bkg!");
@@ -109,7 +109,7 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 			bkgData= 0;
 			return 0;
 		}
-		INFO_LOG("Local bkg computation completed!");
+		DEBUG_LOG("Local bkg computation completed!");
 	}//close if computeLocalBkg
 
 	
@@ -117,10 +117,10 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 	//## Search and exclude significant blobs (both positive & negative excesses) 
 	//## using the first estimate bkg/noise
 	if(skipOutliers){
-		INFO_LOG("Improving bkg estimate by skipping outliers ...");
+		DEBUG_LOG("Improving bkg estimate by skipping outliers ...");
 
 		//Get significance map
-		INFO_LOG("Computing the significance map ...");
+		DEBUG_LOG("Computing the significance map ...");
 		Image* significanceMap= img->GetSignificanceMap(bkgData,computeLocalBkg);
 		if(!significanceMap){
 			ERROR_LOG("Failed to compute the significance map (needed to exclude blobs)!");
@@ -130,7 +130,7 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 		}	
 
 		//Find blobs
-		INFO_LOG("Finding compact blobs to be tagged as outliers...");
+		DEBUG_LOG("Finding compact blobs to be tagged as outliers...");
 		std::vector<Source*> blobs;
 		bool findNestedSources= false;
 		//bool findNegativeExcess= true;
@@ -147,7 +147,7 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 		}
 
 		//Find image without outliers (set to zero)
-		INFO_LOG("Computing image without outliers (set to zero)...");
+		DEBUG_LOG("Computing image without outliers (set to zero)...");
 		Image* img_wOutliers= img->GetSourceMask(blobs,false,true);//invert mask
 		if(!img_wOutliers){
 			ERROR_LOG("Failed to compute image with blob outliers subtracted!");
@@ -165,11 +165,11 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 			return 0;
 		}//close if
 
-		INFO_LOG("img without outliers info: min/max="<<img_wOutliers->GetMinimum()<<"/"<<img_wOutliers->GetMaximum());
+		DEBUG_LOG("img without outliers info: min/max="<<img_wOutliers->GetMinimum()<<"/"<<img_wOutliers->GetMaximum());
 
 		//Recompute bkg on residual map (using this function recursively)
 		//Do not skip outliers this time!
-		INFO_LOG("Recomputing bkg on residual map...");
+		DEBUG_LOG("Recomputing bkg on residual map...");
 		ImgBkgData* robustBkgData= FindBkg(img_wOutliers,estimator,computeLocalBkg,boxSizeX,boxSizeY,gridStepSizeX,gridStepSizeY,use2ndPass,false,seedThr,mergeThr,minPixels,useRange, minThr,maxThr);
 		if(!robustBkgData){
 			ERROR_LOG("Failed to compute bkg over image with blob outliers subtracted!");
@@ -187,7 +187,7 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 			return 0;
 		}
 		if( (robustBkgData->BkgMap) && (robustBkgData->NoiseMap) ) {
-			INFO_LOG("Robust bkg map min/max="<<(robustBkgData->BkgMap)->GetMinimum()<<"/"<<(robustBkgData->BkgMap)->GetMaximum()<<", rms map min/max="<<(robustBkgData->NoiseMap)->GetMinimum()<<"/"<<(robustBkgData->NoiseMap)->GetMaximum());
+			DEBUG_LOG("Robust bkg map min/max="<<(robustBkgData->BkgMap)->GetMinimum()<<"/"<<(robustBkgData->BkgMap)->GetMaximum()<<", rms map min/max="<<(robustBkgData->NoiseMap)->GetMinimum()<<"/"<<(robustBkgData->NoiseMap)->GetMaximum());
 		}
 
 		//Override main bkgData with robust estimates
@@ -222,7 +222,7 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 int BkgFinder::FindLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,long int boxSizeX,long int boxSizeY, double gridStepSizeX, double gridStepSizeY,bool use2ndPass,bool useRange,double minThr,double maxThr){
 
 	//## Compute bkg data
-	INFO_LOG("Computing local bkg (1st pass)...");
+	DEBUG_LOG("Computing local bkg (1st pass)...");
 	if(ComputeLocalGridBkg(bkgData,img, estimator, boxSizeX, boxSizeY, gridStepSizeX,gridStepSizeY,useRange,minThr,maxThr)<0){	
 		ERROR_LOG("Computation of local background failed for this image!");
 		return -1;
@@ -231,7 +231,7 @@ int BkgFinder::FindLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,lon
 	
 	//## Improve rms by recomputing stuff from residual map 
 	if(use2ndPass){
-		INFO_LOG("Improving rms estimation with a 2nd pass...");
+		DEBUG_LOG("Improving rms estimation with a 2nd pass...");
 
 		TString residualMapName= Form("%s_residual",img->GetName().c_str());
 		Image* residualMap= img->GetCloned(std::string(residualMapName),true,true);
@@ -455,7 +455,7 @@ int BkgFinder::ComputeLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,
 	
 	
 	//## Perform the 2D interpolation
-	INFO_LOG("Start bkg 2d interpolation...");
+	DEBUG_LOG("Start bkg 2d interpolation...");
 	std::vector<double> interp_gridX;
 	std::vector<double> interp_gridY;
 	
@@ -547,7 +547,7 @@ int BkgFinder::ComputeLocalGridBkg(ImgBkgData* bkgData,Image* img,int estimator,
 	(bkgData->NoiseMap)= img->GetCloned(std::string(noiseImgName),true,true);
 	(bkgData->NoiseMap)->Reset();
 		
-	INFO_LOG("Filling bkg/noise images after interpolation ...");
+	DEBUG_LOG("Filling bkg/noise images after interpolation ...");
 	#ifdef OPENMP_ENABLED
 		Caesar::StatMoments<double> bkg_moments_t;		
 		Caesar::StatMoments<double> rms_moments_t;	

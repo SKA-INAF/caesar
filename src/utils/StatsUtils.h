@@ -434,11 +434,11 @@ class StatsUtils : public TObject {
 		* \brief Compute median using nth_element (should run in O(n))
 		*/
 		template < typename T >
-		static T GetMedianFast(std::vector<T>& vec, bool useParallelVersion=false, bool alreadySorted=false){
-
+		static T GetMedianFast(std::vector<T>& vec, bool useParallelVersion=false, bool alreadySorted=false)
+		{
 			//Check empty vector
 			if(vec.size()<=0) {
-				WARN_LOG("Empty data vector, returning zero!");
+				DEBUG_LOG("Empty data vector, returning zero!");
 				return 0;
 			}
 			std::size_t n = vec.size()/2;
@@ -467,10 +467,11 @@ class StatsUtils : public TObject {
 		* \brief Compute MAD using nth_element (should run in O(n))
 		*/
 		template < typename T >
-		static T GetMADFast( std::vector<T>const &vec, T median,bool useParallelVersion=false){
+		static T GetMADFast( std::vector<T>const &vec, T median,bool useParallelVersion=false)
+		{
 			size_t n = vec.size();
 			if(n<=0) {
-				WARN_LOG("Empty data vector, returning zero!");
+				DEBUG_LOG("Empty data vector, returning zero!");
 				return 0;
 			}
 			std::vector<T> MADs;
@@ -502,7 +503,7 @@ class StatsUtils : public TObject {
 		static T GetMedian( std::vector<T>&vec, bool isSorted=false){//this should run in O(nlog(n))
 			size_t n = vec.size();
 			if(n<=0) {
-				WARN_LOG("Empty data vector, returning zero!");
+				DEBUG_LOG("Empty data vector, returning zero!");
 				return 0;
 			}
   		if(!isSorted) std::sort(vec.begin(), vec.end());
@@ -544,7 +545,7 @@ class StatsUtils : public TObject {
 		static T GetMAD( std::vector<T>const &vec, T median){
 			size_t n = vec.size();
 			if(n<=0) {
-				WARN_LOG("Empty data vector, returning zero!");
+				DEBUG_LOG("Empty data vector, returning zero!");
 				return 0;
 			}
 			std::vector<double> MADs;

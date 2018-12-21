@@ -1198,7 +1198,7 @@ int Image::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool useRa
 		m_Stats= new Caesar::ImgStats;
 	}
 	else{		
-		WARN_LOG("Image has stats already computed...");
+		DEBUG_LOG("Image has stats already computed...");
 	}
 
 	//## If recomputing is not requested (i.e. some pixels has been reset by the user, just set the stats params!
@@ -2004,7 +2004,7 @@ int Image::FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkg
 	int nNestedSources= static_cast<int>(NestedSources.size());
 	
 	if(nNestedSources>=0){
-		INFO_LOG("#"<<nNestedSources<<" blobs found in curvature map!");
+		DEBUG_LOG("#"<<nNestedSources<<" blobs found in curvature map ...");
 
 		//## Init mother-nested association list
 		std::vector<int> nestedSourcesToBeRemoved;
@@ -2078,7 +2078,7 @@ int Image::FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkg
 					bool isNestedSmaller= (matchingPixFraction<maxMatchingPixFraction);
 					
 					if( areOffset || isNestedSmaller){//Add nested to mother source
-						INFO_LOG("Adding nested source to mother source (name="<<sources[i]->GetName()<<", id="<<sources[i]->Id<<", nPix="<<NPix<<"): areOffset? "<<areOffset<<" (dist_x="<<centroidDistX<<", dist_y="<<centroidDistY<<"), isNestedSmaller?"<<isNestedSmaller<<" (matchingPixFraction="<<matchingPixFraction<<", maxMatchingPixFraction="<<maxMatchingPixFraction<<", nPixThrToSearchNested="<<nPixThrToSearchNested<<")");					
+						DEBUG_LOG("Adding nested source to mother source (name="<<sources[i]->GetName()<<", id="<<sources[i]->Id<<", nPix="<<NPix<<"): areOffset? "<<areOffset<<" (dist_x="<<centroidDistX<<", dist_y="<<centroidDistY<<"), isNestedSmaller?"<<isNestedSmaller<<" (matchingPixFraction="<<matchingPixFraction<<", maxMatchingPixFraction="<<maxMatchingPixFraction<<", nPixThrToSearchNested="<<nPixThrToSearchNested<<")");					
 
 						sources[i]->AddNestedSource(NestedSources[nestedIndex]);
 						nSelNestedSources++;
@@ -2095,7 +2095,7 @@ int Image::FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkg
 			}//end loop nested components
 		}//end loop mother sources
 
-		INFO_LOG("#"<<nSelNestedSources<<" nested sources found and added to mother sources...");
+		INFO_LOG("#"<<nSelNestedSources<<" nested sources found and added to mother sources ...");
 
 		//Delete nested source selected for removal
 		for(size_t k=0;k<nestedSourcesToBeRemoved.size();k++){
