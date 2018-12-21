@@ -124,6 +124,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--dilatebrightthr=[DILATE_BRIGHT_THR] - Seed threshold (in nsigmas) used to dilate sources (even if they have nested components or different dilation type) (default=10 sigmas)"	
 	echo "--dilatekernsize=[DILATE_KERNEL_SIZE] - Size of dilating kernel in pixels (default=9)"
 	echo "--dilatedsource=[DILATED_SOURCE] - Type of source dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED) (default=2)"
+	echo "--pssubtractionmethod=[PS_SUBTRACTION_METHOD] - Method used to subtract point-sources in residual map (1=DILATION, 2=FIT MODEL REMOVAL)"
 	echo ""
 
 	echo "=== SFINDER SOURCE FITTING OPTIONS ==="
@@ -304,6 +305,8 @@ GUIDED_FILTER_RADIUS="12"
 GUIDED_FILTER_EPS="0.04"
 EXT_SFINDER_METHOD="3"
 AC_METHOD="2"
+
+PS_SUBTRACTION_METHOD="1"
 
 SELECT_SOURCES="false"
 USE_BOUNDING_BOX_CUT="true"
@@ -718,6 +721,9 @@ do
 		;;
 		--dilatekernsize=*)
 			DILATE_KERNEL_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
+		--pssubtractionmethod=*)
+			PS_SUBTRACTION_METHOD=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 
 		## SMOOTHING FILTER OPTIONS
@@ -1385,7 +1391,7 @@ generate_config(){
 		echo "removedSourceType = $DILATED_SOURCE									| Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"
 		echo 'residualModel = 1																    | Dilate source model  (1=bkg,2=median)'
 		echo 'residualModelRandomize = false											| Randomize dilated values (T/F)'
-		echo "psSubtractionMethod = 2                             | Point-source subtraction method (1=dilation, 2=model subtraction (default=1)"
+		echo "psSubtractionMethod = $PS_SUBTRACTION_METHOD        | Point-source subtraction method (1=dilation, 2=model subtraction (default=1)"
 		echo '###'
 		echo '###'
 		echo '//============================================='
@@ -1559,28 +1565,21 @@ generate_exec_script(){
       echo 'echo "****         PREPARE JOB                     ****"'
       echo 'echo "*************************************************"'
 
-      echo 'echo ""'
-            
       echo " "
 
       echo 'echo ""'
-      echo 'echo "INFO: Source the software environment ..."'
+      echo 'echo "INFO: Source the software environment vars in file '"$ENV_FILE"' ..."'
       echo "source $ENV_FILE"
-
       echo 'echo ""'
       
       echo "JOBDIR=$BASEDIR"
      
       echo " "
-
-           
-      echo 'echo ""'
-
       echo " "
 
       echo " "
       echo 'echo "*************************************************"'
-      echo 'echo "****         RUN SIMULATION                  ****"'
+      echo 'echo "****         RUN SOURCE FINDER               ****"'
       echo 'echo "*************************************************"'
       echo 'echo ""'
       echo '  cd $JOBDIR'
