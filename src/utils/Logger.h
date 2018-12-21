@@ -25,10 +25,10 @@
 * @date 20/01/2015
 */
 
-#ifndef Logger_h
-#define Logger_h 1
+#ifndef _LOGGER_h
+#define _LOGGER_h 1
 
-//#include <CodeUtils.h>
+#include <SysUtils.h>
 
 #include <TObject.h>
 #include <TMath.h>
@@ -49,6 +49,7 @@
 #include <log4cxx/propertyconfigurator.h>
 #include <log4cxx/net/syslogappender.h>
 #include <log4cxx/helpers/exception.h>
+#include <log4cxx/mdc.h>
 
 //Boost
 #include <boost/regex.hpp>
@@ -368,10 +369,29 @@ class ConsoleLogger : public Logger {
 			//Create logger
 			logger= log4cxx::LoggerPtr(log4cxx::Logger::getLogger(m_tag));
 			if(!logger) return -1;
-			
+
+			//Get hostname
+			std::string host= SysUtils::GetHost();
+			log4cxx::MDC::put("hostname", host);
+
+			//Get processor id
+			int procId= SysUtils::GetProcId();
+			std::stringstream procid_ss;
+			procid_ss<<"PROC"<<procId;
+			std::string procid_str= procid_ss.str();
+			log4cxx::MDC::put("proc", procid_str);
+						
+			//Get thread id
+			int threadId= SysUtils::GetOMPThreadId();
+			std::stringstream threadid_ss;
+			threadid_ss<<"THREAD"<<threadId;
+			std::string threadid_str= threadid_ss.str();
+			log4cxx::MDC::put("thread", threadid_str);
+	
 			//Define log layout
-			//layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d %-5p [%c] [%l] %m%n") );
-			layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d %-5p [%c] %m%n") );
+			//layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d %-5p [%c] %m%n") );
+			//layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d %-5p %m%n") );
+			layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d %-5p[%X{hostname}, %X{proc}, %X{thread}] %m%n") );			
 			if(!layout) return -1;
 
 			//Create and add appender

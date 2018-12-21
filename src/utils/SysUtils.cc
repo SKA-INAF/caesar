@@ -69,6 +69,9 @@ ClassImp(Caesar::FileInfo)
 
 namespace Caesar {
 
+//int SysUtils::m_procId= 0;
+//std::string SysUtils::m_procName= "";
+
 SysUtils::SysUtils(){
 
 }
@@ -315,6 +318,25 @@ int SysUtils::GetProcMemoryInfo(ProcMemInfo& info)
 
 }//close GetProcMemoryInfo()
 
+
+std::string SysUtils::GetHost() 
+{
+	char hostname[HOST_NAME_MAX];
+	gethostname(hostname, HOST_NAME_MAX);
+	return std::string(hostname);
+		
+}
+
+int SysUtils::GetProcId() 
+{
+	int procid= 0;			
+	#ifdef MPI_ENABLED
+		MPI_Comm_rank(MPI_COMM_WORLD, &procid);
+	#endif
+
+	return procid;
+		
+}
 
 
 }//close namespace

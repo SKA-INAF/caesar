@@ -1170,7 +1170,7 @@ int Blob::GetSampleStdDev(double& sigmaX,double& sigmaY,double& covXY)
 	sigmaX= sqrt(varX/normFactor);
 	sigmaY= sqrt(varY/normFactor);
 	covXY= varXY/normFactor;
-	INFO_LOG("Source "<<this->GetName()<<" sample std dev (sigmaX,sigmaY,covXY)=("<<sigmaX<<","<<sigmaY<<","<<covXY<<"), normFactor="<<normFactor);
+	DEBUG_LOG("Source "<<this->GetName()<<" sample std dev (sigmaX,sigmaY,covXY)=("<<sigmaX<<","<<sigmaY<<","<<covXY<<"), normFactor="<<normFactor);
 
 	return 0;
 	

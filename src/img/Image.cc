@@ -2622,7 +2622,7 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 		if(fabs(Z)>zThr) isDilatedSource= true;
 		if(fabs(Z)>zBrightThr) isBrightSource= true;
 		
-		INFO_LOG("Source "<<source->GetName()<<" sourceType="<<sourceType<<", hasFitInfo?"<<hasFitInfo<<", hasNestedSources?"<<hasNestedSources<<", isSelectedSource?"<<isSelectedSource<<", addToPSList? "<<addToPSList<<" (psSubtractionMethod="<<psSubtractionMethod<<", dilateSourceType="<<dilateSourceType<<"), isDilatedSource? "<<isDilatedSource<<", isBrightSource? "<<isBrightSource);
+		DEBUG_LOG("Source "<<source->GetName()<<" sourceType="<<sourceType<<", hasFitInfo?"<<hasFitInfo<<", hasNestedSources?"<<hasNestedSources<<", isSelectedSource?"<<isSelectedSource<<", addToPSList? "<<addToPSList<<" (psSubtractionMethod="<<psSubtractionMethod<<", dilateSourceType="<<dilateSourceType<<"), isDilatedSource? "<<isDilatedSource<<", isBrightSource? "<<isBrightSource);
 
 
 		//Select source
@@ -2699,7 +2699,7 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 	}//end loop dilated sources
 
 	//Re-compute stats of residual image
-	INFO_LOG("Recomputing stats of residual image...");
+	DEBUG_LOG("Recomputing stats of residual image...");
 	residualImg->ComputeStats(true,true,false);
 
 	return residualImg;

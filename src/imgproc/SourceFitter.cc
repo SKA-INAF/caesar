@@ -133,7 +133,7 @@ int SourceFitter::InitData(Source* aSource,SourceFitOptions& fitOptions)
 {
 	//## Check if stats has been computed, otherwise compute them
 	if(!aSource->HasStats()){
-		INFO_LOG("Input source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") has no stats computed, computing them now...");
+		DEBUG_LOG("Input source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") has no stats computed, computing them now...");
 		aSource->ComputeStats();
 	}
 
@@ -149,7 +149,7 @@ int SourceFitter::InitData(Source* aSource,SourceFitOptions& fitOptions)
 	double normFactor= Smax;
 
 	//## Fill source flux histo
-	INFO_LOG("Filling flux histo for source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") ...");
+	DEBUG_LOG("Filling flux histo for source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") ...");
 	m_bkgMean= 0.;
 	m_rmsMean= 0.;
 	long int ndata= 0;
@@ -339,7 +339,7 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 				double theta= fitOptions.bpa;
 					
 				if(useDeblendedBlobPars && deblendedBlobs[i]){
-					INFO_LOG("Computing pars of blended component no. "<<i+1<<" (nPix="<<deblendedBlobs[i]->GetNPixels()<<") for source "<<aSource->GetName()<<" ...");
+					DEBUG_LOG("Computing pars of blended component no. "<<i+1<<" (nPix="<<deblendedBlobs[i]->GetNPixels()<<") for source "<<aSource->GetName()<<" ...");
 					double sigmaX_sample_blended= 0;
 					double sigmaY_sample_blended= 0;
 					double covXY_sample_blended= 0;
@@ -392,7 +392,7 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 			//Remove faint peaks
 			if(Zpeak_imgbkg<fitOptions.peakZThrMin) {
 			//if(Zpeak_sourcebkg<fitOptions.peakZThrMin) {
-				INFO_LOG("Removing nested source no. "<<i<<" (name="<<nestedSources[i]->GetName()<<", pos("<<x<<","<<y<<")) from the component list as below peak significance thr (Zpeak(imgbkg)="<<Zpeak_imgbkg<<", Zpeak(sourcebkg)="<<Zpeak_sourcebkg<<"<"<<fitOptions.peakZThrMin<<")");
+				DEBUG_LOG("Removing nested source no. "<<i<<" (name="<<nestedSources[i]->GetName()<<", pos("<<x<<","<<y<<")) from the component list as below peak significance thr (Zpeak(imgbkg)="<<Zpeak_imgbkg<<", Zpeak(sourcebkg)="<<Zpeak_sourcebkg<<"<"<<fitOptions.peakZThrMin<<")");
 				continue;
 			}
 
@@ -496,7 +496,6 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 
 	INFO_LOG("#"<<fitPars_start.size()<<" fit components will be fitted...");
 
-	
 	return 0;
 
 }//close EstimateFitComponents()
@@ -1068,7 +1067,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	long int niters_fit= 0;
 	long int niters_fit_max= fitOptions.fitNRetries;	
 
-	INFO_LOG("Start fit procedure (nretries="<<niters_fit_max<<")");
+	INFO_LOG("Start full fit (nretries="<<niters_fit_max<<")");
 	while(!stopFit){
 		//Perform minimization
 		INFO_LOG("Fitting source "<<aSource->GetName()<<" (#"<<niters_fit<<" iter cycles performed) ...");

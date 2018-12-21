@@ -1379,7 +1379,7 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 		thresholdLevels.push_back(thrLevel);
 
 		//Zero-threshold filtered map
-		INFO_LOG("Zero-thresholding LoG map @ scale "<<sigma<<" (thr="<<thrLevel<<") ...");
+		DEBUG_LOG("Zero-thresholding LoG map @ scale "<<sigma<<" (thr="<<thrLevel<<") ...");
 		filterMap->ApplyThreshold(thrLevel);
 
 		//Find peaks in filter map
@@ -1416,8 +1416,7 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 			long int iy= filterMap->GetBinY(gbin);
 			double Speak= filterMap->GetBinContent(gbin);
 			double Speak_img= img->GetBinContent(gbin);
-			INFO_LOG("Scale no. "<<i+1<<" (scale="<<sigma<<", peak no. "<<k+1<<", S="<<Speak<<", pos("<<x<<","<<y<<"), pixel pos("<<ix<<","<<iy<<")");
-
+			DEBUG_LOG("Scale no. "<<i+1<<" (scale="<<sigma<<", peak no. "<<k+1<<", S="<<Speak<<", pos("<<x<<","<<y<<"), pixel pos("<<ix<<","<<iy<<")");
 
 			//Add peak to selected peak
 			PeakInfo peakInfo(gbin,ix,iy,Speak,(int)(i));
@@ -1461,7 +1460,7 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 
 		//Find best scale according to max peak across scales
 		for(size_t i=0;i<connected_indexes.size();i++){
-			INFO_LOG("Peak no. "<<i+1<<" detected in "<<connected_indexes[i].size()<<" scales...");
+			DEBUG_LOG("Peak no. "<<i+1<<" detected in "<<connected_indexes[i].size()<<" scales...");
 
 			double Speak_max= -1.e+99;
 			//int bestScaleIndex= 0;
@@ -1478,13 +1477,13 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 					//bestScaleIndex= index;
 					index_best= index;
 				}
-				INFO_LOG("Peak no. "<<i+1<<", scale="<<j<<": pos("<<ix<<","<<iy<<")");
+				DEBUG_LOG("Peak no. "<<i+1<<", scale="<<j<<": pos("<<ix<<","<<iy<<")");
 			}//end loop items in cluster
 		
 			int scale_best= peaks[index_best].scale;
 			long int ix_best= peaks[index_best].ix;
 			long int iy_best= peaks[index_best].iy;
-			INFO_LOG("Peak no. "<<i+1<<", best scale="<<scale_best<<": pos("<<ix_best<<","<<iy_best<<")");
+			DEBUG_LOG("Peak no. "<<i+1<<", best scale="<<scale_best<<": pos("<<ix_best<<","<<iy_best<<")");
 			peaks_best.push_back(peaks[index_best]);
 		}//end loop clusters	
 
@@ -1497,7 +1496,6 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 
 	INFO_LOG("#"<<peaks_best.size()<<" best peaks selected across scales ...");
 
-	
 	//Find blended blobs corresponding to best peaks
 	std::vector<PeakInfo> peaks_final;
 	for(size_t k=0;k<peaks_best.size();k++){

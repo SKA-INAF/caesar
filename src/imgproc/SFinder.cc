@@ -358,8 +358,8 @@ void SFinder::InitOptions()
 }//close InitOptions()
 
 
-int SFinder::Init(){
-
+int SFinder::Init()
+{
 	//## Init options
 	InitOptions();
 
@@ -1709,7 +1709,7 @@ Image* SFinder::FindExtendedSources(Image* inputImg,ImgBkgData* bkgData,TaskData
 	//****************************
 	//** Find residual map
 	//****************************
-	INFO_LOG("[PROC "<<m_procId<<"] - Computing residual image ...");
+	DEBUG_LOG("[PROC "<<m_procId<<"] - Computing residual image ...");
 	Image* residualImg= FindResidualMap(inputImg,bkgData,taskData->sources);
 	if(!residualImg){
 		ERROR_LOG("Residual map computation failed!");

@@ -26,8 +26,8 @@
 */
 
 
-#ifndef SysUtils_h
-#define SysUtils_h 1
+#ifndef _SYS_UTILS_h
+#define _SYS_UTILS_h 1
 
 #include <TObject.h>
 
@@ -45,6 +45,7 @@
 #include <map>
 #include <time.h>
 #include <ctime>
+#include <limits.h>
 
 
 using namespace std;
@@ -182,7 +183,7 @@ class SysUtils : public TObject {
 		*/
    	virtual ~SysUtils();
 
-		
+				
 	public:
 
 		/**
@@ -274,6 +275,19 @@ class SysUtils : public TObject {
 		* \brief Get process used virtual memory
 		*/
 		static int GetProcMemoryInfo(ProcMemInfo& info);
+
+		/**
+		* \brief Get hostname
+		*/
+		static std::string GetHost();
+
+		/**
+		* \brief Get processor id
+		*/
+		static int GetProcId();
+
+	protected:
+		
 
 	private:
 	
