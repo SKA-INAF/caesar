@@ -1389,7 +1389,7 @@ generate_config(){
 		echo '//==  SOURCE RESIDUAL OPTIONS   =='
 		echo '//================================'
 		echo "removeNestedSources = $RESIDUAL_REMOVE_NESTED				| Dilate sources nested inside bright sources (T/F)"
-		echo "residualZThr = $DRESIDUAL_ZTHR                      | Significance threshold (in sigmas) above which sources of selected type are dilated"
+		echo "residualZThr = $RESIDUAL_ZTHR                      | Significance threshold (in sigmas) above which sources of selected type are dilated"
 		echo "residualZHighThr = $RESIDUAL_ZHIGHTHR               | Significance threshold (in sigmas) above which sources are always dilated (even if they have nested or different type)"
 		echo "dilateKernelSize = $DILATE_KERNEL_SIZE							| Size of kernel (odd) to be used in dilation operation"
 		echo "removedSourceType = $RESIDUAL_REMOVED_SOURCE_TYPE   | Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"
