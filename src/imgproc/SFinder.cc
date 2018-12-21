@@ -3416,18 +3416,20 @@ int SFinder::SaveCatalogFile()
 	}
 	
 	//Saving source fitted components to ascii file
-	INFO_LOG("[PROC "<<m_procId<<"] - Writing source catalog to file "<<m_catalogComponentsOutFileName<<" ...");
-	status= SourceExporter::WriteComponentsToAscii(m_catalogComponentsOutFileName,m_SourceCollection,dumpNestedSourceInfo,m_ds9WCSType,wcs);
-	if(status<0){
-		WARN_LOG("[PROC "<<m_procId<<"] - Writing source fitted component catalog to file "<<m_catalogOutFileName<<" failed!");
+	if(m_fitSources){
+		INFO_LOG("[PROC "<<m_procId<<"] - Writing source catalog to file "<<m_catalogComponentsOutFileName<<" ...");
+		status= SourceExporter::WriteComponentsToAscii(m_catalogComponentsOutFileName,m_SourceCollection,dumpNestedSourceInfo,m_ds9WCSType,wcs);
+		if(status<0){
+			WARN_LOG("[PROC "<<m_procId<<"] - Writing source fitted component catalog to file "<<m_catalogOutFileName<<" failed!");
+		}
 	}
 
 	return 0;
 
 }//close SaveCatalogFile()
 
-int SFinder::Save(){
-
+int SFinder::Save()
+{
 	INFO_LOG("[PROC "<<m_procId<<"] - Storing results to file & catalog...");
 
 	//Save DS9 regions?
