@@ -84,7 +84,7 @@ struct SourceFitOptions {
 		nMaxComponents= 3;	
 		fixCentroidInPreFit= false;
 		limitCentroidInFit= true;
-		centroidLimit= 0.2;
+		centroidLimit= 5;//pixels
 		fixBkg= true;
 		limitBkgInFit= true;
 		useEstimatedBkgLevel= true;
@@ -137,6 +137,8 @@ struct SourceFitOptions {
 		fitParBoundIncreaseStepSize= 0.1;
 
 		wcsType= eJ2000;
+		fitScaleDataToMax= false;
+
 
 	}//close constructor
 
@@ -222,6 +224,9 @@ struct SourceFitOptions {
 
 		//- Fit ellipse pars
 		int wcsType;
+	
+		//- Scale data to max
+		bool fitScaleDataToMax;
 
 };//close SourceFitOptions
 

@@ -145,7 +145,8 @@ int SourceFitter::InitData(Source* aSource,SourceFitOptions& fitOptions)
 	std::vector<Pixel*> pixels= aSource->GetPixels();
 	m_sourceX0= aSource->GetSx();
 	m_sourceY0= aSource->GetSy();
-
+	double Smax= aSource->GetSmax();
+	double normFactor= Smax;
 
 	//## Fill source flux histo
 	INFO_LOG("Filling flux histo for source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") ...");
@@ -174,8 +175,15 @@ int SourceFitter::InitData(Source* aSource,SourceFitOptions& fitOptions)
 		}
 
 		//Scale and fill fit data
-		S*= 1.e+3;//convert to mJy/beam
-		S_err*= 1.e+3;//convert to mJy/beam
+		if(fitOptions.fitScaleDataToMax){//scale to max pixel flux
+			S/= normFactor;
+			S_err/= normFactor;
+		}
+		else{//convert to mJy/beam
+			S*= 1.e+3;
+			S_err*= 1.e+3;
+		}
+
 		x-= m_sourceX0;
 		y-= m_sourceY0;
 		if(rms>0 && fitOptions.useFluxZCut){
@@ -206,11 +214,17 @@ int SourceFitter::InitData(Source* aSource,SourceFitOptions& fitOptions)
 		m_rmsMean/= (double)(ndata_rms);
 	}
 
-	//Convert bkg & rms to mJy
-	m_bkgMean*= 1.e+3;//convert to mJy
-	m_rmsMean*= 1.e+3;//convert to mJy
-
-	INFO_LOG("Source (name="<<aSource->GetName()<<", N="<<pixels.size()<<", pos("<<m_sourceX0<<","<<m_sourceY0<<")) bkg info: <bkg(mJy)>="<<m_bkgMean<<", <rms(mJy)>="<<m_rmsMean);
+	//Convert bkg & rms to mJy	
+	if(fitOptions.fitScaleDataToMax){
+		m_bkgMean/= normFactor;//scale to max pix flux
+		m_rmsMean/= normFactor;//scale to max pix flux
+		INFO_LOG("Source (name="<<aSource->GetName()<<", N="<<pixels.size()<<", Smax="<<Smax<<", pos("<<m_sourceX0<<","<<m_sourceY0<<")) bkg info: <bkg(norm)>="<<m_bkgMean<<", <rms(norm)>="<<m_rmsMean);	
+	}
+	else{
+		m_bkgMean*= 1.e+3;//convert to mJy
+		m_rmsMean*= 1.e+3;//convert to mJy
+		INFO_LOG("Source (name="<<aSource->GetName()<<", N="<<pixels.size()<<", pos("<<m_sourceX0<<","<<m_sourceY0<<")) bkg info: <bkg(mJy)>="<<m_bkgMean<<", <rms(mJy)>="<<m_rmsMean);
+	}
 
 	return 0;
 
@@ -306,7 +320,8 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 		if(peaks.size()==1){
 			fitPars_start.push_back( std::vector<double>() );
 			
-			fitPars_start[0].push_back(Smax*1.e+3);//converted in mJy
+			if(fitOptions.fitScaleDataToMax) fitPars_start[0].push_back(1);//scaled to max pix flux
+			else fitPars_start[0].push_back(Smax*1.e+3);//converted in mJy
 			fitPars_start[0].push_back(meanX-m_sourceX0);//normalized to centroid
 			fitPars_start[0].push_back(meanY-m_sourceY0);//normalized to centroid
 			fitPars_start[0].push_back(sigmaX);
@@ -340,7 +355,8 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 				}//close if use deblended blob pars
 
 				fitPars_start.push_back( std::vector<double>() );
-				fitPars_start[i].push_back(Speak*1.e+3);//converted in mJy
+				if(fitOptions.fitScaleDataToMax) fitPars_start[i].push_back(Speak/Smax);//scaled to max pix flux
+				else fitPars_start[i].push_back(Speak*1.e+3);//converted in mJy
 				fitPars_start[i].push_back(x-m_sourceX0);//normalized to centroid
 				fitPars_start[i].push_back(y-m_sourceY0);//normalized to centroid
 				fitPars_start[i].push_back(sigmaX);
@@ -442,7 +458,8 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 			}			
 			if(peaks.size()<=1){
 				fitPars_start.push_back( std::vector<double>() );	
-				fitPars_start[componentCounter].push_back(Smax*1.e+3);//converted to mJy
+				if(fitOptions.fitScaleDataToMax) fitPars_start[componentCounter].push_back(Smax/aSource->GetSmax());//scaled to max pix flux
+				else fitPars_start[componentCounter].push_back(Smax*1.e+3);//converted to mJy
 				fitPars_start[componentCounter].push_back(meanX-m_sourceX0);//normalized to centroid
 				fitPars_start[componentCounter].push_back(meanY-m_sourceY0);//normalized to centroid
 				fitPars_start[componentCounter].push_back(sigmaX);
@@ -461,8 +478,9 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 					double sigmaY= fitOptions.bmin/GausSigma2FWHM;
 					double theta= fitOptions.bpa;
 	
-					fitPars_start.push_back( std::vector<double>() );	
-					fitPars_start[componentCounter].push_back(Speak*1.e+3);//converted to mJy
+					fitPars_start.push_back( std::vector<double>() );
+					if(fitOptions.fitScaleDataToMax) fitPars_start[componentCounter].push_back(Speak/aSource->GetSmax());//scaled to max pix flux	
+					else fitPars_start[componentCounter].push_back(Speak*1.e+3);//converted to mJy
 					fitPars_start[componentCounter].push_back(x-m_sourceX0);//normalized to centroid
 					fitPars_start[componentCounter].push_back(y-m_sourceY0);//normalized to centroid
 					fitPars_start[componentCounter].push_back(sigmaX);
@@ -553,11 +571,17 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	double Xmax_norm= Xmax-m_sourceX0;
 	double Ymin_norm= Ymin-m_sourceY0;
 	double Ymax_norm= Ymax-m_sourceY0;
-
-	//Convert to mJy
-	Smax*= 1.e+3;
-	Smin*= 1.e+3;
-
+	double normFactor= aSource->GetSmax();
+	
+	if(fitOptions.fitScaleDataToMax){//Scaled to max pixel flux
+		Smax= 1;
+		Smin/= normFactor;	
+	}
+	else{//Convert to mJy	
+		Smax*= 1.e+3;
+		Smin*= 1.e+3;
+	}	
+	
 	//==============================================
 	//==             INITIALIZE FITTER
 	//==============================================
@@ -584,6 +608,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	std::vector<std::vector<double>> parLimits_min;
 	std::vector<std::vector<double>> parLimits_max;
 
+	
 	//- Offset
 	double offset= 0.;
 	double offset_min= 0;
@@ -591,18 +616,27 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	double offset_step= 0.1;
 	double offset_err= 0.;
 	std::string offsetParName= "offset";
-	if(fitOptions.useEstimatedBkgLevel) offset= m_bkgMean;//use estimated avg bkg
-	else offset= fitOptions.fixedBkgLevel*1.e+3;//use user-supplied bkg level converted in mJy
+	if(fitOptions.useEstimatedBkgLevel) {//use estimated avg bkg
+		offset= m_bkgMean;
+	}
+	else {
+		if(fitOptions.fitScaleDataToMax) offset= fitOptions.fixedBkgLevel/normFactor;//use user-supplied bkg level scaled to peak
+		else offset= fitOptions.fixedBkgLevel*1.e+3;//use user-supplied bkg level converted in mJy
+	}
+
 	if(m_bkgMean>Smax) {
 		WARN_LOG("Offset start par given/estimated is below min or above max source flux, setting it to Smin...");
 		offset= Smin;
 	}
 	offset_err= fabs(offset_step*offset);
+
+	/*
 	if(fitOptions.limitBkgInFit){
 		offset_min= std::min(Smin,offset-fabs(m_rmsMean));
 		offset_max= std::min(Smax,offset+fabs(m_rmsMean));
 		INFO_LOG("Limiting offset par "<<offset<<" in range ["<<offset_min<<","<<offset_max<<"]");
-	}
+	}	
+	*/
 	
 	//- Component pars
 	double Speak_step= 0.01;
@@ -623,6 +657,28 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		double Speak_max= 0;
 		double Speak_err= fabs(Speak*Speak_step);
 		std::string parName= Form("%s_%d",parNamePrefix[0].c_str(),i+1);
+
+		parNameMap.insert( std::make_pair(std::string(parName),par_counter) );
+		if(fitOptions.fixAmplInPreFit){	
+			INFO_LOG("Setting amplitude par fixed to "<<Speak);
+			fitter->SetFixedVariable(par_counter,parName,Speak);
+		}
+		else{
+			if(fitOptions.limitAmplInFit){
+				Speak_min= std::min(Smin, Speak*(1 - fitOptions.amplLimit) );
+				Speak_max= std::max(Smax, Speak*(1 + fitOptions.amplLimit) );
+				parLimits_min[i][0]= Speak_min;
+				parLimits_max[i][0]= Speak_max;
+				INFO_LOG("Limiting amplitude par "<<Speak<<" in range ["<<Speak_min<<","<<Speak_max<<"]");
+				fitter->SetLimitedVariable(par_counter,parName,Speak,Speak_err,Speak_min,Speak_max);
+			}
+			else{
+				INFO_LOG("Setting free amplitude par initialized to "<<Speak);
+				fitter->SetVariable(par_counter,parName,Speak,Speak_err);
+			}
+		}
+
+		/*
 		if(fitOptions.limitAmplInFit){
 			Speak_min= std::min(Smin, Speak*(1 - fitOptions.amplLimit) );
 			Speak_max= std::max(Smax, Speak*(1 + fitOptions.amplLimit) );
@@ -635,6 +691,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		if(fitOptions.fixAmplInPreFit){
 			fitter->FixVariable(par_counter);
 		}
+		*/
 
 		//- Centroids
 		double x0= fitPars_start[i][1];
@@ -646,6 +703,38 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		double x0_max= 0;
 		double y0_min= 0;
 		double y0_max= 0;
+
+		std::string parName_x0= Form("%s_%d",parNamePrefix[1].c_str(),i+1);
+		std::string parName_y0= Form("%s_%d",parNamePrefix[2].c_str(),i+1);
+		parNameMap.insert( std::make_pair(std::string(parName_x0),par_counter+1) );
+		parNameMap.insert( std::make_pair(std::string(parName_y0),par_counter+2) );
+		
+		if(fitOptions.fixCentroidInPreFit){
+			fitter->SetFixedVariable(par_counter+1,parName_x0,x0);		
+			fitter->SetFixedVariable(par_counter+2,parName_y0,y0);
+		}
+		else{
+			if(fitOptions.limitCentroidInFit){
+				x0_min= std::max(x0 - centroidLimit,Xmin_norm);
+				x0_max= std::min(x0 + centroidLimit,Xmax_norm);
+				y0_min= std::max(y0 - centroidLimit,Ymin_norm);
+				y0_max= std::min(y0 + centroidLimit,Ymax_norm);
+				parLimits_min[i][1]= x0_min;
+				parLimits_max[i][1]= x0_max;
+				parLimits_min[i][2]= y0_min;
+				parLimits_max[i][2]= y0_max;
+				INFO_LOG("Limiting centroid pars (x,y)=("<<x0<<","<<y0<<")"<<" to bounds x0("<<x0_min<<","<<x0_max<<"), y0("<<y0_min<<","<<y0_max<<")");
+				fitter->SetLimitedVariable(par_counter+1,parName_x0,x0,x0_err,x0_min,x0_max);
+				fitter->SetLimitedVariable(par_counter+2,parName_y0,y0,y0_err,y0_min,y0_max);
+			}
+			else{
+				INFO_LOG("Setting free centroid pars initialized to (x,y)=("<<x0<<","<<y0<<")");
+				fitter->SetVariable(par_counter+1,parName_x0,x0,x0_err);
+				fitter->SetVariable(par_counter+2,parName_y0,y0,y0_err);
+			}
+		}
+
+		/*
 		if(fitOptions.limitCentroidInFit){
 			x0_min= std::max(x0 - centroidLimit,Xmin_norm);
 			x0_max= std::min(x0 + centroidLimit,Xmax_norm);
@@ -667,7 +756,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 			fitter->FixVariable(par_counter+1);		
 			fitter->FixVariable(par_counter+2);
 		}			
-	
+		*/
 
 		//- Sigmas
 		double sigmaX= fitPars_start[i][3];
@@ -680,6 +769,39 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		double sigmaY_min= 0;
 		double sigmaX_max= 0;
 		double sigmaY_max= 0;
+
+		std::string parName_sx= Form("%s_%d",parNamePrefix[3].c_str(),i+1);
+		std::string parName_sy= Form("%s_%d",parNamePrefix[4].c_str(),i+1);
+		parNameMap.insert( std::make_pair(std::string(parName_sx),par_counter+3) );
+		parNameMap.insert( std::make_pair(std::string(parName_sy),par_counter+4) );
+
+		if(fitOptions.fixSigmaInPreFit){
+			INFO_LOG("Setting sigma pars fixed to (sigmaX,sigmaY)=("<<sigmaX<<","<<sigmaY<<")");
+			fitter->SetFixedVariable(par_counter+3,parName_sx,sigmaX);
+			fitter->SetFixedVariable(par_counter+4,parName_sy,sigmaY);
+		}
+		else{
+			if(fitOptions.limitSigmaInFit){
+				sigmaX_min= std::max(0.,sigmaX*(1-fitOptions.sigmaLimit));
+				sigmaY_min= std::max(0.,sigmaY*(1-fitOptions.sigmaLimit));
+				sigmaX_max= std::max(sourceSigmaMax_x,sigmaX*(1+fitOptions.sigmaLimit));
+				sigmaY_max= std::max(sourceSigmaMax_y,sigmaY*(1+fitOptions.sigmaLimit));
+				parLimits_min[i][3]= sigmaX_min;
+				parLimits_max[i][3]= sigmaX_max;
+				parLimits_min[i][4]= sigmaY_min;
+				parLimits_max[i][4]= sigmaY_max;
+				INFO_LOG("Limiting sigma pars (sigmaX,sigmaY)=("<<sigmaX<<","<<sigmaY<<")"<<" to bounds sigmaX("<<sigmaX_min<<","<<sigmaX_max<<"), sigmaY("<<sigmaY_min<<","<<sigmaY_max<<"), bmaj="<<fitOptions.bmaj<<", bmin="<<fitOptions.bmin);
+				fitter->SetLimitedVariable(par_counter+3,parName_sx,sigmaX,sigmaX_err,sigmaX_min,sigmaX_max);
+				fitter->SetLimitedVariable(par_counter+4,parName_sy,sigmaY,sigmaY_err,sigmaY_min,sigmaY_max);	
+			}
+			else{
+				INFO_LOG("Setting free sigma pars initialized to (sigmaX,sigmaY)=("<<sigmaX<<","<<sigmaY<<")");
+				fitter->SetVariable(par_counter+3,parName_sx,sigmaX,sigmaX_err);
+				fitter->SetVariable(par_counter+4,parName_sy,sigmaY,sigmaY_err);	
+			}
+		}
+
+		/*
 		if(fitOptions.limitSigmaInFit){
 			sigmaX_min= std::max(0.,sigmaX*(1-fitOptions.sigmaLimit));
 			sigmaY_min= std::max(0.,sigmaY*(1-fitOptions.sigmaLimit));
@@ -701,6 +823,8 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 			fitter->FixVariable(par_counter+3);		
 			fitter->FixVariable(par_counter+4);		
 		}
+		*/
+
 
 		//- Theta		
 		double theta= fitPars_start[i][5];
@@ -708,6 +832,30 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		double theta_max= 0;
 		double theta_err= fabs(theta*theta_step);
 		double theta_limits= fitOptions.thetaLimit*TMath::DegToRad();
+
+		parName= Form("%s_%d",parNamePrefix[5].c_str(),i+1);
+		parNameMap.insert( std::make_pair(std::string(parName),par_counter+5) );
+
+		if(fitOptions.fixThetaInPreFit){//Fix theta par in pre-fit?
+			INFO_LOG("Setting theta par fixed to "<<theta);
+			fitter->SetFixedVariable(par_counter+5,parName,theta);	
+		}
+		else{
+			if(fitOptions.limitThetaInFit){
+				theta_min= theta - theta_limits;
+				theta_max= theta + theta_limits;
+				parLimits_min[i][5]= theta_min;
+				parLimits_max[i][5]= theta_max;
+				INFO_LOG("Limiting theta par "<<theta<<" to bounds ("<<theta_min<<","<<theta_max<<")");
+				fitter->SetLimitedVariable(par_counter+5,parName,theta,theta_err,theta_min,theta_max);
+			}
+			else{
+				INFO_LOG("Setting free theta par initialized to "<<theta);
+				fitter->SetVariable(par_counter+5,parName,theta,theta_err);	
+			}
+		}
+
+		/*
 		if(fitOptions.limitThetaInFit){
 			theta_min= theta - theta_limits;
 			theta_max= theta + theta_limits;
@@ -721,6 +869,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		if(fitOptions.fixThetaInPreFit){//Fix theta par in pre-fit?
 			fitter->FixVariable(par_counter+5);	
 		}
+		*/
 		
 		//Update par counter
 		par_counter+= nComponentPars;
@@ -728,9 +877,28 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	}//end loop components
 
 	//- Offset
+	if(fitOptions.fixBkg){
+		INFO_LOG("Setting offset par fixed to "<<offset);
+		fitter->SetFixedVariable(nFitPars-1,offsetParName,offset);	
+	}
+	else{
+		if(fitOptions.limitBkgInFit){
+			offset_min= std::min(Smin,offset-fabs(m_rmsMean));
+			offset_max= std::min(Smax,offset+fabs(m_rmsMean));
+			INFO_LOG("Limiting offset par "<<offset<<" in range ["<<offset_min<<","<<offset_max<<"]");
+			fitter->SetLimitedVariable(nFitPars-1,offsetParName,offset,offset_err,offset_min,offset_max);
+		}	
+		else{
+			INFO_LOG("Setting free offset par initialized to "<<offset);
+			fitter->SetVariable(nFitPars-1,offsetParName,offset,offset_err);
+		}
+	}
+
+	/*
+	//- Offset
 	fitter->SetLimitedVariable(nFitPars-1,offsetParName,offset,offset_err,offset_min,offset_max);
 	fitter->FixVariable(nFitPars-1);//Fix offset par for pre-fit
-	
+	*/
 
 	//==============================================
 	//==             PRE-FIT
@@ -743,6 +911,15 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		WARN_LOG("Source pre-fit failed or did not converge, trying to perform the full fit...");
 		m_fitStatus= eFitNotConverged;
 	}	
+
+	//## Retrieve fit status code (depends on minimizer)
+	int prefitMinimizerStatusCode= fitter->Status();
+	double prefitEdm= fitter->Edm();
+	double prefitFcnMin= fitter->MinValue();
+	unsigned int prefixNCalls= fitter->NCalls();
+	unsigned int prefixNIters= fitter->NIterations(); 
+	INFO_LOG("Source pre-fit ended up after #"<<prefixNIters<<" iterations and #"<<prefixNCalls<<" calls with a minimizer status "<<prefitMinimizerStatusCode<<" (fcnMin="<<prefitFcnMin<<", Edm="<<prefitEdm<<") ...");
+	
 
 	//==============================================
 	//==             RELEASE PARS
@@ -972,7 +1149,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		}//close if
 
 		if(niters_fit>niters_fit_max || !fitOptions.fitImproveConvergence) {	
-			WARN_LOG("Maximum number of fitting cycles reached ("<<niters_fit_max<<"), will stop fitting!");
+			WARN_LOG("Maximum number of fitting cycles reached ("<<niters_fit_max<<") or no further improvements required, will stop fitting!");
 			break;
 		}
 		niters_fit++;
@@ -1048,9 +1225,15 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 			if(parName=="y0"){
 				parVal+= m_sourceY0;
 			}
-			if(parName=="A"){//convert to Jy
-				parVal/= 1.e+3;
-				parErr/= 1.e+3;
+			if(parName=="A"){
+				if(fitOptions.fitScaleDataToMax){//convert to original scale
+					parVal*= normFactor;
+					parErr*= normFactor;
+				}
+				else{//convert back to Jy
+					parVal/= 1.e+3;
+					parErr/= 1.e+3;
+				}
 			}
 			if(parName=="theta"){//convert to deg
 				parVal*= TMath::RadToDeg();
@@ -1088,9 +1271,15 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		}
 	}
 	
-	m_sourceFitPars.SetOffsetPar(fittedOffset/1.e+3);//convert back to Jy
-	m_sourceFitPars.SetOffsetParErr(fittedOffsetErr/1.e+3);//convert back to Jy
-
+	if(fitOptions.fitScaleDataToMax){//convert back to original scale
+		m_sourceFitPars.SetOffsetPar(fittedOffset*normFactor);
+		m_sourceFitPars.SetOffsetParErr(fittedOffsetErr*normFactor);
+	}
+	else{//convert back to Jy
+		m_sourceFitPars.SetOffsetPar(fittedOffset/1.e+3);
+		m_sourceFitPars.SetOffsetParErr(fittedOffsetErr/1.e+3);
+	}
+	
 	//Set fit status if any pars at limits
 	if(m_fitStatus==eFitConverged && hasParsAtLimits) m_fitStatus= eFitConvergedWithWarns;	
 	fitStatus= fitter->Status();
