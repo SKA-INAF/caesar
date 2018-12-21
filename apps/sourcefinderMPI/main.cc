@@ -58,6 +58,8 @@ static const struct option options_tab[] = {
 //Options
 std::string configFileName= "";
 bool mpiRunEnabled= true;
+int nproc= 1;
+int procid= 0;
 
 //Functions
 int ParseOptions(int argc, char *argv[]);
@@ -76,7 +78,45 @@ int main(int argc, char *argv[])
 	//================================
 	//== RUN SOURCE FINDER
 	//================================
+	//Start timer
+	auto t0 = chrono::steady_clock::now();	
+
+	//Create finder 
+	SFinder* finder= new SFinder;
+
+	//Run finder
+	INFO_LOG("Starting source finding");
+	if(finder->Run()<0){
+		ERROR_LOG("Source finding failed!");
+	}
+	else{
+		INFO_LOG("End source finding");
+	}
+
+	//Clear finder
+	if(finder){
+		DEBUG_LOG("Clearing up sfinder object ...");
+		delete finder;
+		finder= 0;
+	}
+
+	//End timer
+	auto t1 = chrono::steady_clock::now();	
+	double dt= chrono::duration <double, milli> (t1-t0).count();
+	INFO_LOG("Total time spent (s): "<<dt/1000.);
+	
+
+	//Close MPI run if enabled
 	if(mpiRunEnabled){
+		INFO_LOG("Finalizing MPI run...");
+		MPI_Finalize();
+		INFO_LOG("MPI comm finalized with success");
+	}
+
+
+	/*
+	if(mpiRunEnabled){
+
 		//## INIT MPI
 		char processor_name[MPI_MAX_PROCESSOR_NAME];
 		int nproc;
@@ -88,8 +128,8 @@ int main(int argc, char *argv[])
 		int namelen;
 		MPI_Get_processor_name(processor_name,&namelen);
 		double startTime= MPI_Wtime();
-		INFO_LOG("[PROC "<<procid<<"] - INFO: Process "<<procid<<" running on processor "<<processor_name);
-
+		INFO_LOG("[PROC "<<procid<<"] - Process "<<procid<<" running on host "<<processor_name);
+		
 		//## RUN FINDER
 		INFO_LOG("[PROC "<<procid<<"] - Starting source finding");
 		SFinder* finder= new SFinder;
@@ -130,7 +170,7 @@ int main(int argc, char *argv[])
 			finder= 0;
 		}
 	}//close else
-
+	*/
 
 	return 0;
 
@@ -182,12 +222,38 @@ int ParseOptions(int argc, char *argv[])
     }//close switch
 	}//close while
  
+
+	//## Initializing MPI
+	if(mpiRunEnabled){
+		//Initialize MPI comm
+		char processor_name[MPI_MAX_PROCESSOR_NAME];
+		MPI_Init(&argc, &argv);
+		MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+		MPI_Comm_rank(MPI_COMM_WORLD, &procid);
+		
+		//Print processor host
+		//int namelen;
+		//MPI_Get_processor_name(processor_name,&namelen);
+		//INFO_LOG("[PROC "<<procid<<"] - Process "<<procid<<" running on host "<<processor_name);
+	}
+	//else{
+	//	std::string host= SysUtils::GetHost();
+	//	INFO_LOG("[PROC "<<procid<<"] - Process "<<procid<<" running on host "<<host);
+	//}
+
 	//## Read config options 
 	if(ConfigParser::Instance().Parse(configFileName)<0){
 		cerr<<"ERROR: Failed to parse config options!"<<endl;
 		return -1;
 	}
-	PRINT_OPTIONS();
+
+	if(procid==0){
+		cout<<endl;
+		cout<<"== RUN CONFIG OPTIONS =="<<endl;
+		PRINT_OPTIONS();
+		cout<<"========================"<<endl;
+		cout<<endl;
+	}
 
 	//=======================
 	//== Init Logger 
