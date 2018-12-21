@@ -119,12 +119,12 @@ if [ "$NARGS" -lt 2 ]; then
 	echo ""
 	
 	echo "=== SFINDER SOURCE RESIDUAL OPTIONS ==="
-	echo "--dilatenested - When a source has nested sources perform the dilation only on nested (default=false)"
-	echo "--dilatethr=[DILATE_THR] - Seed threshold (in nsigmas) used to dilate sources (default=5 sigmas)"	
-	echo "--dilatebrightthr=[DILATE_BRIGHT_THR] - Seed threshold (in nsigmas) used to dilate sources (even if they have nested components or different dilation type) (default=10 sigmas)"	
+	echo "--res-removenested - When a source has nested sources remove only on nested (default=false)"
+	echo "--res-zthr=[RESIDUAL_ZTHR] - Seed threshold (in nsigmas) used to dilate sources (default=5 sigmas)"	
+	echo "--res-zhighthr=[RESIDUAL_ZHIGHTHR] - Seed threshold (in nsigmas) used to dilate sources (even if they have nested components or different dilation type) (default=10 sigmas)"		
 	echo "--dilatekernsize=[DILATE_KERNEL_SIZE] - Size of dilating kernel in pixels (default=9)"
-	echo "--dilatedsource=[DILATED_SOURCE] - Type of source dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED) (default=2)"
-	echo "--pssubtractionmethod=[PS_SUBTRACTION_METHOD] - Method used to subtract point-sources in residual map (1=DILATION, 2=FIT MODEL REMOVAL)"
+	echo "--res-removedsourcetype=[RESIDUAL_REMOVED_SOURCE_TYPE] - Type of source dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED) (default=2)"
+	echo "--res-pssubtractionmethod=[PS_SUBTRACTION_METHOD] - Method used to subtract point-sources in residual map (1=DILATION, 2=FIT MODEL REMOVAL)"
 	echo ""
 
 	echo "=== SFINDER SOURCE FITTING OPTIONS ==="
@@ -294,10 +294,15 @@ SEARCH_COMPACT_SOURCES="true"
 COMPACT_SOURCE_SEARCH_NITERS="5"
 SEED_THR_STEP="1"
 
-DILATE_NESTED="false"
-DILATE_BRIGHT_THR="10"
-DILATE_THR="5"
-DILATED_SOURCE="2"
+##DILATE_NESTED="false"
+RESIDUAL_REMOVE_NESTED="false"
+##DILATE_BRIGHT_THR="10"
+RESIDUAL_ZHIGHTHR="10"
+##DILATE_THR="5"
+RESIDUAL_ZTHR="5"
+##DILATED_SOURCE="2"
+RESIDUAL_REMOVED_SOURCE_TYPE="2"
+PS_SUBTRACTION_METHOD="1"
 DILATE_KERNEL_SIZE="9"
 USE_PRESMOOTHING="true"
 SMOOTH_FILTER="2"
@@ -306,7 +311,6 @@ GUIDED_FILTER_EPS="0.04"
 EXT_SFINDER_METHOD="3"
 AC_METHOD="2"
 
-PS_SUBTRACTION_METHOD="1"
 
 SELECT_SOURCES="false"
 USE_BOUNDING_BOX_CUT="true"
@@ -707,22 +711,22 @@ do
 		;;
 
 		## RESIDUAL OPTIONS
-		--dilatethr=*)
-    	DILATE_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		--res-zthr=*)
+    	RESIDUAL_ZTHR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
-		--dilatebrightthr=*)
-    	DILATE_BRIGHT_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		--res-zhighthr=*)
+    	RESIDUAL_ZHIGHTHR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
-		--dilatenested*)
-			DILATE_NESTED="true"		
+		--res-removenested*)
+			RESIDUAL_REMOVE_NESTED="true"		
 		;;
-		--dilatedsource=*)
-			DILATED_SOURCE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		--res-removedsourcetype=*)
+			RESIDUAL_REMOVED_SOURCE_TYPE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--dilatekernsize=*)
 			DILATE_KERNEL_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
 		;;
-		--pssubtractionmethod=*)
+		--res-pssubtractionmethod=*)
 			PS_SUBTRACTION_METHOD=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 
@@ -1384,13 +1388,13 @@ generate_config(){
 		echo '//================================'
 		echo '//==  SOURCE RESIDUAL OPTIONS   =='
 		echo '//================================'
-		echo "removeNestedSources = $DILATE_NESTED								| Dilate sources nested inside bright sources (T/F)"
-		echo "residualZThr = $DILATE_THR                          | Significance threshold (in sigmas) above which sources of selected type are dilated"
-		echo "residualZHighThr = $DILATE_BRIGHT_THR               | Significance threshold (in sigmas) above which sources are always dilated (even if they have nested or different type)"
+		echo "removeNestedSources = $RESIDUAL_REMOVE_NESTED				| Dilate sources nested inside bright sources (T/F)"
+		echo "residualZThr = $DRESIDUAL_ZTHR                      | Significance threshold (in sigmas) above which sources of selected type are dilated"
+		echo "residualZHighThr = $RESIDUAL_ZHIGHTHR               | Significance threshold (in sigmas) above which sources are always dilated (even if they have nested or different type)"
 		echo "dilateKernelSize = $DILATE_KERNEL_SIZE							| Size of kernel (odd) to be used in dilation operation"
-		echo "removedSourceType = $DILATED_SOURCE									| Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"
-		echo 'residualModel = 1																    | Dilate source model  (1=bkg,2=median)'
-		echo 'residualModelRandomize = false											| Randomize dilated values (T/F)'
+		echo "removedSourceType = $RESIDUAL_REMOVED_SOURCE_TYPE   | Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"
+		echo 'residualModel = 1																    | Model used to replace residual pixel values (1=bkg,2=source median)'
+		echo 'residualModelRandomize = false											| Randomize pixel values used to replace residual pixels (T/F)'
 		echo "psSubtractionMethod = $PS_SUBTRACTION_METHOD        | Point-source subtraction method (1=dilation, 2=model subtraction (default=1)"
 		echo '###'
 		echo '###'
