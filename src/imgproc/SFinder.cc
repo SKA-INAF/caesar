@@ -909,11 +909,13 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 	//== Fit sources not at edge
 	//============================
 	if(!stopTask){
-		INFO_LOG("[PROC "<<m_procId<<"] - Fitting task sources not located at tile edge ...");
 		auto t0_sfit = chrono::steady_clock::now();
-		if(FitTaskSources()<0){
-			ERROR_LOG("[PROC "<<m_procId<<"] - Fitting sources not at tile edges failed!");
-			status= -1;
+		if(m_fitSources){
+			INFO_LOG("[PROC "<<m_procId<<"] - Fitting task sources not located at tile edge ...");
+			if(FitTaskSources()<0){
+				ERROR_LOG("[PROC "<<m_procId<<"] - Fitting sources not at tile edges failed!");
+				status= -1;
+			}
 		}
 		auto t1_sfit = chrono::steady_clock::now();	
 		sourceFitTime= chrono::duration <double, milli> (t1_sfit-t0_sfit).count();
@@ -3506,24 +3508,28 @@ int SFinder::Save()
 
 	//Save saliency map
 	if(m_saveSaliencyMap && m_SaliencyImg){
+		INFO_LOG("Saving saliency map to file...");
 		m_SaliencyImg->SetNameTitle("img_saliency","img_saliency");
 		m_SaliencyImg->Write();
 	}
 
 	//Save Laplacian
 	if(m_saveCurvatureMap && m_LaplImg){
+		INFO_LOG("Saving curvature map to file...");
 		m_LaplImg->SetNameTitle("img_lapl","img_lapl");
 		m_LaplImg->Write();
 	}
 
 	//Save Edgeness
 	if(m_saveEdgenessMap && m_EdgeImg){
+		INFO_LOG("Saving edgeness map to file...");
 		m_EdgeImg->SetNameTitle("img_edge","img_edge");
 		m_EdgeImg->Write();
 	}
 
 	//Save segmented map
 	if(m_saveSegmentedMap && m_SegmImg){
+		INFO_LOG("Saving segmented map to file...");
 		m_SegmImg->SetNameTitle("img_segm","img_segm");
 		m_SegmImg->Write();
 	}
