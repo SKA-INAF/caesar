@@ -384,14 +384,14 @@ class ConsoleLogger : public Logger {
 			//Get thread id
 			int threadId= SysUtils::GetOMPThreadId();
 			std::stringstream threadid_ss;
-			threadid_ss<<"THREAD"<<threadId;
+			threadid_ss<<"TID"<<threadId;
 			std::string threadid_str= threadid_ss.str();
 			log4cxx::MDC::put("thread", threadid_str);
 	
 			//Define log layout
 			//layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d %-5p [%c] %m%n") );
 			//layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d %-5p %m%n") );
-			layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d %-5p[%X{hostname}, %X{proc}, %X{thread}] %m%n") );			
+			layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d [%X{hostname}, %X{proc}, %X{thread}] %-5p%m%n") );			
 			if(!layout) return -1;
 
 			//Create and add appender
