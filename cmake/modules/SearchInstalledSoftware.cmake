@@ -292,4 +292,38 @@ if (ENABLE_VTK)
 	endif()	
 endif()
 
+#======================================
+#==   Check for WCSLIB              ===
+#======================================
+#if (NOT "$ENV{WCSLIB_ROOT_DIR}" STREQUAL "")
+#  set(WCSLIB_ROOT_DIR $ENV{WCSLIB_ROOT_DIR})
+#endif()
+#MESSAGE(STATUS WCSLIB_ROOT_DIR ${WCSLIB_ROOT_DIR})
+#MESSAGE(STATUS "Looking for WCS library")	
+#FIND_PACKAGE(WCSLIB REQUIRED)
+
+#MESSAGE(STATUS "WCSLIB_INCLUDE_DIRS= ${WCSLIB_INCLUDE_DIRS}")
+#MESSAGE(STATUS "WCSLIB_LIBRARIES= ${WCSLIB_LIBRARIES}")
+
+#======================================
+#==   Check for CASA CORE           ===
+#======================================
+option(ENABLE_CASACORE "Enable CASACORE" OFF)
+if (ENABLE_CASACORE)
+	if (NOT "$ENV{CASACORE_ROOT_DIR}" STREQUAL "")
+  	set(CASACORE_ROOT_DIR $ENV{CASACORE_ROOT_DIR})
+	endif()
+
+	MESSAGE(STATUS "Looking for CASACORE library")	
+	FIND_PACKAGE(Casacore REQUIRED)
+	if(CASACORE_FOUND)
+		MESSAGE(STATUS "CASACORE found, defining preprocessor flag CASACORE_ENABLED")
+		add_definitions(-DCASACORE_ENABLED=1)
+		MESSAGE(STATUS "CASACORE_INCLUDE_DIRS= ${CASACORE_INCLUDE_DIRS}")
+		MESSAGE(STATUS "CASACORE_LIBRARIES= ${CASACORE_LIBRARIES}")
+
+	else()
+		MESSAGE(SEND_ERROR "CASACORE not found!")
+	endif()	
+endif()
 

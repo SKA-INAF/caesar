@@ -106,7 +106,6 @@ if(ENABLE_MPI AND MPI_FOUND)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MPI_C_COMPILE_FLAGS}")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MPI_CXX_COMPILE_FLAGS}")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${MPI_CXX_LINK_FLAGS}")
-
 endif()
 
 #==============================================================================================
@@ -127,10 +126,6 @@ add_subdirectory(scripts)
 add_subdirectory(macros)
 add_subdirectory(data)
 
-##if(ENABLE_SERVER)
-	##add_subdirectory(server)
-##endif()
-
 
 #-- WCSTools
 set(WCSTOOL_DIR ${CMAKE_SOURCE_DIR}/external/wcstools/v3.9.2/libwcs)
@@ -143,7 +138,6 @@ set(WCSTOOL_HEADERS ${WCSTOOL_BUILD_DIR}/libwcs/wcs.h)
 list(APPEND WCSTOOL_HEADERS ${WCSTOOL_BUILD_DIR}/libwcs/wcslib.h)
 list(APPEND WCSTOOL_HEADERS ${WCSTOOL_BUILD_DIR}/libwcs/fitshead.h)
 set(WCSTOOL_INCLUDE_DIRS ${CMAKE_INSTALL_INCLUDEDIR})
-##set(WCSTOOL_LIBRARIES ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${WCSTOOL_LIB})
 set(WCSTOOL_LIBRARIES ${CMAKE_INSTALL_LIBDIR}/${WCSTOOL_LIB})
 
 #-- linterp
@@ -161,14 +155,15 @@ if (ENABLE_R)
 	list (APPEND INCLUDE_DIRS ${R_INCLUDE_DIR})
 endif()
 list (APPEND INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
-list (APPEND INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS})
+##list (APPEND INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS})
 list (APPEND INCLUDE_DIRS ${WCSTOOL_INCLUDE_DIRS})
 list (APPEND INCLUDE_DIRS ${LINTERP_INCLUDE_DIRS})
 list (APPEND INCLUDE_DIRS ${LOG4CXX_INCLUDE_DIRS})
 list (APPEND INCLUDE_DIRS ${JSONCPP_INCLUDE_DIR})
 list (APPEND INCLUDE_DIRS ${CFITSIO_INCLUDE_DIR})
 list (APPEND INCLUDE_DIRS ${PROTOBUF_INCLUDE_DIR})
-list (APPEND INCLUDE_DIRS ${GSL_INCLUDE_DIRS})
+##list (APPEND INCLUDE_DIRS ${GSL_INCLUDE_DIRS})
+list (APPEND INCLUDE_DIRS ${WCSLIB_INCLUDE_DIR})
 
 list (APPEND INCLUDE_DIRS ${LINTERP_DOWNLOAD_DIR})
 if (ENABLE_TEST)
@@ -181,6 +176,10 @@ endif()
 
 if (ENABLE_VTK)
 	list (APPEND INCLUDE_DIRS ${VTK_INCLUDE_DIRS})
+endif()
+
+if (ENABLE_CASACORE)
+	list (APPEND INCLUDE_DIRS ${CASACORE_INCLUDE_DIR})
 endif()
 
 include_directories(${INCLUDE_DIRS})
@@ -203,7 +202,11 @@ list (APPEND LINKED_LIBS ${LOG4CXX_LIBRARIES})
 list (APPEND LINKED_LIBS ${JSONCPP_LIBRARIES})
 list (APPEND LINKED_LIBS ${CFITSIO_LIBRARIES})
 list (APPEND LINKED_LIBS ${PROTOBUF_LIBRARIES})
-list (APPEND LINKED_LIBS ${GSL_LIBRARIES})
+###list (APPEND LINKED_LIBS ${GSL_LIBRARIES})
+
+list (APPEND LINKED_LIBS ${WCSLIB_LIBRARIES})
+
+
 if (ENABLE_TEST)
   list (APPEND LINKED_LIBS ${GTEST_BOTH_LIBRARIES})
 endif()
@@ -214,6 +217,10 @@ endif()
 
 if (ENABLE_VTK)
 	list (APPEND LINKED_LIBS ${VTK_LIBRARIES})
+endif()
+
+if (ENABLE_CASACORE)
+	list (APPEND LINKED_LIBS ${CASACORE_LIBRARIES})
 endif()
 
 message (STATUS "LINKED_LIBS: ${LINKED_LIBS}")
@@ -280,6 +287,7 @@ add_custom_command(
 add_custom_command(
 	#OUTPUT proto_generation
 	OUTPUT ${PROTO_GEN_FILES}
+	PRE_BUILD
 	COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} --proto_path=${PROTO_DIR} --cpp_out=${CMAKE_BINARY_DIR} ${PROTO_FILES}
   #DEPENDS always_rebuild  ### Decomment this to always generate protobuf files
 	DEPENDS ${PROTO_FILES}
@@ -287,8 +295,8 @@ add_custom_command(
 
 add_custom_target(ProtobufSchema ALL 
 	#DEPENDS proto_generation
-	DEPENDS ${PROTO_FILES}  ## Will generate source files only when proto files are changed
-	#DEPENDS ${PROTO_GEN_FILES}
+	#DEPENDS ${PROTO_FILES}  ## Will generate source files only when proto files are changed
+	DEPENDS ${PROTO_GEN_FILES}
 )
 
 #-----------------------------------------------------------------------------------------------
@@ -301,14 +309,16 @@ add_custom_target(ProtobufSchema ALL
 #--- Generate classes dictionary
 ##MESSAGE (STATUS "DICT_HEADERS: ${DICT_HEADERS}, $DICT_SRCS: ${DICT_SRCS}")
 ##ROOT_GENERATE_DICTIONARY(CaesarDict ${DICT_HEADERS} MODULE Caesar LINKDEF LinkDef.h)
-ROOT_GENERATE_DICTIONARY(CaesarDict ${DICT_HEADERS} LINKDEF LinkDef.h OPTIONS -DBOOST_LOG_USE_NATIVE_SYSLOG -DBOOST_LOG_DYN_LINK )
+ROOT_GENERATE_DICTIONARY(CaesarDict ${DICT_HEADERS} 
+	LINKDEF LinkDef.h 
+	OPTIONS -DBOOST_LOG_USE_NATIVE_SYSLOG -DBOOST_LOG_DYN_LINK 
+#	DEPENDENCIES ${PROTO_GEN_FILES}
+)
 
 
 #---Create a shared library with generated dictionary
 add_library(Caesar SHARED ${SRCS} CaesarDict.cxx)
 add_dependencies(Caesar ProtobufSchema LINTERP WCSTools)
-#add_library(Caesar SHARED ${PROTO_GEN_SRCS} ${SRCS} CaesarDict.cxx)
-#add_dependencies(Caesar LINTERP WCSTools)
 target_link_libraries(Caesar PUBLIC ${LINKED_LIBS})
 #===============================================================================================
 
@@ -584,15 +594,12 @@ install(FILES ${LINTERP_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # -- Install share files
 file(GLOB_RECURSE SHARE_FILES ${SHARE_SRC_DIR}/*)
-##MESSAGE(STATUS SHARE_FILES: ${SHARE_FILES})
 install(FILES ${SHARE_FILES} DESTINATION ${SHARE_INSTALL_DIR})
 
 # -- Install config files
-##MESSAGE(STATUS CONFIG_FILES: ${CONFIG_FILES})
 install(FILES ${CONFIG_FILES} DESTINATION ${CONFIG_INSTALL_DIR})
 
 # -- Install script files
-##MESSAGE(STATUS SCRIPT_FILES: ${SCRIPT_FILES})
 install(FILES ${SCRIPT_FILES} 
 	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE OWNER_EXECUTE GROUP_READ GROUP_WRITE GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
 	DESTINATION ${SCRIPT_INSTALL_DIR}
