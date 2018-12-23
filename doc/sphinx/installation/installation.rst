@@ -28,7 +28,8 @@ Optional dependencies are:
 
 Dependencies for the provided scripts are:
 
-* **python** (>=2.7) [https://www.python.org/], install also these additional modules: pyfits, astropy
+* **python** (>=2.7) [https://www.python.org/] and these additional modules: pyfits, astropy, scipy, getopt, argparse, collections, matplotlib, pylab
+* **CASA** [https://casa.nrao.edu/]
 
 
 Make sure you have set the following environment variables to the external library installation dirs:
