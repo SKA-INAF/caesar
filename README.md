@@ -34,23 +34,27 @@ Install the project mandatory dependencies:
 * cfitsio [https://heasarc.gsfc.nasa.gov/fitsio/fitsio.html], to be built with multithread support (e.g. give --enable-reentrant option in configure)
 * protobuf [https://github.com/google/protobuf]
 * jsoncpp [https://github.com/open-source-parsers/jsoncpp]
-* python (>=2.7) [https://www.python.org/], install also these additional modules: pyfits, astropy
 * cmake (>=2.8) [https://cmake.org]  
   
 Optional dependencies are:
-* MPICH [https://www.mpich.org/] or OpenMPI [https://www.open-mpi.org/], needed when the build option ENABLE_MPI=ON        
-* OpenMP [http://www.openmp.org/], needed when the build option BUILD_WITH_OPENMP=ON    
+* MPICH [https://www.mpich.org/] or OpenMPI [https://www.open-mpi.org/], needed when the build option ENABLE_MPI=ON (to enable parallel source finding application)       
+* OpenMP [http://www.openmp.org/], needed when the build option BUILD_WITH_OPENMP=ON (to enable multithread processing)  
 * R [https://www.r-project.org/], install also these additional packages: RInside, Rcpp, rrcovHD, truncnorm, FNN, akima
 * GoogleTest [https://github.com/google/googletest], needed for unit testing when the build option ENABLE_TEST=ON   
 * Doxygen [www.doxygen.org/], needed to generate the API documentation   
+* Sphinx [http://www.sphinx-doc.org] & Breathe [https://pypi.org/project/breathe], needed to generate the Sphinx API & wiki documentation
+
+Dependencies for the provided scripts are:
+* python (>=2.7) [https://www.python.org/], install also these additional modules: pyfits, astropy
+
 
 Make sure you have set the following environment variables to the external library installation dirs 
 * ROOTSYS
 * OPENCV_DIR
-* R_DIR
 * BOOST_ROOT
 * LOG4CXX_ROOT
 * JSONCPP_ROOT
+* R_DIR (optional)
 
 Add also the following paths to the PKG_CONFIG_PATH environment var: 
 * $LOG4CXX_ROOT/lib/pkgconfig  
