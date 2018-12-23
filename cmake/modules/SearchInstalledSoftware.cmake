@@ -102,29 +102,33 @@ endif()
 #==================================
 #==    Check for GSL library    ===
 #==================================
-message (STATUS "Looking for GSL library...")
-#include(FindGSL REQUIRED)
-find_package (GSL REQUIRED)
-message (STATUS "GSL_INCLUDE_DIRS: ${GSL_INCLUDE_DIRS}")
-message (STATUS "GSL_LIBRARIES: ${GSL_LIBRARIES}")
+##message (STATUS "Looking for GSL library")
+##find_package (GSL REQUIRED)
+##find_package (GSL)
+##message (STATUS "GSL_INCLUDE_DIRS: ${GSL_INCLUDE_DIRS}")
+##message (STATUS "GSL_LIBRARIES: ${GSL_LIBRARIES}")
 
 #==================================
 #==    Check for Python         ===
 #==================================
-message (STATUS "Looking for Python")
-find_package (PythonLibs REQUIRED)
-message (STATUS "PYTHON_LIBRARIES: ${PYTHON_LIBRARIES}, PYTHON_INCLUDE_DIRS: ${PYTHON_INCLUDE_DIRS}")
+##message (STATUS "Looking for Python")
+##find_package (PythonLibs REQUIRED)
+##find_package (PythonLibs)
+##message (STATUS "PYTHON_LIBRARIES: ${PYTHON_LIBRARIES}, PYTHON_INCLUDE_DIRS: ${PYTHON_INCLUDE_DIRS}")
 
 #==================================
 #== Check for Python Modules    ===
 #==================================
-include(FindPythonModule)
+#include(FindPythonModule)
+
 # pyfits
-message (STATUS "Looking for Python pyfits module")
-find_python_module(pyfits REQUIRED)
+#message (STATUS "Looking for Python pyfits module")
+##find_python_module(pyfits REQUIRED)
+#find_python_module(pyfits)
 # astropy
-message (STATUS "Looking for Python astropy module")
-find_python_module(astropy REQUIRED)
+#message (STATUS "Looking for Python astropy module")
+##find_python_module(astropy REQUIRED)
+#find_python_module(astropy)
 
 
 #==================================
@@ -194,15 +198,17 @@ endif()
 #==============================================
 #==   ENABLE OPENMP OPTION?                 ===
 #==============================================
-option(BUILD_WITH_OPENMP "Enable building of Caesar with OpenMP" OFF)
-if(BUILD_WITH_OPENMP)
+##option(BUILD_WITH_OPENMP "Enable building of Caesar with OpenMP" OFF)
+##if(BUILD_WITH_OPENMP)
+option(ENABLE_OPENMP "Enable building of Caesar with OpenMP" OFF)
+if(ENABLE_OPENMP)
 	MESSAGE(STATUS "Looking for OpenMP")
 	include(FindOpenMP)
 	if(OPENMP_FOUND)
 		MESSAGE(STATUS "OpenMP found, defining preprocessor flag OPENMP_ENABLED")
 		add_definitions(-DOPENMP_ENABLED=1)
 	else()
-		MESSAGE(SEND_ERROR "OPENMP not found!")
+		MESSAGE(SEND_ERROR "OpenMP not found!")
 	endif()
 endif()
 
@@ -286,157 +292,4 @@ if (ENABLE_VTK)
 	endif()	
 endif()
 
-
-#===========================================
-#==   Check for Tango Framework          ===
-#===========================================
-option(ENABLE_SERVER "Enable Caesar server in building" OFF)
-if(ENABLE_SERVER)
-	## Define a preprocessor option
-	add_definitions(-DBUILD_CAESAR_SERVER)
-	
-	
-
-	#================================
-	#==   Check for MSGPACK       ===
-	#================================
-	MESSAGE(STATUS "Looking for MessagePack lib")
-	FIND_PACKAGE(MsgPack REQUIRED)
-	IF (NOT MSGPACK_FOUND)
-		MESSAGE(SEND_ERROR "MessagePack not found!")
-	endif()
-	MESSAGE(STATUS "MSGPACK_INCLUDE_DIR: ${MSGPACK_INCLUDE_DIRS}")
-	MESSAGE(STATUS "MSGPACK_LIBRARIES: ${MSGPACK_LIBRARIES}")
-	
-
-	#================================
-	#==   Check for OMNIORB       ===
-	#================================
-	MESSAGE(STATUS "Looking for omniORB")
-	if(NOT DEFINED ENV{OMNI_ROOT})
-		MESSAGE(SEND_ERROR "OMNI_ROOT variable not defined!")
-	endif()
-
-	SET (OMNI_ROOT $ENV{OMNI_ROOT})
-	MESSAGE(STATUS "OMNI_ROOT: ${OMNI_ROOT}")
-
-	FIND_PATH (OMNIORB_INCLUDE_DIR
-		NAMES omniconfig.h
-  	HINTS
-  	${OMNI_ROOT}/include
-	)
-
-	FIND_LIBRARY (OMNIORB_LIB1 NAMES omniORB4 HINTS ${OMNI_ROOT}/lib)
-	FIND_LIBRARY (OMNIORB_LIB2 NAMES COS4 HINTS ${OMNI_ROOT}/lib)
-	FIND_LIBRARY (OMNIORB_LIB3 NAMES omniDynamic4 HINTS ${OMNI_ROOT}/lib)
-	FIND_LIBRARY (OMNIORB_LIB4 NAMES omnithread HINTS ${OMNI_ROOT}/lib)
-	list(APPEND OMNIORB_LIBRARIES ${OMNIORB_LIB1} ${OMNIORB_LIB2} ${OMNIORB_LIB3} ${OMNIORB_LIB4})
-
-	MARK_AS_ADVANCED (OMNIORB_INCLUDE_DIR OMNIORB_LIBRARIES)
-	MESSAGE(STATUS "OMNIORB_INCLUDE_DIR: ${OMNIORB_INCLUDE_DIR}")
-	MESSAGE(STATUS "OMNIORB_LIBRARIES: ${OMNIORB_LIBRARIES}")
-
-	#================================
-	#==   Check for ZMQ           ===
-	#================================
-	MESSAGE(STATUS "Looking for ZMQ")
-	if(NOT DEFINED ENV{ZMQ_ROOT})
-		MESSAGE(SEND_ERROR "ZMQ_ROOT variable not defined!")
-	endif()
-
-	SET (ZMQ_ROOT $ENV{ZMQ_ROOT})
-	MESSAGE(STATUS "ZMQ_ROOT: ${ZMQ_ROOT}")
-
-	FIND_PATH (ZMQ_INCLUDE_DIR
-		NAMES zmq.h
-  	HINTS
-  	${ZMQ_ROOT}/include
-	)
-
-	FIND_LIBRARY (ZMQ_LIBRARIES NAMES zmq HINTS ${ZMQ_ROOT}/lib)
-
-	MARK_AS_ADVANCED (ZMQ_INCLUDE_DIR ZMQ_LIBRARIES)
-	MESSAGE(STATUS "ZMQ_INCLUDE_DIR: ${ZMQ_INCLUDE_DIR}")
-	MESSAGE(STATUS "ZMQ_LIBRARIES: ${ZMQ_LIBRARIES}")
-
-
-	#==================================	
-	#==   Check for TANGO           ===
-	#==================================
-	MESSAGE(STATUS "Looking for TANGO Framework")
-	
-	## Define Tango preprocessor flag
-  add_definitions(-DUSE_TANGO)
-	add_definitions(-DAPPENDERS_HAVE_LEVEL_THRESHOLD=1)
-
-	if(NOT DEFINED ENV{TANGO_ROOT})
-		MESSAGE(SEND_ERROR "TANGO_ROOT variable not defined!")
-	endif()
-
-	SET (TANGO_ROOT $ENV{TANGO_ROOT})
-	MESSAGE(STATUS "TANGO_ROOT: ${TANGO_ROOT}")
-
-	FIND_PATH (TANGO_INCLUDE_DIR
-		NAMES tango.h
-  	HINTS
-  	${TANGO_ROOT}/include/tango
-	)
-
-	FIND_LIBRARY (TANGO_LIB1 NAMES tango HINTS ${TANGO_ROOT}/lib)
-	FIND_LIBRARY (TANGO_LIB2 NAMES log4tango HINTS ${TANGO_ROOT}/lib)
-	list(APPEND TANGO_LIBRARIES ${TANGO_LIB1} ${TANGO_LIB2})
-
-	MARK_AS_ADVANCED (TANGO_INCLUDE_DIR TANGO_LIBRARIES)
-	MESSAGE(STATUS "TANGO_INCLUDE_DIR: ${TANGO_INCLUDE_DIR}")
-	MESSAGE(STATUS "TANGO_LIBRARIES: ${TANGO_LIBRARIES}")
-
-
-	#=================================
-	#==   Check for YAT4           ===
-	#=================================
-	MESSAGE(STATUS "Looking for YAT Library")
-	if(NOT DEFINED ENV{YAT_ROOT})
-		MESSAGE(SEND_ERROR "YAT_ROOT variable not defined!")
-	endif()
-
-	FIND_PATH (YAT_INCLUDE_DIR
-		NAMES yat/threading/Task.h
-  	HINTS
-  	$ENV{YAT_ROOT}/include
-	)
-	FIND_LIBRARY (YAT_LIBRARIES 
-		NAMES yat
-		HINTS 
-		$ENV{YAT_ROOT}/lib
-	)
-	MARK_AS_ADVANCED (YAT_INCLUDE_DIR YAT_LIBRARIES)
-	MESSAGE(STATUS "YAT_INCLUDE_DIR: ${YAT_INCLUDE_DIR}")
-	MESSAGE(STATUS "YAT_LIBRARIES: ${YAT_LIBRARIES}")
-		
-
-
-	#======================================
-	#==   Check for YAT4TANGO           ===
-	#======================================
-	MESSAGE(STATUS "Looking for YAT4TANGO Library")
-	if(NOT DEFINED ENV{YAT4TANGO_ROOT})
-		MESSAGE(SEND_ERROR "YAT4TANGO_ROOT variable not defined!")
-	endif()
-
-	FIND_PATH (YAT4TANGO_INCLUDE_DIR
-		NAMES yat4tango/DeviceTask.h
-  	HINTS
-  	$ENV{YAT4TANGO_ROOT}/include
-	)
-	FIND_LIBRARY (YAT4TANGO_LIBRARIES 
-		NAMES yat4tango 
-		HINTS 
-		$ENV{YAT4TANGO_ROOT}/lib
-	)
-	MARK_AS_ADVANCED (YAT4TANGO_INCLUDE_DIR YAT4TANGO_LIBRARIES)
-	MESSAGE(STATUS "YAT4TANGO_INCLUDE_DIR: ${YAT4TANGO_INCLUDE_DIR}")
-	MESSAGE(STATUS "YAT4TANGO_LIBRARIES: ${YAT4TANGO_LIBRARIES}")
-		
-
-endif() ### close if enable Tango
 
