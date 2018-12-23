@@ -15,7 +15,6 @@ Install the project mandatory dependencies:
 * **cfitsio** [https://heasarc.gsfc.nasa.gov/fitsio/fitsio.html], to be built with multithread support (e.g. give --enable-reentrant option in configure)
 * **protobuf** [https://github.com/google/protobuf]
 * **jsoncpp** [https://github.com/open-source-parsers/jsoncpp]
-* **python** (>=2.7) [https://www.python.org/], install also these additional modules: pyfits, astropy
 * **cmake** (>=2.8) [https://cmake.org]  
   
 Optional dependencies are:
@@ -27,14 +26,19 @@ Optional dependencies are:
 * **Doxygen** [www.doxygen.org/], needed to generate the API documentation
 * **Sphinx** [http://www.sphinx-doc.org] & **Breathe** [https://pypi.org/project/breathe], needed to generate the Sphinx API & wiki documentation
 
+Dependencies for the provided scripts are:
+
+* **python** (>=2.7) [https://www.python.org/], install also these additional modules: pyfits, astropy
+
+
 Make sure you have set the following environment variables to the external library installation dirs:
 
 * ROOTSYS
 * OPENCV_DIR
-* R_DIR
 * BOOST_ROOT
 * LOG4CXX_ROOT
 * JSONCPP_ROOT
+* R_DIR (optional)
 
 Add also the following paths to the PKG_CONFIG_PATH environment var: 
 
