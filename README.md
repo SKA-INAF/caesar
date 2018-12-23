@@ -39,7 +39,7 @@ Install the project mandatory dependencies:
 Optional dependencies are:
 * MPICH [https://www.mpich.org/] or OpenMPI [https://www.open-mpi.org/], needed when the build option ENABLE_MPI=ON (to enable parallel source finding application)       
 * OpenMP [http://www.openmp.org/], needed when the build option BUILD_WITH_OPENMP=ON (to enable multithread processing)  
-* R [https://www.r-project.org/], install also these additional packages: RInside, Rcpp, rrcovHD, truncnorm, FNN, akima
+* R [https://www.r-project.org/] and additional packages: RInside, Rcpp, rrcovHD, truncnorm, FNN, akima. Needed when the build option ENABLE_R=ON
 * GoogleTest [https://github.com/google/googletest], needed for unit testing when the build option ENABLE_TEST=ON   
 * Doxygen [www.doxygen.org/], needed to generate the API documentation   
 * Sphinx [http://www.sphinx-doc.org] & Breathe [https://pypi.org/project/breathe], needed to generate the Sphinx API & wiki documentation
