@@ -29,7 +29,6 @@ At present CAESAR is still being developed with major functionalities to be inte
 Install the project mandatory dependencies:  
 * ROOT [https://root.cern.ch/], to be built with FITSIO, PyROOT, RInterface options enabled. Make sure that the FindROOT.cmake is present in $ROOTSYS/etc/cmake directory after installation.
 * OpenCV [http://opencv.org/]
-* R [https://www.r-project.org/], install also these additional packages: RInside, Rcpp, rrcovHD, truncnorm, FNN, akima
 * log4cxx [https://logging.apache.org/log4cxx/]
 * boost [http://www.boost.org/] 
 * cfitsio [https://heasarc.gsfc.nasa.gov/fitsio/fitsio.html], to be built with multithread support (e.g. give --enable-reentrant option in configure)
@@ -41,6 +40,7 @@ Install the project mandatory dependencies:
 Optional dependencies are:
 * MPICH [https://www.mpich.org/] or OpenMPI [https://www.open-mpi.org/], needed when the build option ENABLE_MPI=ON        
 * OpenMP [http://www.openmp.org/], needed when the build option BUILD_WITH_OPENMP=ON    
+* R [https://www.r-project.org/], install also these additional packages: RInside, Rcpp, rrcovHD, truncnorm, FNN, akima
 * GoogleTest [https://github.com/google/googletest], needed for unit testing when the build option ENABLE_TEST=ON   
 * Doxygen [www.doxygen.org/], needed to generate the API documentation   
 
