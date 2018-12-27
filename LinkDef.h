@@ -33,6 +33,9 @@
 #pragma link C++ class Caesar::EllipseUtils+;
 #pragma link C++ class Caesar::ImgUtils+;
 
+#pragma link C++ class Caesar::WCSUtils+;
+#pragma link C++ class Caesar::WCS+;
+
 
 #pragma link C++ class Caesar::ClippedStats<int>+;
 #pragma link C++ class Caesar::ClippedStats<long int>+;
@@ -198,6 +201,10 @@
 #pragma link C++ class Caesar::FITSFileInfo+;
 #pragma link C++ class Caesar::FITSReader+;
 #pragma link C++ class Caesar::FITSWriter+;
+
+#ifdef CASACORE_ENABLED
+#pragma link C++ class Caesar::CasaReader+;
+#endif
 //==============
 
 //== FILTER CLASSES ==
