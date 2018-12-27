@@ -30,6 +30,7 @@
 
 #include <FITSReader.h>
 
+
 //WCSTOOLS
 #include <wcs.h>
 
@@ -37,6 +38,8 @@
 #include <string>
 
 namespace Caesar {
+
+
 
 class ImgMetaData : public TObject {
 
@@ -70,6 +73,11 @@ class ImgMetaData : public TObject {
 		* \brief Get world coordinate system 
 		*/
 		WorldCoor* GetWorldCoord(int coordSystem=-1);
+
+		/**
+		* \brief Get world coordinate system 
+		*/
+		//WCS* GetWCS(int coordSystem=-1);
 
 		/**
 		* \brief Get pixel area in deg^2

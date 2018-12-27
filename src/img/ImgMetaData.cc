@@ -32,6 +32,9 @@
 #include <Consts.h>
 #include <Logger.h>
 
+//#include <WCSUtils.h>
+
+
 //WCSTOOLS
 #include <wcs.h>
 
@@ -138,6 +141,53 @@ WorldCoor* ImgMetaData::GetWorldCoord(int coordSystem)
 	return wcs;
 		
 }//close GetWorldCoord()
+
+
+/*
+WCS* ImgMetaData::GetWCS(int coordSystem)
+{
+	//## Compute the wcs from vars
+	//## NB: FITS keywords CRPIX are defined from [1,N] not 0-based
+	//##     Since we use 0-based convention we set Cx->Cx-1 Cy->Cy-1
+	WCSUtils wcs_utils;
+	WCS* wcs= wcs_utils.wcskinit(
+		Nx, Ny,
+		(char*)CoordTypeX.c_str(),(char*)CoordTypeY.c_str(),
+		Cx-1, Cy-1,
+		Xc, Yc,
+		NULL,
+		dX,dY,
+		RotY,(int)(Epoch),Epoch
+	);
+	std::string wcsType= std::string(wcs_utils.getwcsout(wcs));
+	
+	//Convert wcs to desired type
+	char* flag = (char*)("");
+	if(coordSystem==eGALACTIC)
+		flag = (char*)("GALACTIC");	
+	else if(coordSystem==eJ2000)
+		flag = (char*)("FK5");
+	else if(coordSystem==eB1950)
+		flag = (char*)("FK4");
+	else if(coordSystem==-1 && m_wcsType!="")					
+		flag = (char*)(m_wcsType.c_str());
+	else{
+		ERROR_LOG("Invalid coord system type ("<<coordSystem<<") specified, will not build WCS!");
+		return nullptr;
+	}
+			
+	if(strcmp(flag,"")!=0) {
+		wcs_utils.wcsoutinit (wcs,flag);
+		m_wcsType= std::string(flag);
+	}
+			
+	wcsType= std::string(wcs_utils.getwcsout(wcs));
+	DEBUG_LOG("wcsType="<<wcsType);
+
+	return wcs;
+		
+}//close GetWCS()
+*/
 
 bool ImgMetaData::HasBeamInfo()
 {

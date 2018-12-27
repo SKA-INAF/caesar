@@ -3,10 +3,29 @@ set(INC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 ## GET SOURCES and HEADERS
-file(GLOB THIS_SRCS ${SRC_DIR}/*.cc)
-file(GLOB THIS_HEADERS ${INC_DIR}/*.h)
+#file(GLOB THIS_SRCS ${SRC_DIR}/*.cc)
+#file(GLOB THIS_HEADERS ${INC_DIR}/*.h)
+
+file(GLOB THIS_SRCS 
+	${SRC_DIR}/FITSReader.cc
+	${SRC_DIR}/FITSWriter.cc
+)
+file(GLOB THIS_HEADERS 
+	${INC_DIR}/FITSReader.h
+	${INC_DIR}/FITSWriter.h
+)
+
 set(THIS_DICT_HEADERS ${THIS_DICT_HEADERS} FITSReader.h FITSWriter.h)
 set(THIS_DICT_SRCS ${THIS_DICT_SRCS} ${SRC_DIR}/FITSReader.cc ${SRC_DIR}/FITSWriter.cc)
+
+if (ENABLE_CASACORE)
+	list (APPEND THIS_SRCS ${SRC_DIR}/CasaReader.cc)
+	list (APPEND THIS_HEADERS ${INC_DIR}/CasaReader.h)
+	list (APPEND THIS_DICT_HEADERS CasaReader.h)
+	list (APPEND THIS_DICT_SRCS ${SRC_DIR}/CasaReader.cc)
+	
+endif()
+
 
 set(THIS_HEADERS_WPATH "")
 foreach (_headerFile ${THIS_HEADERS})
