@@ -69,8 +69,6 @@ ClassImp(Caesar::FileInfo)
 
 namespace Caesar {
 
-//int SysUtils::m_procId= 0;
-//std::string SysUtils::m_procName= "";
 
 SysUtils::SysUtils(){
 
@@ -80,8 +78,42 @@ SysUtils::~SysUtils(){
 
 }
 
-bool SysUtils::CheckFile(std::string path,Caesar::FileInfo& info,bool match_extension,std::string extension){
 
+bool SysUtils::CheckDir(std::string path)
+{
+	//Check input file path
+	if(path==""){	
+		WARN_LOG("Empty filename given!");
+		return false;
+	}
+
+	try {
+		//Check if file exists on filesystem
+		boost::filesystem::path file_path(path.c_str());
+		if (!boost::filesystem::exists(file_path)){
+			ERROR_LOG("File "<<path<<" not found in local filesystem!");
+			return false;
+		}
+
+		//Check if directory
+		if (!boost::filesystem::is_directory(file_path)){
+    	ERROR_LOG("File ("<<file_path<<") is not a directory!");
+			return false;
+    }
+	
+	}//close try
+	catch (const boost::filesystem::filesystem_error& ex) {
+    ERROR_LOG("Exception detected while checking file (err: "<<ex.what()<<")!");
+		return false;
+  }
+
+	return true;
+
+}//close CheckDir()
+
+
+bool SysUtils::CheckFile(std::string path,Caesar::FileInfo& info,bool match_extension,std::string extension)
+{
 	//Check input file path
 	if(path==""){	
 		WARN_LOG("Empty filename given!");
@@ -248,11 +280,11 @@ bool SysUtils::IsMPIInitialized(){
 		int mpi_init_flag= 0;
 		MPI_Initialized(&mpi_init_flag);
 		if(mpi_init_flag==1) {
-			DEBUG_LOG("MPI is initialized for this run...");
+			//DEBUG_LOG("MPI is initialized for this run...");
 			isInitialized= true;	
 		}
 		else {
-			WARN_LOG("MPI was not initialized for this run (hint: call MPI_Init), will run on single processor...");
+			//WARN_LOG("MPI was not initialized for this run (hint: call MPI_Init), will run on single processor...");
 			isInitialized= false;
 		}
 	#endif
@@ -331,7 +363,13 @@ int SysUtils::GetProcId()
 {
 	int procid= 0;			
 	#ifdef MPI_ENABLED
-		MPI_Comm_rank(MPI_COMM_WORLD, &procid);
+		bool isMPIInitialized= IsMPIInitialized();
+		if(isMPIInitialized){
+			MPI_Comm_rank(MPI_COMM_WORLD, &procid);
+		}
+		else{
+			procid= 0;
+		}
 	#endif
 
 	return procid;

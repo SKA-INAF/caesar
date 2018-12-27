@@ -20,6 +20,7 @@ set(THIS_DICT_HEADERS ${THIS_DICT_HEADERS}
 	Serializer.h
 	Graph.h
 	ImgUtils.h
+	WCSUtils.h
 )
 set(THIS_DICT_SRCS ${THIS_DICT_SRCS} 
 	${SRC_DIR}/SysUtils.cc 
@@ -36,6 +37,7 @@ set(THIS_DICT_SRCS ${THIS_DICT_SRCS}
 	${SRC_DIR}/Serializer.cc
 	${SRC_DIR}/Graph.cc
 	${SRC_DIR}/ImgUtils.cc
+	${SRC_DIR}/WCSUtils.cc
 ) 
 
 set(THIS_HEADERS_WPATH "")

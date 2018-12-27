@@ -367,8 +367,10 @@ class ConsoleLogger : public Logger {
 		*/
 		virtual int Init(){
 			//Create logger
+			//cout<<"Initializing console logger with tag "<<m_tag<<" ..."<<endl;
 			logger= log4cxx::LoggerPtr(log4cxx::Logger::getLogger(m_tag));
 			if(!logger) return -1;
+			//cout<<"Initialized console logger with tag "<<m_tag<<" ..."<<endl;
 
 			//Get hostname
 			std::string host= SysUtils::GetHost();
@@ -389,16 +391,21 @@ class ConsoleLogger : public Logger {
 			log4cxx::MDC::put("thread", threadid_str);
 	
 			//Define log layout
+			//cout<<"Creating log layout ..."<<endl;
+
 			//layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d %-5p [%c] %m%n") );
 			//layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d %-5p %m%n") );
 			layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d [%X{hostname}, %X{proc}, %X{thread}] %-5p%m%n") );			
 			if(!layout) return -1;
 
 			//Create and add appender
+			//cout<<"Create appender..."<<endl;
 			appender= log4cxx::AppenderPtr( new log4cxx::ConsoleAppender(layout,m_target) );	
 			appender->setOption("TARGET",m_target);
+
+			//cout<<"Add appender..."<<endl;
 			logger->addAppender(appender);
-	
+			
 			//Set logging level (OFF is set if a wrong name is given!)
 			log4cxx::LevelPtr level= log4cxx::Level::toLevel(m_level,log4cxx::Level::getInfo());
 			logger->setLevel(level);  

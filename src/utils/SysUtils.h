@@ -190,6 +190,11 @@ class SysUtils : public TObject {
 		* \brief Check if a file exists in filesystem
 		*/
 		static bool CheckFile(std::string path,FileInfo& info,bool match_extension=false,std::string extension="");
+
+		/**
+		* \brief Check if directory exists in filesystem
+		*/
+		static bool CheckDir(std::string path);
 	
 		/**
 		* \brief Compute the difference between two timestamps

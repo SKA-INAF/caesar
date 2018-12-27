@@ -60,8 +60,6 @@ class ImgMetaData;
 class ImgStatsData;
 class Contour;
 
-
-
 //========================================
 //==   ASTRO UTILS
 //========================================
