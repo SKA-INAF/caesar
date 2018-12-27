@@ -104,6 +104,11 @@ class WCSUtils : public TObject {
 		static char* getwcsout(WCS* wcs);
 
 		/**
+		* \brief Return current value of WCS output coordinate system set by -wcsout
+		*/
+		static std::string GetWCSTypeStr(WCS* wcs);
+
+		/**
 		* \brief Convert pixel coordinates to World Coordinate string 
 		*/
 		static int pix2wcst(WCS* wcs,double xpix,double ypix,char *wcstring,int lstr);
@@ -137,6 +142,11 @@ class WCSUtils : public TObject {
 			int equinox,	/* Equinox of coordinates, 1950 and 2000 supported */
 			double epoch /* Epoch of coordinates, for FK4/FK5 conversion */
 		);	
+
+		/**
+		* \brief Initialize WCS input coordinate system for use by WCS2PIX
+		*/
+		static void wcsininit(WCS* wcs,char* coorsys);
 
 
 	protected:
@@ -384,10 +394,7 @@ class WCSUtils : public TObject {
 		static int tnxpix(double xpos,double ypos,WCS* wcs,double *xpix,double *ypix);
 
 		
-		/**
-		* \brief Initialize WCS input coordinate system for use by WCS2PIX
-		*/
-		static void wcsininit(WCS* wcs,char* coorsys);
+		
 
 		/**
 		* \brief Set projection in WCS structure from FITS keyword values

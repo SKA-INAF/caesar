@@ -93,7 +93,8 @@ WCS* WCSUtils::ComputeWCSFromImgMetaData(ImgMetaData* metadata,int coordSystem)
 		metadata->dX,metadata->dY,
 		metadata->RotY,(int)(metadata->Epoch),metadata->Epoch
 	);
-	std::string wcsType= std::string(getwcsout(wcs));
+	//std::string wcsType= std::string(getwcsout(wcs));
+	std::string wcsType= GetWCSTypeStr(wcs);
 	std::string wcsType_default= metadata->GetWCSType();
 	
 	//Convert wcs to desired type
@@ -109,6 +110,10 @@ WCS* WCSUtils::ComputeWCSFromImgMetaData(ImgMetaData* metadata,int coordSystem)
 	else{
 		ERROR_LOG("Invalid coord system type ("<<coordSystem<<") specified, will not build WCS!");
 		return nullptr;
+	}
+
+	if(strcmp(flag,"")!=0) {
+		wcsoutinit (wcs,flag);
 	}
 			
 	return wcs;
@@ -170,6 +175,17 @@ char* WCSUtils::getwcsout(WCS* wcs)
 		return(wcs->radecout);
 
 }//close getwcsout()
+
+
+std::string WCSUtils::GetWCSTypeStr(WCS* wcs)
+{
+	char* wcsType= getwcsout(wcs);
+	std::string wcsTypeStr= "";	
+	if(wcsType) wcsTypeStr= std::string(wcsType);
+
+	return wcsTypeStr;
+
+}//close GetWCSTypeStr()
 
 
 /* Convert pixel coordinates to World Coordinate string */
@@ -1630,7 +1646,7 @@ void WCSUtils::pix2foc(WCS* wcs,double u,double v,double* x,double* y)
     double temp_u, temp_v;
 
     /* Spitzer distortion */
-    if (wcs->distcode == DISTORT_SIRTF) {
+    if (wcs->distcode == eDISTORT_SIRTF) {
 	m = wcs->distort.a_order;
 	n = wcs->distort.b_order;
 
@@ -2098,7 +2114,7 @@ void WCSUtils::setdistcode(WCS* wcs,char* ctype)
     else {
 	extension = ctype + 8;
 	if (!strncmp (extension, "-SIP", 4))
-	    wcs->distcode = DISTORT_SIRTF;
+	    wcs->distcode = eDISTORT_SIRTF;
 	else
 	    wcs->distcode = eDISTORT_NONE;
 	}
@@ -6857,7 +6873,7 @@ double WCSUtils::wf_gseval(IRAFsurface* sf,double x,double y)
             wf_gsb1leg (x, sf->xorder, sf->xmaxmin, sf->xrange, sf->xbasis);
             wf_gsb1leg (y, sf->yorder, sf->ymaxmin, sf->yrange, sf->ybasis);
 	    break;
-        case TNX_POLYNOMIAL:
+        case eTNX_POLYNOMIAL:
             wf_gsb1pol (x, sf->xorder, sf->xbasis);
             wf_gsb1pol (y, sf->yorder, sf->ybasis);
 	    break;
@@ -8975,7 +8991,7 @@ double WCSUtils::wf_gsder (IRAFsurface* sf1,double x,double y,int nxd,int nyd)
     /* Set the derivative surface parameters */
     if (sf2->type == eTNX_LEGENDRE ||
 	sf2->type == eTNX_CHEBYSHEV ||
-	sf2->type == TNX_POLYNOMIAL) {
+	sf2->type == eTNX_POLYNOMIAL) {
 
 	sf2->xterms = sf1->xterms;
 
@@ -9122,7 +9138,7 @@ double WCSUtils::wf_gsder (IRAFsurface* sf1,double x,double y,int nxd,int nyd)
     zfit = wf_gseval (sf2, x, y);
 
     /* normalize */
-    if (sf2->type != TNX_POLYNOMIAL) { 
+    if (sf2->type != eTNX_POLYNOMIAL) { 
 	norm = pow (sf2->xrange, (double)nxder) *
 	       pow (sf2->yrange, (double)nyder);
 	zfit = norm * zfit;
@@ -9631,7 +9647,7 @@ void WCSUtils::foc2pix(WCS* wcs,double x,double y,double* u,double* v)
     double temp_x, temp_y;
 
     /* Spitzer distortion */
-    if (wcs->distcode == DISTORT_SIRTF) {
+    if (wcs->distcode == eDISTORT_SIRTF) {
 	m = wcs->distort.ap_order;
 	n = wcs->distort.bp_order;
 
