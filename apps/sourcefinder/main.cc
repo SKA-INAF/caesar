@@ -75,13 +75,22 @@ int main(int argc, char *argv[])
 	//== Run SourceFinder
 	//=======================
 	INFO_LOG("Starting source finding");
-	SFinder finder;
-	if(finder.Run()<0){
+	SFinder* finder= new SFinder;
+	if(finder->Run()<0){
 		ERROR_LOG("Source finding failed!");
-		return -1;
+	}
+	else{
+		INFO_LOG("End source finding");
 	}
 
-	INFO_LOG("End source finding");
+	//=======================
+	//== Clear
+	//=======================
+	if(finder){
+		INFO_LOG("Clear finder");
+		delete finder;
+		finder= 0;
+	}
 
 	return 0;
 
@@ -134,7 +143,12 @@ int ParseOptions(int argc, char *argv[])
 		cerr<<"ERROR: Failed to parse config options!"<<endl;
 		return -1;
 	}
+	cout<<endl;
+	cout<<"== RUN CONFIG OPTIONS =="<<endl;
 	PRINT_OPTIONS();
+	cout<<"========================"<<endl;
+	cout<<endl;
+
 
 	//=======================
 	//== Init Logger 
