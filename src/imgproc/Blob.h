@@ -60,7 +60,7 @@ namespace Caesar {
 
 class ImgMetaData;
 class Contour;
-
+class WCS;
 
 struct MatchPixelType {
 	MatchPixelType(const int& type) : m_type(type) {}
@@ -549,14 +549,22 @@ class Blob : public TNamed {
 		}
 
 		/**
+		* \brief Return contours converted in WCS (TO BE DEPRECATED)
+		*/
+		//std::vector<Contour*> GetWCSContours(WorldCoor* wcs=0,int coordSystem=-1,int pixOffset=0,bool computePars=false);
+		/**
 		* \brief Return contours converted in WCS 
 		*/
-		std::vector<Contour*> GetWCSContours(WorldCoor* wcs=0,int coordSystem=-1,int pixOffset=0,bool computePars=false);
+		std::vector<Contour*> GetWCSContours(WCS* wcs=0,int coordSystem=-1,int pixOffset=0,bool computePars=false);
 		
+		/**
+		* \brief Return contour with index and convert to WCS (TO BE DEPRECATED)
+		*/
+		//Contour* GetWCSContour(int index,WorldCoor* wcs=0,int coordSystem=-1,int pixOffset=0,bool computePars=false);
 		/**
 		* \brief Return contour with index and convert to WCS
 		*/
-		Contour* GetWCSContour(int index,WorldCoor* wcs=0,int coordSystem=-1,int pixOffset=0,bool computePars=false);
+		Contour* GetWCSContour(int index,WCS* wcs=0,int coordSystem=-1,int pixOffset=0,bool computePars=false);
 
 
 
@@ -588,11 +596,20 @@ class Blob : public TNamed {
 		//==         WCS
 		//================================================
 		/**
-		* \brief Get WCS from stored metadata
+		* \brief Get WCS from stored metadata (TO BE DEPRECATED)
 		*/
+		/*
 		WorldCoor* GetWCS(int coordSystem=-1){
 			if(!m_imgMetaData) return nullptr;
 			return m_imgMetaData->GetWorldCoord(coordSystem);
+		}
+		*/
+		/**
+		* \brief Get WCS from stored metadata
+		*/
+		WCS* GetWCS(int coordSystem=-1){
+			if(!m_imgMetaData) return nullptr;
+			return m_imgMetaData->GetWCS(coordSystem);
 		}
 
 	private:

@@ -31,11 +31,13 @@
 #include <Contour.h>
 #include <CodeUtils.h>
 #include <AstroUtils.h>
+#include <WCSUtils.h>
 
 #include <TObject.h>
 #include <TEllipse.h>
 
-#include <wcs.h>
+//WCSTOOLS (TO BE DEPRECATED)
+//#include <wcs.h>
 
 #include <iomanip>
 #include <iostream>
@@ -67,7 +69,8 @@ SourceExporter::~SourceExporter()
 //=================================================
 //==        ASCII EXPORTER
 //=================================================
-int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WorldCoor* wcs)
+//int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WorldCoor* wcs)
+int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
 {
 	//Open output file
 	FILE* fout= fopen(filename.c_str(),"w");
@@ -130,7 +133,8 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 				WARN_LOG("No metadata are available to retrieve WCS!");
 				return -1;
 			}
-			wcs= metadata->GetWorldCoord(wcsType);
+			//wcs= metadata->GetWorldCoord(wcsType);
+			wcs= metadata->GetWCS(wcsType);
 			if(!wcs){
 				ERROR_LOG("Failed to get WCS from metadata!");
 				return -1;
@@ -161,7 +165,8 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 	}//end loop sources
 
 	//Delete WCS
-	if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+	//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+	if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 
 	//Close file
 	fclose(fout);
@@ -171,7 +176,8 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 }//close WriteToAscii()
 
 
-const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool dumpNestedSourceInfo,int wcsType,WorldCoor* wcs)
+//const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool dumpNestedSourceInfo,int wcsType,WorldCoor* wcs)
+const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
 {
 	//Init string list
 	std::vector<std::string> sourceStrList;
@@ -189,7 +195,8 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 	bool deleteWCS= false;
 	if(!wcs){
 		if(metadata){
-			wcs= metadata->GetWorldCoord(wcsType);
+			//wcs= metadata->GetWorldCoord(wcsType);
+			wcs= metadata->GetWCS(wcsType);
 			if(wcs) deleteWCS= true;
 			else WARN_LOG("Failed to get WCS from metadata!");
 		}
@@ -301,14 +308,16 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 		
 
 	//Delete WCS
-	if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+	//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+	if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 
 	return sourceStrList;
 
 }//close SourceToAscii()
 
 
-int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WorldCoor* wcs)
+//int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WorldCoor* wcs)
+int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
 {
 	//Open output file
 	FILE* fout= fopen(filename.c_str(),"w");
@@ -379,7 +388,8 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 				WARN_LOG("No metadata are available to retrieve WCS!");
 				return -1;
 			}
-			wcs= metadata->GetWorldCoord(wcsType);
+			//wcs= metadata->GetWorldCoord(wcsType);
+			wcs= metadata->GetWCS(wcsType);
 			if(!wcs){
 				ERROR_LOG("Failed to get WCS from metadata!");
 				return -1;
@@ -396,7 +406,8 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 	}//end loop sources
 
 	//Delete WCS
-	if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+	//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+	if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 
 	//Close file
 	fclose(fout);
@@ -406,7 +417,8 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 }//close WriteComponentsToAscii()
 
 
-const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* source,bool dumpNestedSourceInfo,int wcsType,WorldCoor* wcs)
+//const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* source,bool dumpNestedSourceInfo,int wcsType,WorldCoor* wcs)
+const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* source,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
 {
 	//Init vector
 	std::vector<std::string> fitComponentStrList;
@@ -424,7 +436,8 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 	bool deleteWCS= false;
 	if(!wcs){
 		if(metadata){
-			wcs= metadata->GetWorldCoord(wcsType);
+			//wcs= metadata->GetWorldCoord(wcsType);
+			wcs= metadata->GetWCS(wcsType);
 			if(wcs) deleteWCS= true;
 			else WARN_LOG("Failed to get WCS from metadata!");
 		}
@@ -614,7 +627,8 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 	
 	
 	//Delete WCS
-	if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+	//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+	if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 
 	return fitComponentStrList;
 
@@ -623,7 +637,8 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 //=================================================
 //==        DS9 EXPORTER
 //=================================================
-int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS,int ds9WCSType,int ds9RegionFormat,WorldCoor* wcs)
+//int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS,int ds9WCSType,int ds9RegionFormat,WorldCoor* wcs)
+int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS,int ds9WCSType,int ds9RegionFormat,WCS* wcs)
 {
 	//## Open output file
 	FILE* fout= fopen(filename.c_str(),"w");
@@ -675,7 +690,8 @@ int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& 
 }//close WriteToDS9()
 
 
-int SourceExporter::WriteComponentsToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS,int ds9WCSType,WorldCoor* wcs)
+//int SourceExporter::WriteComponentsToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS,int ds9WCSType,WorldCoor* wcs)
+int SourceExporter::WriteComponentsToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS,int ds9WCSType,WCS* wcs)
 {
 	//## Open file
 	FILE* fout_fit= fopen(filename.c_str(),"w");
@@ -726,7 +742,8 @@ std::string SourceExporter::GetDS9RegionColor(Source* source)
 		
 }//close GetDS9RegionColor()
 
-const std::string SourceExporter::SourceToDS9Region(Source* source,bool dumpNestedSourceInfo,bool convertToWCS,WorldCoor* wcs,int coordSystem)
+//const std::string SourceExporter::SourceToDS9Region(Source* source,bool dumpNestedSourceInfo,bool convertToWCS,WorldCoor* wcs,int coordSystem)
+const std::string SourceExporter::SourceToDS9Region(Source* source,bool dumpNestedSourceInfo,bool convertToWCS,WCS* wcs,int coordSystem)
 {
 	//Check source
 	if(!source){
@@ -878,7 +895,8 @@ const std::string SourceExporter::SourceToDS9EllipseRegion(Source* source,bool d
 }//close SourceToDS9EllipseRegion()
 
 
-const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,bool useFWHM,bool dumpNestedSourceInfo,bool convertToWCS,WorldCoor* wcs,int coordSystem)
+//const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,bool useFWHM,bool dumpNestedSourceInfo,bool convertToWCS,WorldCoor* wcs,int coordSystem)
+const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,bool useFWHM,bool dumpNestedSourceInfo,bool convertToWCS,WCS* wcs,int coordSystem)
 {
 	//Check source
 	if(!source){

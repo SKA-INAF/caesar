@@ -32,7 +32,9 @@
 #include <TMatrixD.h>
 
 #include <Consts.h>
-#include <wcs.h>
+
+//WCSTOOLS (TO BE DEPRECATED)
+//#include <wcs.h>
 
 #include <cstdlib>
 #include <iomanip>
@@ -55,6 +57,7 @@
 namespace Caesar {
 
 class Source;
+class WCS;
 
 class SourceExporter : public TObject 
 {
@@ -78,41 +81,48 @@ class SourceExporter : public TObject
 		/**
 		* \brief Write ascii file from source collection
 		*/
-		static int WriteToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WorldCoor* wcs=0);
+		//static int WriteToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WorldCoor* wcs=0);
+		static int WriteToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
 		
 		/**
 		* \brief Get source ascii string
 		*/
-		static const std::vector<std::string> SourceToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WorldCoor* wcs=0);
+		//static const std::vector<std::string> SourceToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WorldCoor* wcs=0);
+		static const std::vector<std::string> SourceToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
 
 		/**
 		* \brief Write ascii file from source component collection
 		*/
-		static int WriteComponentsToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WorldCoor* wcs=0);
+		//static int WriteComponentsToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WorldCoor* wcs=0);
+		static int WriteComponentsToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
 		
 		/**
 		* \brief Get source component ascii string
 		*/
-		static const std::vector<std::string> SourceComponentsToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WorldCoor* wcs=0);
-
+		//static const std::vector<std::string> SourceComponentsToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WorldCoor* wcs=0);
+		static const std::vector<std::string> SourceComponentsToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
+	
 		//=======================================
 		//==      DS9 EXPORT
 		//=======================================
 		/**
 		* \brief Write DS9 regions from source collection
 		*/
-		static int WriteToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS=false,int ds9WCSType=eJ2000,int ds9RegionFormat=ePolygonRegion,WorldCoor* wcs=0);
+		//static int WriteToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS=false,int ds9WCSType=eJ2000,int ds9RegionFormat=ePolygonRegion,WorldCoor* wcs=0);
+		static int WriteToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS=false,int ds9WCSType=eJ2000,int ds9RegionFormat=ePolygonRegion,WCS* wcs=0);
 
 		/**
 		* \brief Write DS9 regions for source fitted components
 		*/
-		static int WriteComponentsToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS=false,int ds9WCSType=eJ2000,WorldCoor* wcs=0);
+		//static int WriteComponentsToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS=false,int ds9WCSType=eJ2000,WorldCoor* wcs=0);
+		static int WriteComponentsToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS=false,int ds9WCSType=eJ2000,WCS* wcs=0);
 
 
 		/**
 		* \brief Get DS9 region info
 		*/
-		static const std::string SourceToDS9Region(Source* source,bool dumpNestedSourceInfo=false,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1);
+		//static const std::string SourceToDS9Region(Source* source,bool dumpNestedSourceInfo=false,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1);
+		static const std::string SourceToDS9Region(Source* source,bool dumpNestedSourceInfo=false,bool convertToWCS=false,WCS* wcs=0,int coordSystem=-1);
 
 		/**
 		* \brief Get DS9 ellipse info
@@ -122,7 +132,8 @@ class SourceExporter : public TObject
 		/**
 		* \brief Get DS9 fitted ellipse info
 		*/
-		static const std::string SourceToDS9FittedEllipseRegion(Source* source,bool useFWHM=true,bool dumpNestedSourceInfo=false,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1);
+		//static const std::string SourceToDS9FittedEllipseRegion(Source* source,bool useFWHM=true,bool dumpNestedSourceInfo=false,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1);
+		static const std::string SourceToDS9FittedEllipseRegion(Source* source,bool useFWHM=true,bool dumpNestedSourceInfo=false,bool convertToWCS=false,WCS* wcs=0,int coordSystem=-1);
 
 	
 	private:

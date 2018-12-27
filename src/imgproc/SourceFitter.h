@@ -32,6 +32,7 @@
 #include <CodeUtils.h>
 #include <MathUtils.h>
 #include <AstroUtils.h>
+#include <WCSUtils.h>
 #include <Consts.h>
 
 #include <TObject.h>
@@ -486,7 +487,8 @@ class SourceComponentPars : public TObject {
 		/**
 		* \brief Compute ellipse pars in WCS coordinates
 		*/
-		int ComputeWCSEllipsePars(WorldCoor* wcs)
+		//int ComputeWCSEllipsePars(WorldCoor* wcs)
+		int ComputeWCSEllipsePars(WCS* wcs)
 		{
 			//Check given WCS	
 			if(!wcs){
@@ -519,14 +521,16 @@ class SourceComponentPars : public TObject {
 			//Compute ellipse centroid coords in WCS coords
 			double x_wcs= 0;
 			double y_wcs= 0;
-			pix2wcs (wcs,x,y,&x_wcs, &y_wcs);
+			//pix2wcs (wcs,x,y,&x_wcs, &y_wcs);
+			WCSUtils::pix2wcs (wcs,x,y,&x_wcs, &y_wcs);
 			m_x0_wcs= x_wcs;
 			m_y0_wcs= y_wcs;
 
 			//Compute ellipse centroid errors in WCS coords
 			double dx_wcs= 0;
 			double dy_wcs= 0;
-			pix2wcs (wcs,x + x_err,y + y_err,&dx_wcs,&dy_wcs); 
+			//pix2wcs (wcs,x + x_err,y + y_err,&dx_wcs,&dy_wcs);
+			WCSUtils::pix2wcs (wcs,x + x_err,y + y_err,&dx_wcs,&dy_wcs); 
 			m_x0_err_wcs= AstroUtils::GetWCSPointDist_Haversine(x_wcs,y_wcs,dx_wcs,y_wcs);
 			m_y0_err_wcs= AstroUtils::GetWCSPointDist_Haversine(x_wcs,y_wcs,x_wcs,dy_wcs);
 
@@ -543,8 +547,10 @@ class SourceComponentPars : public TObject {
 			double y1_wcs= 0;
 			double x2_wcs= 0;
 			double y2_wcs= 0;
-			pix2wcs (wcs,x1,y1,&x1_wcs, &y1_wcs);
-			pix2wcs (wcs,x2,y2,&x2_wcs, &y2_wcs);
+			//pix2wcs (wcs,x1,y1,&x1_wcs, &y1_wcs);
+			//pix2wcs (wcs,x2,y2,&x2_wcs, &y2_wcs);
+			WCSUtils::pix2wcs (wcs,x1,y1,&x1_wcs, &y1_wcs);
+			WCSUtils::pix2wcs (wcs,x2,y2,&x2_wcs, &y2_wcs);
 
 			//Compute semi-axis in WCS coords
 			double a_wcs= AstroUtils::GetWCSPointDist_Haversine(x_wcs,y_wcs,x1_wcs,y1_wcs);//semi-major axis
@@ -572,8 +578,10 @@ class SourceComponentPars : public TObject {
 			double y1_ref_wcs= 0;
 			double x1_err_wcs= 0;
 			double y1_err_wcs= 0;
-			pix2wcs (wcs,x1_ref,y1_ref,&x1_ref_wcs, &y1_ref_wcs);
-			pix2wcs (wcs,x1_err,y1_err,&x1_err_wcs, &y1_err_wcs);
+			//pix2wcs (wcs,x1_ref,y1_ref,&x1_ref_wcs, &y1_ref_wcs);
+			//pix2wcs (wcs,x1_err,y1_err,&x1_err_wcs, &y1_err_wcs);
+			WCSUtils::pix2wcs (wcs,x1_ref,y1_ref,&x1_ref_wcs, &y1_ref_wcs);
+			WCSUtils::pix2wcs (wcs,x1_err,y1_err,&x1_err_wcs, &y1_err_wcs);
 			double a_err_wcs= AstroUtils::GetWCSPointDist_Haversine(x1_ref_wcs,y1_ref_wcs,x1_err_wcs,y1_err_wcs);
 
 			//- Minor axis
@@ -585,8 +593,10 @@ class SourceComponentPars : public TObject {
 			double y2_ref_wcs= 0;			
 			double x2_err_wcs= 0;
 			double y2_err_wcs= 0;
-			pix2wcs (wcs,x2_ref,y2_ref,&x2_ref_wcs, &y2_ref_wcs);
-			pix2wcs (wcs,x2_err,y2_err,&x2_err_wcs, &y2_err_wcs);
+			//pix2wcs (wcs,x2_ref,y2_ref,&x2_ref_wcs, &y2_ref_wcs);
+			//pix2wcs (wcs,x2_err,y2_err,&x2_err_wcs, &y2_err_wcs);
+			WCSUtils::pix2wcs (wcs,x2_ref,y2_ref,&x2_ref_wcs, &y2_ref_wcs);
+			WCSUtils::pix2wcs (wcs,x2_err,y2_err,&x2_err_wcs, &y2_err_wcs);
 			double b_err_wcs= AstroUtils::GetWCSPointDist_Haversine(x2_ref_wcs,y2_ref_wcs,x2_err_wcs,y2_err_wcs);
 
 			//Compute pos angle error
@@ -594,7 +604,8 @@ class SourceComponentPars : public TObject {
 			double y1_thetaerr= y + sy * sin(theta_rad + theta_err_rad);
 			double x1_thetaerr_wcs= 0;
 			double y1_thetaerr_wcs= 0;
-			pix2wcs (wcs,x1_thetaerr,y1_thetaerr,&x1_thetaerr_wcs, &y1_thetaerr_wcs);
+			//pix2wcs (wcs,x1_thetaerr,y1_thetaerr,&x1_thetaerr_wcs, &y1_thetaerr_wcs);
+			WCSUtils::pix2wcs (wcs,x1_thetaerr,y1_thetaerr,&x1_thetaerr_wcs, &y1_thetaerr_wcs);
 			double pa_err_wcs= fabs(AstroUtils::GetWCSPointBearing(x_wcs,y_wcs,x1_wcs,y1_wcs) - AstroUtils::GetWCSPointBearing(x_wcs,y_wcs,x1_thetaerr_wcs,y1_thetaerr_wcs));
 
 
@@ -1641,7 +1652,8 @@ class SourceFitPars : public TObject {
 		/**
 		* \brief Compute component WCS ellipse pars
 		*/
-		int ComputeComponentWCSEllipsePars(WorldCoor* wcs)
+		//int ComputeComponentWCSEllipsePars(WorldCoor* wcs)
+		int ComputeComponentWCSEllipsePars(WCS* wcs)
 		{
 			int status= 0;
 			for(size_t i=0;i<pars.size();i++){

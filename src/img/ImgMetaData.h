@@ -31,15 +31,15 @@
 #include <FITSReader.h>
 
 
-//WCSTOOLS
-#include <wcs.h>
+//WCSTOOLS (TO BE DEPRECATED)
+//#include <wcs.h>
 
 #include <TObject.h>
 #include <string>
 
 namespace Caesar {
 
-
+class WCS;
 
 class ImgMetaData : public TObject {
 
@@ -70,14 +70,14 @@ class ImgMetaData : public TObject {
 		void SetWCSType(std::string value){m_wcsType=value;}
 		
 		/**
-		* \brief Get world coordinate system 
+		* \brief Get world coordinate system (TO BE DEPRECATED)
 		*/
-		WorldCoor* GetWorldCoord(int coordSystem=-1);
+		//WorldCoor* GetWorldCoord(int coordSystem=-1);
 
 		/**
 		* \brief Get world coordinate system 
 		*/
-		//WCS* GetWCS(int coordSystem=-1);
+		WCS* GetWCS(int coordSystem=-1);
 
 		/**
 		* \brief Get pixel area in deg^2

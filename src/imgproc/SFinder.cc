@@ -3309,7 +3309,8 @@ int SFinder::SaveDS9RegionFile()
 	DEBUG_LOG("Saving "<<m_SourceCollection.size()<<" sources to file...");
 
 	//Init WCS
-	WorldCoor* wcs= 0;
+	//WorldCoor* wcs= 0;
+	WCS* wcs= 0;
 
 	for(size_t k=0;k<m_SourceCollection.size();k++){
 		int source_type= m_SourceCollection[k]->Type;
@@ -3391,7 +3392,8 @@ int SFinder::SaveCatalogFile()
 	}
 
 	//Retrieve source WCS
-	WorldCoor* wcs= m_SourceCollection[0]->GetWCS(m_ds9WCSType);
+	//WorldCoor* wcs= m_SourceCollection[0]->GetWCS(m_ds9WCSType);
+	WCS* wcs= m_SourceCollection[0]->GetWCS(m_ds9WCSType);
 	if(!wcs) {
 		WARN_LOG("Failed to compute WCS from sources!");
 	}	

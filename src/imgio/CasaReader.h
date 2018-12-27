@@ -77,9 +77,6 @@ class CasaReader : public TObject {
 		*/
 		static int Read(Caesar::Image& img,std::string filename,int ix_min=-1,int ix_max=-1,int iy_min=-1,int iy_max=-1,bool checkFile=true);
 	
-	
-
-	private:
 
 		ClassDef(CasaReader,1)
 

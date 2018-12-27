@@ -3,8 +3,8 @@ set(INC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 ## GET SOURCES and HEADERS
-file(GLOB_RECURSE THIS_SRCS ${SRC_DIR}/*.cc)
-file(GLOB_RECURSE THIS_HEADERS ${INC_DIR}/*.h)
+file(GLOB THIS_SRCS ${SRC_DIR}/*.cc)
+file(GLOB THIS_HEADERS ${INC_DIR}/*.h)
 
 set(THIS_HEADERS_WPATH "")
 foreach (_headerFile ${THIS_HEADERS})
@@ -24,7 +24,7 @@ list (APPEND HEADERS_WPATH ${THIS_HEADERS_WPATH})
 ### Generate protobuf files
 ###########################################
 ## Get all .proto files in this directory
-file(GLOB_RECURSE THIS_PROTOS ${SRC_DIR}/*.proto)
+file(GLOB THIS_PROTOS ${SRC_DIR}/*.proto)
 
 ## Generate proto srcs and heads
 #MESSAGE(STATUS "Generating protobuf files ...")

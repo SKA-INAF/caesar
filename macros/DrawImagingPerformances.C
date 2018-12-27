@@ -19,7 +19,7 @@ using namespace Caesar;
 
 //Vars
 std::vector<double> LgFluxBins= {
-	-6,-5,-4.5,-4,-3.5,-3,-2.75,-2.5,-2.25,-2,-1.75,-1.5,-1.25,-1,-0.5,0,1,1.5
+	-4,-3.5,-3,-2.75,-2.5,-2.25,-2,-1.75,-1.5,-1.25,-1,-0.5,0,1,1.5
 };
 
 std::map<int,int> typeToHistoIdMap;
@@ -245,8 +245,8 @@ int DrawImagingPerformances(std::string fileName){
 	FluxAccuracyPlot->cd();
 
 	TH2D* FluxAccuracyPlotBkg= new TH2D("FluxAccuracyPlotBkg","",100,LgFluxBins[0]-0.5,LgFluxBins[LgFluxBins.size()-1]+0.5,100,fluxRatio_min,fluxRatio_max);
-	FluxAccuracyPlotBkg->GetXaxis()->SetTitle("log_{10}(S_{true}/Jy)");
-	FluxAccuracyPlotBkg->GetYaxis()->SetTitle("S_{rec}/S_{true}-1");
+	FluxAccuracyPlotBkg->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+	FluxAccuracyPlotBkg->GetYaxis()->SetTitle("(S-S_{gen})/S_{gen}");
 	FluxAccuracyPlotBkg->SetStats(0);
 	FluxAccuracyPlotBkg->Draw();
 
@@ -269,8 +269,8 @@ int DrawImagingPerformances(std::string fileName){
 	FluxAccuracyPlot_extended->cd();
 
 	TH2D* FluxAccuracyPlotBkg_extended= new TH2D("FluxAccuracyPlotBkg_extended","",100,LgFluxBins[0]-0.5,LgFluxBins[LgFluxBins.size()-1]+0.5,100,fluxRatio_min,fluxRatio_max);
-	FluxAccuracyPlotBkg_extended->GetXaxis()->SetTitle("log_{10}(S_{true}/Jy)");
-	FluxAccuracyPlotBkg_extended->GetYaxis()->SetTitle("S_{rec}/S_{true}-1");
+	FluxAccuracyPlotBkg_extended->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+	FluxAccuracyPlotBkg_extended->GetYaxis()->SetTitle("(S-S_{gen})/S_{gen}");
 	FluxAccuracyPlotBkg_extended->SetStats(0);
 	FluxAccuracyPlotBkg_extended->Draw();
 
@@ -293,8 +293,8 @@ int DrawImagingPerformances(std::string fileName){
 	FluxAccuracyPlot_compactextended->cd();
 
 	TH2D* FluxAccuracyPlotBkg_compactextended= new TH2D("FluxAccuracyPlotBkg_compactextended","",100,LgFluxBins[0]-0.5,LgFluxBins[LgFluxBins.size()-1]+0.5,100,fluxRatio_min,fluxRatio_max);
-	FluxAccuracyPlotBkg_compactextended->GetXaxis()->SetTitle("log_{10}(S_{true}/Jy)");
-	FluxAccuracyPlotBkg_compactextended->GetYaxis()->SetTitle("S_{rec}/S_{true}-1");
+	FluxAccuracyPlotBkg_compactextended->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+	FluxAccuracyPlotBkg_compactextended->GetYaxis()->SetTitle("S/S_{gen}-1");
 	FluxAccuracyPlotBkg_compactextended->SetStats(0);
 	FluxAccuracyPlotBkg_compactextended->Draw();
 
@@ -313,12 +313,12 @@ int DrawImagingPerformances(std::string fileName){
 	refLine_fluxAccuracy->Draw("same");
 
 	//### All sources
-	TCanvas* FluxAccuracyPlot_all= new TCanvas("FluxAccuracyPlot_all","FluxAccuracyPlot_all");
+	TCanvas* FluxAccuracyPlot_all= new TCanvas("FluxAccuracyPlot_all","FluxAccuracyPlot_all",1000,800);
 	FluxAccuracyPlot_all->cd();
 
 	TH2D* FluxAccuracyPlotBkg_all= new TH2D("FluxAccuracyPlotBkg_all","",100,LgFluxBins[0]-0.5,LgFluxBins[LgFluxBins.size()-1]+0.5,100,fluxRatio_min,fluxRatio_max);
-	FluxAccuracyPlotBkg_all->GetXaxis()->SetTitle("log_{10}(S_{true}/Jy)");
-	FluxAccuracyPlotBkg_all->GetYaxis()->SetTitle("S_{rec}/S_{true}");
+	FluxAccuracyPlotBkg_all->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+	FluxAccuracyPlotBkg_all->GetYaxis()->SetTitle("(S-S_{gen})/S_{gen}");
 	FluxAccuracyPlotBkg_all->SetStats(0);
 	FluxAccuracyPlotBkg_all->Draw();
 
@@ -362,8 +362,17 @@ int DrawImagingPerformances(std::string fileName){
 	fluxAccuracy_compactextended->SetLineColor(kBlue);
 	fluxAccuracy_compactextended->Draw("ep same");
 
-	
 	refLine_fluxAccuracy->Draw("same");
+
+	TLegend* FluxAccuracyPlotLegend_all= new TLegend(0.6,0.7,0.7,0.8);
+	FluxAccuracyPlotLegend_all->SetFillColor(0);
+	FluxAccuracyPlotLegend_all->SetTextSize(0.045);
+	FluxAccuracyPlotLegend_all->SetTextFont(52);
+	FluxAccuracyPlotLegend_all->AddEntry(fluxAccuracy_compact,"point-like","pl");
+	FluxAccuracyPlotLegend_all->AddEntry(fluxAccuracy_extended,"extended","pl");
+	FluxAccuracyPlotLegend_all->AddEntry(fluxAccuracy_compactextended,"extended+point-like","pl");
+	FluxAccuracyPlotLegend_all->Draw("same");
+
 	
 
 	return 0;

@@ -42,8 +42,8 @@
 #include <CodeUtils.h>
 #include <Logger.h>
 
-//WCSTOOLS
-#include <wcs.h>
+//WCSTOOLS (TO BE DEPRECATED)
+//#include <wcs.h>
 
 
 //ROOT
@@ -85,7 +85,7 @@ namespace Caesar{
 
 //Forward declarations
 class Source;
-
+class WCS;
 
 class ImgBkgPars : public TObject {
 
@@ -1147,9 +1147,13 @@ class Image : public TNamed {
 		*/
 		TH2D* GetHisto2D(std::string histoname="");
 		/**
+		* \brief Export to ROOT TH2 converted to WCS (TO BE DEPRECATED)
+		*/
+		//TH2D* GetWCSHisto2D(std::string histoname="",WorldCoor* wcs=0,bool useImageCoord=true);
+		/**
 		* \brief Export to ROOT TH2 converted to WCS
 		*/
-		TH2D* GetWCSHisto2D(std::string histoname="",WorldCoor* wcs=0,bool useImageCoord=true);
+		TH2D* GetWCSHisto2D(std::string histoname="",WCS* wcs=0,bool useImageCoord=true);
 
 		/**
 		* \brief Convert image to OpenCV mat float image

@@ -29,7 +29,8 @@
 #ifndef _ASTRO_UTILS_h
 #define _ASTRO_UTILS_h 1
 
-#include <wcs.h>
+//WCSTOOLS (TO BE DEPRECATED)
+//#include <wcs.h>
 
 #include <TObject.h>
 #include <TMath.h>
@@ -59,6 +60,7 @@ class Image;
 class ImgMetaData;
 class ImgStatsData;
 class Contour;
+class WCS;
 
 //========================================
 //==   ASTRO UTILS
@@ -86,23 +88,39 @@ class AstroUtils : public TObject {
 		
 
 		/**
-		* \brief Get WCS coordinates corresponding to image coordinates
+		* \brief Get WCS coordinates corresponding to image coordinates (TO BE DEPRECATED)
 		*/
-		static int PixelToWCSCoords(double& xpos, double& ypos,WorldCoor* wcs,double ix,double iy);
-		/**
-		* \brief Get WCS coordinates in string format corresponding to image coordinates
-		*/
-		static int PixelToWCSStrCoords(std::string& wcs_str,WorldCoor* wcs,double ix,double iy,int max_str_length=4096);
-
-
+		//static int PixelToWCSCoords(double& xpos, double& ypos,WorldCoor* wcs,double ix,double iy);
 		/**
 		* \brief Get WCS coordinates corresponding to image coordinates
 		*/
-		static int PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,double& xpos, double& ypos,bool useImageCoords=true);
+		static int PixelToWCSCoords(double& xpos, double& ypos,WCS* wcs,double ix,double iy);
+		/**
+		* \brief Get WCS coordinates in string format corresponding to image coordinates (TO BE DEPRECATED)
+		*/
+		//static int PixelToWCSStrCoords(std::string& wcs_str,WorldCoor* wcs,double ix,double iy,int max_str_length=4096);
+		/**
+		* \brief Get WCS coordinates in string format corresponding to image coordinates 
+		*/
+		static int PixelToWCSStrCoords(std::string& wcs_str,WCS* wcs,double ix,double iy,int max_str_length=4096);
+
+
+		/**
+		* \brief Get WCS coordinates corresponding to image coordinates (TO BE DEPRECATED)
+		*/
+		//static int PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,double& xpos, double& ypos,bool useImageCoords=true);
+		/**
+		* \brief Get WCS coordinates corresponding to image coordinates
+		*/
+		static int PixelToWCSCoords(Caesar::Image* image,WCS* wcs,double ix,double iy,double& xpos, double& ypos,bool useImageCoords=true);
+		/**
+		* \brief Get WCS coordinates in string format corresponding to image coordinates (TO BE DEPRECATED)
+		*/
+		//static int PixelToWCSStrCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,std::string& wcs_str,bool useImageCoords=true,int max_str_length=4096); 
 		/**
 		* \brief Get WCS coordinates in string format corresponding to image coordinates
 		*/
-		static int PixelToWCSStrCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,std::string& wcs_str,bool useImageCoords=true,int max_str_length=4096); 
+		static int PixelToWCSStrCoords(Caesar::Image* image,WCS* wcs,double ix,double iy,std::string& wcs_str,bool useImageCoords=true,int max_str_length=4096); 
 
 		/**
 		* \brief Get WCS coordinates corresponding to image coordinates
@@ -144,19 +162,32 @@ class AstroUtils : public TObject {
 		}
 
 		/**
+		* \brief Convert contour from pixel coordinates to sky coordinates (TO BE DEPRECATED)
+		*/
+		//static Contour* PixelToWCSContour(Contour* contour,WorldCoor* wcs,int pixOffset=0);
+		/**
 		* \brief Convert contour from pixel coordinates to sky coordinates
 		*/
-		static Contour* PixelToWCSContour(Contour* contour,WorldCoor* wcs,int pixOffset=0);
+		static Contour* PixelToWCSContour(Contour* contour,WCS* wcs,int pixOffset=0);
 
+		/**
+		* \brief Convert contour list from pixel coordinates to sky coordinates (TO BE DEPRECATED)
+		*/
+		//static int PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vector<Contour*>const& contours,WorldCoor* wcs,int pixOffset=0);
 		/**
 		* \brief Convert contour list from pixel coordinates to sky coordinates
 		*/
-		static int PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vector<Contour*>const& contours,WorldCoor* wcs,int pixOffset=0);
+		static int PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vector<Contour*>const& contours,WCS* wcs,int pixOffset=0);
 	
+		/**
+		* \brief Convert ellipse from pixel coordinates to sky coordinates (TO BE DEPRECATED)
+		*/
+		//static TEllipse* PixelToWCSEllipse(TEllipse* ellipse,WorldCoor* wcs,int pixOffset=0);
 		/**
 		* \brief Convert ellipse from pixel coordinates to sky coordinates
 		*/
-		static TEllipse* PixelToWCSEllipse(TEllipse* ellipse,WorldCoor* wcs,int pixOffset=0);
+		static TEllipse* PixelToWCSEllipse(TEllipse* ellipse,WCS* wcs,int pixOffset=0);
+	
 
 		/**
 		* \brief Compute ellipse deconvolved from ellipse beam

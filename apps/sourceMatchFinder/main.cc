@@ -26,14 +26,15 @@
 #include <MathUtils.h>
 #include <EllipseUtils.h>
 #include <Contour.h>
+#include <WCSUtils.h>
 
 //ROOT headers
 #include <TFile.h>
 #include <TTree.h>
 #include <TEllipse.h>
 
-//WCS headers
-#include <wcs.h>
+//WCS headers (TO BE DEPRECATED)
+//#include <wcs.h>
 
 //BOOST headers
 #include <boost/graph/bron_kerbosch_all_cliques.hpp>
@@ -321,7 +322,8 @@ int InitGrid(float xmin,float xmax,float xstep,float ymin,float ymax,float ystep
 int FindSourceMatchesInTiles();
 int ReadData();
 int ReadSourceData(std::string filename,int collectionIndex);
-int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int collectionIndex,int sourceIndex,int nestedSourceIndex=-1,WorldCoor* wcs=0,int coordSystem=0);
+//int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int collectionIndex,int sourceIndex,int nestedSourceIndex=-1,WorldCoor* wcs=0,int coordSystem=0);
+int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int collectionIndex,int sourceIndex,int nestedSourceIndex=-1,WCS* wcs=0,int coordSystem=0);
 bool HaveSourceComponentMatch(ComponentPars* pars1,ComponentPars* pars2);
 bool HaveContourMatch(SourcePars* pars1,SourcePars* pars2);
 void Save();
@@ -1265,7 +1267,8 @@ int ReadSourceData(std::string filename,int catalogIndex)
 
 	//Initialize WCS & source pars
 	int wcsType= 0;
-	WorldCoor* wcs= 0;
+	//WorldCoor* wcs= 0;
+	WCS* wcs= 0;
 	int coordSys= 0;//eJ2000
 	std::vector<SourcePars*> pars;
 	int sourceIndex= 0;
@@ -1327,13 +1330,15 @@ int ReadSourceData(std::string filename,int catalogIndex)
 	INFO_LOG("#"<<sources[catalogIndex].size()<<" sources to be cross-matched in this collection (#"<<source_pars.size()<<" source pars added from catalog no. "<<catalogIndex<<")...");
 
 	//Delete WCS for this collection
-	CodeUtils::DeletePtr<WorldCoor>(wcs);
+	//CodeUtils::DeletePtr<WorldCoor>(wcs);
+	CodeUtils::DeletePtr<WCS>(wcs);
 
 	return 0;
 
 }//close ReadSourceData()
 
-int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogIndex,int sourceIndex,int nestedSourceIndex,WorldCoor* wcs,int coordSystem)
+//int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogIndex,int sourceIndex,int nestedSourceIndex,WorldCoor* wcs,int coordSystem)
+int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogIndex,int sourceIndex,int nestedSourceIndex,WCS* wcs,int coordSystem)
 {
 	//####  METHOD ##############################
 	//Distinguish different source cases

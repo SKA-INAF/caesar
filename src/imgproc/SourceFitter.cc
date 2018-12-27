@@ -35,6 +35,7 @@
 #include <SysUtils.h>
 #include <Logger.h>
 #include <Consts.h>
+#include <WCSUtils.h>
 
 //ROOT headers
 #include <TFile.h>
@@ -1376,7 +1377,8 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	if(aSource->HasImageMetaData()){
 		//Retrieve WCS
 		ImgMetaData* metadata= aSource->GetImageMetaData();
-		WorldCoor* wcs= metadata->GetWorldCoord(fitOptions.wcsType);
+		//WorldCoor* wcs= metadata->GetWorldCoord(fitOptions.wcsType);
+		WCS* wcs= metadata->GetWCS(fitOptions.wcsType);
 		if(wcs){
 			if(m_sourceFitPars.ComputeComponentWCSEllipsePars(wcs)<0){
 				WARN_LOG("Failed to compute WCS fit component ellipse pars!");

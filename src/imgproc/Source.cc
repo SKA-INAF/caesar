@@ -32,6 +32,7 @@
 #include <Image.h>
 #include <Contour.h>
 #include <GraphicsUtils.h>
+#include <WCSUtils.h>
 
 #include <TObject.h>
 #include <TMatrixD.h>
@@ -340,7 +341,8 @@ void Source::Draw(bool drawBoundingBox,bool drawEllipse,bool drawNested,int line
 }//close Draw()
 
 
-const std::string Source::GetDS9Region(bool dumpNestedSourceInfo,bool convertToWCS,WorldCoor* wcs,int coordSystem)
+//const std::string Source::GetDS9Region(bool dumpNestedSourceInfo,bool convertToWCS,WorldCoor* wcs,int coordSystem)
+const std::string Source::GetDS9Region(bool dumpNestedSourceInfo,bool convertToWCS,WCS* wcs,int coordSystem)
 {
 	//Check if has pixels
 	//NB: DS9 crashes miserably when given a polygon region with one point 
@@ -425,7 +427,8 @@ const std::string Source::GetDS9Region(bool dumpNestedSourceInfo,bool convertToW
 }//close GetDS9Region()
 
 
-const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNestedSourceInfo,bool convertToWCS,WorldCoor* wcs,int coordSystem)
+//const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNestedSourceInfo,bool convertToWCS,WorldCoor* wcs,int coordSystem)
+const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNestedSourceInfo,bool convertToWCS,WCS* wcs,int coordSystem)
 {
 	//Check WCS & metadata
 	if(convertToWCS && !wcs && !m_imgMetaData){
@@ -1191,7 +1194,8 @@ int Source::Fit(SourceFitOptions& fitOptions)
 }//close Fit()
 
 
-int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool convertToWCS,WorldCoor* wcs,int coordSystem,int pixOffset)
+//int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool convertToWCS,WorldCoor* wcs,int coordSystem,int pixOffset)
+int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool convertToWCS,WCS* wcs,int coordSystem,int pixOffset)
 {
 	//Init data 
 	fitEllipses.clear();
@@ -1220,7 +1224,8 @@ int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool
 		//Build the WCS with metadata if not given
 		bool deleteWCS= false;
 		if(!wcs){
-			wcs= m_imgMetaData->GetWorldCoord(coordSystem);
+			//wcs= m_imgMetaData->GetWorldCoord(coordSystem);
+			wcs= m_imgMetaData->GetWCS(coordSystem);
 			if(!wcs){
 				ERROR_LOG("Failed to get WorldCoord system from metadata!");
 				CodeUtils::DeletePtrCollection<TEllipse>(fitEllipses);
@@ -1236,7 +1241,8 @@ int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool
 			if(!fitEllipse_wcs){
 				ERROR_LOG("Failed to convert fit ellipse no. "<<i+1<<" to WCS!");
 				CodeUtils::DeletePtrCollection<TEllipse>(fitEllipses);
-				if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+				//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+				if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);	
 				return -1;
 			}
 			fitEllipses_wcs.push_back(fitEllipse_wcs);
@@ -1247,7 +1253,8 @@ int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool
 		fitEllipses.insert(fitEllipses.end(),fitEllipses_wcs.begin(),fitEllipses_wcs.end());
 	
 		//Delete wcs (if allocated)
-		if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+		//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+		if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 
 	}//close if convert to WCS
 
@@ -1483,7 +1490,8 @@ int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std:
 }//close FindBlendedComponents()
 
 
-std::string Source::GetIAUName(bool useWeightedPos,WorldCoor* wcs,int coordSystem)
+//std::string Source::GetIAUName(bool useWeightedPos,WorldCoor* wcs,int coordSystem)
+std::string Source::GetIAUName(bool useWeightedPos,WCS* wcs,int coordSystem)
 {
 	//Init name
 	std::string iau= "";
@@ -1495,7 +1503,8 @@ std::string Source::GetIAUName(bool useWeightedPos,WorldCoor* wcs,int coordSyste
 			WARN_LOG("No metadata are available to retrieve WCS!");
 			return iau;
 		}
-		wcs= m_imgMetaData->GetWorldCoord(coordSystem);
+		//wcs= m_imgMetaData->GetWorldCoord(coordSystem);	
+		wcs= m_imgMetaData->GetWCS(coordSystem);
 		if(!wcs){
 			ERROR_LOG("Failed to get WCS from metadata!");
 			return iau;
@@ -1511,7 +1520,8 @@ std::string Source::GetIAUName(bool useWeightedPos,WorldCoor* wcs,int coordSyste
 
 	if(status<0){
 		WARN_LOG("Failed to compute WCS source pos in string format!");
-		if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+		//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+		if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 		return iau;
 	}
 
@@ -1519,18 +1529,21 @@ std::string Source::GetIAUName(bool useWeightedPos,WorldCoor* wcs,int coordSyste
 	if(AstroUtils::GetIAUCoords(iau,wcspos_str)<0){
 		WARN_LOG("Failed to compute IAU name from WCS string coords!");
 		iau= "";
-		if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+		//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);	
+		if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 		return iau;
 	}
 
 	//Delete WCS
-	if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+	//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+	if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 
 	return iau;
 
 }//close GetIAUName()
 
-int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WorldCoor* wcs,int coordSystem)
+//int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WorldCoor* wcs,int coordSystem)
+int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WCS* wcs,int coordSystem)
 {
 	//Init pos
 	xwcs= -999;
@@ -1543,7 +1556,8 @@ int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WorldCoor* 
 			WARN_LOG("Requested to get WCS centroid coords but no wcs was provided and no metadata are available to retrieve it!");
 			return -1;
 		}
-		wcs= m_imgMetaData->GetWorldCoord(coordSystem);
+		//wcs= m_imgMetaData->GetWorldCoord(coordSystem);
+		wcs= m_imgMetaData->GetWCS(coordSystem);
 		if(!wcs){
 			ERROR_LOG("Failed to get WorldCoord system from metadata!");
 			return -1;
@@ -1559,7 +1573,8 @@ int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WorldCoor* 
 	}
 
 	//Delete WCS
-	if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+	//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
+	if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 
 	return 0;
 

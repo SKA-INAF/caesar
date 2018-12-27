@@ -54,7 +54,7 @@
 namespace Caesar {
 
 class Contour;
-
+class WCS;
 
 //======================================
 //==      STRUCT: SourceOverlapMatchPars
@@ -309,7 +309,8 @@ class Source : public Blob {
 		/**
 		* \brief Get DS9 region info
 		*/
-		const std::string GetDS9Region(bool dumpNestedSourceInfo=false,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1);
+		//const std::string GetDS9Region(bool dumpNestedSourceInfo=false,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1);
+		const std::string GetDS9Region(bool dumpNestedSourceInfo=false,bool convertToWCS=false,WCS* wcs=0,int coordSystem=-1);
 		/**
 		* \brief Get DS9 ellipse info
 		*/
@@ -317,7 +318,8 @@ class Source : public Blob {
 		/**
 		* \brief Get DS9 fitted ellipse info
 		*/
-		const std::string GetDS9FittedEllipseRegion(bool useFWHM=true,bool dumpNestedSourceInfo=false,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1);
+		//const std::string GetDS9FittedEllipseRegion(bool useFWHM=true,bool dumpNestedSourceInfo=false,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1);
+		const std::string GetDS9FittedEllipseRegion(bool useFWHM=true,bool dumpNestedSourceInfo=false,bool convertToWCS=false,WCS* wcs=0,int coordSystem=-1);
 
 		/**
 		* \brief Get DS9 region color according to source type
@@ -525,7 +527,8 @@ class Source : public Blob {
 		/**
 		* \brief Get fit ellipses
 		*/
-		int GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM=true,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1,int pixOffset=0);
+		//int GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM=true,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1,int pixOffset=0);
+		int GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM=true,bool convertToWCS=false,WCS* wcs=0,int coordSystem=-1,int pixOffset=0);
 	
 		
 		/**
@@ -549,7 +552,8 @@ class Source : public Blob {
 		/**
 		* \brief Return source position in WCS coordinates
 		*/
-		int GetWCSPos(double& xwcs,double& ywcs,WorldCoor* wcs=0,int coordSystem=eJ2000)
+		//int GetWCSPos(double& xwcs,double& ywcs,WorldCoor* wcs=0,int coordSystem=eJ2000)
+		int GetWCSPos(double& xwcs,double& ywcs,WCS* wcs=0,int coordSystem=eJ2000)
 		{
 			return GetWCSCoords(xwcs,ywcs,X0,Y0,wcs,coordSystem);
 		}
@@ -557,7 +561,8 @@ class Source : public Blob {
 		/**
 		* \brief Return signal-weighted source position in WCS coordinates
 		*/
-		int GetWCSWeightedPos(double& xwcs,double& ywcs,WorldCoor* wcs=0,int coordSystem=eJ2000)
+		//int GetWCSWeightedPos(double& xwcs,double& ywcs,WorldCoor* wcs=0,int coordSystem=eJ2000)
+		int GetWCSWeightedPos(double& xwcs,double& ywcs,WCS* wcs=0,int coordSystem=eJ2000)
 		{
 			return GetWCSCoords(xwcs,ywcs,m_Sx,m_Sy,wcs,coordSystem);
 		}
@@ -565,7 +570,8 @@ class Source : public Blob {
 		/**
 		* \brief Return bounding box in WCS coordinates
 		*/
-		int GetWCSSourceRange(double& xmin_wcs,double& xmax_wcs,double& ymin_wcs,double& ymax_wcs,WorldCoor* wcs=0,int coordSystem=eJ2000)
+		//int GetWCSSourceRange(double& xmin_wcs,double& xmax_wcs,double& ymin_wcs,double& ymax_wcs,WorldCoor* wcs=0,int coordSystem=eJ2000)
+		int GetWCSSourceRange(double& xmin_wcs,double& xmax_wcs,double& ymin_wcs,double& ymax_wcs,WCS* wcs=0,int coordSystem=eJ2000)
 		{
 			xmin_wcs= -999;
 			xmax_wcs= -999;
@@ -581,7 +587,8 @@ class Source : public Blob {
 		/**
 		* \brief Return source name following IAU convention
 		*/
-		std::string GetIAUName(bool useWeightedPos=false,WorldCoor* wcs=0,int coordSystem=eJ2000);
+		//std::string GetIAUName(bool useWeightedPos=false,WorldCoor* wcs=0,int coordSystem=eJ2000);
+		std::string GetIAUName(bool useWeightedPos=false,WCS* wcs=0,int coordSystem=eJ2000);
 		
 		/**
 		* \brief Return spectral axis info
@@ -598,7 +605,8 @@ class Source : public Blob {
 		/**
 		* \brief Return centroid in WCS coordinates
 		*/
-		int GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WorldCoor* wcs=0,int coordSystem=eJ2000);
+		//int GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WorldCoor* wcs=0,int coordSystem=eJ2000);
+		int GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WCS* wcs=0,int coordSystem=eJ2000);
 
 
 

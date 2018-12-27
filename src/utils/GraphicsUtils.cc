@@ -29,6 +29,7 @@
 #include <GraphicsUtils.h>
 #include <AstroUtils.h>
 #include <Image.h>
+#include <WCSUtils.h>
 
 #include <TObject.h>
 #include <TStyle.h>
@@ -121,8 +122,9 @@ int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::
 		return -1;
 	}
 	ImgMetaData* metadata= img->GetMetaData();
-	WorldCoor* wcs= metadata->GetWorldCoord(coordSystem);
-	//WorldCoor* wcs= metadata->GetWorldCoord();
+	//WorldCoor* wcs= metadata->GetWorldCoord(coordSystem);
+	WCS* wcs= metadata->GetWCS(coordSystem);
+	
 	if(!wcs){
 		WARN_LOG("Cannot get WCS from image!");
 		return -1;
@@ -131,11 +133,15 @@ int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::
 	//Get range coord in WCS
 	double xBR_wcs, xBL_wcs, xTR_wcs, xTL_wcs;
 	double yBR_wcs, yBL_wcs, yTR_wcs, yTL_wcs;
-	pix2wcs (wcs,xmin,ymin,&xBL_wcs,&yBL_wcs);//Bottom-Left corner
-	pix2wcs (wcs,xmax,ymin,&xBR_wcs,&yBR_wcs);//Bottom-Right corner
-	pix2wcs (wcs,xmin,ymax,&xTL_wcs,&yTL_wcs);//Top-Left corner
-	pix2wcs (wcs,xmax,ymax,&xTR_wcs,&yTR_wcs);//Top-Right corner
-	
+	//pix2wcs (wcs,xmin,ymin,&xBL_wcs,&yBL_wcs);//Bottom-Left corner
+	//pix2wcs (wcs,xmax,ymin,&xBR_wcs,&yBR_wcs);//Bottom-Right corner
+	//pix2wcs (wcs,xmin,ymax,&xTL_wcs,&yTL_wcs);//Top-Left corner
+	//pix2wcs (wcs,xmax,ymax,&xTR_wcs,&yTR_wcs);//Top-Right corner
+	WCSUtils::pix2wcs (wcs,xmin,ymin,&xBL_wcs,&yBL_wcs);//Bottom-Left corner
+	WCSUtils::pix2wcs (wcs,xmax,ymin,&xBR_wcs,&yBR_wcs);//Bottom-Right corner
+	WCSUtils::pix2wcs (wcs,xmin,ymax,&xTL_wcs,&yTL_wcs);//Top-Left corner
+	WCSUtils::pix2wcs (wcs,xmax,ymax,&xTR_wcs,&yTR_wcs);//Top-Right corner
+
 	double xmin_wcs, xmax_wcs, ymin_wcs, ymax_wcs;	
 	xmin_wcs= min(min(xBR_wcs,xBL_wcs),min(xTR_wcs,xTL_wcs));
 	xmax_wcs= max(max(xBR_wcs,xBL_wcs),max(xTR_wcs,xTL_wcs));
@@ -181,7 +187,8 @@ int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::
 		flag = (char*)(wcsType.c_str());
 			
 	if(strcmp(flag,"")!=0) {
-		wcsininit (wcs,flag);			
+		//wcsininit (wcs,flag);
+		WCSUtils::wcsininit (wcs,flag);
 	}
 	
 	
@@ -194,8 +201,9 @@ int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::
 		double xstart= x_list[i];
 		double ystart= ymin;
 		double xstart_wcs, ystart_wcs;
-		//wcsoutinit (wcs,flag);
-		pix2wcs (wcs,xstart,ystart,&xstart_wcs,&ystart_wcs); 
+		
+		//pix2wcs (wcs,xstart,ystart,&xstart_wcs,&ystart_wcs);
+		WCSUtils::pix2wcs (wcs,xstart,ystart,&xstart_wcs,&ystart_wcs); 
 		DEBUG_LOG("Grid no. "<<i<<" (xstart,ystart)=("<<xstart<<","<<ystart<<") ==> ("<<xstart_wcs<<","<<ystart_wcs<<")");
 	
 		//Move along wcs proj
@@ -213,8 +221,9 @@ int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::
 			nPts++;
 			
 			x_wcs+= stepx_wcs;
-			//wcsininit (wcs,flag);
-			wcs2pix(wcs, x_wcs, y_wcs,&x,&y,&offset);
+			
+			//wcs2pix(wcs, x_wcs, y_wcs,&x,&y,&offset);
+			WCSUtils::wcs2pix(wcs, x_wcs, y_wcs,&x,&y,&offset);
 		}//end loop points
 		gridx.push_back(thisPolyLine);
 
@@ -225,8 +234,9 @@ int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::
 		double xstart= xmin;
 		double ystart= y_list[i];
 		double xstart_wcs, ystart_wcs;
-		//wcsoutinit (wcs,flag);
-		pix2wcs (wcs,xstart,ystart,&xstart_wcs,&ystart_wcs); 
+		
+		//pix2wcs (wcs,xstart,ystart,&xstart_wcs,&ystart_wcs);
+		WCSUtils::pix2wcs (wcs,xstart,ystart,&xstart_wcs,&ystart_wcs); 
 		DEBUG_LOG("Grid no. "<<i<<" (xstart,ystart)=("<<xstart<<","<<ystart<<") ==> ("<<xstart_wcs<<","<<ystart_wcs<<")");
 	
 		//Move along wcs proj
@@ -244,8 +254,9 @@ int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::
 			nPts++;
 			
 			y_wcs+= stepy_wcs;
-			//wcsininit (wcs,flag);
-			wcs2pix(wcs, x_wcs, y_wcs,&x,&y,&offset);
+			
+			//wcs2pix(wcs, x_wcs, y_wcs,&x,&y,&offset);
+			WCSUtils::wcs2pix(wcs, x_wcs, y_wcs,&x,&y,&offset);
 		}//end loop points
 		gridy.push_back(thisPolyLine);
 
@@ -278,7 +289,8 @@ int GraphicsUtils::SetWCSAxis(Image* img,TGaxis& xaxis_wcs,TGaxis& yaxis_wcs,int
 		return -1;
 	}
 	ImgMetaData* metadata= img->GetMetaData();
-	WorldCoor* wcs= metadata->GetWorldCoord(coordSystem);
+	//WorldCoor* wcs= metadata->GetWorldCoord(coordSystem);
+	WCS* wcs= metadata->GetWCS(coordSystem);
 	if(!wcs){
 		ERROR_LOG("Cannot get WCS from image!");
 		return -1;
@@ -469,7 +481,8 @@ int GraphicsUtils::UpdateGAxis(bool useImageCoords)
 		return -1;
 	}
 	ImgMetaData* metadata= img->GetMetaData();
-	WorldCoor* wcs= metadata->GetWorldCoord();
+	//WorldCoor* wcs= metadata->GetWorldCoord();
+	WCS* wcs= metadata->GetWCS();
 	if(!wcs){
 		ERROR_LOG("Cannot get WCS from image!");
 		return -1;
