@@ -61,6 +61,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--bkggrid=[BKG_GRIDSIZE] - Grid size (fraction of bkg box) used to compute local bkg (default=0.2 x box)"
 	echo "--no-bkg2ndpass - Do not perform a 2nd pass in bkg estimation (default=true)"
 	echo "--bkgskipoutliers - Remove bkg outliers (blobs above seed thr) when estimating bkg (default=no)"
+	echo "--sourcebkgboxborder=[SOURCE_BKGBOX_BORDER] - Border size (in pixels) of box around source bounding box used to estimate bkg for fitting (default=20)"
 	echo ""
 
 	echo "=== SFINDER SOURCE FINDING OPTIONS ==="
@@ -138,7 +139,8 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--fit-maxcomponents=[FIT_MAX_COMPONENTS] - Maximum number of components fitted in a blob (default=3)"	
 	echo "--fit-usenestedascomponents - Initialize fit components to nested sources found in source (default=no)"
 	echo "--fit-freebkg - Fit with bkg offset parameter free to vary (default=fixed)"
-	echo "--fit-estimatedbkg - Set bkg par starting value to estimated bkg (average over source pixels) (default=use fixed bkg start value)"
+	echo "--fit-estimatedbkg - Set bkg par starting value to estimated bkg (average over source pixels by default, box around source if --fit-estimatedboxbkg is given) (default=use fixed bkg start value)"
+	echo "--fit-usebkgboxestimate - Set bkg par starting value to estimated bkg (from box around source)"
 	echo "--fit-bkg=[FIT_BKG] - Bkg par starting value (NB: ineffective when -fit-estimatedbkg is enabled) (default=0)"
 	echo "--fit-ampllimit=[FIT_AMPL_LIMIT] - Limit amplitude range par (Speak*(1+-FIT_AMPL_LIMIT)) (default=0.3)"
 	echo "--prefit-freeampl - Set free amplitude par in pre-fit (default=fixed)"
@@ -287,6 +289,8 @@ BKG_BOXSIZE="20"
 BKG_GRIDSIZE="0.2"
 BKG_USE_2ND_PASS="true"
 BKG_SKIP_OUTLIERS="false"
+SOURCE_BKGBOX_BORDER="20"
+
 NPIX_MIN="5"
 SEED_THR="5"
 MERGE_THR="2.6"
@@ -364,6 +368,7 @@ FIT_MAX_NBEAMS="20"
 FIT_MAX_COMPONENTS="3"
 FIT_WITH_FIXED_BKG="true"
 FIT_WITH_ESTIMATED_BKG="false"
+FIT_USE_BKGBOX_ESTIMATE="false"
 FIT_BKG="0"
 FIT_WITH_BKG_LIMITS="true"
 FIT_WITH_AMPL_LIMITS="true"
@@ -588,6 +593,9 @@ do
 		--bkgskipoutliers*)
 			BKG_SKIP_OUTLIERS="true"
 		;;
+		--sourcebkgboxborder=*)
+			SOURCE_BKGBOX_BORDER=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
 
 		## SOURCE MERGING
 		--mergeedgesources*)
@@ -792,6 +800,9 @@ do
 		--fit-estimatedbkg*)
     	FIT_WITH_ESTIMATED_BKG="true"
     ;;
+		--fit-usebkgboxestimate*)
+			FIT_USE_BKGBOX_ESTIMATE="true"
+		;;
 		--fit-bkg=*)
     	FIT_BKG=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
@@ -1277,6 +1288,7 @@ generate_config(){
 		echo "boxSizeY = $BKG_BOXSIZE										        | Y Size of local background box in #pixels"
 		echo "gridSizeX = $BKG_GRIDSIZE									        | X Size of local background grid used for bkg interpolation"
 		echo "gridSizeY = $BKG_GRIDSIZE									        | Y Size of local background grid used for bkg interpolation"
+		echo "sourceBkgBoxBorderSize = $SOURCE_BKGBOX_BORDER    | Border size in pixels of box around source bounding box used to estimate bkg for fitting"
 		echo '###'
 		echo '###'
 		echo '//==============================='
@@ -1337,6 +1349,7 @@ generate_config(){
 		echo "fitWithBkgLimits = $FIT_WITH_BKG_LIMITS			          | Use limits when fitting bkg offset (T/F)"
 		echo "fitWithFixedBkg = $FIT_WITH_FIXED_BKG                 | Fix bkg level parameter in fit (T/F)"
 		echo "fitUseEstimatedBkgLevel = $FIT_WITH_ESTIMATED_BKG     | Use estimated (avg bkg) as bkg level par in fit (T/F)"
+		echo "fitUseBkgBoxEstimate = $FIT_USE_BKGBOX_ESTIMATE       | Use bkg estimated in a box around source (if available) as bkg level par in fit (T/F)"
 		echo "fitBkgLevel = $FIT_BKG                                | Fixed bkg level used when fitWithFixedBkg=true"
 		echo "fitWithAmplLimits = $FIT_WITH_AMPL_LIMITS             | Use limits when fitting gaussian amplitude (T/F)"
 		echo "fixAmplInPreFit = $PREFIT_FIX_AMPL                    | Fix amplitude par in pre-fit (T/F)"
