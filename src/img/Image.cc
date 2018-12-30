@@ -2446,6 +2446,122 @@ int Image::MaskSources(std::vector<Source*>const& sources,float maskValue)
 
 }//close MaskSources()
 
+
+int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,int boxThickness,int bkgEstimator,Image* mask,bool useParallelVersion)
+{
+	//Check source
+	if(!source){
+		ERROR_LOG("Null ptr to input source given!");
+		return -1;
+	}
+
+	//Check box size
+	if(boxThickness<=0){
+		ERROR_LOG("Box size must be >0!");
+		return -1;
+	}
+
+	//Get source bounding box
+	long int ix_min= -1;
+	long int ix_max= -1;
+	long int iy_min= -1;
+	long int iy_max= -1;
+	source->GetSourcePixelRange(ix_min,ix_max,iy_min,iy_max);
+
+	if(ix_min<0 || ix_min>=ix_max || ix_max>=m_Nx){
+		ERROR_LOG("Invalid source x range ("<<ix_min<<","<<ix_max<<")!");
+		return -1;
+	}
+	if(iy_min<0 || iy_min>=iy_max || iy_max>=m_Ny){
+		ERROR_LOG("Invalid source y range ("<<iy_min<<","<<iy_max<<")!");
+		return -1;
+	}
+
+	//Exclude pixels belonging to source
+	long int nPixels= this->GetNPixels();
+	std::vector<bool> use_pixels(nPixels,true);
+
+	for(int l=0;l<source->GetNPixels();l++){
+		long int id= (source->GetPixel(l))->id;
+		if(!this->HasBin(id)) continue;
+		use_pixels[id]= false;
+	}//end loop pixels
+	
+	
+	//Select pixels to compute bkg info
+	std::vector<double> pixels;
+	for(long int i=ix_min-boxThickness;i<=ix_max+boxThickness;i++){
+		for(long int j=iy_min-boxThickness;j<=iy_max+boxThickness;j++){
+			long int id= this->GetBin(i,j);
+			if( id<0 || !use_pixels[id] || (mask && mask->GetPixelValue(id)<=0) ) continue;
+			double S= this->GetPixelValue(id);
+			pixels.push_back(S);
+		}//end loop y
+	}//end loop x
+
+	DEBUG_LOG("#"<<pixels.size()<<" pixels selected to measure box around source "<<source->GetName()<<" ...");
+
+	//Compute bkg info
+	double bkgLevel= 0;
+	double bkgRMS= 0;
+	if(bkgEstimator==eMedianBkg){
+		//Compute median
+		double median= Caesar::StatsUtils::GetMedianFast<double>(pixels,useParallelVersion);
+		
+		//Compute MAD = median(|x_i-median|)
+		double medianMAD= Caesar::StatsUtils::GetMADFast(pixels,median);	
+		double medianRMS= medianMAD*1.4826;//0.6744888;
+
+		bkgLevel= median;
+		bkgRMS= medianRMS;
+	}
+	else if(bkgEstimator==eMedianClippedBkg){
+		//Compute mean & rms
+		double mean= 0;
+		double rms= 0;
+		Caesar::StatsUtils::ComputeMeanAndRMS<double>(mean,rms,pixels);
+		
+		//Compute median
+		double median= Caesar::StatsUtils::GetMedianFast<double>(pixels,useParallelVersion);
+		
+		//Compute clipped estimators
+		double clipSigma= 3;
+		int clipMaxIter= 100;
+		double clipTolerance= 0.1;
+		ClippedStats<double> clipped_stats;
+		Caesar::StatsUtils::GetClippedEstimators(clipped_stats,pixels,median,mean,rms,clipSigma,clipMaxIter,clipTolerance,useParallelVersion);
+		
+		bkgLevel= clipped_stats.median;
+		bkgRMS= clipped_stats.stddev;
+	}
+	else if(bkgEstimator==eMeanBkg){
+		//Compute mean & rms
+		double mean= 0;
+		double rms= 0;
+		Caesar::StatsUtils::ComputeMeanAndRMS<double>(mean,rms,pixels);
+		
+		bkgLevel= mean;
+		bkgRMS= rms;
+	}
+	else{
+		ERROR_LOG("Invalid bkg estimator ("<<bkgEstimator<<") given!");
+		return -1;
+	}
+
+	bkgSampleData.ix_min= ix_min-boxThickness;
+	bkgSampleData.ix_max= ix_max+boxThickness;
+	bkgSampleData.iy_min= iy_min-boxThickness; 
+	bkgSampleData.iy_max= iy_max+boxThickness;
+	bkgSampleData.npix= pixels.size();
+	bkgSampleData.isReliable= true;
+	bkgSampleData.bkgLevel= bkgLevel;
+	bkgSampleData.bkgRMS= bkgRMS;
+
+	return 0;
+
+}//close GetBkgInfoAroundSource()
+
+
 Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,bool invert){
 
 	//## Clone map

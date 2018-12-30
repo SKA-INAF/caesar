@@ -995,7 +995,12 @@ class Image : public TNamed {
 		/**
 		* \brief Mask sources
 		*/
-		int MaskSources(std::vector<Source*>const& source,float maskValue=0.);
+		int MaskSources(std::vector<Source*>const& sources,float maskValue=0.);
+
+		/**
+		* \brief Measure bkg in a box around given source bounding box. Box thickness= bkgbox_max-sourcebox_max
+		*/
+		int GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,int boxThickness=20,int bkgEstimator=eMedianBkg,Image* mask=0,bool useParallelVersion=false);
 
 		/**
 		* \brief Create image with bin contents equal to fitted sources
