@@ -234,6 +234,8 @@ int ConfigParser::RegisterPredefinedOptions()
 		REGISTER_OPTION(boxSizeY,double,20,0.01,1000);
 		REGISTER_OPTION(gridSizeX,double,0.2,0.,1.);
 		REGISTER_OPTION(gridSizeY,double,0.2,0.,1.);
+		REGISTER_OPTION(sourceBkgBoxBorderSize,int,20,0,1000);
+		
 	
 		//==============================
 		//==  Filtering options       ==
@@ -371,7 +373,7 @@ int ConfigParser::RegisterPredefinedOptions()
 		REGISTER_OPTION(fitUseThreads,bool,false,false,true);
 		REGISTER_OPTION(fitParBoundIncreaseStepSize,double,0.1,0,10);
 		REGISTER_OPTION(fitScaleDataToMax,bool,false,false,true);
-		
+		REGISTER_OPTION(fitUseBkgBoxEstimate,bool,false,false,true);
 		
 
 		//=============================================
