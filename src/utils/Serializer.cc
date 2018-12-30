@@ -545,6 +545,10 @@ int Serializer::EncodeBlobToProtobuf(CaesarPB::Blob& blob_pb,Source* source){
 		//Add average bkg info
 		blob_pb.set_m_bkgsum(source->GetBkgSum());
 		blob_pb.set_m_bkgrmssum(source->GetBkgRMSSum());
+
+		blob_pb.set_m_hasboxbkginfo(source->HasBoxBkgInfo());
+		blob_pb.set_m_boxbkg(source->GetBoxBkg());
+		blob_pb.set_m_boxbkgrms(source->GetBoxBkgRMS());
 		
 		//Set metadata
 		if(source->HasImageMetaData()){
@@ -1198,6 +1202,15 @@ int Serializer::EncodeProtobufToBlob(Source& source,const CaesarPB::Blob& blob_p
 			source.SetSourcePixelRange(blob_pb.m_ix_min(),blob_pb.m_ix_max(),blob_pb.m_iy_min(),blob_pb.m_iy_max());
 		}
 
+
+		//Add bkg info to blob
+		if(blob_pb.has_m_bkgsum()) source.SetBkgSum(blob_pb.m_bkgsum());
+		if(blob_pb.has_m_bkgrmssum()) source.SetBkgRMSSum(blob_pb.m_bkgrmssum());
+		if(blob_pb.has_m_hasboxbkginfo()) source.SetHasBoxBkgInfo(blob_pb.m_hasboxbkginfo());
+		if(blob_pb.has_m_boxbkg() && blob_pb.has_m_boxbkgrms()) {
+			source.SetBoxBkgInfo(blob_pb.m_boxbkg(),blob_pb.m_boxbkgrms());
+		}
+		
 		//Add metadata to blob		
 		const CaesarPB::ImgMetaData& thisMetaDataPB= blob_pb.m_imgmetadata();
 		ImgMetaData* metadata= new ImgMetaData;
