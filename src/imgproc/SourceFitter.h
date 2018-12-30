@@ -89,6 +89,7 @@ struct SourceFitOptions {
 		fixBkg= true;
 		limitBkgInFit= true;
 		useEstimatedBkgLevel= true;
+		useBkgBoxEstimate= false;
 		fixedBkgLevel= 0;
 		fixAmplInPreFit= false;
 		limitAmplInFit= true;
@@ -140,7 +141,7 @@ struct SourceFitOptions {
 		wcsType= eJ2000;
 		fitScaleDataToMax= false;
 
-
+		
 	}//close constructor
 
 	public:
@@ -181,6 +182,7 @@ struct SourceFitOptions {
 		bool fixBkg;
 		bool limitBkgInFit;
 		bool useEstimatedBkgLevel;
+		bool useBkgBoxEstimate;
 		double fixedBkgLevel;
 		
 		//- Amplitude fit par range (example +-20% around source peak)

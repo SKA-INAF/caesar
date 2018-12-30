@@ -170,6 +170,9 @@ void Blob::Copy(TObject &obj) const {
 	//Bkg & noise sum
 	((Blob&)obj).m_bkgSum= m_bkgSum;
 	((Blob&)obj).m_bkgRMSSum= m_bkgRMSSum;
+	((Blob&)obj).m_boxBkg= m_boxBkg;
+	((Blob&)obj).m_boxBkgRMS= m_boxBkgRMS;
+	((Blob&)obj).m_hasBoxBkgInfo= m_hasBoxBkgInfo;
 
 	//Image metadata
 	if(((Blob&)obj).m_imgMetaData){
@@ -334,6 +337,9 @@ void Blob::ResetMoments(){
 	
 	m_bkgSum= 0;
 	m_bkgRMSSum= 0;
+	m_boxBkg= 0;
+	m_boxBkgRMS= 0;
+	m_hasBoxBkgInfo= false;
 
 	m_HasStats= false;
 

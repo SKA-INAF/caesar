@@ -680,6 +680,9 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(fitUseThreads,m_fitUseThreads);
 	GET_OPTION_VALUE(fitScaleDataToMax,m_fitScaleDataToMax);
 
+	GET_OPTION_VALUE(sourceBkgBoxBorderSize,m_sourceBkgBoxBorderSize);
+	GET_OPTION_VALUE(fitUseBkgBoxEstimate,m_fitUseBkgBoxEstimate);
+
 	if(m_peakMinKernelSize>m_peakMaxKernelSize){
 		ERROR_LOG("Invalid peak kernel size option given (hint: min kernel must be larger or equal to max kernel size)!");
 		return -1;
@@ -1420,7 +1423,7 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	
 
 	//Clearup data
-	CodeUtils::DeletePtr<Image>(img);
+	//CodeUtils::DeletePtr<Image>(img);
 	CodeUtils::DeletePtrCollection<Source>(sources);
 
 	if(merge_status<0) {
@@ -1466,13 +1469,41 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
 		sources_merged[k]->SetBeamFluxIntegral(beamArea);
 		//sources_merged[k]->Print();
+
+		//Compute bkg info in box
+		//NB: Using img previously computed as a mask to exclude pixels belonging to other sources falling in the box
+		BkgSampleData bkgSampleData;
+		int status= inputImg->GetBkgInfoAroundSource(bkgSampleData,sources_merged[k],m_sourceBkgBoxBorderSize,m_BkgEstimator,img,m_useParallelMedianAlgo);
+		if(status<0){
+			WARN_LOG("Failed to compute bkg info in box around source "<<k+1<<", will not set bkg box pars in source!");
+		}
+		else{
+			sources_merged[k]->SetBoxBkgInfo(bkgSampleData.bkgLevel,bkgSampleData.bkgRMS);
+		}
+
+		//Set nested source pars
 		std::vector<Source*> nestedSources= sources_merged[k]->GetNestedSources();
 		for(size_t l=0;l<nestedSources.size();l++){
 			nestedSources[l]->SetId(l+1);
 			nestedSources[l]->SetName(Form("S%d_N%d",(signed)(k+1),(signed)(l+1)));
 			nestedSources[l]->SetBeamFluxIntegral(beamArea);
-		}
+
+			//Compute bkg info in box
+			//NB: Not using mask as we want to include parent source pixels in the bkg computation
+			BkgSampleData bkgSampleData_nested;
+			status= inputImg->GetBkgInfoAroundSource(bkgSampleData_nested,nestedSources[l],m_sourceBkgBoxBorderSize,m_BkgEstimator,nullptr,m_useParallelMedianAlgo);
+			if(status<0){
+				WARN_LOG("Failed to compute bkg info in box around nested source "<<l+1<<", will not set bkg box pars in source!");
+			}
+			else{
+				nestedSources[l]->SetBoxBkgInfo(bkgSampleData_nested.bkgLevel,bkgSampleData_nested.bkgRMS);
+			}
+			
+		}//end loop nested sources
 	}//end loop sources
+
+	//Clearup data
+	CodeUtils::DeletePtr<Image>(img);
 			
 	//## Add sources to task data sources
 	(taskData->sources).insert( (taskData->sources).end(),sources_merged.begin(),sources_merged.end());			
@@ -2921,6 +2952,7 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	fitOptions.limitBkgInFit= m_fitWithBkgLimits;
 	fitOptions.fixBkg= m_fitWithFixedBkg;
 	fitOptions.useEstimatedBkgLevel= m_fitUseEstimatedBkgLevel;
+	fitOptions.useBkgBoxEstimate= m_fitUseBkgBoxEstimate;
 	fitOptions.fixedBkgLevel= m_fitBkgLevel;
 	fitOptions.limitAmplInFit= m_fitWithAmplLimits;
 	fitOptions.fixAmplInPreFit= m_fixAmplInPreFit;

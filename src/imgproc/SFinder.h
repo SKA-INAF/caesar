@@ -557,6 +557,9 @@ class SFinder : public TObject {
 		bool m_fitUseThreads;
 		bool m_fitScaleDataToMax;
 
+		int m_sourceBkgBoxBorderSize;
+		bool m_fitUseBkgBoxEstimate;
+
 		//Saliency computation
 		Image* m_SaliencyImg;
 		bool m_SaliencyUseOptimalThr;

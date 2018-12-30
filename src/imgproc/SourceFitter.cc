@@ -215,6 +215,17 @@ int SourceFitter::InitData(Source* aSource,SourceFitOptions& fitOptions)
 		m_rmsMean/= (double)(ndata_rms);
 	}
 
+	//Use bkg & rms computed in a box around source?
+	if(fitOptions.useBkgBoxEstimate){//use bkg estimated in a box around source (if computed)
+		if(aSource->HasBoxBkgInfo()){
+			m_bkgMean= aSource->GetBoxBkg();
+			m_rmsMean= aSource->GetBoxBkgRMS();
+		}
+		else{
+			WARN_LOG("Source "<<aSource->GetName()<<" has no box bkg info computed, using estimates from bkg map instead ...");
+		}
+	}//close if
+
 	//Convert bkg & rms to mJy	
 	if(fitOptions.fitScaleDataToMax){
 		m_bkgMean/= normFactor;//scale to max pix flux

@@ -583,6 +583,7 @@ class Blob : public TNamed {
 		//================================================
 		//==         BKG INFO
 		//================================================
+		
 		/**
 		* \brief Get bkg sum
 		*/
@@ -591,6 +592,40 @@ class Blob : public TNamed {
 		* \brief Get bkg rms sum
 		*/
 		double GetBkgRMSSum(){return m_bkgRMSSum;}
+		/**
+		* \brief Set bkg sum (USED BY SERIALIZER)
+		*/
+		void SetBkgSum(double bkg){m_bkgSum=bkg;}
+		/**
+		* \brief Set bkg rms sum (USED BY SERIALIZER)
+		*/
+		void SetBkgRMSSum(double rms){m_bkgRMSSum=rms;}
+		/**
+		* \brief Check if bkg info in a box around the blob has ben set
+		*/
+		bool HasBoxBkgInfo(){return m_hasBoxBkgInfo;}
+		/**
+		* \brief Set has box bkg info flag (USED BY SERIALIZER)
+		*/
+		void SetHasBoxBkgInfo(bool flag){m_hasBoxBkgInfo=flag;}
+
+		/**
+		* \brief Get bkg estimate in a box around the blob
+		*/
+		double GetBoxBkg(){return m_boxBkg;}
+		/**
+		* \brief Get bkg rms estimate in a box around the blob
+		*/
+		double GetBoxBkgRMS(){return m_boxBkgRMS;}
+		/**
+		* \brief Set bkg and rms estimate in a box around the blob
+		*/
+		void SetBoxBkgInfo(double bkg,double rms)
+		{
+			m_boxBkg= bkg;
+			m_boxBkgRMS= rms;
+			m_hasBoxBkgInfo= true;			
+		}
 
 		//================================================
 		//==         WCS
@@ -705,6 +740,9 @@ class Blob : public TNamed {
 		//Bkg/noise sum	
 		double m_bkgSum;
 		double m_bkgRMSSum;
+		bool m_hasBoxBkgInfo;
+		double m_boxBkg;
+		double m_boxBkgRMS;
 
 		//Image range
 		float m_Xmin;
@@ -725,7 +763,7 @@ class Blob : public TNamed {
 		//Image metadata
 		ImgMetaData* m_imgMetaData;
 	
-	ClassDef(Blob,2)
+	ClassDef(Blob,3)
 
 };//close Blob()
 
