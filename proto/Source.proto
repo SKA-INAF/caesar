@@ -244,9 +244,12 @@ message Blob {
 	//Bkg average info
 	optional float m_bkgSum= 62;
 	optional float m_bkgRMSSum= 63;
+	optional bool m_hasBoxBkgInfo= 64;
+	optional float m_boxBkg= 65;
+	optional float m_boxBkgRMS= 66;
 
 	//Image metadata
-	optional ImgMetaData m_imgMetaData= 64;
+	optional ImgMetaData m_imgMetaData= 67;
 
 }//close Blob schema
 
