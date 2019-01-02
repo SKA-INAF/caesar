@@ -1604,7 +1604,7 @@ int SourceFitter::FitSource(Source* aSource,SourceFitOptions& fitOptions)
 		
 		while(m_fitStatus!=eFitNotConverged){
 			//Remove one component at each cycle and retry fit
-			std::vector< std::vector<double> > fitPars_start_iter(fitPars_start.begin(),fitPars_start.end()-niters+1); 
+			std::vector< std::vector<double> > fitPars_start_iter(fitPars_start.begin(),fitPars_start.end()-niters-1); 
 			int nComponents_iter= static_cast<int>(fitPars_start_iter.size());
 			if(nComponents_iter<=0){
 				INFO_LOG("No more components left for fitting after iteration...giving up, fit failed!");
