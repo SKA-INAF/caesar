@@ -348,7 +348,7 @@ int ConfigParser::RegisterPredefinedOptions()
 		//REGISTER_OPTION(fixThetaInPreFit,bool,true,false,true);
 		REGISTER_OPTION(fixThetaInPreFit,bool,false,false,true);
 		REGISTER_OPTION(fitWithFixedTheta,bool,false,false,true);
-		REGISTER_OPTION(fitThetaLimit,double,5,0,360);
+		REGISTER_OPTION(fitThetaLimit,double,90,0,361);
 		REGISTER_OPTION(useFluxZCutInFit,bool,false,false,true);
 		REGISTER_OPTION(fitZCutMin,double,2.5,0,1000);
 		REGISTER_OPTION(peakMinKernelSize,int,3,0,101);
