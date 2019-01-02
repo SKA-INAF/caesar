@@ -1337,6 +1337,7 @@ generate_config(){
 		echo '//=================================='
 		echo "fitSources = $FIT_SOURCES                             | Deblend and fit point-like sources with multi-component gaus fit (T/F)"
 		echo "fitUseThreads = $FIT_USETHREADS                       | Use multithread in source fitting (default=false) (T/F)"
+		echo "fitScaleDataToMax = true                              | Scale source flux data to max peak flux if true, otherwise scale to mJy units (default=false)"
 		echo "fitMinimizer = $FIT_MINIMIZER                         | Minimizer {Minuit,Minuit2} (default=Minuit) (T/F)"
 		echo "fitMinimizerAlgo = $FIT_MINIMIZER_ALGO         				| Minimizer algorithm: {migrad,simplex,scan,minimize,fumili} (default=minimize)"
 		echo "fitPrintLevel = $FIT_PRINTLEVEL                				| Minimizer print level (default=1)"
