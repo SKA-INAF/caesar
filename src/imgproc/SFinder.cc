@@ -682,6 +682,7 @@ int SFinder::Configure(){
 
 	GET_OPTION_VALUE(sourceBkgBoxBorderSize,m_sourceBkgBoxBorderSize);
 	GET_OPTION_VALUE(fitUseBkgBoxEstimate,m_fitUseBkgBoxEstimate);
+	GET_OPTION_VALUE(fitRetryWithLessComponents,m_fitRetryWithLessComponents);
 
 	if(m_peakMinKernelSize>m_peakMaxKernelSize){
 		ERROR_LOG("Invalid peak kernel size option given (hint: min kernel must be larger or equal to max kernel size)!");
@@ -2981,6 +2982,7 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	//fitOptions.fitFinalMinimizer= m_fitFinalMinimizer;
 	fitOptions.useNestedAsComponents= m_fitUseNestedAsComponents;
 	fitOptions.chi2RegPar= m_fitChi2RegPar;
+	fitOptions.fitRetryWithLessComponents= m_fitRetryWithLessComponents;
 
 	fitOptions.fitMinimizer= m_fitMinimizer;		
 	fitOptions.fitMinimizerAlgo= m_fitMinimizerAlgo;

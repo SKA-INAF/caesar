@@ -124,6 +124,7 @@ struct SourceFitOptions {
 		fitDoFinalMinimizerStep= true;
 		fitFinalMinimizer= eHESS;
 		chi2RegPar= 0.1;
+		fitRetryWithLessComponents= true;
 
 		//Supported minimizers & algo
 		//  - Minuit: {Migrad,Simplex,Scan,Minimize}
@@ -217,6 +218,7 @@ struct SourceFitOptions {
 		bool fitDoFinalMinimizerStep;
 		int fitFinalMinimizer;
 		double chi2RegPar;
+		bool fitRetryWithLessComponents;
 
 		//- Fit minimizer
 		int fitPrintLevel;

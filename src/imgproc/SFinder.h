@@ -548,6 +548,7 @@ class SFinder : public TObject {
 		int m_fitFinalMinimizer;
 		bool m_fitUseNestedAsComponents;
 		double m_fitChi2RegPar;
+		bool m_fitRetryWithLessComponents;
 
 		std::string m_fitMinimizer;		
 		std::string m_fitMinimizerAlgo;

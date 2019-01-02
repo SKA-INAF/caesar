@@ -339,7 +339,6 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 			fitPars_start[0].push_back(sigmaX);
 			fitPars_start[0].push_back(sigmaY);
 			fitPars_start[0].push_back(theta*TMath::DegToRad());//converted to rad
-			
 		}
 		else{
 			for(size_t i=0;i<peaks.size();i++){
@@ -507,6 +506,29 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 	}//close else
 
 	INFO_LOG("#"<<fitPars_start.size()<<" fit components will be fitted...");
+
+	//Sort components by peak flux case of multiple components
+	if(fitPars_start.size()>1){
+		DEBUG_LOG("Sorting fit components by largest peak fluxes ...");
+		std::vector<double> peakFluxes;
+		for(size_t i=0;i<fitPars_start.size();i++){
+			peakFluxes.push_back(fitPars_start[i][0]);
+		}
+
+		//Sort vector in descending order and get sort indexes
+		std::vector<size_t> sort_indexes;
+		std::vector<double> peakFluxes_sorted;
+		CodeUtils::sort_descending(peakFluxes,peakFluxes_sorted,sort_indexes);
+
+		std::vector<std::vector<double>> fitPars_start_sorted;
+		for(size_t i=0;i<sort_indexes.size();i++){
+			size_t index= sort_indexes[i];
+			fitPars_start_sorted.push_back(fitPars_start[index]);
+		}
+		
+		//Replace unsorted component pars with sorted
+		fitPars_start= fitPars_start_sorted;	
+	}//close if
 
 	return 0;
 
@@ -1564,13 +1586,44 @@ int SourceFitter::FitSource(Source* aSource,SourceFitOptions& fitOptions)
 	}
 
 	//## Perform fit
-	//if(DoFit(aSource,fitOptions,fitPars_start)<0){
 	if(DoChi2Fit(aSource,fitOptions,fitPars_start)<0){		
 		ERROR_LOG("Failed to perform source fit!");
 		m_fitStatus= eFitAborted;
 		return -1;	
 	}
-	
+
+	//## Iteratively repeat the fit if not converged
+	bool retryFit= (
+		fitOptions.fitRetryWithLessComponents==true &&
+		m_fitStatus!=eFitNotConverged
+	);
+
+	if(retryFit){
+		int niters= 0;
+		int nComponents= static_cast<int>(fitPars_start.size());
+		
+		while(m_fitStatus!=eFitNotConverged){
+			//Remove one component at each cycle and retry fit
+			std::vector< std::vector<double> > fitPars_start_iter(fitPars_start.begin(),fitPars_start.end()-niters+1); 
+			int nComponents_iter= static_cast<int>(fitPars_start_iter.size());
+			if(nComponents_iter<=0){
+				INFO_LOG("No more components left for fitting after iteration...giving up, fit failed!");
+				break;
+			}	
+			INFO_LOG("Repeating fit of source "<<aSource->GetName()<<" with #"<<nComponents_iter<<"/"<<nComponents<<" brightest components...");
+			niters++;
+
+			//Perform fit		
+			int status= DoChi2Fit(aSource,fitOptions,fitPars_start_iter);
+			if(status<0){		
+				ERROR_LOG("Failed to perform source fit at iteration no. "<<niters<<", exit fit");
+				m_fitStatus= eFitAborted;
+				return -1;	
+			}
+
+		}//end loop fit iterations
+	}//close retryFit
+
 	return 0;
 
 }//close FitSource()
