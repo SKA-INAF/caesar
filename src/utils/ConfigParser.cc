@@ -374,6 +374,7 @@ int ConfigParser::RegisterPredefinedOptions()
 		REGISTER_OPTION(fitParBoundIncreaseStepSize,double,0.1,0,10);
 		REGISTER_OPTION(fitScaleDataToMax,bool,false,false,true);
 		REGISTER_OPTION(fitUseBkgBoxEstimate,bool,false,false,true);
+		REGISTER_OPTION(fitRetryWithLessComponents,bool,true,false,true);
 		
 
 		//=============================================

@@ -1377,6 +1377,7 @@ generate_config(){
 		echo "###fitFinalMinimizer = 2                              | Final minimizer (1=MIGRAD,2=HESS,3=MINOS) (default=2)"
 		echo "fitChi2RegPar = 1															 				| Chi2 regularization par chi2=chi2_signal + regpar*chi2_bkg (default=1)"	
 		echo "fitParBoundIncreaseStepSize = $FIT_PARBOUNDINCREASE_STEPSIZE    | Par bound increase step size (e.g. parmax= parmax_old+(1+nretry)*fitParBoundIncreaseStepSize*0.5*|max-min| (default=0.1)"
+		echo "fitRetryWithLessComponents = true                     | If fit does not converge repeat it iteratively with one component less at each cycle (default=true)"
 		echo '###'
 		echo '###'
 		echo '//================================'
