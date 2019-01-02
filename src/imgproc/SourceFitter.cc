@@ -743,6 +743,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		parNameMap.insert( std::make_pair(std::string(parName_y0),par_counter+2) );
 		
 		if(fitOptions.fixCentroidInPreFit){
+			INFO_LOG("Setting centroid fixed to ("<<x0<<","<<y0<<")");
 			fitter->SetFixedVariable(par_counter+1,parName_x0,x0);		
 			fitter->SetFixedVariable(par_counter+2,parName_y0,y0);
 		}
