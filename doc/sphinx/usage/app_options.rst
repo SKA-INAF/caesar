@@ -268,6 +268,11 @@ Local background maps (bkg, rms) are obtained by interpolating background estima
 |                                | | fraction of sampling box y     |           |                        |
 |                                | | size                           |           |                        |
 +--------------------------------+----------------------------------+-----------+------------------------+
+| ``sourceBkgBoxBorderSize``     | | Border pad size in pixels of   |    20     |                        |
+|                                | | box around source bounding box |           |                        |
+|                                | | used to estimate bkg for       |           |                        |
+|                                | | fitting                        |           |                        |
++--------------------------------+----------------------------------+-----------+------------------------+
 | ``useBeamInfoInBkg``           | | Use beam information in bkg    |   true    | | true                 |
 |                                | | sampling box size definition.  |           | | false                |
 |                                | | Beam info are taken from image |           |                        |
@@ -562,6 +567,12 @@ These options enable control of source fitting stage: minimization algorithm and
 |                                 | | minimum and par error estimate |           |                        |
 |                                 | | limits                         |           |                        |
 +---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitRetryWithLessComponents``  | | If fit fails to converge,      |   true    | | true                 |
+|                                 | | repeat it iteratively with one |           | | false                |
+|                                 | | component less at each cycle   |           |                        |
+|                                 | | until convergence or until no  |           |                        |
+|                                 | | more components are available  |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
 | ``nBeamsMaxToFit``              | | Maximum number of beams        |    20     |                        |
 |                                 | | for a compact source to be     |           |                        |
 |                                 | | fitted (if above this threshold|           |                        |
@@ -624,6 +635,10 @@ These options enable control of source fitting stage: minimization algorithm and
 +---------------------------------+----------------------------------+-----------+------------------------+
 | ``fitUseEstimatedBkgLevel``     | | Use estimated (avg bkg) as     |   true    | | true                 |
 |                                 | | starting bkg level par in fit  |           | | false                |
++---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitUseBkgBoxEstimate``        | | Use bkg estimated in a box     |   true    | | true                 |
+|                                 | | around source (if available)   |           | | false                |
+|                                 | | as bkg level par in fit        |           | | false                |
 +---------------------------------+----------------------------------+-----------+------------------------+
 | ``fitBkgLevel``                 | | Starting bkg level par in fit  |     0     |                        |
 |                                 | | (used when option              |           |                        |
