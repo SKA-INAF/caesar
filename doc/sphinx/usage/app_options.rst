@@ -518,6 +518,10 @@ These options enable control of source fitting stage: minimization algorithm and
 |                                 | | is not supported by Minuit     |           |                        |
 |                                 | | minimizer                      |           |                        |
 +---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitScaleDataToMax``           | | Scale source flux data to max  |   false   | | true                 |
+|                                 | | peak flux if true, otherwise   |           | | false                |
+|                                 | | scale to mJy units             |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
 | ``fitMinimizer``                | | Minimizer used in source       |  Minuit2  | | Minuit               |
 |                                 | | fitting                        |           | | Minuit2              |
 +---------------------------------+----------------------------------+-----------+------------------------+
