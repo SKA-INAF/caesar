@@ -165,6 +165,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--fit-fcntol=[FIT_FCNTOL] - Fit function tolerance for convergence (default 1.e-2)"
 	echo "--fit-maxniters=[FIT_MAXNITERS] - Maximum number of fit iterations or function calls performed (default 10000)"
 	echo "--fit-noimproveconvergence - Do not use iterative fitting to try to achieve fit convergence (default=use)"
+	echo "--fit-noretry - Do not iteratively retry fit with less components in case of failed convergence (default=retry)"
 	echo "--fit-nretries=[FIT_NRETRIES] - Maximum number of fit retries if fit failed or has parameters at bound (default 10)"
 	echo "--fit-parboundincreasestep - Fit par bound increase step size (e.g. parmax= parmax_old+(1+nretry)*fitParBoundIncreaseStepSize*0.5*|max-min|). Used in iterative fitting. (default=0.1)"
 	echo "--fit-improveerrors - Run final minimizer step (e.g. HESS) to improve fit error estimates (default=no)"
@@ -393,6 +394,7 @@ FIT_IMPROVE_CONVERGENCE="true"
 FIT_PARBOUNDINCREASE_STEPSIZE="0.1"
 FIT_MAXNITERS="10000"
 FIT_NRETRIES="10"
+FIT_RETRY_WITH_LESS_COMPONENTS="true"
 FIT_FCNTOL="1.e-2"
 FIT_IMPROVE_ERRORS="false"
 PREFIT_FIX_AMPL="true"
@@ -871,6 +873,9 @@ do
 
 		--fit-noimproveconvergence*)
 			FIT_IMPROVE_CONVERGENCE="false"
+		;;
+		--fit-noretry*)
+			FIT_RETRY_WITH_LESS_COMPONENTS="false"	
 		;;
 		--fit-improveerrors*)
 			FIT_IMPROVE_ERRORS="true"
@@ -1384,7 +1389,7 @@ generate_config(){
 		echo "###fitFinalMinimizer = 2                              | Final minimizer (1=MIGRAD,2=HESS,3=MINOS) (default=2)"
 		echo "fitChi2RegPar = 1															 				| Chi2 regularization par chi2=chi2_signal + regpar*chi2_bkg (default=1)"	
 		echo "fitParBoundIncreaseStepSize = $FIT_PARBOUNDINCREASE_STEPSIZE    | Par bound increase step size (e.g. parmax= parmax_old+(1+nretry)*fitParBoundIncreaseStepSize*0.5*|max-min| (default=0.1)"
-		echo "fitRetryWithLessComponents = true                     | If fit does not converge repeat it iteratively with one component less at each cycle (default=true)"
+		echo "fitRetryWithLessComponents = $FIT_RETRY_WITH_LESS_COMPONENTS    | If fit does not converge repeat it iteratively with one component less at each cycle (default=true)"
 		echo '###'
 		echo '###'
 		echo '//================================'
