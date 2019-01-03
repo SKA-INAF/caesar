@@ -1596,14 +1596,14 @@ int SourceFitter::FitSource(Source* aSource,SourceFitOptions& fitOptions)
 	//## Iteratively repeat the fit if not converged
 	bool retryFit= (
 		fitOptions.fitRetryWithLessComponents==true &&
-		m_fitStatus!=eFitNotConverged
+		m_fitStatus==eFitNotConverged
 	);
 
 	if(retryFit){
 		int niters= 0;
 		int nComponents= static_cast<int>(fitPars_start.size());
 		
-		while(m_fitStatus!=eFitNotConverged){
+		while(m_fitStatus==eFitNotConverged){
 			//Remove one component at each cycle and retry fit
 			std::vector< std::vector<double> > fitPars_start_iter(fitPars_start.begin(),fitPars_start.end()-niters-1); 
 			int nComponents_iter= static_cast<int>(fitPars_start_iter.size());
