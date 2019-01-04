@@ -24,6 +24,7 @@
 #include <Contour.h>
 #include <Source.h>
 #include <Logger.h>
+#include <Consts.h>
 
 
 #include <TFile.h>
@@ -553,7 +554,7 @@ int SelectSources(){
 		//Is point-like source?
 		if( IsPointLikeSource(sources[i]) ){
 			INFO_LOG("Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as a point-like source ...");
-			sources[i]->SetType(Source::ePointLike);
+			sources[i]->SetType(ePointLike);
 		}
 
 		//Tag nested sources
@@ -571,7 +572,7 @@ int SelectSources(){
 			}
 			if( IsPointLikeSource(nestedSources[j]) ){
 				INFO_LOG("Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as a point-like source ...");
-				nestedSources[j]->SetType(Source::ePointLike);
+				nestedSources[j]->SetType(ePointLike);
 			}
 		}//end loop nested sources
 			

@@ -23,6 +23,7 @@
 #include <Logger.h>
 #include <CodeUtils.h>
 #include <Graph.h>
+#include <Consts.h>
 
 //ROOT headers
 #include <TFile.h>
@@ -420,10 +421,10 @@ int RunConvolver()
 		}
 		sourceImg->Reset();
 
-		if(type==Source::eCompact || type==Source::ePointLike){
+		if(type==eCompact || type==ePointLike){
 			sourceImg->Fill(X0_true, Y0_true, S_true);
 		}
-		else if(type==Source::eExtended || type==Source::eCompactPlusExtended){
+		else if(type==eExtended || type==eCompactPlusExtended){
 			std::vector<Pixel*> pixels= sources[i]->GetPixels();
 			for(size_t k=0;k<pixels.size();k++){	
 				long int gBin= pixels[k]->id;
@@ -463,10 +464,10 @@ int RunConvolver()
 		//Find truncation threshold (user-supplied or found from image)
 		double thr= 0;//no threshold
 		if(useUserThreshold){
-			if(type==Source::eCompact || type==Source::ePointLike){
+			if(type==eCompact || type==ePointLike){
 				thr= fluxThr;
 			}
-			else if(type==Source::eExtended || type==Source::eCompactPlusExtended){
+			else if(type==eExtended || type==eCompactPlusExtended){
 				thr= fluxThr_ext;
 			}
 			else{
@@ -665,15 +666,15 @@ int MergeSources()
 	for(size_t i=0;i<sources_conv.size()-1;i++){
 		Source* source= sources_conv[i];
 		int type= source->Type;
-		bool isCompactSource= (type==Source::eCompact || type==Source::ePointLike);
-		bool isExtendedSource= (type==Source::eExtended || type==Source::eCompactPlusExtended);
+		bool isCompactSource= (type==eCompact || type==ePointLike);
+		bool isExtendedSource= (type==eExtended || type==eCompactPlusExtended);
 
 		//Loop neighbors
 		for(size_t j=i+1;j<sources_conv.size();j++){	
 			Source* source_neighbor= sources_conv[j];
 			int type_neighbor= source_neighbor->Type;
-			bool isCompactSource_neighbor= (type_neighbor==Source::eCompact || type_neighbor==Source::ePointLike);
-			bool isExtendedSource_neighbor= (type_neighbor==Source::eExtended || type_neighbor==Source::eCompactPlusExtended);
+			bool isCompactSource_neighbor= (type_neighbor==eCompact || type_neighbor==ePointLike);
+			bool isExtendedSource_neighbor= (type_neighbor==eExtended || type_neighbor==eCompactPlusExtended);
 
 			//Check if both sources are compact and if they are allowed to be merged
 			if(isCompactSource && isCompactSource_neighbor && !enableCompactSourceMerging){			
@@ -712,8 +713,8 @@ int MergeSources()
 	for(size_t i=0;i<sources_conv.size();i++){
 		int type= sources_conv[i]->Type;
 		bool isMergeable= isMergeableSource[i];
-		bool isCompactSource= (type==Source::eCompact || type==Source::ePointLike);
-		bool isExtendedSource= (type==Source::eExtended || type==Source::eCompactPlusExtended);		
+		bool isCompactSource= (type==eCompact || type==ePointLike);
+		bool isExtendedSource= (type==eExtended || type==eCompactPlusExtended);		
 		if(isMergeable) {	
 			if(enableCompactSourceMerging && isCompactSource) continue;
 			if(enableExtendedSourceMerging && isExtendedSource) continue;
@@ -1028,10 +1029,10 @@ void SaveDS9RegionFile(){
 
 		//Set source color
 		std::string colorStr= "white";
-		if(source_type==Source::eExtended) colorStr= "green";
-		else if(source_type==Source::eCompactPlusExtended) colorStr= "orange";
-		else if(source_type==Source::ePointLike) colorStr= "red";
-		else if(source_type==Source::eCompact) colorStr= "blue";
+		if(source_type==eExtended) colorStr= "green";
+		else if(source_type==eCompactPlusExtended) colorStr= "orange";
+		else if(source_type==ePointLike) colorStr= "red";
+		else if(source_type==eCompact) colorStr= "blue";
 		else colorStr= "magenta";
 		if(colorStr!=colorStr_last){
 			colorStr_last= colorStr;

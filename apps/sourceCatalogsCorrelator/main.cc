@@ -22,6 +22,7 @@
 #include <ConfigParser.h>
 #include <Logger.h>
 #include <CodeUtils.h>
+#include <Consts.h>
 
 //ROOT headers
 #include <TFile.h>
@@ -111,7 +112,7 @@ std::vector<Source*> sources;
 std::vector<Source*> sources_rec;
 int SourceFoundFlag;
 std::string SourceName;
-int SourceType;
+int sourceType;
 int SourceSimType;
 long int NPix;
 double X0;
@@ -126,7 +127,7 @@ double Y0_true;
 double fluxDensity_true;
 double beamArea_true;
 std::string SourceName_rec;
-int SourceType_rec;
+int sourceType_rec;
 int IsNestedSource_rec;
 long int NPix_rec;
 double S_rec;
@@ -429,12 +430,12 @@ int FindSourceMatches()
 
 		//Find source match according to source type (e.g. compact/point-like vs extended)
 		int sourceType= sources[i]->Type;
-		if(enableCompactSourceCorrelation && (sourceType==Source::eCompact || sourceType==Source::ePointLike) ){
+		if(enableCompactSourceCorrelation && (sourceType==eCompact || sourceType==ePointLike) ){
 			nCompactSources++;
 			bool isCompactSourceFound= FindPointSourceMatch(i);
 			if(isCompactSourceFound) nCompactSources_found++;
 		}
-		if(enableExtendedSourceCorrelation && (sourceType==Source::eExtended || sourceType==Source::eCompactPlusExtended) ){
+		if(enableExtendedSourceCorrelation && (sourceType==eExtended || sourceType==eCompactPlusExtended) ){
 			nExtendedSources++;
 			bool isExtendedSourceFound= FindExtendedSourceMatch(i);
 			if(isExtendedSourceFound) nExtendedSources_found++;
@@ -458,7 +459,7 @@ bool FindPointSourceMatch(int source_true_index)
 	NPix= source_true->GetNPixels();
 	SourceFoundFlag= 0;
 	SourceName= std::string(source_true->GetName());
-	SourceType= source_true->Type;
+	sourceType= source_true->Type;
 	SourceSimType= source_true->SimType;
 	X0= source_true->X0;
 	Y0= source_true->Y0;
@@ -487,7 +488,7 @@ bool FindPointSourceMatch(int source_true_index)
 	Y0_rec= -1;
 	X0_sweighted_rec= -1;
 	Y0_sweighted_rec= -1;
-	SourceType_rec= -1;
+	sourceType_rec= -1;
 	MatchFraction= 0.;
 	MatchFraction_rec= 0.;
 	S_bkg= 0;
@@ -535,7 +536,7 @@ bool FindPointSourceMatch(int source_true_index)
 
 		NPix_rec= match_source->GetNPixels();
 		SourceName_rec= std::string(match_source->GetName());
-		SourceType_rec= match_source->Type;
+		sourceType_rec= match_source->Type;
 		X0_rec= match_source->X0;
 		Y0_rec= match_source->Y0;
 		X0_sweighted_rec= match_source->GetSx();
@@ -648,7 +649,7 @@ bool FindExtendedSourceMatch(int source_true_index)
 	Source* source_true= sources[source_true_index]; 
 	NPix= source_true->GetNPixels();
 	SourceName= std::string(source_true->GetName());
-	SourceType= source_true->Type;
+	sourceType= source_true->Type;
 	SourceSimType= source_true->SimType;
 	X0= source_true->X0;
 	Y0= source_true->Y0;
@@ -677,7 +678,7 @@ bool FindExtendedSourceMatch(int source_true_index)
 	Y0_rec= -1;
 	X0_sweighted_rec= -1;
 	Y0_sweighted_rec= -1;
-	SourceType_rec= -1;
+	sourceType_rec= -1;
 	MatchFraction= 0.;
 	MatchFraction_rec= 0.;
 	Sratio= 0.;
@@ -715,7 +716,7 @@ bool FindExtendedSourceMatch(int source_true_index)
 		dY= static_cast<double>(match_info.dY);
 		NPix_rec= sources_rec[match_source_index]->GetNPixels();
 		SourceName_rec= std::string(sources_rec[match_source_index]->GetName());
-		SourceType_rec= sources_rec[match_source_index]->Type;
+		sourceType_rec= sources_rec[match_source_index]->Type;
 		X0_rec= sources_rec[match_source_index]->X0;
 		Y0_rec= sources_rec[match_source_index]->Y0;
 		X0_sweighted_rec= sources_rec[match_source_index]->GetSx();
@@ -821,12 +822,12 @@ int FindRealAndFakeSources()
 		}//end loop nested
 
 		/*
-		if(enableCompactSourceCorrelation && (sourceType==Source::eCompact || sourceType==Source::ePointLike) ){
+		if(enableCompactSourceCorrelation && (sourceType==eCompact || sourceType==ePointLike) ){
 			if(FindPointSourceRealAndFakeSources(i)<0){
 				WARN_LOG("Failed to find true associations to rec source "<<i<<"!");
 			}
 		}
-		if(enableExtendedSourceCorrelation && (sourceType==Source::eExtended || sourceType==Source::eCompactPlusExtended) ){
+		if(enableExtendedSourceCorrelation && (sourceType==eExtended || sourceType==eCompactPlusExtended) ){
 			if(FindExtendedRealAndFakeSources(i)<0){
 				WARN_LOG("Failed to find true associations to rec source "<<i<<"!");
 			}
@@ -852,7 +853,7 @@ int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex)
 	SourceName_rec= std::string(source_rec->GetName());
 	IsNestedSource_rec= 0;
 	if(nestedIndex!=-1) IsNestedSource_rec= 1;
-	SourceType_rec= source_rec->Type;
+	sourceType_rec= source_rec->Type;
 	NPix_rec= source_rec->GetNPixels();			
 	X0_rec= source_rec->X0;
 	Y0_rec= source_rec->Y0;
@@ -879,7 +880,7 @@ int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex)
 		SourceFitPars fitPars= source_rec->GetFitPars();
 		for(int k=0;k<fitPars.GetNComponents();k++){
 			SourceName_rec= sname + std::string(Form("_fitcomp%d",k+1));
-			SourceType_rec= Source::ePointLike;
+			sourceType_rec= ePointLike;
 			X0_rec= fitPars.GetParValue(k,"x0");	
 			Y0_rec= fitPars.GetParValue(k,"y0");
 			Smax_rec= fitPars.GetParValue(k,"A");	
@@ -957,7 +958,7 @@ int FindPointSourceRealAndFakeSources(int source_rec_index)
 	Source* source_rec= sources_rec[source_rec_index]; 
 	std::string sname= std::string(source_rec->GetName());
 	SourceName_rec= std::string(source_rec->GetName());
-	SourceType_rec= source_rec->Type;			
+	sourceType_rec= source_rec->Type;			
 	X0_rec= source_rec->X0;
 	Y0_rec= source_rec->Y0;
 	Smax_rec= source_rec->GetSmax();
@@ -1058,7 +1059,7 @@ int FindExtendedRealAndFakeSources(int source_rec_index)
 	int sourceIndex= source_rec_index;
 	Source* source_rec= sources_rec[source_rec_index]; 
 	SourceName_rec= std::string(source_rec->GetName());
-	SourceType_rec= source_rec->Type;			
+	sourceType_rec= source_rec->Type;			
 	X0_rec= source_rec->X0;
 	Y0_rec= source_rec->Y0;
 	Smax_rec= source_rec->GetSmax();
@@ -1109,7 +1110,7 @@ void Init(){
 	if(!matchedSourceInfo) matchedSourceInfo= new TTree("SourceMatchInfo","SourceMatchInfo");
 	matchedSourceInfo->Branch("found",&SourceFoundFlag,"found/I");
 	matchedSourceInfo->Branch("name",&SourceName);
-	matchedSourceInfo->Branch("type",&SourceType,"type/I");
+	matchedSourceInfo->Branch("type",&sourceType,"type/I");
 	matchedSourceInfo->Branch("simtype",&SourceSimType,"simtype/I");
 	matchedSourceInfo->Branch("NPix",&NPix,"NPix/L");	
 	matchedSourceInfo->Branch("S",&S,"S/D");
@@ -1124,7 +1125,7 @@ void Init(){
 	matchedSourceInfo->Branch("fluxDensity_true",&fluxDensity_true,"fluxDensity_true/D");
 	matchedSourceInfo->Branch("beamArea_true",&beamArea_true,"beamArea_true/D");
 	matchedSourceInfo->Branch("name_rec",&SourceName_rec);	
-	matchedSourceInfo->Branch("type_rec",&SourceType_rec,"type_rec/I");
+	matchedSourceInfo->Branch("type_rec",&sourceType_rec,"type_rec/I");
 	matchedSourceInfo->Branch("NPix_rec",&NPix_rec,"NPix_rec/L");	
 	matchedSourceInfo->Branch("S_rec",&S_rec,"S_rec/D");
 	matchedSourceInfo->Branch("Smax_rec",&Smax_rec,"Smax_rec/D");
@@ -1161,7 +1162,7 @@ void Init(){
 	if(!matchedExtSourceInfo) matchedExtSourceInfo= new TTree("ExtSourceMatchInfo","ExtSourceMatchInfo");
 	matchedExtSourceInfo->Branch("found",&SourceFoundFlag,"found/I");
 	matchedExtSourceInfo->Branch("name",&SourceName);
-	matchedExtSourceInfo->Branch("type",&SourceType,"type/I");
+	matchedExtSourceInfo->Branch("type",&sourceType,"type/I");
 	matchedExtSourceInfo->Branch("simtype",&SourceSimType,"simtype/I");
 	matchedExtSourceInfo->Branch("NPix",&NPix,"NPix/L");	
 	matchedExtSourceInfo->Branch("S",&S,"S/D");
@@ -1176,7 +1177,7 @@ void Init(){
 	matchedExtSourceInfo->Branch("fluxDensity_true",&fluxDensity_true,"fluxDensity_true/D");
 	matchedExtSourceInfo->Branch("beamArea_true",&beamArea_true,"beamArea_true/D");
 	matchedExtSourceInfo->Branch("name_rec",&SourceName_rec);	
-	matchedExtSourceInfo->Branch("type_rec",&SourceType_rec,"type_rec/I");
+	matchedExtSourceInfo->Branch("type_rec",&sourceType_rec,"type_rec/I");
 	matchedExtSourceInfo->Branch("NPix_rec",&NPix_rec,"NPix_rec/L");	
 	matchedExtSourceInfo->Branch("S_rec",&S_rec,"S_rec/D");
 	matchedExtSourceInfo->Branch("Smax_rec",&Smax_rec,"Smax_rec/D");
@@ -1198,7 +1199,7 @@ void Init(){
 	//Create rec source info (useful for reliability estimation)
 	if(!recSourceInfo) recSourceInfo= new TTree("RecSourceInfo","RecSourceInfo");
 	recSourceInfo->Branch("name_rec",&SourceName_rec);
-	recSourceInfo->Branch("type_rec",&SourceType_rec,"type_rec/I");
+	recSourceInfo->Branch("type_rec",&sourceType_rec,"type_rec/I");
 	recSourceInfo->Branch("HasFitInfo",&HasFitInfo,"HasFitInfo/I");	
 	recSourceInfo->Branch("IsNestedSource",&IsNestedSource_rec,"IsNestedSource/I");
 	recSourceInfo->Branch("NPix_rec",&NPix_rec,"NPix_rec/L");	
@@ -1218,7 +1219,7 @@ void Init(){
 	/*
 	if(!recExtSourceInfo) recExtSourceInfo= new TTree("RecExtSourceInfo","RecExtSourceInfo");
 	recExtSourceInfo->Branch("name_rec",&SourceName_rec);
-	recExtSourceInfo->Branch("type_rec",&SourceType_rec,"type_rec/I");
+	recExtSourceInfo->Branch("type_rec",&sourceType_rec,"type_rec/I");
 	recExtSourceInfo->Branch("X0_rec",&X0_rec,"X0_rec/D");
 	recExtSourceInfo->Branch("Y0_rec",&Y0_rec,"Y0_rec/D");
 	recExtSourceInfo->Branch("Smax_rec",&Smax_rec,"Smax_rec/D");	
