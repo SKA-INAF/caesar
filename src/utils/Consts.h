@@ -53,7 +53,8 @@ enum ImgFilters {
 };
 
 enum ImgType {
-	eUnknown=0,
+	//eUnknown=0,
+	eUnknownMap=0,
 	eFluxMap=1,
 	eMeanFluxMap=2,
 	eSignificanceMap=3,
@@ -98,6 +99,46 @@ enum BkgMethod {
 	eGridBkg=1,
 	eSuperpixelBkg=2
 };
+
+/**
+* \brief Source type enumeration
+*/
+enum SourceType {
+	eUnknownType=0,
+	eCompact=1,
+	ePointLike=2,
+	eExtended=3,
+	eCompactPlusExtended=4
+};
+
+/**
+* \brief Source flag enumeration
+*/
+enum SourceFlag {
+	eReal=1,
+	eCandidate=2,
+	eFake=3
+};
+
+/**
+* \brief Simulated source type enumeration
+*/
+enum SimSourceType {
+	eUnknownSimClass=0,
+	eRingLike=1,
+	eBubbleLike=2,
+	eEllipseLike=3,
+	eDiskLike=4,	
+	eBlobLike=5
+};
+
+enum SourceFitQuality {
+	eBadFit=0,//not converged
+	eLQFit=1,//converged with pars at boundary, error matrix not posdef
+	eMQFit=2,//converged with good error estimates, not passing quality selection cuts
+	eHQFit=3//passing quality selection
+};
+		
 
 enum ColorPaletteStyle {
 	eRAINBOW= 0,

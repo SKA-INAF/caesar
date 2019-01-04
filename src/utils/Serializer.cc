@@ -168,6 +168,8 @@ int Serializer::EncodeSourceComponentParsToProtobuf(CaesarPB::SourceComponentPar
 		sourceCompPars_pb->set_m_bmin_deconv_wcs(bmin_deconv_wcs);
 		sourceCompPars_pb->set_m_pa_deconv_wcs(pa_deconv_wcs);
 
+		sourceCompPars_pb->set_m_flag(sourceCompPars.GetFlag());
+
 	}//close try block
 	catch(std::exception const & e) {
 		ERROR_LOG("Source component pars encoding to protobuf failed with status "<<e.what());
@@ -204,6 +206,8 @@ int Serializer::EncodeSourceFitParsToProtobuf(CaesarPB::SourceFitPars& sourceFit
 	sourceFitPars_pb.set_sigmafixed(sourceFitPars.IsSigmaFixed());
 	sourceFitPars_pb.set_fluxdensity(sourceFitPars.GetFluxDensity());
 	sourceFitPars_pb.set_fluxdensityerr(sourceFitPars.GetFluxDensityErr());
+
+	sourceFitPars_pb.set_fitquality(sourceFitPars.GetFitQuality());
 
 	//Add component fit pars
 	std::vector<SourceComponentPars> pars= sourceFitPars.GetPars();
@@ -977,6 +981,7 @@ int Serializer::EncodeProtobufToSourceComponentPars(SourceComponentPars& sourceC
 			double m_pa_deconv_wcs= sourceComponentPars_pb.m_pa_deconv_wcs();
 			sourceComponentPars.SetWCSDeconvolvedEllipsePars(m_bmaj_deconv_wcs,m_bmin_deconv_wcs,m_pa_deconv_wcs);
 			
+			sourceComponentPars.SetFlag(sourceComponentPars_pb.m_flag());
 
 		}//end loop fit pars
 
@@ -1017,6 +1022,8 @@ int Serializer::EncodeProtobufToSourceFitPars(SourceFitPars& sourceFitPars,Caesa
 		
 		if(sourceFitPars_pb.has_fluxdensity()) sourceFitPars.SetFluxDensity(sourceFitPars_pb.fluxdensity());
 		if(sourceFitPars_pb.has_fluxdensityerr()) sourceFitPars.SetFluxDensityErr(sourceFitPars_pb.fluxdensityerr());
+		
+		if(sourceFitPars_pb.has_fitquality()) sourceFitPars.SetFitQuality(sourceFitPars_pb.fitquality());
 		
 		//Set fit component pars	
 		for(int i=0;i<sourceFitPars_pb.pars_size();i++){
