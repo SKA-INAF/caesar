@@ -705,6 +705,11 @@ These options enable control of source fitting stage: minimization algorithm and
 |                                 | | so that total chi2 is given by |           |                        |
 |                                 | | chi2(Z>thr)+regPar*chi2(Z<thr) |           |                        |
 +---------------------------------+----------------------------------+-----------+------------------------+
+| ``fitRedChi2Cut``               | | Used to set fit quality flag.  |     5     |                        |
+|                                 | | If Chi2/NDF>cut the good fit   |           |                        |
+|                                 | | cut is not passed              |           |                        |
++---------------------------------+----------------------------------+-----------+------------------------+
+
 
 	
 -----------------------
