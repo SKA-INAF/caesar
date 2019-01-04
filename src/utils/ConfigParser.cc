@@ -375,6 +375,7 @@ int ConfigParser::RegisterPredefinedOptions()
 		REGISTER_OPTION(fitScaleDataToMax,bool,false,false,true);
 		REGISTER_OPTION(fitUseBkgBoxEstimate,bool,false,false,true);
 		REGISTER_OPTION(fitRetryWithLessComponents,bool,true,false,true);
+		REGISTER_OPTION(fitRedChi2Cut,double,5,0,1000);
 		
 
 		//=============================================
