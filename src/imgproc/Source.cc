@@ -33,6 +33,7 @@
 #include <Contour.h>
 #include <GraphicsUtils.h>
 #include <WCSUtils.h>
+#include <Consts.h>
 
 #include <TObject.h>
 #include <TMatrixD.h>
@@ -150,7 +151,8 @@ Source& Source::operator=(const Source& source) {
 void Source::Init(){
 
 	//Init source flags
-	Type= eUnknown;
+	//Type= eUnknown;
+	Type= eUnknownType;
 	Flag= eCandidate;
 	SimType= eUnknownSimClass;
 	SimMaxScale= 0;
@@ -1063,20 +1065,24 @@ int Source::MergeSource(Source* aSource,bool copyPixels,bool checkIfAdjacent,boo
 	if( this->Type==eCompact || this->Type==ePointLike ){
 		if(mergedSourceType==eCompact || mergedSourceType==ePointLike) this->Type= eCompact; 
 		else if(mergedSourceType==eExtended || mergedSourceType==eCompactPlusExtended) this->Type= eCompactPlusExtended; 
-		else this->Type= eUnknown; 
+		//else this->Type= eUnknown;
+		else this->Type= eUnknownType; 
 	}
 	else if( this->Type==eExtended ){
 		if(mergedSourceType==eCompact || mergedSourceType==ePointLike) this->Type= eCompactPlusExtended; 
 		else if(mergedSourceType==eExtended) this->Type= eExtended;  
 		else if(mergedSourceType==eCompactPlusExtended) this->Type= eCompactPlusExtended; 
-		else this->Type= eUnknown; 
+		//else this->Type= eUnknown;
+		else this->Type= eUnknownType; 
 	}
 	else if( this->Type==eCompactPlusExtended ){
-		if(mergedSourceType==eUnknown) this->Type= eUnknown; 
+		//if(mergedSourceType==eUnknown) this->Type= eUnknown; 
+		if(mergedSourceType==eUnknownType) this->Type= eUnknownType; 
 		else this->Type= eCompactPlusExtended;  
 	}
 	else{
-		this->Type= eUnknown; 
+		//this->Type= eUnknown;
+		this->Type= eUnknownType; 
 	}
 
 	//Set sim max scale to max of the two sources

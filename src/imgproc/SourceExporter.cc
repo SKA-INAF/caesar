@@ -32,6 +32,7 @@
 #include <CodeUtils.h>
 #include <AstroUtils.h>
 #include <WCSUtils.h>
+#include <Consts.h>
 
 #include <TObject.h>
 #include <TEllipse.h>
@@ -114,7 +115,7 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 	ss<<"# BeamArea- Number of pixels in beam. Used to convert flux parameters from Jy/beam to Jy/pixel (e.g. Jy/pixel=Jy/beam/beamarea).\n";
 	ss<<"# BkgSum- Background estimator summed over all source pixels (in Jy/beam).\n";
 	ss<<"# RMSSum- Noise (rms) estimator summed over all source pixels (in Jy/beam).\n";
-	ss<<"# Type- Source type tag (eUnknown=0,eCompact=1,ePointLike=2,eExtended=3,eCompactPlusExtended=4)\n";
+	ss<<"# Type- Source type tag (eUnknownType=0,eCompact=1,ePointLike=2,eExtended=3,eCompactPlusExtended=4)\n";
 	ss<<"# Flag- Source flag (eReal=1,eCandidate=2,eFake=3)\n";
 	ss<<"# IsGoodSource- Bool flag indicating if source was tagged as good (true) or bad (false) in the finding process\n";
 	ss<<"# DepthLevel- Source depth level (0=mother source,1=nested source,...)\n";
@@ -373,6 +374,8 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 	ss<<"# RMSSum- Noise (rms) estimator summed over all source pixels (in Jy/beam).\n";
 	ss<<"# Chi2- Fit chisquare.\n";
 	ss<<"# NDF - Fit number of degrees of freedom.\n";
+	ss<<"# FitQuality - Fit quality flag (eBadFit=0,eLQFit=1,eMQFit=2,eHQFit=3)\n";
+	ss<<"# Flag- Fitted component flag (eReal=1,eCandidate=2,eFake=3)\n";
 	ss<<"# ---------------\n";
 	ss<<"#\n";
 	fprintf(fout,"%s",ss.str().c_str());
@@ -553,6 +556,13 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 				}
 			}
 
+			
+			//Get component flag
+			int componentFlag= -1;
+			if(fitPars.GetComponentFlag(componentFlag,k)<0){
+				WARN_LOG("Failed to retrieve flag for component no. "<<k+1<<"!");
+			}
+	
 			//## Fill source component
 			std::stringstream ss;
 
@@ -603,7 +613,10 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			ss<<source->GetBkgRMSSum()<<"\t";
 
 			//Fit chi2/ndf
-			ss<<fitPars.GetChi2()<<"\t"<<fitPars.GetNDF();
+			ss<<fitPars.GetChi2()<<"\t"<<fitPars.GetNDF()<<"\t";
+
+			//Source component flags
+			ss<<fitPars.GetFitQuality()<<"\t"<<componentFlag;
 
 			//Store component string
 			fitComponentStrList.push_back(ss.str());
@@ -732,10 +745,10 @@ int SourceExporter::WriteComponentsToDS9(std::string filename,const std::vector<
 std::string SourceExporter::GetDS9RegionColor(Source* source)
 {
 	std::string colorStr= "white";
-	if(source->Type==Source::eExtended) colorStr= "green";
-	else if(source->Type==Source::eCompactPlusExtended) colorStr= "magenta";
-	else if(source->Type==Source::ePointLike) colorStr= "red";
-	else if(source->Type==Source::eCompact) colorStr= "blue";
+	if(source->Type==eExtended) colorStr= "green";
+	else if(source->Type==eCompactPlusExtended) colorStr= "magenta";
+	else if(source->Type==ePointLike) colorStr= "red";
+	else if(source->Type==eCompact) colorStr= "blue";
 	else colorStr= "white";
 			
 	return colorStr;

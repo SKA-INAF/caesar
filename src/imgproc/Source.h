@@ -170,17 +170,17 @@ class Source : public Blob {
 		/**
 		* \brief Source type enumeration
 		*/
-		enum SourceType {eUnknown=0,eCompact=1,ePointLike=2,eExtended=3,eCompactPlusExtended=4};
+		//enum SourceType {eUnknown=0,eCompact=1,ePointLike=2,eExtended=3,eCompactPlusExtended=4};
 
 		/**
 		* \brief Source flag enumeration
 		*/
-		enum SourceFlag {eReal=1,eCandidate=2,eFake=3};
+		//enum SourceFlag {eReal=1,eCandidate=2,eFake=3};
 
 		/**
 		* \brief Simulated source type enumeration
 		*/
-		enum SimSourceType {eUnknownSimClass=0,eRingLike=1,eBubbleLike=2,eEllipseLike=3,eDiskLike=4,eBlobLike=5};
+		//enum SimSourceType {eUnknownSimClass=0,eRingLike=1,eBubbleLike=2,eEllipseLike=3,eDiskLike=4,eBlobLike=5};
 		
 
 	public:
@@ -326,10 +326,10 @@ class Source : public Blob {
 		*/
 		std::string GetDS9RegionColor(){
 			std::string colorStr= "white";
-			if(Type==Source::eExtended) colorStr= "green";
-			else if(Type==Source::eCompactPlusExtended) colorStr= "magenta";
-			else if(Type==Source::ePointLike) colorStr= "red";
-			else if(Type==Source::eCompact) colorStr= "blue";
+			if(Type==eExtended) colorStr= "green";
+			else if(Type==eCompactPlusExtended) colorStr= "magenta";
+			else if(Type==ePointLike) colorStr= "red";
+			else if(Type==eCompact) colorStr= "blue";
 			else colorStr= "white";
 			return colorStr;
 		}//close GetDS9RegionColor()
@@ -339,10 +339,10 @@ class Source : public Blob {
 		*/
 		std::string GetDS9RegionTag(){
 			std::string tagStr= "unknown";
-			if(Type==Source::eExtended) tagStr= "extended";
-			else if(Type==Source::eCompactPlusExtended) tagStr= "extended-compact";
-			else if(Type==Source::ePointLike) tagStr= "point-like";
-			else if(Type==Source::eCompact) tagStr= "compact";
+			if(Type==eExtended) tagStr= "extended";
+			else if(Type==eCompactPlusExtended) tagStr= "extended-compact";
+			else if(Type==ePointLike) tagStr= "point-like";
+			else if(Type==eCompact) tagStr= "compact";
 			else tagStr= "unknown";
 			return tagStr;
 		}//close GetDS9RegionTag()
@@ -497,6 +497,14 @@ class Source : public Blob {
 		}
 
 		/**
+		* \brief Get fit quality flag
+		*/
+		int GetFitQuality(){
+			if(!m_HasFitInfo) return -1;
+			return m_fitPars.GetFitQuality();
+		}
+
+		/**
 		* \brief Get integrated flux density error on components according to Condon (1997) formula 14
 		*/
 		int GetCondonComponentFluxDensityErr(std::vector<double>& fluxDensityErrList){
@@ -507,7 +515,7 @@ class Source : public Blob {
 			double rmsAvg= m_bkgRMSSum/NPix;
 			double dx= fabs(m_imgMetaData->dX);
  			double dy= fabs(m_imgMetaData->dY);
-			INFO_LOG("rmsAvg="<<rmsAvg<<", dx="<<dx<<", dy="<<dy);
+			DEBUG_LOG("rmsAvg="<<rmsAvg<<", dx="<<dx<<", dy="<<dy);
  
 			for(int k=0;k<nComponents;k++){
 				double A= m_fitPars.GetParValue(k,"A");
@@ -518,7 +526,7 @@ class Source : public Blob {
 				double IRelErr= sqrt(2./(TMath::Pi()*sigmaX*sigmaY))/SNR;
 				//double IVar= 2.*I*I*dx*dy*rmsAvg*rmsAvg/(TMath::Pi()*sigmaX*sigmaY*A*A);
 				double IErr= IRelErr*I;
-				INFO_LOG("A="<<A<<", sigmaX="<<sigmaX<<", sigmaY="<<sigmaY<<", SNR="<<SNR<<", I="<<I<<", IRelErr="<<IRelErr<<", IErr="<<IErr);
+				DEBUG_LOG("A="<<A<<", sigmaX="<<sigmaX<<", sigmaY="<<sigmaY<<", SNR="<<SNR<<", I="<<I<<", IRelErr="<<IRelErr<<", IErr="<<IErr);
 				fluxDensityErrList.push_back(IErr);
 			}//end loop components
 			return 0;

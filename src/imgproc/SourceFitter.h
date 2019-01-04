@@ -141,6 +141,7 @@ struct SourceFitOptions {
 
 		wcsType= eJ2000;
 		fitScaleDataToMax= false;
+		fitRedChi2Cut= 5.;
 
 		
 	}//close constructor
@@ -233,6 +234,9 @@ struct SourceFitOptions {
 		//- Scale data to max
 		bool fitScaleDataToMax;
 
+		//- Selection cuts
+		double fitRedChi2Cut;
+
 };//close SourceFitOptions
 
 
@@ -258,6 +262,9 @@ class SourceComponentPars : public TObject {
 
 			//Initialize ellipse pars
 			InitEllipsePars();
+
+			//Init other vars
+			m_flag= eCandidate;
 
 		}//close contructor
 
@@ -307,6 +314,16 @@ class SourceComponentPars : public TObject {
 		\brief Get fit par errors
  		*/
 		std::map<std::string,double>const& GetFitParErrors() const {return FitParsErr;}		
+
+		/** 
+		\brief Get source component flag
+ 		*/	
+		int GetFlag(){return m_flag;}
+
+		/** 
+		\brief Set source component flag
+ 		*/
+		void SetFlag(int flag){m_flag=flag;}
 
 		/** 
 		\brief Get fit ellipse
@@ -990,7 +1007,10 @@ class SourceComponentPars : public TObject {
 		double m_bmin_deconv_wcs;
 		double m_pa_deconv_wcs;
 
-	ClassDef(SourceComponentPars,2)
+		//- Source component flag
+		int m_flag;
+
+	ClassDef(SourceComponentPars,3)
 
 };//close SourceComponentPars()
 
@@ -1067,6 +1087,8 @@ class SourceFitPars : public TObject {
 			((SourceFitPars&)obj).sigmaFixed = sigmaFixed;	
 			((SourceFitPars&)obj).fluxDensity = fluxDensity;	
 			((SourceFitPars&)obj).fluxDensityErr = fluxDensityErr;	
+
+			((SourceFitPars&)obj).fitQuality = fitQuality;
 		
 			//Copy matrix
 			int nRows= fitCovarianceMatrix.GetNrows();
@@ -1702,7 +1724,7 @@ class SourceFitPars : public TObject {
 		*/
 		void Print(){
 			cout<<"*** FIT RESULTS ***"<<endl;
-			cout<<"nPars="<<npars<<", nParsFree="<<npars_free<<", fitStatus="<<status<<" (minimizer status="<<minimizer_status<<")"<<endl;
+			cout<<"nPars="<<npars<<", nParsFree="<<npars_free<<", fitStatus="<<status<<" (minimizer status="<<minimizer_status<<"), fitQuality="<<fitQuality<<endl;
 			cout<<"Chi2="<<chi2<<", ndf="<<ndof<<", Chi2/NDF="<<chi2/ndof<<endl;
 			cout<<"fluxDensity="<<fluxDensity<<" +- "<<fluxDensityErr<<endl;
 			for(int i=0;i<nComponents;i++){
@@ -1783,6 +1805,51 @@ class SourceFitPars : public TObject {
 
 		}//close GetComponentFluxDerivMatrix()
 
+		/**
+		* \brief Set component flag
+		*/
+		int SetComponentFlag(int componentId,int flag)
+		{		
+			//Check component id	
+			if(componentId<0 || componentId>=nComponents){
+				WARN_LOG("Component "<<componentId<<" does not exist!");
+				return 0;
+			}
+
+			//Get component fit ellipse pars
+			pars[componentId].SetFlag(flag);
+
+			return 0;
+		}
+	
+		/**
+		* \brief Get component flag
+		*/
+		int GetComponentFlag(int& flag,int componentId)
+		{
+			//Check component id
+			flag= -1;
+			if(componentId<0 || componentId>=nComponents){
+				WARN_LOG("Component "<<componentId<<" does not exist!");
+				return -1;
+			}
+	
+			//Retrieve flag
+			flag= pars[componentId].GetFlag();
+
+			return 0;
+		}
+
+		/**
+		* \brief Get is good fit flag
+		*/
+		int GetFitQuality(){return fitQuality;}
+
+		/**
+		* \brief Set is good fit flag
+		*/
+		void SetFitQuality(int flag){fitQuality=flag;}
+
 	private:
 
 		/**
@@ -1812,6 +1879,7 @@ class SourceFitPars : public TObject {
 			sigmaFixed= false;	
 			fluxDensity= 0;
 			fluxDensityErr= 0;
+			fitQuality= eBadFit;
 		}
 
 		
@@ -1843,7 +1911,9 @@ class SourceFitPars : public TObject {
 		double fluxDensity;
 		double fluxDensityErr;
 
-	ClassDef(SourceFitPars,2)
+		int fitQuality;
+
+	ClassDef(SourceFitPars,3)
 
 };
 

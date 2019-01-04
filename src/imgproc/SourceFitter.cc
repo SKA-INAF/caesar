@@ -1201,6 +1201,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	int NPars= fitter->NDim();
 	int NFittedBins= (int)(m_fitData.size());
 	double NDF= NFittedBins-NFreePars;
+	double reducedChi2= Chi2/NDF;
 
 	//Retrieve fitted pars & errors
 	const double* fittedPars= fitter->X();
@@ -1318,8 +1319,9 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	if(m_fitStatus==eFitConverged && hasParsAtLimits) m_fitStatus= eFitConvergedWithWarns;	
 	fitStatus= fitter->Status();
 
+	int covMatrixStatus= fitter->CovMatrixStatus();
 	
-	INFO_LOG("Source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") fit info: status="<<fitStatus<<", fitterStatus="<<m_fitStatus<<", covMatrixStatus="<<fitter->CovMatrixStatus()<<", IsValidError? "<<fitter->IsValidError()<<", ProvidesError? "<<fitter->ProvidesError()<<", fit strategy="<<fitter->Strategy()<<" (hasParsAtLimits? "<<hasParsAtLimits<<"), NDF="<<NDF<<", Chi2="<<Chi2<<", NPars="<<NPars<<", NFreePars="<<NFreePars<<" NFittedBins="<<NFittedBins);
+	INFO_LOG("Source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") fit info: status="<<fitStatus<<", fitterStatus="<<m_fitStatus<<", covMatrixStatus="<<covMatrixStatus<<", IsValidError? "<<fitter->IsValidError()<<", ProvidesError? "<<fitter->ProvidesError()<<", fit strategy="<<fitter->Strategy()<<" (hasParsAtLimits? "<<hasParsAtLimits<<"), NDF="<<NDF<<", Chi2="<<Chi2<<", NPars="<<NPars<<", NFreePars="<<NFreePars<<" NFittedBins="<<NFittedBins);
 
 	m_sourceFitPars.SetChi2(Chi2);
 	m_sourceFitPars.SetNDF(NDF);
@@ -1327,6 +1329,28 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	m_sourceFitPars.SetNFreePars(NFreePars);
 	m_sourceFitPars.SetNFitPoints(NFittedBins);
 	m_sourceFitPars.SetStatus(m_fitStatus);
+
+	//Compute is good fit flag
+	bool isGoodFit= (
+		reducedChi2<fitOptions.fitRedChi2Cut
+	);
+
+	bool hasGoodErrorEstimate= (
+		covMatrixStatus==2 || covMatrixStatus==3
+	);
+	
+	//NB: This is a minimal selection, e.g. set as good if converged. Source selection (e.g. on chi2, ...) can applied later to 
+	//    better estimate the flag
+	int fitQuality= eBadFit;
+	if(m_fitStatus==eFitConvergedWithWarns) {
+		fitQuality= eLQFit;
+	}
+	if(m_fitStatus==eFitConverged){
+		if(isGoodFit && hasGoodErrorEstimate) fitQuality= eHQFit;
+		else fitQuality= eMQFit;
+	}
+	
+	m_sourceFitPars.SetFitQuality(fitQuality);
 	
 	
 	//==============================================

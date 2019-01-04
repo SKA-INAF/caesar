@@ -683,6 +683,7 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(sourceBkgBoxBorderSize,m_sourceBkgBoxBorderSize);
 	GET_OPTION_VALUE(fitUseBkgBoxEstimate,m_fitUseBkgBoxEstimate);
 	GET_OPTION_VALUE(fitRetryWithLessComponents,m_fitRetryWithLessComponents);
+	GET_OPTION_VALUE(fitRedChi2Cut,m_fitRedChi2Cut);
 
 	if(m_peakMinKernelSize>m_peakMaxKernelSize){
 		ERROR_LOG("Invalid peak kernel size option given (hint: min kernel must be larger or equal to max kernel size)!");
@@ -1441,13 +1442,13 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		sources_merged[k]->SetId(k+1);
 		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
 		sources_merged[k]->SetBeamFluxIntegral(beamArea);
-		sources_merged[k]->SetType(Source::eCompact);
+		sources_merged[k]->SetType(eCompact);
 		std::vector<Source*> nestedSources= sources_merged[k]->GetNestedSources();
 		for(size_t l=0;l<nestedSources.size();l++){
 			nestedSources[l]->SetId(l+1);
 			nestedSources[l]->SetName(Form("S%d_N%d",(signed)(k+1),(signed)(l+1)));
 			nestedSources[l]->SetBeamFluxIntegral(beamArea);
-			nestedSources[l]->SetType(Source::eCompact);
+			nestedSources[l]->SetType(eCompact);
 		}
 	}
 	
@@ -1586,7 +1587,7 @@ Image* SFinder::FindCompactSources(Image* inputImg, ImgBkgData* bkgData, TaskDat
 	int nSources= static_cast<int>( sources.size() );
 	INFO_LOG("#"<<nSources<<" compact sources detected in input image ...");
 	for(size_t k=0;k<sources.size();k++) {
-		sources[k]->SetType(Source::eCompact);
+		sources[k]->SetType(eCompact);
 	}
 	
 	//## Apply source selection?
@@ -1915,7 +1916,7 @@ Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,T
 	for(size_t k=0;k<sources.size();k++) {
 		sources[k]->SetId(k+1);
 		sources[k]->SetName(Form("Sext%d",(signed)(k+1)));
-		sources[k]->SetType(Source::eExtended);
+		sources[k]->SetType(eExtended);
 		sources[k]->SetBeamFluxIntegral(fluxCorrection);
 	}
 	
@@ -2175,7 +2176,7 @@ Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,T
 	for(size_t k=0;k<sources.size();k++) {
 		sources[k]->SetId(k+1);
 		sources[k]->SetName(Form("Sext%d",(signed)(k+1)));
-		sources[k]->SetType(Source::eExtended);
+		sources[k]->SetType(eExtended);
 		sources[k]->SetBeamFluxIntegral(fluxCorrection);
 	}
 	
@@ -2542,7 +2543,7 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 	for(size_t k=0;k<sources.size();k++) {
 		sources[k]->SetId(k+1);
 		sources[k]->SetName(Form("Sext%d",(signed)(k+1)));
-		sources[k]->SetType(Source::eExtended);
+		sources[k]->SetType(eExtended);
 		sources[k]->SetBeamFluxIntegral(fluxCorrection);
 	}
 
@@ -2684,7 +2685,7 @@ Image* SFinder::FindExtendedSources_WT(Image* inputImg,TaskData* taskData,Image*
 	for(size_t k=0;k<sources.size();k++){
 		sources[k]->SetId(k+1);
 		sources[k]->SetName(Form("Sext%d",(signed)(k+1)));	
-		sources[k]->SetType(Source::eExtended);
+		sources[k]->SetType(eExtended);
 		sources[k]->SetBeamFluxIntegral(fluxCorrection);
 	}
 
@@ -2737,7 +2738,7 @@ int SFinder::SelectSources(std::vector<Source*>& sources)
 		//Is point-like source?
 		if( IsPointLikeSource(sources[i]) ){
 			DEBUG_LOG("Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as a point-like source ...");
-			sources[i]->SetType(Source::ePointLike);
+			sources[i]->SetType(ePointLike);
 		}
 		else{
 			DEBUG_LOG("Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) NOT tagged as point-like source ...");
@@ -2765,7 +2766,7 @@ int SFinder::SelectSources(std::vector<Source*>& sources)
 			//Check if point-source
 			if(isPointSource_nested){
 				DEBUG_LOG("Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as a point-like source ...");
-				nestedSources[j]->SetType(Source::ePointLike);
+				nestedSources[j]->SetType(ePointLike);
 			}
 			
 			//Add to selected nested list
@@ -2910,11 +2911,11 @@ bool SFinder::IsFittableSource(Source* aSource)
 {
 	//Check if not point-like or compact
 	int sourceType= aSource->Type;
-	bool isCompact= (sourceType==Source::ePointLike || sourceType==Source::eCompact);
+	bool isCompact= (sourceType==ePointLike || sourceType==eCompact);
 	if(!isCompact) return false;
 
 	//If compact source check nbeams (if too large do not perform fit)
-	if(sourceType==Source::eCompact){
+	if(sourceType==eCompact){
 		double NPix= aSource->GetNPixels();
 		double beamArea= aSource->GetBeamFluxIntegral();
 		double nBeams= 0;
@@ -2983,6 +2984,7 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	fitOptions.useNestedAsComponents= m_fitUseNestedAsComponents;
 	fitOptions.chi2RegPar= m_fitChi2RegPar;
 	fitOptions.fitRetryWithLessComponents= m_fitRetryWithLessComponents;
+	fitOptions.fitRedChi2Cut= m_fitRedChi2Cut;
 
 	fitOptions.fitMinimizer= m_fitMinimizer;		
 	fitOptions.fitMinimizerAlgo= m_fitMinimizerAlgo;
@@ -4099,9 +4101,9 @@ int SFinder::MergeTaskData()
 				//Process sources not at edge
 				for(size_t k=0;k<(m_taskDataPerWorkers[i][j]->sources).size();k++){
 					int sourceType= (m_taskDataPerWorkers[i][j]->sources)[k]->Type;
-					if(sourceType==Source::eCompact) nCompactSources++;
-					else if(sourceType==Source::eExtended) nExtendedSources++;
-					else if(sourceType==Source::ePointLike) nPointLikeSources++;
+					if(sourceType==eCompact) nCompactSources++;
+					else if(sourceType==eExtended) nExtendedSources++;
+					else if(sourceType==ePointLike) nPointLikeSources++;
 					else nUnknown++;
 					nSources++;
 					m_SourceCollection.push_back( (m_taskDataPerWorkers[i][j]->sources)[k] );
@@ -4110,9 +4112,9 @@ int SFinder::MergeTaskData()
 				//Add edge sources not merged (if merging was not selected as option)
 				for(size_t k=0;k<(m_taskDataPerWorkers[i][j]->sources_edge).size();k++){
 					int sourceType= (m_taskDataPerWorkers[i][j]->sources_edge)[k]->Type;
-					if(sourceType==Source::eCompact) nCompactSources++;
-					else if(sourceType==Source::eExtended) nExtendedSources++;
-					else if(sourceType==Source::ePointLike) nPointLikeSources++;
+					if(sourceType==eCompact) nCompactSources++;
+					else if(sourceType==eExtended) nExtendedSources++;
+					else if(sourceType==ePointLike) nPointLikeSources++;
 					else nUnknown++;
 					nSources++;
 					nEdgeSources++;
@@ -4215,10 +4217,10 @@ int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* task
 		sources_merged[k]->SetId(k+1);
 		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
 		sources_merged[k]->SetBeamFluxIntegral(beamArea);
-		sources_merged[k]->SetType(Source::eCompact);
+		sources_merged[k]->SetType(eCompact);
 		bool isFittable= IsFittableSource(sources_merged[k]);
 		if(!isFittable){
-			sources_merged[k]->SetType(Source::eExtended);
+			sources_merged[k]->SetType(eExtended);
 		}
 
 		std::vector<Source*> nestedSources= sources_merged[k]->GetNestedSources();
@@ -4226,13 +4228,13 @@ int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* task
 			nestedSources[l]->SetId(l+1);
 			nestedSources[l]->SetName(Form("S%d_N%d",(signed)(k+1),(signed)(l+1)));
 			nestedSources[l]->SetBeamFluxIntegral(beamArea);
-			nestedSources[l]->SetType(Source::eCompact);
+			nestedSources[l]->SetType(eCompact);
 			bool isFittable_nested= IsFittableSource(nestedSources[l]);
 			if(!isFittable_nested){
-				nestedSources[l]->SetType(Source::eExtended);
+				nestedSources[l]->SetType(eExtended);
 			}
-			if(sources_merged[k]->Type==Source::eExtended && nestedSources[l]->Type==Source::eCompact){
-				sources_merged[k]->SetType(Source::eCompactPlusExtended);
+			if(sources_merged[k]->Type==eExtended && nestedSources[l]->Type==eCompact){
+				sources_merged[k]->SetType(eCompactPlusExtended);
 			}
 		}//end loop nested sources
 	}//end loop sources
@@ -4255,7 +4257,7 @@ int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* task
 		sources_merged[k]->SetId(k+1);
 		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
 		sources_merged[k]->SetBeamFluxIntegral(beamArea);
-		sources_merged[k]->Print();
+		//sources_merged[k]->Print();
 		std::vector<Source*> nestedSources= sources_merged[k]->GetNestedSources();
 		for(size_t l=0;l<nestedSources.size();l++){
 			nestedSources[l]->SetId(l+1);
@@ -4273,175 +4275,7 @@ int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* task
 
 }//close MergeTaskSources()
 
-/*
-int SFinder::MergeTaskSources(TaskData* taskData)
-{
-	//Check task data
-	if(!taskData){
-		ERROR_LOG("Null ptr to task data given!");
-		return -1;
-	}
 
-	//## Return if there are no sources to be merged
-	if( (taskData->sources).empty() ){
-		DEBUG_LOG("No task sources to be merged, nothing to be done...");
-		return 0;
-	}
-
-	INFO_LOG("#"<<(taskData->sources).size()<<" sources will be searched for merging ...");
-	Graph mergedSourceGraph;
-	std::vector<bool> isMergeableSource;
-	for(size_t i=0;i<(taskData->sources).size();i++){
-		mergedSourceGraph.AddVertex();
-		isMergeableSource.push_back(false);
-	}
-
-	
-	//## Find adjacent sources	
-	INFO_LOG("Finding adjacent/overlapping sources (#"<<mergedSourceGraph.GetNVertexes()<<") ...");
-	
-	for(size_t i=0;i<(taskData->sources).size()-1;i++){
-		Source* source= (taskData->sources)[i];
-		int type= source->Type;
-		bool isCompactSource= (type==Source::eCompact || type==Source::ePointLike);
-		bool isExtendedSource= (type==Source::eExtended || type==Source::eCompactPlusExtended);
-
-		//Loop neighbors
-		for(size_t j=i+1;j<(taskData->sources).size();j++){	
-			Source* source_neighbor= (taskData->sources)[j];
-			int type_neighbor= source_neighbor->Type;
-			bool isCompactSource_neighbor= (type_neighbor==Source::eCompact || type_neighbor==Source::ePointLike);
-			bool isExtendedSource_neighbor= (type_neighbor==Source::eExtended || type_neighbor==Source::eCompactPlusExtended);
-
-			//Check if both sources are compact and if they are allowed to be merged
-			if(isCompactSource && isCompactSource_neighbor && !m_mergeCompactSources){			
-				DEBUG_LOG("Skip merging as both sources (i,j)=("<<i<<","<<j<<") are compact and merging among compact sources is disabled...");
-				continue;
-			}
-	
-			//Check if both sources are extended or if one is extended and the other compact and if they are allowed to be merged
-			if(isExtendedSource && isExtendedSource_neighbor && !m_mergeExtendedSources){			
-				DEBUG_LOG("Skip merging as both sources (i,j)=("<<i<<","<<j<<") are extended and merging among extended sources is disabled...");
-				continue;
-			}
-			if( ((isCompactSource && isExtendedSource_neighbor) || (isExtendedSource && isCompactSource_neighbor)) && !m_mergeExtendedSources){			
-				DEBUG_LOG("Skip merging between sources (i,j)=("<<i<<","<<j<<") as merging among extended and compact sources is disabled...");
-				continue;
-			}
-		
-			//Check is sources are adjacent
-			//NB: This is time-consuming (N1xN2 more or less)!!!
-			bool areAdjacentSources= source->IsAdjacentSource(source_neighbor);
-			if(!areAdjacentSources) continue;
-
-			//If they are adjacent add linking in graph
-			INFO_LOG("Sources (i,j)=("<<i<<","<<j<<") are adjacent and selected for merging...");
-			mergedSourceGraph.AddEdge(i,j);
-			isMergeableSource[i]= true;
-			isMergeableSource[j]= true;
-		}//end loop sources
-	}//end loop sources
-
-	//## Add to merged collection all sources not mergeable
-	//## NB: If sources are not to be merged each other, add to merged collection 
-	std::vector<Source*> sources_merged;
-	for(size_t i=0;i<(taskData->sources).size();i++){
-		int type= (taskData->sources)[i]->Type;
-		bool isMergeable= isMergeableSource[i];
-		bool isCompactSource= (type==Source::eCompact || type==Source::ePointLike);
-		bool isExtendedSource= (type==Source::eExtended || type==Source::eCompactPlusExtended);		
-		if(isMergeable) {	
-			if(m_mergeCompactSources && isCompactSource) continue;
-			if(m_mergeExtendedSources && isExtendedSource) continue;
-		}
-		Source* merged_source= new Source;
-		*merged_source= *((taskData->sources)[i]);
-		sources_merged.push_back(merged_source);
-	}
-
-	//## Find all connected components in graph corresponding to sources to be merged
-	INFO_LOG("Find all connected components in graph corresponding to sources to be merged...");
-	std::vector<std::vector<int>> connected_source_indexes;
-	mergedSourceGraph.GetConnectedComponents(connected_source_indexes);
-	INFO_LOG("#"<<connected_source_indexes.size()<<"/"<<(taskData->sources).size()<<" selected for merging...");
-		
-	//## Now merge the sources
-	std::vector<int> sourcesToBeRemoved;
-	bool copyPixels= true;//create memory for new pixels
-	bool checkIfAdjacent= false;//already done before
-	bool sumMatchingPixels= false;
-	bool computeStatPars= false;//do not compute stats& pars at each merging
-	bool computeMorphPars= false;
-	bool computeRobustStats= true;
-	bool forceRecomputing= true;//need to re-compute moments because pixel flux of merged sources are summed up
-	
-	INFO_LOG("Merging sources and adding them to collection...");
-
-	for(size_t i=0;i<connected_source_indexes.size();i++){
-		//Skip empty or single-sources
-		if(connected_source_indexes[i].size()<=1) continue;
-		
-		//Get source id=0 of this component
-		int index= connected_source_indexes[i][0];
-		Source* source= (taskData->sources)[index];
-		
-		//Create a new source which merges the two
-		Source* merged_source= new Source;
-		*merged_source= *source;
-
-		//Merge other sources in the group if any 
-		int nMerged= 0;
-		
-		for(size_t j=1;j<connected_source_indexes[i].size();j++){
-			int index_adj= connected_source_indexes[i][j];
-			Source* source_adj= (taskData->sources)[index_adj];
-				
-			int status= merged_source->MergeSource(source_adj,copyPixels,checkIfAdjacent,computeStatPars,computeMorphPars,sumMatchingPixels);
-			if(status<0){
-				WARN_LOG("Failed to merge sources (i,j)=("<<index<<","<<index_adj<<"), skip to next...");
-				continue;
-			}
-			nMerged++;
-
-		}//end loop of sources to be merged in this component
-
-		//If at least one was merged recompute stats & pars of merged source
-		if(nMerged>0) {
-			//Set name
-			TString sname= Form("Smerg%d",i+1);
-			merged_source->SetId(i+1);
-			merged_source->SetName(std::string(sname));
-
-			//Compute stats of merged source
-			DEBUG_LOG("Recomputing stats & moments of merged source in merge group "<<i<<" after #"<<nMerged<<" merged source...");
-			if(merged_source->ComputeStats(computeRobustStats,forceRecomputing)<0){
-				WARN_LOG("Failed to compute stats for merged source in merge group "<<i<<"...");
-				continue;
-			}
-
-			//Compute morphology pars of merged source
-			if(merged_source->ComputeMorphologyParams()<0){
-				WARN_LOG("Failed to compute morph pars for merged source in merge group "<<i<<"...");
-				continue;
-			}
-		}//close if
-
-		//Add merged source to collection
-		sources_merged.push_back(merged_source);
-
-	}//end loop number of components
-
-	
-	INFO_LOG("#"<<sources_merged.size()<<" sources present in merged collection...");
-	
-	//## Clear task collection and replace with merged collection
-	taskData->ClearSources();
-	(taskData->sources).insert( (taskData->sources).end(),sources_merged.begin(),sources_merged.end());		
-	
-	return 0;
-
-}//close MergeTaskSources()
-*/
 
 int SFinder::MergeSourcesAtEdge()
 {
