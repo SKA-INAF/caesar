@@ -2183,7 +2183,7 @@ int Image::FindExtendedSource_CV(std::vector<Source*>& sources,Image* initSegmIm
 		int imgMedian= m_Stats->median;
 		for(size_t k=0;k<sources.size();k++){
 			//Tag sources as extended
-			sources[k]->SetType(Source::eExtended);
+			sources[k]->SetType(eExtended);
 
 			//Check if source is a "negative excess"
 			double Smedian= sources[k]->Median;
@@ -2712,7 +2712,7 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 		bool addToPSList= (
 			hasFitInfo && 
 			psSubtractionMethod==ePS_MODELSUBTRACTION &&
-			(dilateSourceType==-1 || dilateSourceType==Source::ePointLike || dilateSourceType==Source::eCompact)
+			(dilateSourceType==-1 || dilateSourceType==ePointLike || dilateSourceType==eCompact)
 		);
 		
 		//Check is source stats are available
@@ -2760,7 +2760,7 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 					bool addToPSList_nested= (
 						hasFitInfo_nested && 
 						psSubtractionMethod==ePS_MODELSUBTRACTION &&
-						(dilateSourceType==-1 || dilateSourceType==Source::ePointLike || dilateSourceType==Source::eCompact)
+						(dilateSourceType==-1 || dilateSourceType==ePointLike || dilateSourceType==eCompact)
 					);
 					
 					if(addToPSList_nested) psSources.push_back(nestedSources[k]);
@@ -4152,11 +4152,11 @@ int Image::Draw(std::vector<Source*>const& sources,int palette,bool drawFull,boo
 	for(unsigned int k=0;k<sources.size();k++){	
 		int type= sources[k]->Type;
 		int lineColor= kBlack;
-		if(type==Source::eCompact)
+		if(type==eCompact)
 			lineColor= kBlack;	
-		else if(type==Source::ePointLike)
+		else if(type==ePointLike)
 			lineColor= kRed;
-		else if(type==Source::eExtended)
+		else if(type==eExtended)
 			lineColor= kGreen+1;	
 		sources[k]->Draw(false,false,true,lineColor);
 	}//end loop sources
@@ -4261,11 +4261,11 @@ int Image::Plot(std::vector<Source*>const& sources,bool useCurrentCanvas,bool dr
 	for(unsigned int k=0;k<sources.size();k++){	
 		int type= sources[k]->Type;
 		int lineColor= kBlack;
-		if(type==Source::eCompact)
+		if(type==eCompact)
 			lineColor= kBlack;	
-		else if(type==Source::ePointLike)
+		else if(type==ePointLike)
 			lineColor= kRed;
-		else if(type==Source::eExtended)
+		else if(type==eExtended)
 			lineColor= kGreen+1;	
 		sources[k]->Draw(false,false,true,lineColor);
 	}//end loop sources
