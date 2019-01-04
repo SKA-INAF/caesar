@@ -139,19 +139,19 @@ int WriteRegions(std::string fileName)
 		//Set source color/tag/...
 		std::string colorStr= "white";
 		std::string tagStr= "unknown";
-		if(source_type==Source::eExtended) {
+		if(source_type==eExtended) {
 			colorStr= "green";
 			tagStr= "extended";
 		}
-		else if(source_type==Source::eCompactPlusExtended) {
+		else if(source_type==eCompactPlusExtended) {
 			colorStr= "magenta";
 			tagStr= "extended-compact";
 		}
-		else if(source_type==Source::ePointLike) {
+		else if(source_type==ePointLike) {
 			colorStr= "red";
 			tagStr= "point-like";
 		}
-		else if(source_type==Source::eCompact) {
+		else if(source_type==eCompact) {
 			colorStr= "blue";
 			tagStr= "compact";
 		}

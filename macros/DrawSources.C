@@ -66,9 +66,9 @@ void DrawSources(std::string filename=""){
 		int color= kBlack;
 		int lineStyle= kSolid;
 
-		if(source_type==Source::eExtended) color= kGreen;
-		else if(source_type==Source::ePointLike) color= kRed;
-		else if(source_type==Source::eCompact) color= kBlue;	
+		if(source_type==eExtended) color= kGreen;
+		else if(source_type==ePointLike) color= kRed;
+		else if(source_type==eCompact) color= kBlue;	
 		else color= kGray;
 		if(isAtEdge) {
 			color+= 2;

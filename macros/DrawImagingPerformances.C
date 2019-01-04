@@ -116,13 +116,13 @@ int DrawImagingPerformances(std::string fileName){
 		double lgFlux_true= log10(fluxDensity_true);
 		
 		double bkg= 0;
-		if(type==Source::eCompact || type==Source::ePointLike) {
+		if(type==eCompact || type==ePointLike) {
 			bkg= S_bkg;
 		}
-		else if(type==Source::eExtended){
+		else if(type==eExtended){
 			bkg= S_bkg;
 		}
-		else if(type==Source::eCompactPlusExtended){
+		else if(type==eCompactPlusExtended){
 			bkg= Npix_rec*BkgAvg;
 		}	
 		else{
@@ -138,19 +138,19 @@ int DrawImagingPerformances(std::string fileName){
 		}
 
 		//Fill histo/graph
-		if(type==Source::eCompact || type==Source::ePointLike){
+		if(type==eCompact || type==ePointLike){
 			fluxRatioList_compact[gBin-1].push_back(fluxRatio);
 			fluxList_compact[gBin-1].push_back(lgFlux_true);
 			fluxPoints_compact->SetPoint(nPoints_compact,lgFlux_true,fluxRatio);	
 			nPoints_compact++;
 		}	
-		else if(type==Source::eExtended){
+		else if(type==eExtended){
 			fluxRatioList_extended[gBin-1].push_back(fluxRatio);
 			fluxList_extended[gBin-1].push_back(lgFlux_true);
 			fluxPoints_extended->SetPoint(nPoints_extended,lgFlux_true,fluxRatio);	
 			nPoints_extended++;
 		}
-		else if(type==Source::eCompactPlusExtended){
+		else if(type==eCompactPlusExtended){
 			fluxRatioList_compactextended[gBin-1].push_back(fluxRatio);
 			fluxList_compactextended[gBin-1].push_back(lgFlux_true);
 			fluxPoints_compactextended->SetPoint(nPoints_compactextended,lgFlux_true,fluxRatio);	
