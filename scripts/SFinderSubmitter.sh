@@ -1390,6 +1390,7 @@ generate_config(){
 		echo "fitChi2RegPar = 1															 				| Chi2 regularization par chi2=chi2_signal + regpar*chi2_bkg (default=1)"	
 		echo "fitParBoundIncreaseStepSize = $FIT_PARBOUNDINCREASE_STEPSIZE    | Par bound increase step size (e.g. parmax= parmax_old+(1+nretry)*fitParBoundIncreaseStepSize*0.5*|max-min| (default=0.1)"
 		echo "fitRetryWithLessComponents = $FIT_RETRY_WITH_LESS_COMPONENTS    | If fit does not converge repeat it iteratively with one component less at each cycle (default=true)"
+		echo "fitRedChi2Cut = 5															        | Used to set fit quality flag. If Chi2/NDF>cut the good fit cut is not passed (default=5)"
 		echo '###'
 		echo '###'
 		echo '//================================'
