@@ -296,6 +296,8 @@ message SourceComponentPars {
 	optional float m_bmin_deconv_wcs= 31;
 	optional float m_pa_deconv_wcs= 32;
 
+	optional int32 m_flag= 33;
+
 }//close SourceComponentPars()
 
 message SourceFitPars {
@@ -325,6 +327,8 @@ message SourceFitPars {
 	optional bool sigmaFixed= 20;
 	optional float fluxDensity= 21;
 	optional float fluxDensityErr= 22;
+	
+	optional int32 fitQuality= 23;
 
 }//close SourceFitPars()
 
