@@ -30,6 +30,7 @@
 #define _CONSTS_h 1
 
 #include <math.h>
+#include <string>
 
 namespace Caesar {
 
@@ -121,6 +122,21 @@ enum SourceFlag {
 };
 
 /**
+* \brief Convert source flag enumeration to string
+*/
+inline std::string GetSourceFlagStr(int sourceFlag)
+{
+	std::string flagStr= "";
+	if(sourceFlag==eReal) flagStr= "real";
+	else if(sourceFlag==eCandidate) flagStr= "candidate";
+	else if(sourceFlag==eFake) flagStr= "fake";
+	else flagStr= "unknown";
+	return flagStr;
+}
+
+
+
+/**
 * \brief Simulated source type enumeration
 */
 enum SimSourceType {
@@ -132,12 +148,29 @@ enum SimSourceType {
 	eBlobLike=5
 };
 
+/**
+* \brief Source fit quality enumeration
+*/
 enum SourceFitQuality {
 	eBadFit=0,//not converged
 	eLQFit=1,//converged with pars at boundary, error matrix not posdef
 	eMQFit=2,//converged with good error estimates, not passing quality selection cuts
 	eHQFit=3//passing quality selection
 };
+
+/**
+* \brief Convert source fit quality enumeration to string
+*/
+inline std::string GetSourceFitQualityStr(int fitQuality)
+{
+	std::string flagStr= "";
+	if(fitQuality==eBadFit) flagStr= "bad-fit";
+	else if(fitQuality==eLQFit) flagStr= "lq-fit";
+	else if(fitQuality==eMQFit) flagStr= "mq-fit";
+	else if(fitQuality==eHQFit) flagStr= "hq-fit";
+	else flagStr= "uq-fit";//unknown
+	return flagStr;
+}
 		
 
 enum ColorPaletteStyle {
@@ -242,9 +275,6 @@ enum FitMinimizer {
 //===          CONSTANTS         =====
 //====================================
 static const double GausSigma2FWHM= 2.*sqrt(2*log(2.));
-
-
-
 
 
 
