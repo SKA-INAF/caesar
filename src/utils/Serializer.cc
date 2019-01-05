@@ -106,6 +106,11 @@ int Serializer::EncodeSourceComponentParsToProtobuf(CaesarPB::SourceComponentPar
 		sourceCompPars_pb->set_m_beam_bmin(beam_bmin);
 		sourceCompPars_pb->set_m_beam_pa(beam_pa);
 
+		double beam_eccentricity= sourceCompPars.GetBeamEllipseEccentricity();
+		sourceCompPars_pb->set_m_beam_eccentricity(beam_eccentricity);
+		double beam_area= sourceCompPars.GetBeamEllipseArea();
+		sourceCompPars_pb->set_m_beam_area(beam_area);
+
 		sourceCompPars_pb->set_m_hasellipsepars(sourceCompPars.HasEllipsePars());
 		double x0= 0;
 		double y0= 0;
@@ -131,7 +136,14 @@ int Serializer::EncodeSourceComponentParsToProtobuf(CaesarPB::SourceComponentPar
 		sourceCompPars_pb->set_m_bmin_err(bmin_err);
 		sourceCompPars_pb->set_m_pa_err(pa_err);
 
-
+		double eccentricity= sourceCompPars.GetEllipseEccentricity();
+		double area= sourceCompPars.GetEllipseArea();
+		double rotangle= sourceCompPars.GetEllipseRotAngleVSBeam();
+		sourceCompPars_pb->set_m_eccentricity(eccentricity);
+		sourceCompPars_pb->set_m_area(area);
+		sourceCompPars_pb->set_m_rotangle_vs_beam(rotangle);
+		
+	
 		sourceCompPars_pb->set_m_haswcsellipsepars(sourceCompPars.HasWCSEllipsePars());
 		double x0_wcs= 0;
 		double y0_wcs= 0;
@@ -948,6 +960,11 @@ int Serializer::EncodeProtobufToSourceComponentPars(SourceComponentPars& sourceC
 			double m_beam_pa= sourceComponentPars_pb.m_beam_pa();
 			sourceComponentPars.SetBeamEllipsePars(m_beam_bmaj,m_beam_bmin,m_beam_pa);
 		
+			float m_beam_eccentricity= sourceComponentPars_pb.m_beam_eccentricity();
+			sourceComponentPars.SetBeamEllipseEccentricity(m_beam_eccentricity);
+			float m_beam_area= sourceComponentPars_pb.m_beam_area();
+			sourceComponentPars.SetBeamEllipseArea(m_beam_area);
+
 			double m_x0= sourceComponentPars_pb.m_x0();
 			double m_y0= sourceComponentPars_pb.m_y0();
 			double m_bmaj= sourceComponentPars_pb.m_bmaj();
@@ -961,6 +978,13 @@ int Serializer::EncodeProtobufToSourceComponentPars(SourceComponentPars& sourceC
 			double m_bmin_err= sourceComponentPars_pb.m_bmin_err();
 			double m_pa_err= sourceComponentPars_pb.m_pa_err();
 			sourceComponentPars.SetEllipseParErrors(m_x0_err,m_y0_err,m_bmaj_err,m_bmin_err,m_pa_err);
+
+			float m_eccentricity= sourceComponentPars_pb.m_eccentricity();
+			sourceComponentPars.SetEllipseEccentricity(m_eccentricity);
+			float m_area= sourceComponentPars_pb.m_area();
+			sourceComponentPars.SetEllipseArea(m_area);
+			float m_rotangle_vs_beam= sourceComponentPars_pb.m_rotangle_vs_beam();
+			sourceComponentPars.SetEllipseRotAngleVSBeam(m_rotangle_vs_beam);
 
 			double m_x0_wcs= sourceComponentPars_pb.m_x0_wcs();
 			double m_y0_wcs= sourceComponentPars_pb.m_y0_wcs();
