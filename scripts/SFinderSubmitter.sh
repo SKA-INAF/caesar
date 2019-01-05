@@ -1390,7 +1390,14 @@ generate_config(){
 		echo "fitChi2RegPar = 1															 				| Chi2 regularization par chi2=chi2_signal + regpar*chi2_bkg (default=1)"	
 		echo "fitParBoundIncreaseStepSize = $FIT_PARBOUNDINCREASE_STEPSIZE    | Par bound increase step size (e.g. parmax= parmax_old+(1+nretry)*fitParBoundIncreaseStepSize*0.5*|max-min| (default=0.1)"
 		echo "fitRetryWithLessComponents = $FIT_RETRY_WITH_LESS_COMPONENTS    | If fit does not converge repeat it iteratively with one component less at each cycle (default=true)"
-		echo "fitRedChi2Cut = 5															        | Used to set fit quality flag. If Chi2/NDF>cut the good fit cut is not passed (default=5)"
+		echo "fitApplyRedChi2Cut = true								              | Apply fit Chi2/NDF cut. Used to set fit quality flag. If Chi2/NDF>cut the good fit cut is not passed (default=true)"
+		echo "fitRedChi2Cut = 5															        | Chi2/NDF cut value (default=5)"
+		echo "fitApplyFitEllipseCuts = false								        | Apply fit ellipse selection cuts. If not passed fit component is tagged as fake (default=false)"
+		echo "fitEllipseEccentricityRatioMinCut = 0.5               | Ellipse eccentricity ratio (fit/beam) min cut value (default=0.5)"
+		echo "fitEllipseEccentricityRatioMaxCut = 1.5               | Ellipse eccentricity ratio (fit/beam) max cut value (default=1.5)"
+		echo "fitEllipseAreaRatioMinCut = 0.01 							        | Ellipse area ratio (fit/beam) min cut value (default=0.01)"
+		echo "fitEllipseAreaRatioMaxCut = 10                        | Ellipse area ratio (fit/beam) min cut value (default=10)"
+		echo "fitEllipseRotAngleCut = 45                            | Ellipse rot angle diff (|fit-beam|) cut value in degrees (default=45)"
 		echo '###'
 		echo '###'
 		echo '//================================'
