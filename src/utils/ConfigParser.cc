@@ -375,8 +375,16 @@ int ConfigParser::RegisterPredefinedOptions()
 		REGISTER_OPTION(fitScaleDataToMax,bool,false,false,true);
 		REGISTER_OPTION(fitUseBkgBoxEstimate,bool,false,false,true);
 		REGISTER_OPTION(fitRetryWithLessComponents,bool,true,false,true);
+
+		REGISTER_OPTION(fitApplyRedChi2Cut,bool,true,false,true);
 		REGISTER_OPTION(fitRedChi2Cut,double,5,0,1000);
 		
+		REGISTER_OPTION(fitApplyFitEllipseCuts,bool,false,false,true);
+		REGISTER_OPTION(fitEllipseEccentricityRatioMinCut,double,0.5,0,1000);
+		REGISTER_OPTION(fitEllipseEccentricityRatioMaxCut,double,1.5,0,1000);
+		REGISTER_OPTION(fitEllipseAreaRatioMinCut,double,0.01,0,1000);
+		REGISTER_OPTION(fitEllipseAreaRatioMaxCut,double,10,0,1000);
+		REGISTER_OPTION(fitEllipseRotAngleCut,double,45,0,180);
 
 		//=============================================
 		//==  Active-Contour algorithm main options  ==
