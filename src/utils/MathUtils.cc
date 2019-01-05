@@ -889,6 +889,21 @@ double MathUtils::ComputeEllipseEccentricity(TEllipse* ellipse)
 
 }//close GetEllipseEccentricity()
 
+double MathUtils::ComputeEllipseEccentricity(double bmaj,double bmin)
+{	
+	//NB: bmaj, bmin are major-axis
+	//Check if they need to be switched
+	double bmaj_half= bmaj/2.;
+	double bmin_half= bmin/2.;
+	double b= std::max(bmaj_half,bmin_half);//semi-major axis
+	double a= std::min(bmaj_half,bmin_half);
+	double a2= a*a;
+	double b2= b*b;
+	double e= 1-a2/b2;
+
+	return e;
+
+}//close ComputeEllipseEccentricity()
 
 
 }//close namespace

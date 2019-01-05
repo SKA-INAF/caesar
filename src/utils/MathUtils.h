@@ -218,13 +218,25 @@ class MathUtils : public TObject {
 		}
 
 		/**
-		* \brief Compute ellipse area
+		* \brief Compute ellipse area from ROOT TEllipse
 		*/
-		static double ComputeEllipseArea(TEllipse* ellipse){
+		static double ComputeEllipseArea(TEllipse* ellipse)
+		{
 			if(!ellipse) return -1;
 			double r1= ellipse->GetR1();
 			double r2= ellipse->GetR2();
 			double A= TMath::Pi()*r1*r2;
+			return A;
+		}
+
+		/**
+		* \brief Compute ellipse area
+		*/
+		static double ComputeEllipseArea(double bmaj,double bmin)
+		{
+			double a= bmaj/2.;//semi-major axis
+			double b= bmin/2.;//semi-minor axis
+			double A= TMath::Pi()*a*b;
 			return A;
 		}
 		
@@ -269,12 +281,16 @@ class MathUtils : public TObject {
 		static int Ellipse2Polygon(polygon_2d& poly,TEllipse* ellipse, int n);
 
 		/**
-		* \brief Get ellipse eccentricity
+		* \brief Compute ellipse eccentricity from ROOT TEllipse
 		*/
 		static double ComputeEllipseEccentricity(TEllipse* ellipse);
+		/**
+		* \brief Compute ellipse eccentricity from (bmaj, bmin)
+		*/
+		static double ComputeEllipseEccentricity(double bmaj,double bmin);
 
 		/**
-		* \brief Get ellipse eccentricity
+		* \brief Modulus operator
 		*/
 		template<typename T>
 		static T Mod(T x, T y)
