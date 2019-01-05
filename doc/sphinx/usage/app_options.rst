@@ -705,11 +705,45 @@ These options enable control of source fitting stage: minimization algorithm and
 |                                 | | so that total chi2 is given by |           |                        |
 |                                 | | chi2(Z>thr)+regPar*chi2(Z<thr) |           |                        |
 +---------------------------------+----------------------------------+-----------+------------------------+
-| ``fitRedChi2Cut``               | | Used to set fit quality flag.  |     5     |                        |
-|                                 | | If Chi2/NDF>cut the good fit   |           |                        |
-|                                 | | cut is not passed              |           |                        |
-+---------------------------------+----------------------------------+-----------+------------------------+
 
+
+--------------------------
+Source Fit Selection Cuts
+--------------------------
+
+These options enable control of source fit selection cuts. These cuts are used to assign flag to source fitted components.
+
++----------------------------------------+----------------------------------+-----------+--------------+
+|       Option                           |             Description          |  Default  |   Values     |
++========================================+==================================+===========+==============+
+| ``fitApplyRedChi2Cut``                 | | Apply fit Chi2/NDF cut.        |   true    | | true       |
+|                                        | | Used to set fit quality flag.  |           | | false      |
+|                                        | | If Chi2/NDF>cut the good fit   |           |              |
+|                                        | | cut is not passed              |           |              |
++----------------------------------------+----------------------------------+-----------+--------------+
+| ``fitRedChi2Cut``                      | | Chi2/NDF cut value             |     5     |              |
++----------------------------------------+----------------------------------+-----------+--------------+
+| ``fitApplyFitEllipseCuts``             | | Apply fit ellipse selection    |   false   | | true       |
+|                                        | | cuts. Used to set component    |           | | false      |
+|                                        | | flags. If not passed, fit      |           |              |
+|                                        | | component is tagged as fake    |           |              |
++----------------------------------------+----------------------------------+-----------+--------------+
+| ``fitEllipseEccentricityRatioMinCut``  | | Ellipse eccentricity ratio     |    0.5    |              |
+|                                        | | (fit/beam) min cut value       |           |              |
++----------------------------------------+----------------------------------+-----------+--------------+
+| ``fitEllipseEccentricityRatioMaxCut``  | | Ellipse eccentricity ratio     |    1.5    |              |
+|                                        | | (fit/beam) max cut value       |           |              |
++----------------------------------------+----------------------------------+-----------+--------------+
+| ``fitEllipseAreaRatioMinCut``          | | Ellipse area ratio             |    0.01   |              |
+|                                        | | (fit/beam) min cut value       |           |              |
++----------------------------------------+----------------------------------+-----------+--------------+
+| ``fitEllipseAreaRatioMaxCut``          | | Ellipse area ratio             |    10     |              |
+|                                        | | (fit/beam) max cut value       |           |              |
++----------------------------------------+----------------------------------+-----------+--------------+
+| ``fitEllipseRotAngleCut``              | | Ellipse rot angle diff         |    45     |              |
+|                                        | | (|fit-beam|) cut value         |           |              |
+|                                        | | in degrees                     |           |              |
++----------------------------------------+----------------------------------+-----------+--------------+
 
 	
 -----------------------
