@@ -560,7 +560,16 @@ class SFinder : public TObject {
 
 		int m_sourceBkgBoxBorderSize;
 		bool m_fitUseBkgBoxEstimate;
+
+		bool m_fitApplyRedChi2Cut;
 		double m_fitRedChi2Cut;
+
+		bool m_fitApplyFitEllipseCuts;
+		double m_fitEllipseEccentricityRatioMinCut;
+		double m_fitEllipseEccentricityRatioMaxCut;
+		double m_fitEllipseAreaRatioMinCut;
+		double m_fitEllipseAreaRatioMaxCut;
+		double m_fitEllipseRotAngleCut;
 
 		//Saliency computation
 		Image* m_SaliencyImg;

@@ -1331,10 +1331,19 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	m_sourceFitPars.SetStatus(m_fitStatus);
 
 	//Compute is good fit flag
+	//- Reduced chi2 cut
+	bool hasGoodChi2= true;
+	if(fitOptions.useRedChi2Cut) hasGoodChi2= (reducedChi2<fitOptions.fitRedChi2Cut); 
+	
+	//- Add other cuts here...
+	//...
+
+	//Cumulative selection
 	bool isGoodFit= (
-		reducedChi2<fitOptions.fitRedChi2Cut
+		hasGoodChi2
 	);
 
+	//Compute has good error flag
 	bool hasGoodErrorEstimate= (
 		covMatrixStatus==2 || covMatrixStatus==3
 	);
@@ -1426,16 +1435,55 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	//==============================================
 	//==     COMPUTE FIT ELLIPSE PARS
 	//==============================================
+	//Retrieve metadata & wcs from source image metadata
+	ImgMetaData* metadata= 0;
+	WCS* wcs= 0;
+	if(aSource->HasImageMetaData()){
+		metadata= aSource->GetImageMetaData();
+		wcs= metadata->GetWCS(fitOptions.wcsType);
+		if(!wcs){
+			WARN_LOG("Failed to get WCS system from metadata!");
+		}
+	}
+
+	//Set beam ellipse pars (if metadata are available)
+	if(metadata){
+		double beam_bmaj= metadata->Bmaj*3600;//in arcsec
+		double beam_bmin= metadata->Bmin*3600;//in arcsec
+		double beam_pa= metadata->Bpa;
+		m_sourceFitPars.SetComponentBeamEllipsePars(beam_bmaj,beam_bmin,beam_pa);
+		DEBUG_LOG("Set beam info ("<<beam_bmaj<<","<<beam_bmin<<","<<beam_pa<<") in fit pars...");
+	}
+	else{
+		WARN_LOG("Source has no image metadata, cannot set beam info in fit pars!");
+	}
+
 	//Compute ellipse pars
 	if(m_sourceFitPars.ComputeComponentEllipsePars()<0){
 		WARN_LOG("Failed to compute fit component ellipse pars!");
 	}
 
 	//Compute WCS ellipse pars
+	if(wcs){
+		//Compute WCS ellipse pars
+		if(m_sourceFitPars.ComputeComponentWCSEllipsePars(wcs)<0){
+			WARN_LOG("Failed to compute WCS fit component ellipse pars!");
+		}
+
+		//Compute deconvolved WCS ellipse pars
+		if(m_sourceFitPars.ComputeComponentWCSDeconvolvedEllipsePars()<0){
+			WARN_LOG("Failed to compute WCS fit component beam-deconvolved ellipse pars!");
+		}
+	}//close if	
+	else{
+		WARN_LOG("Source has no WCS stored, cannot compute WCS ellipse pars!");
+	}
+
+	/*
 	if(aSource->HasImageMetaData()){
 		//Retrieve WCS
 		ImgMetaData* metadata= aSource->GetImageMetaData();
-		//WorldCoor* wcs= metadata->GetWorldCoord(fitOptions.wcsType);
+		
 		WCS* wcs= metadata->GetWCS(fitOptions.wcsType);
 		if(wcs){
 			if(m_sourceFitPars.ComputeComponentWCSEllipsePars(wcs)<0){
@@ -1461,7 +1509,60 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	else{
 		WARN_LOG("Source has no image metadata, cannot compute WCS ellipse pars!");
 	}
+	*/
+
+	//==============================================
+	//==       SELECTION CUTS
+	//==============================================
+	if(fitOptions.useFitEllipseCuts){
+		DEBUG_LOG("Applying fit ellipse cuts to set source flags...");
+		for(int k=0;k<m_sourceFitPars.GetNComponents();k++){
+			double E= m_sourceFitPars.GetComponentFitEllipseEccentricity(k);
+			double Area= m_sourceFitPars.GetComponentFitEllipseArea(k);
+			double RotAngle= m_sourceFitPars.GetComponentFitEllipseRotAngleVSBeam(k);
+
+			bool hasBeamInfo= m_sourceFitPars.HasComponentBeamEllipsePars(k);
+			if(!hasBeamInfo){
+				WARN_LOG("Fit component no. "<<k+1<<" has no beam info stored, cannot apply fit ellipse vs beam cuts!");
+				continue;
+			}
+			double E_beam= m_sourceFitPars.GetComponentBeamEllipseEccentricity(k);
+			double Area_beam= m_sourceFitPars.GetComponentBeamEllipseArea(k);
+
+			//Compute eccentricity ratio selection cut
+			double eccentricityRatio= 0;
+			bool isGoodEccentricity= true;
+			if(E_beam!=0) {
+				eccentricityRatio= E/E_beam;
+				isGoodEccentricity= (
+					eccentricityRatio>fitOptions.fitEllipseEccentricityRatioMinCut && 
+					eccentricityRatio<fitOptions.fitEllipseEccentricityRatioMaxCut
+				);
+			}//close if
+			
+			//Compute ellipse area ratio selection cut
+			double areaToBeamRatio= 0;
+			bool isGoodAreaToBeam= true;
+			if(Area_beam!=0) {
+				areaToBeamRatio= Area/Area_beam;
+				isGoodAreaToBeam= (
+					areaToBeamRatio>fitOptions.fitEllipseAreaRatioMinCut && 	
+					areaToBeamRatio<fitOptions.fitEllipseAreaRatioMaxCut
+				);		
+			}//close if
+
+			//Compute rot angle selection cut
+			bool isGoodRotAngle= (fabs(RotAngle)<fitOptions.fitEllipseRotAngleCut);
+
+			//Apply selection cut
+			bool passed= (isGoodEccentricity && isGoodAreaToBeam && isGoodRotAngle);
+			if(!passed){
+				INFO_LOG("Fit ellipse selection cut for fit component no. "<<k+1<<" of source "<<aSource->GetName()<<" not passed, flagging this component as fake...");
+				m_sourceFitPars.SetComponentFlag(k,eFake);
+			}
 	
+		}//end loop fit components
+	}//close if
 
 	//==============================================
 	//==       PRINT FIT RESULTS

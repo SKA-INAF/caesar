@@ -370,6 +370,11 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 	ss<<"# Bmaj_deconv_wcs - Fitted component ellipse major axis in world coordinates, deconvolved by beam (arcsec)\n";
 	ss<<"# Bmin_deconv_wcs - Fitted component ellipse major axis in world coordinates, deconvolved by beam (arcsec)\n";
 	ss<<"# Pa_deconv_wcs - Fitted component ellipse position angles in deg, deconvolved by beam (measured counterclock-wise from North)\n";
+
+	ss<<"# Eccentricity_fit/Eccentricity_beam - Ratio between eccentricities of fitted and beam ellipses\n";
+	ss<<"# Area_fit/Area_beam - Ratio between areas of fitted ellipse and beam ellipse \n";
+	ss<<"# RotAngle_fit_wrt_beam - Rotation angle in degrees (range 0-180) between fit ellipse and beam ellipse \n";
+
 	ss<<"# BkgSum- Background estimator summed over all source pixels (in Jy/beam).\n";
 	ss<<"# RMSSum- Noise (rms) estimator summed over all source pixels (in Jy/beam).\n";
 	ss<<"# Chi2- Fit chisquare.\n";
@@ -506,6 +511,11 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 				WARN_LOG("Failed to retrieve ellipse par errors for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
 			}
 
+			//- Fit ellipse eccentricity, area & rot angle vs beam
+			double E= fitPars.GetComponentFitEllipseEccentricity(k);
+			double Area= fitPars.GetComponentFitEllipseArea(k);
+			double RotAngle= fitPars.GetComponentFitEllipseRotAngleVSBeam(k);
+
 			//- WCS fit ellipse pars
 			double x0_wcs= 0;
 			double y0_wcs= 0;
@@ -532,6 +542,17 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			if(fitPars.GetComponentBeamEllipsePars(k,bmaj_beam,bmin_beam,pa_beam)<0){
 				WARN_LOG("Failed to retrieve beam ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
 			}
+
+			//- Beam eccentricity & area
+			double E_beam= fitPars.GetComponentBeamEllipseEccentricity(k);
+			double Area_beam= fitPars.GetComponentBeamEllipseArea(k);
+
+			//- Ratio between fit ellipse pars & beam ellipse pars
+			double EccentricityRatio= 0;
+			if(E_beam!=0) EccentricityRatio= E/E_beam;
+			
+			double AreaRatio= 0;
+			if(Area_beam!=0) AreaRatio= Area/Area_beam;
 
 			//- WCS beam-deconvolved ellipse pars
 			double bmaj_deconv_wcs= 0;
@@ -608,6 +629,10 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			ss<<bmaj_deconv_wcs<<"\t"<<bmin_deconv_wcs<<"\t"<<pa_deconv_wcs<<"\t";
 			//ss<<bmaj_deconv_wcs_err<<"\t"<<bmin_deconv_wcs_err<<"\t"<<pa_deconv_wcs_err<<"\t";
 		
+			//- Fit ellipse vs beam ellipse pars
+			ss<<EccentricityRatio<<"\t"<<AreaRatio<<"\t"<<RotAngle<<"\t";
+
+
 			//Bkg/noise estimators
 			ss<<source->GetBkgSum()<<"\t";
 			ss<<source->GetBkgRMSSum()<<"\t";
@@ -935,6 +960,9 @@ const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,
 	std::stringstream sstream;
 	bool hasFitInfo= source->HasFitInfo();
 	if(hasFitInfo){
+		//Get fit pars
+		SourceFitPars fitPars= source->GetFitPars();
+
 		//Get fit ellipses
 		std::vector<TEllipse*> ellipses;
 		
@@ -942,15 +970,26 @@ const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,
 			ERROR_LOG("Failed to get WorldCoord system from metadata!");
 			return std::string("");
 		}
+
+		//Get fit info
+		//- fit quality flag
+		int fitQuality= fitPars.GetFitQuality();
+		std::string fitQualityFlagStr= GetSourceFitQualityStr(fitQuality);
 	
 		//Loop over fit ellipses and convert to DS9 regions
 		for(size_t i=0;i<ellipses.size();i++){
 			if(!ellipses[i]) continue;
 
+			//Get fit component flag
+			int fitComponentFlag= -1;
+			fitPars.GetComponentFlag(fitComponentFlag,i);
+			std::string fitComponentFlagStr= GetSourceFlagStr(fitComponentFlag);
+
 			//Get encoded string region
 			std::string regionText(Form("%s_fitcomp%d",source->GetName(),(int)(i+1)));
 			std::string regionColor= "red";
-			std::vector<std::string> regionTags {"point-like","fitted component"};
+			
+			std::vector<std::string> regionTags {"point-like","fit-component",fitComponentFlagStr,fitQualityFlagStr};
 			std::string region= AstroUtils::EllipseToDS9Region(ellipses[i],regionText,regionColor,regionTags,useImageCoords);
 			sstream<<region;
 

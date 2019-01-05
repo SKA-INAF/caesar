@@ -456,15 +456,25 @@ const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNested
 			ERROR_LOG("Failed to get WorldCoord system from metadata!");
 			return std::string("");
 		}
+
+		//Get fit info
+		//- fit quality flag
+		int fitQuality= m_fitPars.GetFitQuality();
+		std::string fitQualityFlagStr= GetSourceFitQualityStr(fitQuality);
 	
 		//Loop over fit ellipses and convert to DS9 regions
 		for(size_t i=0;i<ellipses.size();i++){
 			if(!ellipses[i]) continue;
 
+			//Get fit component flag
+			int fitComponentFlag= -1;
+			m_fitPars.GetComponentFlag(fitComponentFlag,i);
+			std::string fitComponentFlagStr= GetSourceFlagStr(fitComponentFlag);
+
 			//Get encoded string region
 			std::string regionText(Form("%s_fitcomp%d",this->GetName(),(int)(i+1)));
 			std::string regionColor= "red";
-			std::vector<std::string> regionTags {"point-like","fitted component"};
+			std::vector<std::string> regionTags {"point-like","fit-component",fitComponentFlagStr,fitQualityFlagStr};
 			std::string region= AstroUtils::EllipseToDS9Region(ellipses[i],regionText,regionColor,regionTags,useImageCoords);
 			sstream<<region;
 

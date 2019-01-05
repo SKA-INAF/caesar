@@ -141,8 +141,17 @@ struct SourceFitOptions {
 
 		wcsType= eJ2000;
 		fitScaleDataToMax= false;
-		fitRedChi2Cut= 5.;
 
+		//Selection cuts
+		useRedChi2Cut= true;
+		fitRedChi2Cut= 5.;
+		useFitEllipseCuts= false;
+		fitEllipseEccentricityRatioMinCut= 0.5;
+		fitEllipseEccentricityRatioMaxCut= 1.5;
+		fitEllipseAreaRatioMinCut= 0.01;
+		fitEllipseAreaRatioMaxCut= 10;
+		fitEllipseRotAngleCut= 45;
+		
 		
 	}//close constructor
 
@@ -235,8 +244,15 @@ struct SourceFitOptions {
 		bool fitScaleDataToMax;
 
 		//- Selection cuts
+		bool useRedChi2Cut;
 		double fitRedChi2Cut;
-
+		bool useFitEllipseCuts;
+		double fitEllipseEccentricityRatioMinCut;
+		double fitEllipseEccentricityRatioMaxCut;
+		double fitEllipseAreaRatioMinCut;
+		double fitEllipseAreaRatioMaxCut;
+		double fitEllipseRotAngleCut;
+		
 };//close SourceFitOptions
 
 
@@ -392,7 +408,7 @@ class SourceComponentPars : public TObject {
 			double bmaj_err= sigmaX_err*GausSigma2FWHM;
 			double bmin_err= sigmaY_err*GausSigma2FWHM;
 			double pa_err= theta_err;
-
+			
 			m_bmaj= bmaj;
 			m_bmin= bmin;
 			m_pa= pa;
@@ -414,6 +430,20 @@ class SourceComponentPars : public TObject {
 
 			//Limit pa in range [-90,90]
 			m_pa= GetPosAngleInRange(m_pa);
+
+			//Compute ellipse eccentricity & area
+			m_eccentricity= MathUtils::ComputeEllipseEccentricity(m_bmaj,m_bmin);
+			m_area= MathUtils::ComputeEllipseArea(m_bmaj,m_bmin);			
+
+			//Compute rotation angle vs beam (if beam info is available)
+			if(m_hasBeamPars){
+				double dtheta= m_pa-m_beam_pa;	
+				m_rotangle_vs_beam= MathUtils::Mod(dtheta,180.);
+			}
+			else{
+				WARN_LOG("No beam information has been set, do not compute fit ellipse rot angle vs beam (set to 0 by default)!");
+			}
+			
 
 			//Set has ellipse par flag
 			m_hasEllipsePars= true;
@@ -504,6 +534,33 @@ class SourceComponentPars : public TObject {
 			m_bmin_err= bmin_err;
 			m_pa_err= pa_err;
 		}
+
+		/** 
+		\brief Get fitted ellipse eccentricity
+ 		*/
+		double GetEllipseEccentricity(){return m_eccentricity;}
+		/** 
+		\brief Set fitted ellipse eccentricity
+ 		*/	
+		void SetEllipseEccentricity(double val){m_eccentricity=val;}
+
+		/** 
+		\brief Get fitted ellipse area
+ 		*/
+		double GetEllipseArea(){return m_area;}
+		/** 
+		\brief Set fitted ellipse area
+ 		*/	
+		void SetEllipseArea(double val){m_area=val;}
+
+		/** 
+		\brief Get fitted ellipse rot angle wrt beam
+ 		*/
+		double GetEllipseRotAngleVSBeam(){return m_rotangle_vs_beam;}
+		/** 
+		\brief Set fitted ellipse rot angle wrt beam
+ 		*/	
+		void SetEllipseRotAngleVSBeam(double val){m_rotangle_vs_beam=val;}
 
 		/**
 		* \brief Compute ellipse pars in WCS coordinates
@@ -758,7 +815,7 @@ class SourceComponentPars : public TObject {
 		}
 
 		/**
-		* \brief Set beam ellipse parameters
+		* \brief Set beam ellipse parameters (it is assumed units are arcsec)
 		*/
 		void SetBeamEllipsePars(double bmaj,double bmin,double pa)
 		{
@@ -766,6 +823,22 @@ class SourceComponentPars : public TObject {
 			m_beam_bmaj= bmaj;
 			m_beam_bmin= bmin;
 			m_beam_pa= pa;
+
+			//Force bmaj>bmin
+			if(bmaj<bmin){
+				m_beam_bmin= bmaj;//swap bmaj/bmin
+				m_beam_bmaj= bmin;		
+				m_beam_pa= pa + 90.;//rotate pa
+			}
+
+			//Limit pa in range [-90,90]
+			double pa_limited= GetPosAngleInRange(m_beam_pa);
+			m_beam_pa= pa_limited;
+
+			//Compute ellipse eccentricity & area
+			m_beam_eccentricity= MathUtils::ComputeEllipseEccentricity(m_beam_bmaj,m_beam_bmin);
+			m_beam_area= MathUtils::ComputeEllipseArea(m_beam_bmaj,m_beam_bmin);			
+	
 		}
 	
 		/**
@@ -789,7 +862,24 @@ class SourceComponentPars : public TObject {
 			return 0;
 		};
 
-		
+		/**
+		* \brief Get beam ellipse eccentricity
+		*/
+		double GetBeamEllipseEccentricity(){return m_beam_eccentricity;}
+		/**
+		* \brief Set beam ellipse eccentricity
+		*/
+		void SetBeamEllipseEccentricity(double val){m_beam_eccentricity=val;}
+
+		/**
+		* \brief Get beam ellipse area
+		*/
+		double GetBeamEllipseArea(){return m_beam_area;}
+		/**
+		* \brief Set beam ellipse area
+		*/
+		void SetBeamEllipseArea(double val){m_beam_area=val;}
+	
 		/**
 		* \brief Compute beam-deconvolved ellipse in WCS coords
 		*/
@@ -812,8 +902,7 @@ class SourceComponentPars : public TObject {
 				WARN_LOG("No beam pars are available!");
 				return -1;
 			}
-
-			
+	
 			//Compute deconvolved ellipse pars using formula of Wild 1970 (see also Mon. Not. R. Astron. Soc. 342, 1117–1130 (2003))			
 			double sum2= m_bmaj_wcs*m_bmaj_wcs + m_bmin_wcs*m_bmin_wcs;
 			double diff2= m_bmaj_wcs*m_bmaj_wcs - m_bmin_wcs*m_bmin_wcs;
@@ -940,6 +1029,8 @@ class SourceComponentPars : public TObject {
 			m_bmaj_err= -999;
 			m_bmin_err= -999;
 			m_pa_err= -999;
+			m_eccentricity= -999;
+			m_area= -999;
 
 			m_hasWCSEllipsePars= false;
 			m_x0_wcs= -999;
@@ -957,6 +1048,9 @@ class SourceComponentPars : public TObject {
 			m_beam_bmaj= -999;
 			m_beam_bmin= -999;
 			m_beam_pa= -999;
+			m_beam_area= -999;
+			m_beam_eccentricity= -999;
+			m_rotangle_vs_beam= 0;//NB: Set to 0 if beam info not available
 
 			m_hasWCSDeconvolvedEllipsePars= false;
 		 	m_bmaj_deconv_wcs= -999;
@@ -974,6 +1068,8 @@ class SourceComponentPars : public TObject {
 		double m_beam_bmaj;
 		double m_beam_bmin;
 		double m_beam_pa;
+		double m_beam_area;
+		double m_beam_eccentricity;
 		
 		//- Ellipse pars
 		bool m_hasEllipsePars;
@@ -987,6 +1083,10 @@ class SourceComponentPars : public TObject {
 		double m_bmaj_err;
 		double m_bmin_err;
 		double m_pa_err;
+
+		double m_eccentricity;//ellipse eccentricity
+		double m_area;//ellipse area
+		double m_rotangle_vs_beam;//rotation angle vs beam
 
 		//- WCS ellipse pars
 		bool m_hasWCSEllipsePars;
@@ -1253,11 +1353,47 @@ class SourceFitPars : public TObject {
 			pa= 0;
 			if(componentId<0 || componentId>=nComponents){
 				WARN_LOG("Component "<<componentId<<" does not exist!");
-				return 0;
+				return -1;
 			}
 
 			//Get component fit ellipse pars
 			return pars[componentId].GetBeamEllipsePars(bmaj,bmin,pa);
+		}
+
+		/**
+		* \brief Get component beam ellipse eccentricity
+		*/
+		double GetComponentBeamEllipseEccentricity(int componentId)
+		{
+			if(componentId<0 || componentId>=nComponents){
+				WARN_LOG("Component "<<componentId<<" does not exist, returning E=0!");
+				return 0;
+			}
+			return pars[componentId].GetBeamEllipseEccentricity();
+		}
+
+		/**
+		* \brief Get component beam ellipse area
+		*/
+		double GetComponentBeamEllipseArea(int componentId)
+		{
+			if(componentId<0 || componentId>=nComponents){
+				WARN_LOG("Component "<<componentId<<" does not exist, returning A=0!");
+				return 0;
+			}
+			return pars[componentId].GetBeamEllipseArea();
+		}
+
+		/**
+		* \brief Has component beam pars stored?
+		*/
+		bool HasComponentBeamEllipsePars(int componentId)
+		{
+			if(componentId<0 || componentId>=nComponents){
+				WARN_LOG("Component "<<componentId<<" does not exist, returning false!");
+				return 0;
+			}
+			return pars[componentId].HasBeamEllipsePars();		
 		}
 
 		/**
@@ -1273,11 +1409,47 @@ class SourceFitPars : public TObject {
 			pa= 0;
 			if(componentId<0 || componentId>=nComponents){
 				WARN_LOG("Component "<<componentId<<" does not exist!");
-				return 0;
+				return -1;
 			}
 
 			//Get component fit ellipse pars
 			return pars[componentId].GetEllipsePars(x0,y0,bmaj,bmin,pa);
+		}
+
+		/**
+		* \brief Get component fit ellipse eccentricity
+		*/
+		double GetComponentFitEllipseEccentricity(int componentId)
+		{
+			if(componentId<0 || componentId>=nComponents){
+				WARN_LOG("Component "<<componentId<<" does not exist, returning E=0!");
+				return 0;
+			}
+			return pars[componentId].GetEllipseEccentricity();
+		}
+
+		/**
+		* \brief Get component fit ellipse area
+		*/
+		double GetComponentFitEllipseArea(int componentId)
+		{
+			if(componentId<0 || componentId>=nComponents){
+				WARN_LOG("Component "<<componentId<<" does not exist, returning A=0!");
+				return 0;
+			}
+			return pars[componentId].GetEllipseArea();
+		}
+
+		/**
+		* \brief Get component fit ellipse rot angle vs beam
+		*/
+		double GetComponentFitEllipseRotAngleVSBeam(int componentId)
+		{
+			if(componentId<0 || componentId>=nComponents){
+				WARN_LOG("Component "<<componentId<<" does not exist, returning A=0!");
+				return 0;
+			}
+			return pars[componentId].GetEllipseRotAngleVSBeam();
 		}
 
 		/**
@@ -1293,7 +1465,7 @@ class SourceFitPars : public TObject {
 			pa_err= 0;
 			if(componentId<0 || componentId>=nComponents){
 				WARN_LOG("Component "<<componentId<<" does not exist!");
-				return 0;
+				return -1;
 			}
 
 			//Get component fit ellipse pars
@@ -1313,7 +1485,7 @@ class SourceFitPars : public TObject {
 			pa_wcs= 0;
 			if(componentId<0 || componentId>=nComponents){
 				WARN_LOG("Component "<<componentId<<" does not exist!");
-				return 0;
+				return -1;
 			}
 
 			//Get component fit ellipse pars
@@ -1333,7 +1505,7 @@ class SourceFitPars : public TObject {
 			pa_wcs_err= 0;
 			if(componentId<0 || componentId>=nComponents){
 				WARN_LOG("Component "<<componentId<<" does not exist!");
-				return 0;
+				return -1;
 			}
 
 			//Get component fit ellipse pars
@@ -1351,7 +1523,7 @@ class SourceFitPars : public TObject {
 			pa_wcs= 0;
 			if(componentId<0 || componentId>=nComponents){
 				WARN_LOG("Component "<<componentId<<" does not exist!");
-				return 0;
+				return -1;
 			}
 
 			//Get component fit ellipse pars
@@ -1702,6 +1874,7 @@ class SourceFitPars : public TObject {
 				pars[i].SetBeamEllipsePars(bmaj,bmin,pa);
 			}
 		}
+
 
 		/**
 		* \brief Compute component WCS ellipse pars

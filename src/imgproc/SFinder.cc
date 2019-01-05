@@ -683,7 +683,23 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(sourceBkgBoxBorderSize,m_sourceBkgBoxBorderSize);
 	GET_OPTION_VALUE(fitUseBkgBoxEstimate,m_fitUseBkgBoxEstimate);
 	GET_OPTION_VALUE(fitRetryWithLessComponents,m_fitRetryWithLessComponents);
+
+	GET_OPTION_VALUE(fitApplyRedChi2Cut,m_fitApplyRedChi2Cut);
 	GET_OPTION_VALUE(fitRedChi2Cut,m_fitRedChi2Cut);
+	GET_OPTION_VALUE(fitApplyFitEllipseCuts,m_fitApplyFitEllipseCuts);
+	GET_OPTION_VALUE(fitEllipseEccentricityRatioMinCut,m_fitEllipseEccentricityRatioMinCut);
+	GET_OPTION_VALUE(fitEllipseEccentricityRatioMaxCut,m_fitEllipseEccentricityRatioMaxCut);
+	GET_OPTION_VALUE(fitEllipseAreaRatioMinCut,m_fitEllipseAreaRatioMinCut);
+	GET_OPTION_VALUE(fitEllipseAreaRatioMaxCut,m_fitEllipseAreaRatioMaxCut);
+	GET_OPTION_VALUE(fitEllipseRotAngleCut,m_fitEllipseRotAngleCut);
+	if(m_fitApplyFitEllipseCuts && m_fitEllipseEccentricityRatioMinCut>=m_fitEllipseEccentricityRatioMaxCut){
+		ERROR_LOG("Invalid fit ellipse eccentricity ratio cut option given (hint: min cut value must be smaller than max cut value)!");
+		return -1;
+	}
+	if(m_fitApplyFitEllipseCuts && m_fitEllipseAreaRatioMinCut>=m_fitEllipseAreaRatioMaxCut){
+		ERROR_LOG("Invalid fit ellipse area ratio cut option given (hint: min cut value must be smaller than max cut value)!");
+		return -1;
+	}	
 
 	if(m_peakMinKernelSize>m_peakMaxKernelSize){
 		ERROR_LOG("Invalid peak kernel size option given (hint: min kernel must be larger or equal to max kernel size)!");
@@ -2984,7 +3000,15 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	fitOptions.useNestedAsComponents= m_fitUseNestedAsComponents;
 	fitOptions.chi2RegPar= m_fitChi2RegPar;
 	fitOptions.fitRetryWithLessComponents= m_fitRetryWithLessComponents;
+
+	fitOptions.useRedChi2Cut= m_fitApplyRedChi2Cut;
 	fitOptions.fitRedChi2Cut= m_fitRedChi2Cut;
+	fitOptions.useFitEllipseCuts= m_fitApplyFitEllipseCuts;
+	fitOptions.fitEllipseEccentricityRatioMinCut= m_fitEllipseEccentricityRatioMinCut;
+	fitOptions.fitEllipseEccentricityRatioMaxCut= m_fitEllipseEccentricityRatioMaxCut;
+	fitOptions.fitEllipseAreaRatioMinCut= m_fitEllipseAreaRatioMinCut;
+	fitOptions.fitEllipseAreaRatioMaxCut= m_fitEllipseAreaRatioMaxCut;
+	fitOptions.fitEllipseRotAngleCut= m_fitEllipseRotAngleCut;
 
 	fitOptions.fitMinimizer= m_fitMinimizer;		
 	fitOptions.fitMinimizerAlgo= m_fitMinimizerAlgo;
