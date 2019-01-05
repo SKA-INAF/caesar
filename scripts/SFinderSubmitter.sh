@@ -169,6 +169,9 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--fit-nretries=[FIT_NRETRIES] - Maximum number of fit retries if fit failed or has parameters at bound (default 10)"
 	echo "--fit-parboundincreasestep - Fit par bound increase step size (e.g. parmax= parmax_old+(1+nretry)*fitParBoundIncreaseStepSize*0.5*|max-min|). Used in iterative fitting. (default=0.1)"
 	echo "--fit-improveerrors - Run final minimizer step (e.g. HESS) to improve fit error estimates (default=no)"
+	echo "--fit-nochi2cut - Do not apply reduced chi2 cut to fitted sources (default=apply)"
+	echo "--fit-chi2cut=[FIT_CHI2_CUT] - Chi2 cut value (default=5)"
+	echo "--fit-useellipsecuts - Apply ellipse cuts to fitted sources (default=not applied)"
 	echo ""
 
 	echo "=== SFINDER SMOOTHING FILTER OPTIONS ==="
@@ -400,6 +403,9 @@ FIT_IMPROVE_ERRORS="false"
 PREFIT_FIX_AMPL="true"
 PREFIT_FIX_SIGMA="false"
 PREFIT_FIX_THETA="false"
+FIT_USE_CHI2_CUT="true"
+FIT_USE_ELLIPSE_CUTS="false"
+FIT_CHI2_CUT="5"
 
 WTSCALE_MIN="3"
 WTSCALE_MAX="6"
@@ -892,6 +898,17 @@ do
 		--fit-fcntol=*)
 			FIT_FCNTOL=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
 		;;
+
+		--fit-nochi2cut*)
+			FIT_USE_CHI2_CUT="false"
+		;;
+		--fit-chi2cut=*)
+			FIT_CHI2_CUT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+		;;
+		--fit-useellipsecuts*)
+			FIT_USE_ELLIPSE_CUTS="true"
+		;;
+
 
 		## SALIENCY FILTER OPTIONS
 		--saliency-nooptimalthr*)
@@ -1390,9 +1407,9 @@ generate_config(){
 		echo "fitChi2RegPar = 1															 				| Chi2 regularization par chi2=chi2_signal + regpar*chi2_bkg (default=1)"	
 		echo "fitParBoundIncreaseStepSize = $FIT_PARBOUNDINCREASE_STEPSIZE    | Par bound increase step size (e.g. parmax= parmax_old+(1+nretry)*fitParBoundIncreaseStepSize*0.5*|max-min| (default=0.1)"
 		echo "fitRetryWithLessComponents = $FIT_RETRY_WITH_LESS_COMPONENTS    | If fit does not converge repeat it iteratively with one component less at each cycle (default=true)"
-		echo "fitApplyRedChi2Cut = true								              | Apply fit Chi2/NDF cut. Used to set fit quality flag. If Chi2/NDF>cut the good fit cut is not passed (default=true)"
-		echo "fitRedChi2Cut = 5															        | Chi2/NDF cut value (default=5)"
-		echo "fitApplyFitEllipseCuts = false								        | Apply fit ellipse selection cuts. If not passed fit component is tagged as fake (default=false)"
+		echo "fitApplyRedChi2Cut = $FIT_USE_CHI2_CUT	              | Apply fit Chi2/NDF cut. Used to set fit quality flag. If Chi2/NDF>cut the good fit cut is not passed (default=true)"
+		echo "fitRedChi2Cut = $FIT_CHI2_CUT									        | Chi2/NDF cut value (default=5)"
+		echo "fitApplyFitEllipseCuts = $FIT_USE_ELLIPSE_CUTS        | Apply fit ellipse selection cuts. If not passed fit component is tagged as fake (default=false)"
 		echo "fitEllipseEccentricityRatioMinCut = 0.5               | Ellipse eccentricity ratio (fit/beam) min cut value (default=0.5)"
 		echo "fitEllipseEccentricityRatioMaxCut = 1.5               | Ellipse eccentricity ratio (fit/beam) max cut value (default=1.5)"
 		echo "fitEllipseAreaRatioMinCut = 0.01 							        | Ellipse area ratio (fit/beam) min cut value (default=0.01)"
