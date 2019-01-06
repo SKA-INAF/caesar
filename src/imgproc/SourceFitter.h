@@ -431,6 +431,7 @@ class SourceComponentPars : public TObject {
 			//Limit pa in range [-90,90]
 			m_pa= GetPosAngleInRange(m_pa);
 
+			/*
 			//Compute ellipse eccentricity & area
 			m_eccentricity= MathUtils::ComputeEllipseEccentricity(m_bmaj,m_bmin);
 			m_area= MathUtils::ComputeEllipseArea(m_bmaj,m_bmin);			
@@ -444,7 +445,7 @@ class SourceComponentPars : public TObject {
 			else{
 				WARN_LOG("No beam information has been set, do not compute fit ellipse rot angle vs beam (set to 0 by default)!");
 			}
-			
+			*/
 
 			//Set has ellipse par flag
 			m_hasEllipsePars= true;
@@ -719,6 +720,20 @@ class SourceComponentPars : public TObject {
 
 			//Limit pa in [-90,90]
 			m_pa_wcs= GetPosAngleInRange(m_pa_wcs);
+
+			//Compute ellipse eccentricity & area
+			m_eccentricity= MathUtils::ComputeEllipseEccentricity(m_bmaj_wcs,m_bmin_wcs);
+			m_area= MathUtils::ComputeEllipseArea(m_bmaj_wcs,m_bmin_wcs);			
+
+			//Compute rotation angle vs beam (if beam info is available)
+			if(m_hasBeamPars){
+				double dtheta= m_pa_wcs-m_beam_pa;	
+				//m_rotangle_vs_beam= MathUtils::Mod(dtheta,180.);
+				m_rotangle_vs_beam= dtheta;
+			}
+			else{
+				WARN_LOG("No beam information has been set, do not compute fit ellipse rot angle vs beam (set to 0 by default)!");
+			}
 
 			//Set has WCS ellipse par flag
 			m_hasWCSEllipsePars= true;
