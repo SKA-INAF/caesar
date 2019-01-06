@@ -438,7 +438,8 @@ class SourceComponentPars : public TObject {
 			//Compute rotation angle vs beam (if beam info is available)
 			if(m_hasBeamPars){
 				double dtheta= m_pa-m_beam_pa;	
-				m_rotangle_vs_beam= MathUtils::Mod(dtheta,180.);
+				//m_rotangle_vs_beam= MathUtils::Mod(dtheta,180.);
+				m_rotangle_vs_beam= dtheta;
 			}
 			else{
 				WARN_LOG("No beam information has been set, do not compute fit ellipse rot angle vs beam (set to 0 by default)!");
