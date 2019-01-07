@@ -303,6 +303,8 @@ message SourceComponentPars {
 
 	optional int32 m_flag= 38;
 
+	optional float m_pixSize= 39;
+
 }//close SourceComponentPars()
 
 message SourceFitPars {

@@ -836,9 +836,13 @@ class SourceComponentPars : public TObject {
 		}
 
 		/**
-		* \brief Set image pix size(it is assumed units are arcsec)
+		* \brief Set image pix size (it is assumed units are arcsec)
 		*/
 		void SetImagePixSize(double val){m_pixSize=val;}
+		/**
+		* \brief Get image pix size
+		*/
+		double GetImagePixSize(){return m_pixSize;}
 
 		/**
 		* \brief Set beam ellipse parameters (it is assumed units are arcsec)
