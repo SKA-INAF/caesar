@@ -1450,8 +1450,12 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	if(metadata){
 		double beam_bmaj= metadata->Bmaj*3600;//in arcsec
 		double beam_bmin= metadata->Bmin*3600;//in arcsec
-		double beam_pa= metadata->Bpa;
+		double beam_pa= metadata->Bpa;//defined from north
+		double pixSizeX= metadata->dX*3600;//in arcsec 
+		double pixSizeY= metadata->dY*3600;//in arcsec 
+		double pixSize= std::min(fabs(pixSizeX),fabs(pixSizeY));
 		m_sourceFitPars.SetComponentBeamEllipsePars(beam_bmaj,beam_bmin,beam_pa);
+		m_sourceFitPars.SetComponentImagePixSize(pixSize);
 		DEBUG_LOG("Set beam info ("<<beam_bmaj<<","<<beam_bmin<<","<<beam_pa<<") in fit pars...");
 	}
 	else{

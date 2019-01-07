@@ -3047,8 +3047,10 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	INFO_LOG("Fitting sources in multithread? "<<fitInMultithread);
 	
 	//## NB: Convert scale pars in pixels assuming they represent multiple of beam width (Bmin)	
-	double pixSize= fabs(std::min(m_pixSizeX,m_pixSizeY));
-	double beamWidth= fabs(std::min(m_beamBmaj,m_beamBmin));
+	//double pixSize= fabs(std::min(m_pixSizeX,m_pixSizeY));
+	double pixSize= std::min(fabs(m_pixSizeX),fabs(m_pixSizeY));
+	//double beamWidth= fabs(std::min(m_beamBmaj,m_beamBmin));	
+	double beamWidth= std::min(fabs(m_beamBmaj),fabs(m_beamBmin));
 	double beamPixSize= beamWidth/pixSize;
 	double sigmaMin= m_nestedBlobMinScale*beamPixSize/GausSigma2FWHM;//convert from FWHM to sigma
 	double sigmaMax= m_nestedBlobMaxScale*beamPixSize/GausSigma2FWHM;//convert from FWHM to sigma

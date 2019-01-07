@@ -431,10 +431,13 @@ class SourceComponentPars : public TObject {
 			//Limit pa in range [-90,90]
 			m_pa= GetPosAngleInRange(m_pa);
 
-			/*
+			
 			//Compute ellipse eccentricity & area
-			m_eccentricity= MathUtils::ComputeEllipseEccentricity(m_bmaj,m_bmin);
-			m_area= MathUtils::ComputeEllipseArea(m_bmaj,m_bmin);			
+			//NB: Using simple conversion to arcsec rather than bmaj_wcs, bmin_wcs
+			double bmaj_arcsec= m_bmaj*m_pixSize;
+			double bmin_arcsec= m_bmin*m_pixSize;
+			m_eccentricity= MathUtils::ComputeEllipseEccentricity(bmaj_arcsec,bmin_arcsec);
+			m_area= MathUtils::ComputeEllipseArea(bmaj_arcsec,bmin_arcsec);			
 
 			//Compute rotation angle vs beam (if beam info is available)
 			if(m_hasBeamPars){
@@ -445,7 +448,7 @@ class SourceComponentPars : public TObject {
 			else{
 				WARN_LOG("No beam information has been set, do not compute fit ellipse rot angle vs beam (set to 0 by default)!");
 			}
-			*/
+			
 
 			//Set has ellipse par flag
 			m_hasEllipsePars= true;
@@ -721,6 +724,7 @@ class SourceComponentPars : public TObject {
 			//Limit pa in [-90,90]
 			m_pa_wcs= GetPosAngleInRange(m_pa_wcs);
 
+			/*
 			//Compute ellipse eccentricity & area
 			m_eccentricity= MathUtils::ComputeEllipseEccentricity(m_bmaj_wcs,m_bmin_wcs);
 			m_area= MathUtils::ComputeEllipseArea(m_bmaj_wcs,m_bmin_wcs);			
@@ -734,6 +738,7 @@ class SourceComponentPars : public TObject {
 			else{
 				WARN_LOG("No beam information has been set, do not compute fit ellipse rot angle vs beam (set to 0 by default)!");
 			}
+			*/
 
 			//Set has WCS ellipse par flag
 			m_hasWCSEllipsePars= true;
@@ -829,6 +834,11 @@ class SourceComponentPars : public TObject {
 			m_bmin_err_wcs= bmin_err_wcs;
 			m_pa_err_wcs= pa_err_wcs;
 		}
+
+		/**
+		* \brief Set image pix size(it is assumed units are arcsec)
+		*/
+		void SetImagePixSize(double val){m_pixSize=val;}
 
 		/**
 		* \brief Set beam ellipse parameters (it is assumed units are arcsec)
@@ -1045,8 +1055,10 @@ class SourceComponentPars : public TObject {
 			m_bmaj_err= -999;
 			m_bmin_err= -999;
 			m_pa_err= -999;
+
 			m_eccentricity= -999;
 			m_area= -999;
+			m_rotangle_vs_beam= 0;//NB: Set to 0 if beam info not available
 
 			m_hasWCSEllipsePars= false;
 			m_x0_wcs= -999;
@@ -1060,18 +1072,23 @@ class SourceComponentPars : public TObject {
 			m_bmin_err_wcs= -999;
 			m_pa_err_wcs= -999;
 
+			//m_eccentricity_wcs= -999;
+			//m_area_wcs= -999;
+			//m_rotangle_vs_beam_wcs= 0;//NB: Set to 0 if beam info not available
+
 			m_hasBeamPars= false;
 			m_beam_bmaj= -999;
 			m_beam_bmin= -999;
 			m_beam_pa= -999;
 			m_beam_area= -999;
 			m_beam_eccentricity= -999;
-			m_rotangle_vs_beam= 0;//NB: Set to 0 if beam info not available
-
+			
 			m_hasWCSDeconvolvedEllipsePars= false;
 		 	m_bmaj_deconv_wcs= -999;
 			m_bmin_deconv_wcs= -999;
 			m_pa_deconv_wcs= -999;
+
+			m_pixSize= 0;
 
 		}//close InitEllipsePars()
 		
@@ -1080,13 +1097,17 @@ class SourceComponentPars : public TObject {
 		std::map<std::string,double> FitPars;
 		std::map<std::string,double> FitParsErr;
 	
+		//- Image pars
+		double m_pixSize;//in arcsec
+
+		//- Beam pars
 		bool m_hasBeamPars;
 		double m_beam_bmaj;
 		double m_beam_bmin;
 		double m_beam_pa;
 		double m_beam_area;
 		double m_beam_eccentricity;
-		
+				
 		//- Ellipse pars
 		bool m_hasEllipsePars;
 		double m_x0;//ellipse x centroid in pixel coordinates
@@ -1116,6 +1137,10 @@ class SourceComponentPars : public TObject {
 		double m_bmaj_err_wcs;
 		double m_bmin_err_wcs;
 		double m_pa_err_wcs;
+
+		//double m_eccentricity_wcs;//ellipse eccentricity
+		//double m_area_wcs;//ellipse area
+		//double m_rotangle_vs_beam_wcs;//rotation angle vs beam
 
 		//- WCS beam deconvolved ellipse pars
 		bool m_hasWCSDeconvolvedEllipsePars;
@@ -2030,6 +2055,16 @@ class SourceFitPars : public TObject {
 		}
 
 		/**
+		* \brief Set component image pix size
+		*/
+		void SetComponentImagePixSize(double value)
+		{		
+			for(size_t i=0;i<pars.size();i++){
+				pars[i].SetImagePixSize(value);
+			}
+		}
+
+		/**
 		* \brief Get is good fit flag
 		*/
 		int GetFitQuality(){return fitQuality;}
@@ -2038,6 +2073,8 @@ class SourceFitPars : public TObject {
 		* \brief Set is good fit flag
 		*/
 		void SetFitQuality(int flag){fitQuality=flag;}
+
+		
 
 	private:
 
