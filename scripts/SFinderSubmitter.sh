@@ -169,6 +169,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--fit-nretries=[FIT_NRETRIES] - Maximum number of fit retries if fit failed or has parameters at bound (default 10)"
 	echo "--fit-parboundincreasestep - Fit par bound increase step size (e.g. parmax= parmax_old+(1+nretry)*fitParBoundIncreaseStepSize*0.5*|max-min|). Used in iterative fitting. (default=0.1)"
 	echo "--fit-improveerrors - Run final minimizer step (e.g. HESS) to improve fit error estimates (default=no)"
+	echo "--fit-scaledatatomax - Scale source data to max pixel flux for fitting. Otherwise scale to mJy (default=no)"
 	echo "--fit-nochi2cut - Do not apply reduced chi2 cut to fitted sources (default=apply)"
 	echo "--fit-chi2cut=[FIT_CHI2_CUT] - Chi2 cut value (default=5)"
 	echo "--fit-useellipsecuts - Apply ellipse cuts to fitted sources (default=not applied)"
@@ -400,6 +401,7 @@ FIT_NRETRIES="10"
 FIT_RETRY_WITH_LESS_COMPONENTS="true"
 FIT_FCNTOL="1.e-2"
 FIT_IMPROVE_ERRORS="false"
+FIT_SCALE_DATA_TO_MAX="false"
 PREFIT_FIX_AMPL="true"
 PREFIT_FIX_SIGMA="false"
 PREFIT_FIX_THETA="false"
@@ -898,7 +900,9 @@ do
 		--fit-fcntol=*)
 			FIT_FCNTOL=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
 		;;
-
+		--fit-scaledatatomax*)
+			FIT_SCALE_DATA_TO_MAX="true"
+		;;
 		--fit-nochi2cut*)
 			FIT_USE_CHI2_CUT="false"
 		;;
@@ -1364,7 +1368,7 @@ generate_config(){
 		echo '//=================================='
 		echo "fitSources = $FIT_SOURCES                             | Deblend and fit point-like sources with multi-component gaus fit (T/F)"
 		echo "fitUseThreads = $FIT_USETHREADS                       | Use multithread in source fitting (default=false) (T/F)"
-		echo "fitScaleDataToMax = true                              | Scale source flux data to max peak flux if true, otherwise scale to mJy units (default=false)"
+		echo "fitScaleDataToMax = $FIT_SCALE_DATA_TO_MAX            | Scale source flux data to max peak flux if true, otherwise scale to mJy units (default=false)"
 		echo "fitMinimizer = $FIT_MINIMIZER                         | Minimizer {Minuit,Minuit2} (default=Minuit) (T/F)"
 		echo "fitMinimizerAlgo = $FIT_MINIMIZER_ALGO         				| Minimizer algorithm: {migrad,simplex,scan,minimize,fumili} (default=minimize)"
 		echo "fitPrintLevel = $FIT_PRINTLEVEL                				| Minimizer print level (default=1)"
