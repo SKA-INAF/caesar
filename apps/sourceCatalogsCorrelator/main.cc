@@ -166,6 +166,7 @@ double residualMAD_fit;
 double chi2_fit;
 double ndf_fit;
 double ncomponents_fit;
+int fitQuality;
 const int MAX_NTRUE_MATCH_SOURCES= 1000;
 int nTrueMatchedSources;
 std::vector<std::string> SourceNameList_true;
@@ -513,7 +514,7 @@ bool FindPointSourceMatch(int source_true_index)
 	chi2_fit= -1;
 	ndf_fit= -1;
 	ncomponents_fit= -1;
-
+	fitQuality= -1;
 
 	//## Search for extended source associations by matching pixels
 	//SourcePosMatchPars match_info;
@@ -591,6 +592,7 @@ bool FindPointSourceMatch(int source_true_index)
 			chi2_fit= fitPars.GetChi2();
 			ndf_fit= fitPars.GetNDF();
 			ncomponents_fit= fitPars.GetNComponents();
+			fitQuality= fitPars.GetFitQuality();
 
 			//Correct flux from Jy/beam to Jy
 			if(correctFlux){
@@ -868,6 +870,9 @@ int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex)
 	sigmaX_fit= -1;
 	sigmaY_fit= -1;
 	theta_fit= -1;
+	chi2_fit= -1;
+	ndf_fit= -1;
+	fitQuality= -1;
 
 	//Init association info
 	nTrueMatchedSources= 0;
@@ -887,6 +892,9 @@ int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex)
 			sigmaX_fit= fitPars.GetParValue(k,"sigmaX");
 			sigmaY_fit= fitPars.GetParValue(k,"sigmaY");
 			theta_fit= fitPars.GetParValue(k,"theta");
+			chi2_fit= fitPars.GetChi2();
+			ndf_fit= fitPars.GetNDF();
+			fitQuality= fitPars.GetFitQuality();
 			fluxDensity_rec= fitPars.GetComponentFluxDensity(k);
 			if(correctFlux){
 				//Smax_rec/= beamArea_rec;
@@ -972,6 +980,8 @@ int FindPointSourceRealAndFakeSources(int source_rec_index)
 	sigmaX_fit= -1;
 	sigmaY_fit= -1;
 	theta_fit= -1;
+	chi2_fit= -1;
+	ndf_fit= -1;
 
 	//Init association info
 	nTrueMatchedSources= 0;
@@ -991,6 +1001,8 @@ int FindPointSourceRealAndFakeSources(int source_rec_index)
 			sigmaX_fit= fitPars.GetParValue(k,"sigmaX");
 			sigmaY_fit= fitPars.GetParValue(k,"sigmaY");
 			theta_fit= fitPars.GetParValue(k,"theta");
+			chi2_fit= fitPars.GetChi2();
+			ndf_fit= fitPars.GetNDF();
 			if(correctFlux){
 				//Smax_rec/= beamArea_rec;
 				fluxDensity_rec/= beamArea_rec;
@@ -1208,7 +1220,9 @@ void Init(){
 	recSourceInfo->Branch("Smax_rec",&Smax_rec,"Smax_rec/D");	
 	recSourceInfo->Branch("sigmaX_fit",&sigmaX_fit,"sigmaX_fit/D");
 	recSourceInfo->Branch("sigmaY_fit",&sigmaY_fit,"sigmaY_fit/D");
-	recSourceInfo->Branch("theta_fit",&theta_fit,"theta_fit/D");	
+	recSourceInfo->Branch("theta_fit",&theta_fit,"theta_fit/D");
+	recSourceInfo->Branch("chi2_fit",&chi2_fit,"chi2_fit/D");
+	recSourceInfo->Branch("ndf_fit",&ndf_fit,"ndf_fit/D");	
 	recSourceInfo->Branch("fluxDensity_rec",&fluxDensity_rec,"fluxDensity_rec/D");	
 	recSourceInfo->Branch("beamArea_rec",&beamArea_rec,"beamArea_rec/D");	
 	recSourceInfo->Branch("nTrueMatchedSources",&nTrueMatchedSources,"nTrueMatchedSources/I");
