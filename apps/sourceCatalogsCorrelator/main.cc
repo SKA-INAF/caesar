@@ -167,6 +167,7 @@ double chi2_fit;
 double ndf_fit;
 double ncomponents_fit;
 int fitQuality;
+int fitComponentFlag;
 const int MAX_NTRUE_MATCH_SOURCES= 1000;
 int nTrueMatchedSources;
 std::vector<std::string> SourceNameList_true;
@@ -515,6 +516,7 @@ bool FindPointSourceMatch(int source_true_index)
 	ndf_fit= -1;
 	ncomponents_fit= -1;
 	fitQuality= -1;
+	fitComponentFlag= -1;
 
 	//## Search for extended source associations by matching pixels
 	//SourcePosMatchPars match_info;
@@ -593,6 +595,8 @@ bool FindPointSourceMatch(int source_true_index)
 			ndf_fit= fitPars.GetNDF();
 			ncomponents_fit= fitPars.GetNComponents();
 			fitQuality= fitPars.GetFitQuality();
+		
+			fitPars.GetComponentFlag(fitComponentFlag,componentIndex);
 
 			//Correct flux from Jy/beam to Jy
 			if(correctFlux){
@@ -873,6 +877,7 @@ int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex)
 	chi2_fit= -1;
 	ndf_fit= -1;
 	fitQuality= -1;
+	fitComponentFlag= -1;
 
 	//Init association info
 	nTrueMatchedSources= 0;
@@ -895,6 +900,8 @@ int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex)
 			chi2_fit= fitPars.GetChi2();
 			ndf_fit= fitPars.GetNDF();
 			fitQuality= fitPars.GetFitQuality();
+			fitPars.GetComponentFlag(fitComponentFlag,k);
+
 			fluxDensity_rec= fitPars.GetComponentFluxDensity(k);
 			if(correctFlux){
 				//Smax_rec/= beamArea_rec;
@@ -1171,6 +1178,8 @@ void Init(){
 	matchedSourceInfo->Branch("ndf_fit",&ndf_fit,"ndf_fit/D");
 	matchedSourceInfo->Branch("ncomponents_fit",&ncomponents_fit,"ncomponents_fit/D");
 	matchedSourceInfo->Branch("fitQuality",&fitQuality,"fitQuality/I");
+	matchedSourceInfo->Branch("fitComponentFlag",&fitComponentFlag,"fitComponentFlag/I");
+	
 	
 	if(!matchedExtSourceInfo) matchedExtSourceInfo= new TTree("ExtSourceMatchInfo","ExtSourceMatchInfo");
 	matchedExtSourceInfo->Branch("found",&SourceFoundFlag,"found/I");
@@ -1225,6 +1234,7 @@ void Init(){
 	recSourceInfo->Branch("chi2_fit",&chi2_fit,"chi2_fit/D");
 	recSourceInfo->Branch("ndf_fit",&ndf_fit,"ndf_fit/D");
 	recSourceInfo->Branch("fitQuality",&fitQuality,"fitQuality/I");	
+	recSourceInfo->Branch("fitComponentFlag",&fitComponentFlag,"fitComponentFlag/I");
 	recSourceInfo->Branch("fluxDensity_rec",&fluxDensity_rec,"fluxDensity_rec/D");	
 	recSourceInfo->Branch("beamArea_rec",&beamArea_rec,"beamArea_rec/D");	
 	recSourceInfo->Branch("nTrueMatchedSources",&nTrueMatchedSources,"nTrueMatchedSources/I");
