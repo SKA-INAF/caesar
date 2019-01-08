@@ -1170,6 +1170,7 @@ void Init(){
 	matchedSourceInfo->Branch("chi2_fit",&chi2_fit,"chi2_fit/D");
 	matchedSourceInfo->Branch("ndf_fit",&ndf_fit,"ndf_fit/D");
 	matchedSourceInfo->Branch("ncomponents_fit",&ncomponents_fit,"ncomponents_fit/D");
+	matchedSourceInfo->Branch("fitQuality",&fitQuality,"fitQuality/I");
 	
 	if(!matchedExtSourceInfo) matchedExtSourceInfo= new TTree("ExtSourceMatchInfo","ExtSourceMatchInfo");
 	matchedExtSourceInfo->Branch("found",&SourceFoundFlag,"found/I");
@@ -1222,7 +1223,8 @@ void Init(){
 	recSourceInfo->Branch("sigmaY_fit",&sigmaY_fit,"sigmaY_fit/D");
 	recSourceInfo->Branch("theta_fit",&theta_fit,"theta_fit/D");
 	recSourceInfo->Branch("chi2_fit",&chi2_fit,"chi2_fit/D");
-	recSourceInfo->Branch("ndf_fit",&ndf_fit,"ndf_fit/D");	
+	recSourceInfo->Branch("ndf_fit",&ndf_fit,"ndf_fit/D");
+	recSourceInfo->Branch("fitQuality",&fitQuality,"fitQuality/I");	
 	recSourceInfo->Branch("fluxDensity_rec",&fluxDensity_rec,"fluxDensity_rec/D");	
 	recSourceInfo->Branch("beamArea_rec",&beamArea_rec,"beamArea_rec/D");	
 	recSourceInfo->Branch("nTrueMatchedSources",&nTrueMatchedSources,"nTrueMatchedSources/I");
