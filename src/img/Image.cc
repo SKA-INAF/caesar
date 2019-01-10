@@ -2189,7 +2189,7 @@ int Image::FindExtendedSource_CV(std::vector<Source*>& sources,Image* initSegmIm
 			double Smedian= sources[k]->Median;
 			if(Smedian<imgMedian) sourcesToBeRemoved.push_back(k);
 		}
-		CodeUtils::DeleteItems(sources, sourcesToBeRemoved);
+		CodeUtils::DeletePtrItems(sources, sourcesToBeRemoved);
 	}//close if
 
 	return 0;
