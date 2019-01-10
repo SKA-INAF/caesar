@@ -26,10 +26,11 @@
 */
 
 
-#ifndef StatsUtils_h
-#define StatsUtils_h 1
+#ifndef _STATS_UTILS_h
+#define _STATS_UTILS_h 1
 
 #include <SysUtils.h>
+#include <CodeUtils.h>
 #include <Logger.h>
 #include <Consts.h>
 
@@ -183,7 +184,7 @@ class StatMoments : public TObject {
 		/** 
 		\brief Print moments
  		*/
-		void Print(){
+		void PrintStats(){
 			cout<<"*** STAT MOMENTS ***"<<endl;
 			cout<<"N="<<N<<" min/max="<<minVal<<"/"<<maxVal<<endl;
 			cout<<"M1: "<<M1<<", M2="<<M2<<endl;
@@ -252,7 +253,7 @@ class BoxStats : public TObject {
 		/** 
 		\brief Print moments
  		*/
-		void Print(){
+		void PrintStats(){
 			cout<<"*** BOX STATS ***"<<endl;
 			cout<<"median="<<median<<", Q1="<<Q1<<", Q3="<<Q3<<" min/max="<<minVal<<"/"<<maxVal<<endl;
 			cout<<"*****************"<<endl;
@@ -1355,6 +1356,163 @@ class StatsUtils : public TObject {
 
 		}//close GetFitEllipse()
 		*/
+
+
+		/** 
+		\brief Remove outliers from vector by iteratively removing data points outside from 1.5*IQR 
+ 		*/
+		template<typename T>	
+		static int RemoveOutliers(std::vector<T>& data,double iqr_factor=1.5,bool sorted=false)
+		{
+			//Tukey rule
+			//1) First order the data and find median, Q1 (quartile 1), and Q3 (quartile 3) of the data set
+			//2) Find Cutoff value C=1.5*IQR(Inter Quartile Range=Q3 −  Q1)
+			//3) If Observation<(Q1-C)=Outlier and Observation>(Q3+C)=Outlier
+
+			//Check data are not empty
+			if(data.empty()){
+				WARN_LOG("Input data are empty, nothing to be removed!");
+				return -1;
+			}
+
+			//Compute box stats
+			BoxStats<T> stats= ComputeBoxStats(data,sorted);
+			//T median= stats.median;
+			T Q1= stats.Q1;
+			T Q3= stats.Q3;		
+			T IQR= Q3-Q1;
+			T cutValue= iqr_factor*IQR;		
+			
+			//Remove data outside range
+			int niters_max= 1000;
+			int niters= 0;
+			size_t ndata= data.size();
+				
+			while(niters<niters_max)
+			{
+				//Find outliers
+				std::vector<size_t> deleteIndexes;
+				for(size_t i=0;i<data.size();i++){
+					T dataValue= data[i];
+					bool isOutlier= (dataValue<(Q1-cutValue) || dataValue>(Q3+cutValue));
+					if(isOutlier) deleteIndexes.push_back(i);	
+				}
+
+				//Stop loop as no more outliers were found
+				if(deleteIndexes.empty()){
+					break;
+				}
+
+				//Remove data
+				INFO_LOG("Deleting #"<<deleteIndexes.size()<<" outliers from data at iter no. "<<niters<<" (data size="<<data.size()<<") ...");
+				CodeUtils::DeleteItems(data,deleteIndexes);
+
+				//Recompute stats & cut value
+				stats= ComputeBoxStats(data,true);
+				Q1= stats.Q1;
+				Q3= stats.Q3;		
+				IQR= Q3-Q1;
+				cutValue= iqr_factor*IQR;	
+
+				niters++;
+			}//end loop
+
+			
+			//Check if max iters was reached
+			if(niters==niters_max){
+				WARN_LOG("Maximum number of iters ("<<niters_max<<") reached, check computation!");
+				return -1;
+			}
+	
+			size_t ndata_final= data.size();
+			INFO_LOG("Removed #"<<ndata-ndata_final<<" outliers from input data after #"<<niters<<" iterations ...");
+
+			return 0;
+
+		}//close RemoveOutliers()
+
+
+		
+		/** 
+		\brief Extract a number of random samples from data vector with given sample size, with/without repetitions and uniform weights
+ 		*/
+		template<typename T>
+		static int ComputeStatsBootstrapError(std::map<std::string,T>& statsErr,const std::vector<T>& data,int nSamples=100)
+		{
+			//Init map
+			statsErr.clear();
+			statsErr["mean"]= 0;
+			statsErr["sd"]= 0;
+			statsErr["median"]= 0;
+			statsErr["iqr"]= 0;
+
+			//Check data size
+			if(data.empty()){
+				WARN_LOG("Empty data given, nothing to be computed!");
+				return -1;
+			}
+
+			//Generate bootstrap samples
+			std::vector<std::vector<T>> bootstrap_samples;
+			if(CodeUtils::ExtractVectorRandomSamples(bootstrap_samples,data,nSamples,-1,true)<0){
+				ERROR_LOG("Failed to generate "<<nSamples<<" bootstrap samples!");
+				return -1;
+			}
+
+			//Compute bootstrapped data estimator
+			std::vector<T> mean_list;
+			std::vector<T> rms_list;
+			std::vector<T> median_list;
+			std::vector<T> iqr_list;
+
+			for(size_t i=0;i<bootstrap_samples.size();i++){
+				//Compute mean & rms of i-th bootstrap sample
+				double mean, rms;
+				ComputeMeanAndRMS(mean,rms,bootstrap_samples[i]);	
+				mean_list.push_back(mean);
+				rms_list.push_back(rms);
+	
+				//Compute box stats of i-th bootstrap sample
+				BoxStats<T> box_stats= ComputeBoxStats(bootstrap_samples[i]);
+				double median= box_stats.median;
+				double Q1= box_stats.Q1;
+				double Q3= box_stats.Q3;
+				double IQR= Q3-Q1;
+				median_list.push_back(median);
+				iqr_list.push_back(IQR);
+
+			}//end loop samples
+
+			//Compute standard deviation of bootstrapped estimators
+			//- Mean estimator
+			double mean_bootstrap_mean= 0;
+			double sd_bootstrap_mean= 0;
+			ComputeMeanAndRMS(mean_bootstrap_mean,sd_bootstrap_mean,mean_list);	
+
+			//- RMS estimator
+			double mean_bootstrap_rms= 0;
+			double sd_bootstrap_rms= 0;
+			ComputeMeanAndRMS(mean_bootstrap_rms,sd_bootstrap_rms,rms_list);
+			
+			//- Median estimator
+			double mean_bootstrap_median= 0;
+			double sd_bootstrap_median= 0;
+			ComputeMeanAndRMS(mean_bootstrap_median,sd_bootstrap_median,median_list);
+	
+			//- IQR estimator
+			double mean_bootstrap_iqr= 0;
+			double sd_bootstrap_iqr= 0;
+			ComputeMeanAndRMS(mean_bootstrap_iqr,sd_bootstrap_iqr,iqr_list);
+
+			//Fill return values
+			statsErr["mean"]= sd_bootstrap_mean;
+			statsErr["sd"]= sd_bootstrap_rms;
+			statsErr["median"]= sd_bootstrap_median;
+			statsErr["iqr"]= sd_bootstrap_iqr;
+
+			return 0;
+
+		}//close ComputeStatsBootstrapError()
 
 	private:
 	

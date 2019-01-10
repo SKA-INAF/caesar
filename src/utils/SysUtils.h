@@ -79,7 +79,7 @@ class FileInfo : public TObject {
 			ss<<"size (kB): "<<size/1024.;
 			return ss.str();
 		}
-		void Print(){
+		void PrintInfo(){
 			cout <<"*** FILE INFO ***"<<endl;
 			cout << "File Path: "<<path<<endl;
 			cout << "File Name: "<<filename<<endl;
@@ -142,7 +142,7 @@ class ProcMemInfo : public TObject {
 		/** 
 		\brief Print process mem info
  		*/
-		void Print(){
+		void PrintInfo(){
 			cout <<"*** PROC MEM INFO ***"<<endl;
 			cout << "Real Mem (kB): "<<realMem<<endl;
 			cout << "Real Peak Mem (kB): "<<realPeakMem<<endl;

@@ -238,6 +238,27 @@ class CodeUtils : public TObject {
       	markedElements[*itDel] = true;
 
     	for (size_t i=0; i<data.size(); i++) {
+				if(!markedElements[i]) tempBuffer.push_back(data[i]);
+    	}
+    	data = tempBuffer;
+
+		}//close DeleteItems()
+
+
+		/**
+		* \brief Delete selected items from a vector
+		*/
+		template<class T,typename K>
+			static void DeletePtrItems(std::vector<T>& data, const std::vector<K>& deleteIndices) {
+    	std::vector<bool> markedElements(data.size(), false);
+    	std::vector<T> tempBuffer;
+    	tempBuffer.reserve(data.size()-deleteIndices.size());
+
+			typedef typename std::vector<K>::const_iterator Iter;
+   	 	for (Iter itDel = deleteIndices.begin(); itDel != deleteIndices.end(); itDel++)
+      	markedElements[*itDel] = true;
+
+    	for (size_t i=0; i<data.size(); i++) {
 				if (markedElements[i]) {//Free memory!
 					if(data[i]){
 						delete data[i];
@@ -249,7 +270,8 @@ class CodeUtils : public TObject {
 				}
     	}
     	data = tempBuffer;
-		}//close DeleteItems()
+
+		}//close DeletePtrItems()
 
 		/**
 		* \brief Delete object pointer collection
@@ -398,6 +420,110 @@ class CodeUtils : public TObject {
 
 		}//close FindIntersectionIndexes()
 		
+		/**
+		* \brief Extract a subset of random index without repetitions from a container
+		*/
+		template<class Iterator>
+		static Iterator random_unique(Iterator begin, Iterator end, size_t num_random) 
+		{
+			//Fisher-Yates shuffle (https://stackoverflow.com/questions/9345087/choose-m-elements-randomly-from-a-vector-containing-n-elements)
+    	size_t left = std::distance(begin, end);
+    	while (num_random--) {
+        Iterator r = begin;
+        std::advance(r, rand()%left);
+        std::swap(*begin, *r);
+        ++begin;
+        --left;
+   	 	}
+    	return begin;
+		}
+
+		/** 
+		\brief Extract sample from data vector with given sample size, with/without repetitions and uniform weights
+ 		*/
+		template<typename T>	
+		static int ExtractVectorRandomSample(std::vector<T>& sample_data,const std::vector<T>& data,long int n=-1,bool repeate=true)
+		{
+			//Init sample data
+			sample_data.clear();
+
+			//Check data size
+			if(data.empty()){
+				WARN_LOG("Input data are empty, nothing to be sampled!");
+				return -1;
+			}
+			
+			//Check if all data are to be used
+			long int data_size= static_cast<long int>(data.size());
+			if(n<=0 || n>data_size){
+				n= data_size;
+			}
+
+			//Init random generator
+			std::random_device rd; // obtain a random number from hardware
+    	std::mt19937 gen(rd()); // seed the generator
+    	std::uniform_int_distribution<long int> dis(0,n-1);
+
+			//Check if repetitions are to be used
+			long int sample_size= static_cast<long int>(sample_data.size());
+
+			if(repeate){
+				for(long int i=0;i<n;i++){
+					long int rand_index= dis(gen);
+					T dataValue= data[rand_index];
+					sample_data.push_back(dataValue);
+				}
+			}//close if
+			else{
+				if(n==data_size){//return input data in case no repetition with all data are requested
+					sample_data= data;
+				}
+				else{
+					//Copy input data and extract n random unique samples
+					std::vector<T> tmp= data;
+					random_unique(tmp.begin(),tmp.end(),n);
+					for(long int i=0;i<n;i++) sample_data.push_back(tmp[i]);
+				}//close else
+			}//close else NO REPETITIONS
+
+			return 0;
+
+		}//close ExtractVectorRandomSample()
+
+		/** 
+		\brief Extract a number of random samples from data vector with given sample size, with/without repetitions and uniform weights
+ 		*/
+		template<typename T>
+		static int ExtractVectorRandomSamples(std::vector<std::vector<T>>& data_samples,const std::vector<T>& data,int nSamples,long int n=-1,bool repeate=true)
+		{
+			//Init samples
+			data_samples.clear();
+
+			//Check data size
+			if(data.empty()){
+				WARN_LOG("Input data are empty, nothing to be sampled!");
+				return -1;
+			}
+
+			//Generate samples
+			for(int i=0;i<nSamples;i++){
+				std::vector<T> sample_data;
+				int status= ExtractVectorRandomSample(sample_data,data,n,repeate);
+				if(status<0){
+					ERROR_LOG("Failed to generate random sample no. "<<i+1<<", exit generation!");
+					data_samples.clear();
+					return -1;
+				}
+
+				//Add sample to collection	
+				data_samples.push_back(sample_data);
+
+			}//end loop samples
+		
+			return 0;
+
+		}//close ExtractVectorRandomSamples()
+
 		/**
 		* \brief Find vector index at which the cumulative sum is smaller then given value (comparator version)
 		*/
