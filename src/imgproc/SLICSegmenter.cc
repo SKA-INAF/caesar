@@ -273,7 +273,7 @@ int SLICSegmenter::FindSegmentation(SLICData const& slicData,SLICData& segmSlicD
 	
 	//Remove merged regions and compute region pars	
 	INFO_LOG("Remove merged regions and compute region pars	...");
-	CodeUtils::DeleteItems(segmSlicData.regions, regionsToBeDeleted);
+	CodeUtils::DeletePtrItems(segmSlicData.regions, regionsToBeDeleted);
 	for(int i=0;i<segmSlicData.GetNRegions();i++){
 		segmSlicData.regions[i]->ComputeStats(true,false);
 	}//end loop merged regions
@@ -602,7 +602,7 @@ int SLICSegmenter::SPMaxSimilarityMerger(SLICData& segmSlicData,int mergerTag,in
 	
 		//## Delete aggregated region from region list and index map
 		INFO_LOG("Deleting regions aggregated in this step from the main list...");
-		CodeUtils::DeleteItems((segmSlicData.regions), regionsToBeDeleted);
+		CodeUtils::DeletePtrItems((segmSlicData.regions), regionsToBeDeleted);
 		
 		//## Update map and recompute parameters & contours (will be used by nearest neighbors search)
 		INFO_LOG("Updating region parameters & contours...");
@@ -936,7 +936,7 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 	
 		//## Delete aggregated region from region list and index map
 		INFO_LOG("Deleting regions aggregated in this step from the main list...");
-		CodeUtils::DeleteItems((slicData.regions), regionsToBeDeleted);
+		CodeUtils::DeletePtrItems((slicData.regions), regionsToBeDeleted);
 		//for(size_t k=0;k<regionsIdToBeDeleted.size();k++) regionIdMap.erase(regionsIdToBeDeleted[k]);
 
 		//## Update map and recompute parameters & contours (will be used by nearest neighbors search)

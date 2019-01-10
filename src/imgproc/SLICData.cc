@@ -727,7 +727,7 @@ void SLICData::RemoveEmptyRegions(){
 	}
 
 	//Delete regions
-	CodeUtils::DeleteItems(regions, regionsToBeDeleted);
+	CodeUtils::DeletePtrItems(regions, regionsToBeDeleted);
 
 }//close RemoveEmptyRegions()
 

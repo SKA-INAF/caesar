@@ -2167,7 +2167,7 @@ Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,T
 			double Smedian= sources[k]->Median;
 			if(Smedian<imgMedian) sourcesToBeRemoved.push_back(k);
 		}
-		CodeUtils::DeleteItems(sources, sourcesToBeRemoved);
+		CodeUtils::DeletePtrItems(sources, sourcesToBeRemoved);
 
 	}//close if
 	else {
@@ -2534,7 +2534,7 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 			double Smedian= sources[k]->Median;
 			if(Smedian<imgMedian) sourcesToBeRemoved.push_back(k);
 		}
-		CodeUtils::DeleteItems(sources, sourcesToBeRemoved);
+		CodeUtils::DeletePtrItems(sources, sourcesToBeRemoved);
 		INFO_LOG("#"<<sourcesToBeRemoved.size()<<" sources found by ChanVese algo were removed (tagged as negative excess)...");
 
 	}//close if

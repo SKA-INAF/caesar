@@ -176,7 +176,7 @@ class SLICData : public TObject {
 		* \brief Delete regions specified in the list (NB: No check done)
 		*/
 		void DeleteRegions(std::vector<size_t>const& delete_indexes){
-			Caesar::CodeUtils::DeleteItems(regions, delete_indexes);
+			Caesar::CodeUtils::DeletePtrItems(regions, delete_indexes);
 		}
 
 		/**
