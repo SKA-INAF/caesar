@@ -52,7 +52,7 @@ struct MacroOptions {
 		signalCutEff= 0.9;
 		nnClassifierWeights= "dataset/weights/SourceNNClassification_MLP.weights.xml";
 		nnCut= 0.5;
-		addSourceSNRToNNVars= true;
+		addSourceSNRToNNVars= false;
 
 		//- Beam & map info
 		//bkgLevel_true= 10.e-6;
@@ -217,6 +217,9 @@ TH1D* NTrueSourceHisto_reliability_compact_fit_nnsel= 0;
 TH1D* NRecSourceHisto_reliability_compact_fit_nnsel= 0;
 
 //- Compact source completeness/reliability
+TEfficiency::EStatOption gEfficiencyErrModel= TEfficiency::kFCP;
+//TEfficiency::EStatOption gEfficiencyErrModel= TEfficiency::kFFC;
+
 TEfficiency* Efficiency_compact_fit= 0;
 TEfficiency* Efficiency_compact_fit_presel= 0;
 TEfficiency* Efficiency_compact_fit_cutsel= 0;
@@ -245,6 +248,8 @@ TGraphAsymmErrors* xPosResolutionGraph_compact_fit_nnsel= 0;
 TGraphAsymmErrors* yPosResolutionGraph_compact_fit_nnsel= 0;
 TGraphAsymmErrors* FluxDensityAccuracyGraph_compact_fit= 0;
 TGraphAsymmErrors* FluxDensityResolutionGraph_compact_fit= 0;
+TGraphAsymmErrors* FluxDensityAccuracyGraph_compact_fit_presel= 0;
+TGraphAsymmErrors* FluxDensityResolutionGraph_compact_fit_presel= 0;
 TGraphAsymmErrors* FluxDensityAccuracyGraph_compact_fit_cutsel= 0;
 TGraphAsymmErrors* FluxDensityResolutionGraph_compact_fit_cutsel= 0;
 TGraphAsymmErrors* FluxDensityAccuracyGraph_compact_fit_nnsel= 0;
@@ -270,6 +275,8 @@ std::vector< std::vector<double> > FluxDensityPullList_compact_fit;
 std::vector< std::vector<double> > FluxDensityPullList_compact_fit_presel;
 std::vector< std::vector<double> > FluxDensityPullList_compact_fit_cutsel;
 std::vector< std::vector<double> > FluxDensityPullList_compact_fit_nnsel;
+
+std::vector<TH1D*> FluxDensityPullHistos_compact_fit_presel;
 
 //- Extended source histos/graphs
 TH1D* NTrueSourceHisto_ext= 0;
@@ -316,6 +323,12 @@ int FillAnalysisHisto();
 void ComputeAnalysisHistos();
 double GausPosSigmaFcn(double* x,double* par);
 double FitPosErrFcn(double* x,double* par);
+double GetPosAngleInRange(double pa)
+{
+	while (pa <= -90) pa += 180;
+  while (pa > 90) pa -= 180;
+  return pa;
+}
 
 //====================================
 //        MACRO
@@ -419,11 +432,11 @@ void Init()
 	FitEllipseParTree->Branch("isTrueSource",&isTrueSource,"isTrueSource/I");
 	FitEllipseParTree->Branch("beamBmaj",&opt.Bmaj,"beamBmaj/D");
 	FitEllipseParTree->Branch("beamBmin",&opt.Bmin,"beamBmin/D");
-	FitEllipseParTree->Branch("beamTheta",&beamTheta,"beamTheta/F");
-	FitEllipseParTree->Branch("beamArea",&beamEllipseArea,"beamArea/F");
-	FitEllipseParTree->Branch("beamEccentricity",&beamEllipseEccentricity,"beamEccentricity/F");
+	FitEllipseParTree->Branch("beamTheta",&beamTheta,"beamTheta/D");
+	FitEllipseParTree->Branch("beamArea",&beamEllipseArea,"beamArea/D");
+	FitEllipseParTree->Branch("beamEccentricity",&beamEllipseEccentricity,"beamEccentricity/D");
 	FitEllipseParTree->Branch("fitEllipseBmaj",&ellMaj,"fitEllipseBmaj/F");
-	FitEllipseParTree->Branch("fitEllipseBmin",&ellMin,"fitEllipseBmaj/F");
+	FitEllipseParTree->Branch("fitEllipseBmin",&ellMin,"fitEllipseBmin/F");
 	FitEllipseParTree->Branch("fitEllipseTheta",&ellTheta,"fitEllipseTheta/F");
 	FitEllipseParTree->Branch("fitEllipseArea",&ellArea,"fitEllipseArea/F");
 	FitEllipseParTree->Branch("fitEllipseEccentricity",&ellEccentricity,"fitEllipseEccentricity/F");	
@@ -470,15 +483,18 @@ void Init()
 	// Create the MVA reader object	
 	if(opt.applySourceClassifier){
 		//Initialize the cut reader
-		INFO_LOG("Initializing the MVA cut reader...");
-  	reader = new TMVA::Reader( "!Color:!Silent" );
-		reader->AddVariable("thetaDiff",&dTheta);
-		reader->AddVariable("eccentricityRatio",&eccentricityRatio);
-		reader->AddVariable("sourceToBeamRatio",&areaToBeamRatio);
-	
-		TString weightFile= opt.recCutsClassifierWeights.c_str();
-		INFO_LOG("Booking MVA method using weight file "<<weightFile.Data()<<" ...");
-		reader->BookMVA("Cuts",weightFile);
+		if(!opt.applyUserRecCuts){
+			INFO_LOG("Initializing the MVA cut reader...");
+  		reader = new TMVA::Reader( "!Color:!Silent" );
+			reader->AddVariable("thetaDiff",&dTheta);
+			reader->AddVariable("eccentricityRatio",&eccentricityRatio);
+			reader->AddVariable("sourceToBeamRatio",&areaToBeamRatio);
+
+			TString weightFile_cut= opt.recCutsClassifierWeights.c_str();
+			INFO_LOG("Booking MVA method using weight file "<<weightFile_cut.Data()<<" ...");
+			reader->BookMVA("Cuts",weightFile_cut);
+		}
+
 
 		//Initialize the NN reader
 		INFO_LOG("Initializing the MVA NN reader...");
@@ -488,17 +504,20 @@ void Init()
 		reader_NN->AddVariable("sourceToBeamRatio",&areaToBeamRatio);
 		if(opt.addSourceSNRToNNVars) reader_NN->AddVariable("sourceSNR",&sourceSNR);
 	
-		weightFile= opt.nnClassifierWeights.c_str();
-		INFO_LOG("Booking MVA NN method using weight file "<<weightFile.Data()<<" ...");
-		reader_NN->BookMVA("MLP",weightFile);
+		TString weightFile_NN= opt.nnClassifierWeights.c_str();
+		INFO_LOG("Booking MVA NN method using weight file "<<weightFile_NN.Data()<<" ...");
+		reader_NN->BookMVA("MLP",weightFile_NN);
 	}
 
 	//Compute map variables
-	beamTheta= MathUtils::Mod(opt.Bpa+90.,180.);
+	//beamTheta= MathUtils::Mod(opt.Bpa+90.,180.);
+	beamTheta= opt.Bpa;//wrt to North
 	beamArea= AstroUtils::GetBeamAreaInPixels(opt.Bmaj,opt.Bmin,opt.pixSize,opt.pixSize);
 	beamEllipse= new TEllipse(0.,0.,opt.Bmaj/GausSigma2FWHM,opt.Bmin/GausSigma2FWHM,0,360,beamTheta);
-	beamEllipseEccentricity= MathUtils::ComputeEllipseEccentricity(beamEllipse);
-	beamEllipseArea= MathUtils::ComputeEllipseArea(beamEllipse);
+	//beamEllipseEccentricity= MathUtils::ComputeEllipseEccentricity(beamEllipse);
+	beamEllipseEccentricity= MathUtils::ComputeEllipseEccentricity(opt.Bmaj,opt.Bmin);
+	//beamEllipseArea= MathUtils::ComputeEllipseArea(beamEllipse);
+	beamEllipseArea= MathUtils::ComputeEllipseArea(opt.Bmaj,opt.Bmin);
 	INFO_LOG("Beam ellipse: bmaj/bmin/bpa="<<opt.Bmaj<<"/"<<opt.Bmin<<"/"<<opt.Bpa<<", a="<<std::min(beamEllipse->GetR1(),beamEllipse->GetR2())<<", b="<<std::max(beamEllipse->GetR1(),beamEllipse->GetR2())<<", theta="<<beamEllipse->GetTheta()<<", A="<<beamEllipseArea<<", E="<<beamEllipseEccentricity);
 	
 
@@ -698,6 +717,10 @@ void Init()
 	FluxDensityAccuracyGraph_compact_fit= new TGraphAsymmErrors;
 	FluxDensityAccuracyGraph_compact_fit->SetName(graphName);
 
+	graphName= "FluxDensityAccuracyGraph_compact_fit_presel";
+	FluxDensityAccuracyGraph_compact_fit_presel= new TGraphAsymmErrors;
+	FluxDensityAccuracyGraph_compact_fit_presel->SetName(graphName);
+
 	graphName= "FluxDensityAccuracyGraph_compact_fit_cutsel";
 	FluxDensityAccuracyGraph_compact_fit_cutsel= new TGraphAsymmErrors;
 	FluxDensityAccuracyGraph_compact_fit_cutsel->SetName(graphName);
@@ -710,6 +733,10 @@ void Init()
 	graphName= "FluxDensityResolutionGraph_compact_fit";
 	FluxDensityResolutionGraph_compact_fit= new TGraphAsymmErrors;
 	FluxDensityResolutionGraph_compact_fit->SetName(graphName);
+
+	graphName= "FluxDensityResolutionGraph_compact_fit_presel";
+	FluxDensityResolutionGraph_compact_fit_presel= new TGraphAsymmErrors;
+	FluxDensityResolutionGraph_compact_fit_presel->SetName(graphName);
 
 	graphName= "FluxDensityResolutionGraph_compact_fit_cutsel";
 	FluxDensityResolutionGraph_compact_fit_cutsel= new TGraphAsymmErrors;
@@ -739,24 +766,24 @@ void ComputeAnalysisHistos()
 	//##Compute detection efficiency
 	//- Compact sources
 	Efficiency_compact_fit = new TEfficiency(*NRecSourceHisto_compact_fit,*NTrueSourceHisto_compact); 
-	Efficiency_compact_fit->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	Efficiency_compact_fit->SetStatisticOption(gEfficiencyErrModel);  // to set option for errors (see ref doc)
 	Efficiency_compact_fit->SetConfidenceLevel(0.68);
 
 	Efficiency_compact_fit_presel = new TEfficiency(*NRecSourceHisto_compact_fit_presel,*NTrueSourceHisto_compact); 
-	Efficiency_compact_fit_presel->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	Efficiency_compact_fit_presel->SetStatisticOption(gEfficiencyErrModel);  // to set option for errors (see ref doc)
 	Efficiency_compact_fit_presel->SetConfidenceLevel(0.68);
 
 	Efficiency_compact_fit_cutsel = new TEfficiency(*NRecSourceHisto_compact_fit_cutsel,*NTrueSourceHisto_compact); 
-	Efficiency_compact_fit_cutsel->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	Efficiency_compact_fit_cutsel->SetStatisticOption(gEfficiencyErrModel);  // to set option for errors (see ref doc)
 	Efficiency_compact_fit_cutsel->SetConfidenceLevel(0.68);
 
 	Efficiency_compact_fit_nnsel = new TEfficiency(*NRecSourceHisto_compact_fit_nnsel,*NTrueSourceHisto_compact); 
-	Efficiency_compact_fit_nnsel->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	Efficiency_compact_fit_nnsel->SetStatisticOption(gEfficiencyErrModel);  // to set option for errors (see ref doc)
 	Efficiency_compact_fit_nnsel->SetConfidenceLevel(0.68);
 
 	//- Extended sources
 	Efficiency_ext = new TEfficiency(*NRecSourceHisto_ext,*NTrueSourceHisto_ext); 
-	Efficiency_ext->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	Efficiency_ext->SetStatisticOption(gEfficiencyErrModel);  // to set option for errors (see ref doc)
 	Efficiency_ext->SetConfidenceLevel(0.68);
 
 	INFO_LOG("#"<<NTrueSourceHisto_ext->GetEntries()<<" extended sources analyzed");
@@ -767,7 +794,7 @@ void ComputeAnalysisHistos()
 	TEfficiency* effhisto= 0;
 	for(int k=0;k<nSimTypes;k++){
 		effhisto = new TEfficiency(*NRecSourceHisto_simtypes_ext[k],*NTrueSourceHisto_simtypes_ext[k]); 
-		effhisto->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+		effhisto->SetStatisticOption(gEfficiencyErrModel);  // to set option for errors (see ref doc)
 		effhisto->SetConfidenceLevel(0.68);
 		Efficiency_simtypes_ext.push_back(effhisto);
 	}
@@ -783,24 +810,24 @@ void ComputeAnalysisHistos()
 	//## Compute reliability 
 	//- Compact sources
 	Reliability_compact_fit= new TEfficiency(*NTrueSourceHisto_reliability_compact_fit,*NRecSourceHisto_reliability_compact_fit); 
-	Reliability_compact_fit->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	Reliability_compact_fit->SetStatisticOption(gEfficiencyErrModel);  // to set option for errors (see ref doc)
 	Reliability_compact_fit->SetConfidenceLevel(0.68);
 
 	Reliability_compact_fit_presel= new TEfficiency(*NTrueSourceHisto_reliability_compact_fit_presel,*NRecSourceHisto_reliability_compact_fit_presel); 
-	Reliability_compact_fit_presel->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	Reliability_compact_fit_presel->SetStatisticOption(gEfficiencyErrModel);  // to set option for errors (see ref doc)
 	Reliability_compact_fit_presel->SetConfidenceLevel(0.68);
 
 	Reliability_compact_fit_cutsel= new TEfficiency(*NTrueSourceHisto_reliability_compact_fit_cutsel,*NRecSourceHisto_reliability_compact_fit_cutsel); 
-	Reliability_compact_fit_cutsel->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	Reliability_compact_fit_cutsel->SetStatisticOption(gEfficiencyErrModel);  // to set option for errors (see ref doc)
 	Reliability_compact_fit_cutsel->SetConfidenceLevel(0.68);
 	
 	Reliability_compact_fit_nnsel= new TEfficiency(*NTrueSourceHisto_reliability_compact_fit_nnsel,*NRecSourceHisto_reliability_compact_fit_nnsel); 
-	Reliability_compact_fit_nnsel->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	Reliability_compact_fit_nnsel->SetStatisticOption(gEfficiencyErrModel);  // to set option for errors (see ref doc)
 	Reliability_compact_fit_nnsel->SetConfidenceLevel(0.68);
 
 	//- Extended sources
 	Reliability_ext= new TEfficiency(*NTrueSourceHisto_reliability_ext,*NRecSourceHisto_reliability_ext); 
-	Reliability_ext->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	Reliability_ext->SetStatisticOption(gEfficiencyErrModel);  // to set option for errors (see ref doc)
 	Reliability_ext->SetConfidenceLevel(0.68);
 
 
@@ -817,7 +844,8 @@ void ComputeAnalysisHistos()
 	int nPoints_yPull_fit_nnsel= 0;
 	
 	int nPoints_FluxPull_all= 0;
-	int nPoints_FluxPull_fit= 0;
+	int nPoints_FluxPull_fit= 0;	
+	int nPoints_FluxPull_fit_presel= 0;
 	int nPoints_FluxPull_fit_cutsel= 0;
 	int nPoints_FluxPull_fit_nnsel= 0;
 	int nPoints_OffsetPull= 0;
@@ -925,6 +953,11 @@ void ComputeAnalysisHistos()
 			int nEntries= (int)(xPosPullList_compact_fit_presel[i].size());
 			Caesar::BoxStats<double> stats_posx= StatsUtils::ComputeBoxStats(xPosPullList_compact_fit_presel[i]);
 			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_compact_fit_presel[i]);
+
+			std::map<std::string,double> statsBootstrapErr_posx;			
+			int nBootstrapSamples= 1000;
+			Caesar::StatsUtils::ComputeStatsBootstrapError(statsBootstrapErr_posx,xPosPullList_compact_fit_presel[i],nBootstrapSamples);
+
 			double x= stats_x.median;
 			double xerr_low= x-stats_x.Q1;
 			double xerr_up= stats_x.Q3-x;
@@ -938,24 +971,31 @@ void ComputeAnalysisHistos()
 			Caesar::StatsUtils::ComputeMeanAndRMS(posx_mean,posx_rms,xPosPullList_compact_fit_presel[i]);
 			double posx_median= stats_posx.median;
 			double posx_median_err= 1.253*posx_rms/sqrt(nEntries);
+			double posx_median_robust_err= statsBootstrapErr_posx["median"];
 			double posx_iqr= stats_posx.Q3-stats_posx.Q1;
 			double posx_iqr_err= 1.573*posx_rms/sqrt(nEntries);
+			double posx_iqr_robust_err= statsBootstrapErr_posx["iqr"];
 			double posx_iqr_half= posx_iqr/2.;
 			double posx_iqr_half_err= 0.5*posx_iqr_err;
+			double posx_iqr_half_robust_err= 0.5*posx_iqr_robust_err;
 
 			//Bias graph
 			double y= posx_median;
 			//double yerr_low= y-stats_posx.Q1;
 			//double yerr_up= stats_posx.Q3-y;
-			double yerr_low= posx_median_err;
-			double yerr_up= posx_median_err;
+			//double yerr_low= posx_median_err;
+			//double yerr_up= posx_median_err;
+			double yerr_low= posx_median_robust_err;
+			double yerr_up= posx_median_robust_err;
 			xPosAccuracyGraph_compact_fit_presel->SetPoint(nPoints_xPull_fit_presel,x,y);
 			xPosAccuracyGraph_compact_fit_presel->SetPointError(nPoints_xPull_fit_presel,xerr_low,xerr_up,yerr_low,yerr_up);
 
 			//Reso graph
 			y= posx_iqr_half;
-			yerr_low= posx_iqr_half_err;
-			yerr_up= posx_iqr_half_err;
+			//yerr_low= posx_iqr_half_err;
+			//yerr_up= posx_iqr_half_err;
+			yerr_low= posx_iqr_half_robust_err;
+			yerr_up= posx_iqr_half_robust_err;
 			xPosResolutionGraph_compact_fit_presel->SetPoint(nPoints_xPull_fit_presel,x,y);
 			xPosResolutionGraph_compact_fit_presel->SetPointError(nPoints_xPull_fit_presel,xerr_low,xerr_up,yerr_low,yerr_up);
 
@@ -967,6 +1007,11 @@ void ComputeAnalysisHistos()
 			int nEntries= (int)(yPosPullList_compact_fit_presel[i].size());
 			Caesar::BoxStats<double> stats_posy= StatsUtils::ComputeBoxStats(yPosPullList_compact_fit_presel[i]);
 			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_compact_fit_presel[i]);
+
+			std::map<std::string,double> statsBootstrapErr_posy;			
+			int nBootstrapSamples= 1000;
+			Caesar::StatsUtils::ComputeStatsBootstrapError(statsBootstrapErr_posy,yPosPullList_compact_fit_presel[i],nBootstrapSamples);
+
 			double x= stats_x.median;
 			double xerr_low= x-stats_x.Q1;
 			double xerr_up= stats_x.Q3-x;
@@ -980,25 +1025,32 @@ void ComputeAnalysisHistos()
 			Caesar::StatsUtils::ComputeMeanAndRMS(posy_mean,posy_rms,yPosPullList_compact_fit_presel[i]);
 			double posy_median= stats_posy.median;
 			double posy_err= posy_rms/sqrt(nEntries);
-			double posy_median_err= 1.253*posy_rms/sqrt(nEntries);
+			double posy_median_err= 1.253*posy_rms/sqrt(nEntries);	
+			double posy_median_robust_err= statsBootstrapErr_posy["median"];
 			double posy_iqr= stats_posy.Q3-stats_posy.Q1;
 			double posy_iqr_err= 1.573*posy_rms/sqrt(nEntries);
+			double posy_iqr_robust_err= statsBootstrapErr_posy["iqr"];
 			double posy_iqr_half= posy_iqr/2.;
 			double posy_iqr_half_err= 0.5*posy_iqr_err;
+			double posy_iqr_half_robust_err= 0.5*posy_iqr_robust_err;
 
 			//Bias graph
 			double y= posy_median;
 			//double yerr_low= y-stats_posy.Q1;
 			//double yerr_up= stats_posy.Q3-y;
-			double yerr_low= posy_median_err;
-			double yerr_up= posy_median_err;
+			//double yerr_low= posy_median_err;
+			//double yerr_up= posy_median_err;
+			double yerr_low= posy_median_robust_err;
+			double yerr_up= posy_median_robust_err;
 			yPosAccuracyGraph_compact_fit_presel->SetPoint(nPoints_yPull_fit_presel,x,y);
 			yPosAccuracyGraph_compact_fit_presel->SetPointError(nPoints_yPull_fit_presel,xerr_low,xerr_up,yerr_low,yerr_up);
 
 			//Reso graph
 			y= posy_iqr_half;
-			yerr_low= posy_iqr_half_err;
-			yerr_up= posy_iqr_half_err;
+			//yerr_low= posy_iqr_half_err;
+			//yerr_up= posy_iqr_half_err;
+			yerr_low= posy_iqr_half_robust_err;
+			yerr_up= posy_iqr_half_robust_err;
 			yPosResolutionGraph_compact_fit_presel->SetPoint(nPoints_yPull_fit_presel,x,y);
 			yPosResolutionGraph_compact_fit_presel->SetPointError(nPoints_yPull_fit_presel,xerr_low,xerr_up,yerr_low,yerr_up);
 			
@@ -1028,6 +1080,7 @@ void ComputeAnalysisHistos()
 			double posx_iqr_half= posx_iqr/2.;
 			double posx_iqr_half_err= 0.5*posx_iqr_err;
 
+			//Bias graph
 			double y= posx_median;
 			//double yerr_low= y-stats_posx.Q1;
 			//double yerr_up= stats_posx.Q3-y;
@@ -1035,6 +1088,14 @@ void ComputeAnalysisHistos()
 			double yerr_up= posx_median_err;
 			xPosAccuracyGraph_compact_fit_cutsel->SetPoint(nPoints_xPull_fit_cutsel,x,y);
 			xPosAccuracyGraph_compact_fit_cutsel->SetPointError(nPoints_xPull_fit_cutsel,xerr_low,xerr_up,yerr_low,yerr_up);
+
+			//Reso graph
+			y= posx_iqr_half;
+			yerr_low= posx_iqr_half_err;
+			yerr_up= posx_iqr_half_err;
+			yPosResolutionGraph_compact_fit_cutsel->SetPoint(nPoints_yPull_fit_cutsel,x,y);
+			yPosResolutionGraph_compact_fit_cutsel->SetPointError(nPoints_yPull_fit_cutsel,xerr_low,xerr_up,yerr_low,yerr_up);
+			
 			nPoints_xPull_fit_cutsel++;
 		}
 
@@ -1062,6 +1123,7 @@ void ComputeAnalysisHistos()
 			double posy_iqr_half= posy_iqr/2.;
 			double posy_iqr_half_err= 0.5*posy_iqr_err;
 
+			//Bias graph
 			double y= posy_median;
 			//double yerr_low= y-stats_posy.Q1;
 			//double yerr_up= stats_posy.Q3-y;
@@ -1069,12 +1131,21 @@ void ComputeAnalysisHistos()
 			double yerr_up= posy_median_err;
 			yPosAccuracyGraph_compact_fit_cutsel->SetPoint(nPoints_yPull_fit_cutsel,x,y);
 			yPosAccuracyGraph_compact_fit_cutsel->SetPointError(nPoints_yPull_fit_cutsel,xerr_low,xerr_up,yerr_low,yerr_up);
+
+			//Reso graph
+			y= posy_iqr_half;
+			yerr_low= posy_iqr_half_err;
+			yerr_up= posy_iqr_half_err;
+			yPosResolutionGraph_compact_fit_cutsel->SetPoint(nPoints_yPull_fit_cutsel,x,y);
+			yPosResolutionGraph_compact_fit_cutsel->SetPointError(nPoints_yPull_fit_cutsel,xerr_low,xerr_up,yerr_low,yerr_up);
+			
 			nPoints_yPull_fit_cutsel++;
 		}	
 
 		//Compute xpos accuracy	fit	(NN SELECTION)
 		if(xPosPullList_compact_fit_nnsel[i].size()>=nMinPointsToDraw){
-			Caesar::BoxStats<double> stats= StatsUtils::ComputeBoxStats(xPosPullList_compact_fit_nnsel[i]);
+			int nEntries= (int)(xPosPullList_compact_fit_nnsel[i].size());
+			Caesar::BoxStats<double> stats_posx= StatsUtils::ComputeBoxStats(xPosPullList_compact_fit_nnsel[i]);
 			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_compact_fit_nnsel[i]);
 			double x= stats_x.median;
 			double xerr_low= x-stats_x.Q1;
@@ -1083,17 +1154,41 @@ void ComputeAnalysisHistos()
 				xerr_low= 0;
 				xerr_up= 0;
 			}
-			double y= stats.median;
-			double yerr_low= y-stats.Q1;
-			double yerr_up= stats.Q3-y;
+
+			double posx_mean= 0;
+			double posx_rms= 0;
+			Caesar::StatsUtils::ComputeMeanAndRMS(posx_mean,posx_rms,xPosPullList_compact_fit_nnsel[i]);
+			double posx_median= stats_posx.median;
+			double posx_median_err= 1.253*posx_rms/sqrt(nEntries);
+			double posx_iqr= stats_posx.Q3-stats_posx.Q1;
+			double posx_iqr_err= 1.573*posx_rms/sqrt(nEntries);
+			double posx_iqr_half= posx_iqr/2.;
+			double posx_iqr_half_err= 0.5*posx_iqr_err;
+
+			//Bias graph
+			double y= posx_median;
+			//double yerr_low= y-stats_posx.Q1;
+			//double yerr_up= stats_posx.Q3-y;
+			double yerr_low= posx_median_err;
+			double yerr_up= posx_median_err;
 			xPosAccuracyGraph_compact_fit_nnsel->SetPoint(nPoints_xPull_fit_nnsel,x,y);
 			xPosAccuracyGraph_compact_fit_nnsel->SetPointError(nPoints_xPull_fit_nnsel,xerr_low,xerr_up,yerr_low,yerr_up);
+
+			//Reso graph
+			y= posx_iqr_half;
+			yerr_low= posx_iqr_half_err;
+			yerr_up= posx_iqr_half_err;
+			yPosResolutionGraph_compact_fit_nnsel->SetPoint(nPoints_yPull_fit_nnsel,x,y);
+			yPosResolutionGraph_compact_fit_nnsel->SetPointError(nPoints_yPull_fit_nnsel,xerr_low,xerr_up,yerr_low,yerr_up);
+			
+			
 			nPoints_xPull_fit_nnsel++;
 		}
 
 		//Compute ypos accuracy fit (NN SELECTION)
 		if(yPosPullList_compact_fit_nnsel[i].size()>=nMinPointsToDraw){
-			Caesar::BoxStats<double> stats= StatsUtils::ComputeBoxStats(yPosPullList_compact_fit_nnsel[i]);
+			int nEntries= (int)(yPosPullList_compact_fit_nnsel[i].size());
+			Caesar::BoxStats<double> stats_posy= StatsUtils::ComputeBoxStats(yPosPullList_compact_fit_nnsel[i]);
 			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_compact_fit_nnsel[i]);
 			double x= stats_x.median;
 			double xerr_low= x-stats_x.Q1;
@@ -1102,11 +1197,34 @@ void ComputeAnalysisHistos()
 				xerr_low= 0;
 				xerr_up= 0;
 			}
-			double y= stats.median;
-			double yerr_low= y-stats.Q1;
-			double yerr_up= stats.Q3-y;
+			
+			double posy_mean= 0;
+			double posy_rms= 0;
+			Caesar::StatsUtils::ComputeMeanAndRMS(posy_mean,posy_rms,yPosPullList_compact_fit_nnsel[i]);
+			double posy_median= stats_posy.median;
+			double posy_err= posy_rms/sqrt(nEntries);
+			double posy_median_err= 1.253*posy_rms/sqrt(nEntries);
+			double posy_iqr= stats_posy.Q3-stats_posy.Q1;
+			double posy_iqr_err= 1.573*posy_rms/sqrt(nEntries);
+			double posy_iqr_half= posy_iqr/2.;
+			double posy_iqr_half_err= 0.5*posy_iqr_err;
+
+			//Bias graph
+			double y= posy_median;
+			//double yerr_low= y-stats_posy.Q1;
+			//double yerr_up= stats_posy.Q3-y;
+			double yerr_low= posy_median_err;
+			double yerr_up= posy_median_err;
 			yPosAccuracyGraph_compact_fit_nnsel->SetPoint(nPoints_yPull_fit_nnsel,x,y);
 			yPosAccuracyGraph_compact_fit_nnsel->SetPointError(nPoints_yPull_fit_nnsel,xerr_low,xerr_up,yerr_low,yerr_up);
+
+			//Reso graph
+			y= posy_iqr_half;
+			yerr_low= posy_iqr_half_err;
+			yerr_up= posy_iqr_half_err;
+			yPosResolutionGraph_compact_fit_nnsel->SetPoint(nPoints_yPull_fit_nnsel,x,y);
+			yPosResolutionGraph_compact_fit_nnsel->SetPointError(nPoints_yPull_fit_nnsel,xerr_low,xerr_up,yerr_low,yerr_up);
+			
 			nPoints_yPull_fit_nnsel++;
 		}	
 
@@ -1119,7 +1237,8 @@ void ComputeAnalysisHistos()
 		
 		//Compute Flux accuracy for fitted sources
 		if(FluxDensityPullList_compact_fit[i].size()>=nMinPointsToDraw){
-			Caesar::BoxStats<double> stats= StatsUtils::ComputeBoxStats(FluxDensityPullList_compact_fit[i]);	
+			int nEntries= (int)(FluxDensityPullList_compact_fit[i].size());
+			Caesar::BoxStats<double> stats_fluxpull= StatsUtils::ComputeBoxStats(FluxDensityPullList_compact_fit[i]);	
 			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_compact_fit[i]);
 			double x= stats_x.median;
 			double xerr_low= x-stats_x.Q1;
@@ -1128,17 +1247,129 @@ void ComputeAnalysisHistos()
 				xerr_low= 0;
 				xerr_up= 0;
 			}
-			double y= stats.median;
-			double yerr_low= y-stats.Q1;
-			double yerr_up= stats.Q3-y;
+		
+			double fluxpull_mean= 0;
+			double fluxpull_rms= 0;
+			Caesar::StatsUtils::ComputeMeanAndRMS(fluxpull_mean,fluxpull_rms,FluxDensityPullList_compact_fit[i]);
+			double fluxpull_median= stats_fluxpull.median;
+			double fluxpull_median_err= 1.253*fluxpull_rms/sqrt(nEntries);
+			double fluxpull_iqr= stats_fluxpull.Q3-stats_fluxpull.Q1;
+			double fluxpull_iqr_err= 1.573*fluxpull_rms/sqrt(nEntries);
+			double fluxpull_iqr_half= fluxpull_iqr/2.;
+			double fluxpull_iqr_half_err= 0.5*fluxpull_iqr_err;
+
+			//Bias graph
+			double y= fluxpull_median;
+			//double yerr_low= y-stats_fluxpull.Q1;
+			//double yerr_up= stats_fluxpull.Q3-y;
+			double yerr_low= fluxpull_median_err;
+			double yerr_up= fluxpull_median_err;
 			FluxDensityAccuracyGraph_compact_fit->SetPoint(nPoints_FluxPull_fit,x,y);
 			FluxDensityAccuracyGraph_compact_fit->SetPointError(nPoints_FluxPull_fit,xerr_low,xerr_up,yerr_low,yerr_up);
+
+			//Reso graph
+			y= fluxpull_iqr_half;
+			yerr_low= fluxpull_iqr_half_err;
+			yerr_up= fluxpull_iqr_half_err;
+			FluxDensityResolutionGraph_compact_fit->SetPoint(nPoints_FluxPull_fit,x,y);
+			FluxDensityResolutionGraph_compact_fit->SetPointError(nPoints_FluxPull_fit,xerr_low,xerr_up,yerr_low,yerr_up);
+			
 			nPoints_FluxPull_fit++;
+		}	
+
+
+		//Compute Flux accuracy for fitted sources (PRE-SELECTION)
+		if(FluxDensityPullList_compact_fit_presel[i].size()>=nMinPointsToDraw){
+			int nEntries= (int)(FluxDensityPullList_compact_fit_presel[i].size());
+			Caesar::BoxStats<double> stats_fluxpull= StatsUtils::ComputeBoxStats(FluxDensityPullList_compact_fit_presel[i]);	
+			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_compact_fit_presel[i]);
+			
+			std::map<std::string,double> statsBootstrapErr_fluxpull;			
+			int nBootstrapSamples= 1000;
+			Caesar::StatsUtils::ComputeStatsBootstrapError(statsBootstrapErr_fluxpull,FluxDensityPullList_compact_fit_presel[i],nBootstrapSamples);
+
+			double x= stats_x.median;
+			double xerr_low= x-stats_x.Q1;
+			double xerr_up= stats_x.Q3-x;	
+			if(!opt.drawErrorX){
+				xerr_low= 0;
+				xerr_up= 0;
+			}
+		
+			double fluxpull_mean= 0;
+			double fluxpull_rms= 0;
+			Caesar::StatsUtils::ComputeMeanAndRMS(fluxpull_mean,fluxpull_rms,FluxDensityPullList_compact_fit_presel[i]);
+			double fluxpull_median= stats_fluxpull.median;
+			double fluxpull_median_err= 1.253*fluxpull_rms/sqrt(nEntries);
+			double fluxpull_median_robust_err= statsBootstrapErr_fluxpull["median"];
+			double fluxpull_iqr= stats_fluxpull.Q3-stats_fluxpull.Q1;
+			double fluxpull_iqr_err= 1.573*fluxpull_rms/sqrt(nEntries);
+			double fluxpull_iqr_robust_err= statsBootstrapErr_fluxpull["iqr"];
+			double fluxpull_iqr_half= fluxpull_iqr/2.;
+			double fluxpull_iqr_half_err= 0.5*fluxpull_iqr_err;
+			double fluxpull_iqr_half_robust_err= 0.5*fluxpull_iqr_robust_err;
+			double fluxpull_min= stats_fluxpull.minVal;
+			double fluxpull_max= stats_fluxpull.maxVal;
+
+			INFO_LOG("Bin "<<i+1<<": N="<<nEntries<<", <x>="<<x<<", fluxpull_mean="<<fluxpull_mean<<", fluxpull_rms="<<fluxpull_rms<<", fluxpull_median="<<fluxpull_median<<", fluxpull_median_err="<<fluxpull_median_err<<", fluxpull_median_robust_err="<<fluxpull_median_robust_err<<", iqr_half="<<fluxpull_iqr_half<<", fluxpull_iqr_half_err="<<fluxpull_iqr_half_err<<", fluxpull_iqr_half_robust_err="<<fluxpull_iqr_half_robust_err<<", fluxpull_min="<<fluxpull_min<<", fluxpull_max="<<fluxpull_max);
+
+			//Bias graph
+			double y= fluxpull_median;
+			//double yerr_low= y-stats_fluxpull.Q1;
+			//double yerr_up= stats_fluxpull.Q3-y;
+			//double yerr_low= fluxpull_median_err;
+			//double yerr_up= fluxpull_median_err;
+			double yerr_low= fluxpull_median_robust_err;
+			double yerr_up= fluxpull_median_robust_err;
+			FluxDensityAccuracyGraph_compact_fit_presel->SetPoint(nPoints_FluxPull_fit_presel,x,y);
+			FluxDensityAccuracyGraph_compact_fit_presel->SetPointError(nPoints_FluxPull_fit_presel,xerr_low,xerr_up,yerr_low,yerr_up);
+
+			//Reso graph
+			y= fluxpull_iqr_half;
+			//yerr_low= fluxpull_iqr_half_err;
+			//yerr_up= fluxpull_iqr_half_err;
+			yerr_low= fluxpull_iqr_half_robust_err;
+			yerr_up= fluxpull_iqr_half_robust_err;
+			FluxDensityResolutionGraph_compact_fit_presel->SetPoint(nPoints_FluxPull_fit_presel,x,y);
+			FluxDensityResolutionGraph_compact_fit_presel->SetPointError(nPoints_FluxPull_fit_presel,xerr_low,xerr_up,yerr_low,yerr_up);
+			
+			//Histo
+			TString histoName= Form("FluxDensityPullHisto%d__compact_fit_presel",i+1);
+			TH1D* h= new TH1D(histoName,histoName,500,fluxpull_min-10,fluxpull_max+10);
+			h->Sumw2();
+			for(size_t k=0;k<FluxDensityPullList_compact_fit_presel[i].size();k++){
+				h->Fill(FluxDensityPullList_compact_fit_presel[i][k]);
+			}
+			FluxDensityPullHistos_compact_fit_presel.push_back(h);
+
+			/*
+			std::vector<double> fluxpull_data= FluxDensityPullList_compact_fit_presel[i];
+			Caesar::StatsUtils::RemoveOutliers(fluxpull_data);
+			nEntries= (int)(fluxpull_data.size());
+			Caesar::BoxStats<double> stats_fluxpull_nooutliers= StatsUtils::ComputeBoxStats(fluxpull_data);
+			fluxpull_mean= 0;
+			fluxpull_rms= 0;
+			Caesar::StatsUtils::ComputeMeanAndRMS(fluxpull_mean,fluxpull_rms,fluxpull_data);
+			fluxpull_median= stats_fluxpull_nooutliers.median;
+			fluxpull_median_err= 1.253*fluxpull_rms/sqrt(nEntries);
+			fluxpull_iqr= stats_fluxpull_nooutliers.Q3-stats_fluxpull_nooutliers.Q1;
+			fluxpull_iqr_err= 1.573*fluxpull_rms/sqrt(nEntries);
+			fluxpull_iqr_half= fluxpull_iqr/2.;
+			fluxpull_iqr_half_err= 0.5*fluxpull_iqr_err;
+			fluxpull_min= stats_fluxpull_nooutliers.minVal;
+			fluxpull_max= stats_fluxpull_nooutliers.maxVal;
+
+			INFO_LOG("Bin "<<i+1<<": N="<<nEntries<<", <x>="<<x<<", fluxpull_mean="<<fluxpull_mean<<", fluxpull_rms="<<fluxpull_rms<<", fluxpull_median="<<fluxpull_median<<", fluxpull_median_err="<<fluxpull_median_err<<", iqr_half="<<fluxpull_iqr_half<<", fluxpull_iqr_half_err="<<fluxpull_iqr_half_err<<", fluxpull_min="<<fluxpull_min<<", fluxpull_max="<<fluxpull_max);	
+			*/
+			
+
+			nPoints_FluxPull_fit_presel++;
 		}	
 		
 		//Compute Flux accuracy for fitted sources (CUT SELECTION)
 		if(FluxDensityPullList_compact_fit_cutsel[i].size()>=nMinPointsToDraw){
-			Caesar::BoxStats<double> stats= StatsUtils::ComputeBoxStats(FluxDensityPullList_compact_fit_cutsel[i]);	
+			int nEntries= (int)(FluxDensityPullList_compact_fit_cutsel[i].size());
+			Caesar::BoxStats<double> stats_fluxpull= StatsUtils::ComputeBoxStats(FluxDensityPullList_compact_fit_cutsel[i]);	
 			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_compact_fit_cutsel[i]);
 			double x= stats_x.median;
 			double xerr_low= x-stats_x.Q1;
@@ -1147,17 +1378,40 @@ void ComputeAnalysisHistos()
 				xerr_low= 0;
 				xerr_up= 0;
 			}
-			double y= stats.median;
-			double yerr_low= y-stats.Q1;
-			double yerr_up= stats.Q3-y;
+		
+			double fluxpull_mean= 0;
+			double fluxpull_rms= 0;
+			Caesar::StatsUtils::ComputeMeanAndRMS(fluxpull_mean,fluxpull_rms,FluxDensityPullList_compact_fit_cutsel[i]);
+			double fluxpull_median= stats_fluxpull.median;
+			double fluxpull_median_err= 1.253*fluxpull_rms/sqrt(nEntries);
+			double fluxpull_iqr= stats_fluxpull.Q3-stats_fluxpull.Q1;
+			double fluxpull_iqr_err= 1.573*fluxpull_rms/sqrt(nEntries);
+			double fluxpull_iqr_half= fluxpull_iqr/2.;
+			double fluxpull_iqr_half_err= 0.5*fluxpull_iqr_err;
+
+			//Bias graph
+			double y= fluxpull_median;
+			//double yerr_low= y-stats_fluxpull.Q1;
+			//double yerr_up= stats_fluxpull.Q3-y;
+			double yerr_low= fluxpull_median_err;
+			double yerr_up= fluxpull_median_err;
 			FluxDensityAccuracyGraph_compact_fit_cutsel->SetPoint(nPoints_FluxPull_fit_cutsel,x,y);
 			FluxDensityAccuracyGraph_compact_fit_cutsel->SetPointError(nPoints_FluxPull_fit_cutsel,xerr_low,xerr_up,yerr_low,yerr_up);
+
+			//Reso graph
+			y= fluxpull_iqr_half;
+			yerr_low= fluxpull_iqr_half_err;
+			yerr_up= fluxpull_iqr_half_err;
+			FluxDensityResolutionGraph_compact_fit_cutsel->SetPoint(nPoints_FluxPull_fit_cutsel,x,y);
+			FluxDensityResolutionGraph_compact_fit_cutsel->SetPointError(nPoints_FluxPull_fit_cutsel,xerr_low,xerr_up,yerr_low,yerr_up);
+			
 			nPoints_FluxPull_fit_cutsel++;
 		}	
 
 		//Compute Flux accuracy for fitted sources (NN SELECTION)
-		if(FluxDensityPullList_compact_fit_nnsel[i].size()>=nMinPointsToDraw){
-			Caesar::BoxStats<double> stats= StatsUtils::ComputeBoxStats(FluxDensityPullList_compact_fit_nnsel[i]);	
+		if(FluxDensityPullList_compact_fit_nnsel[i].size()>=nMinPointsToDraw){	
+			int nEntries= (int)(FluxDensityPullList_compact_fit_nnsel[i].size());
+			Caesar::BoxStats<double> stats_fluxpull= StatsUtils::ComputeBoxStats(FluxDensityPullList_compact_fit_nnsel[i]);	
 			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_compact_fit_nnsel[i]);
 			double x= stats_x.median;
 			double xerr_low= x-stats_x.Q1;
@@ -1166,11 +1420,33 @@ void ComputeAnalysisHistos()
 				xerr_low= 0;
 				xerr_up= 0;
 			}
-			double y= stats.median;
-			double yerr_low= y-stats.Q1;
-			double yerr_up= stats.Q3-y;
+
+			double fluxpull_mean= 0;
+			double fluxpull_rms= 0;
+			Caesar::StatsUtils::ComputeMeanAndRMS(fluxpull_mean,fluxpull_rms,FluxDensityPullList_compact_fit_nnsel[i]);
+			double fluxpull_median= stats_fluxpull.median;
+			double fluxpull_median_err= 1.253*fluxpull_rms/sqrt(nEntries);
+			double fluxpull_iqr= stats_fluxpull.Q3-stats_fluxpull.Q1;
+			double fluxpull_iqr_err= 1.573*fluxpull_rms/sqrt(nEntries);
+			double fluxpull_iqr_half= fluxpull_iqr/2.;
+			double fluxpull_iqr_half_err= 0.5*fluxpull_iqr_err;
+
+			//Bias graph
+			double y= fluxpull_median;
+			//double yerr_low= y-stats_fluxpull.Q1;
+			//double yerr_up= stats_fluxpull.Q3-y;
+			double yerr_low= fluxpull_median_err;
+			double yerr_up= fluxpull_median_err;
 			FluxDensityAccuracyGraph_compact_fit_nnsel->SetPoint(nPoints_FluxPull_fit_nnsel,x,y);
 			FluxDensityAccuracyGraph_compact_fit_nnsel->SetPointError(nPoints_FluxPull_fit_nnsel,xerr_low,xerr_up,yerr_low,yerr_up);
+
+			//Reso graph
+			y= fluxpull_iqr_half;
+			yerr_low= fluxpull_iqr_half_err;
+			yerr_up= fluxpull_iqr_half_err;
+			FluxDensityResolutionGraph_compact_fit_nnsel->SetPoint(nPoints_FluxPull_fit_nnsel,x,y);
+			FluxDensityResolutionGraph_compact_fit_nnsel->SetPointError(nPoints_FluxPull_fit_nnsel,xerr_low,xerr_up,yerr_low,yerr_up);
+			
 			nPoints_FluxPull_fit_nnsel++;
 		}	
 		
@@ -1811,16 +2087,24 @@ int AnalyzeData(std::string filename){
 			
 
 		//Get fit ellipse pars
-		ellMaj= std::max(sigmaX_fit,sigmaY_fit);
-		ellMin= std::min(sigmaX_fit,sigmaY_fit);
-		ellTheta= MathUtils::Mod(theta_fit,180.);
-		if(sigmaY_fit>sigmaX_fit) ellTheta= MathUtils::Mod(theta_fit-90.,180.);
+		//ellMaj= std::max(sigmaX_fit,sigmaY_fit);
+		//ellMin= std::min(sigmaX_fit,sigmaY_fit);
+		ellMaj= std::max(sigmaX_fit,sigmaY_fit)*GausSigma2FWHM*opt.pixSize;//in arcsec
+		ellMin= std::min(sigmaX_fit,sigmaY_fit)*GausSigma2FWHM*opt.pixSize;//in arcsec
+		//ellTheta= MathUtils::Mod(theta_fit,180.);
+		ellTheta= theta_fit-90.;
+		//if(sigmaY_fit>sigmaX_fit) ellTheta= MathUtils::Mod(theta_fit-90.,180.);
+		if(sigmaY_fit>sigmaX_fit) ellTheta+= 90.;
+		ellTheta= GetPosAngleInRange(ellTheta);
 		fitEllipse->SetR1(ellMaj);
 		fitEllipse->SetR2(ellMin);
 		fitEllipse->SetTheta(ellTheta);
-		ellArea= MathUtils::ComputeEllipseArea(fitEllipse);
-		ellEccentricity= MathUtils::ComputeEllipseEccentricity(fitEllipse);
-		dTheta= fitEllipse->GetTheta()-beamEllipse->GetTheta();	
+		//ellArea= MathUtils::ComputeEllipseArea(fitEllipse);
+		ellArea= MathUtils::ComputeEllipseArea(ellMaj,ellMin);
+		//ellEccentricity= MathUtils::ComputeEllipseEccentricity(fitEllipse);
+		ellEccentricity= MathUtils::ComputeEllipseEccentricity(ellMaj,ellMin);
+		//dTheta= fitEllipse->GetTheta()-beamEllipse->GetTheta();
+		dTheta= ellTheta-beamTheta;	
 		eccentricityRatio= ellEccentricity/beamEllipseEccentricity;
 		areaToBeamRatio= ellArea/beamEllipseArea;
 		isTrueSource= 1;	
@@ -1897,17 +2181,25 @@ int AnalyzeData(std::string filename){
 		fitNDF= ndf_fit;
 
 		//Compute ellipse pars
-		ellMaj= std::max(sigmaX_fit,sigmaY_fit);
-		ellMin= std::min(sigmaX_fit,sigmaY_fit);
-		ellTheta= MathUtils::Mod(theta_fit,180.);
-		if(sigmaY_fit>sigmaX_fit) ellTheta= MathUtils::Mod(theta_fit-90.,180.);
+		//ellMaj= std::max(sigmaX_fit,sigmaY_fit);
+		//ellMin= std::min(sigmaX_fit,sigmaY_fit);
+		ellMaj= std::max(sigmaX_fit,sigmaY_fit)*GausSigma2FWHM*opt.pixSize;//in arcsec
+		ellMin= std::min(sigmaX_fit,sigmaY_fit)*GausSigma2FWHM*opt.pixSize;//in arcsec
+		//ellTheta= MathUtils::Mod(theta_fit,180.);
+		ellTheta= theta_fit-90.;
+		//if(sigmaY_fit>sigmaX_fit) ellTheta= MathUtils::Mod(theta_fit-90.,180.);
+		if(sigmaY_fit>sigmaX_fit) ellTheta+= 90.;
+		ellTheta= GetPosAngleInRange(ellTheta);
 		fitEllipse->SetR1(ellMaj);
 		fitEllipse->SetR2(ellMin);
 		fitEllipse->SetTheta(ellTheta);
-		ellArea= MathUtils::ComputeEllipseArea(fitEllipse);
-		ellEccentricity= MathUtils::ComputeEllipseEccentricity(fitEllipse);
+		//ellArea= MathUtils::ComputeEllipseArea(fitEllipse);
+		ellArea= MathUtils::ComputeEllipseArea(ellMaj,ellMin);
+		//ellEccentricity= MathUtils::ComputeEllipseEccentricity(fitEllipse);
+		ellEccentricity= MathUtils::ComputeEllipseEccentricity(ellMaj,ellMin);
 		eccentricityRatio= ellEccentricity/beamEllipseEccentricity;
-		dTheta= fitEllipse->GetTheta()-beamEllipse->GetTheta();	
+		//dTheta= fitEllipse->GetTheta()-beamEllipse->GetTheta();	
+		dTheta= ellTheta-beamTheta;		
 		areaToBeamRatio= ellArea/beamEllipseArea;
 
 		//Fill tree
@@ -2097,14 +2389,14 @@ void Draw(){
 	EfficiencyGraph_compact_fit_presel->SetLineColor(kRed);
 	EfficiencyGraph_compact_fit_presel->Draw("PLZ same");
 
-	EfficiencyGraph_compact_fit_cutsel->SetMarkerStyle(23);
-	EfficiencyGraph_compact_fit_cutsel->SetMarkerSize(1.5);
+	EfficiencyGraph_compact_fit_cutsel->SetMarkerStyle(33);
+	EfficiencyGraph_compact_fit_cutsel->SetMarkerSize(1.7);
 	EfficiencyGraph_compact_fit_cutsel->SetMarkerColor(kBlue);
 	EfficiencyGraph_compact_fit_cutsel->SetLineColor(kBlue);
 	EfficiencyGraph_compact_fit_cutsel->Draw("PLZ same");
 
 	EfficiencyGraph_compact_fit_nnsel->SetMarkerStyle(22);
-	EfficiencyGraph_compact_fit_nnsel->SetMarkerSize(1.5);
+	EfficiencyGraph_compact_fit_nnsel->SetMarkerSize(1.7);
 	EfficiencyGraph_compact_fit_nnsel->SetMarkerColor(kGreen+1);
 	EfficiencyGraph_compact_fit_nnsel->SetLineColor(kGreen+1);
 	EfficiencyGraph_compact_fit_nnsel->Draw("PLZ same");
@@ -2189,7 +2481,8 @@ void Draw(){
 	//==          DRAW RELIABILITY
 	//===============================================
 	double minReliabilityX_draw= -4;
-	double maxReliabilityX_draw= 0.4;
+	double maxReliabilityX_draw= 0.1;
+	double maxReliabilityErr= 0.5;
 
 	//Compact
 	TCanvas* ReliabilityPlot= new TCanvas("ReliabilityPlot","ReliabilityPlot");
@@ -2215,10 +2508,20 @@ void Draw(){
 			ReliabilityGraph_compact_fit->GetPoint(pointCounter,x,y);
 			cout<<"Bin "<<i<<", pointCounter="<<pointCounter<<", x="<<x<<", Reliability(@fit level)="<<y<<endl;
 			if(x<minReliabilityX_draw || x>maxReliabilityX_draw) {
+				cout<<"Remove bin "<<i<<", x="<<x<<endl;
 				ReliabilityGraph_compact_fit->RemovePoint(pointCounter);
 				continue;
 			}
-			
+
+			double yerr_low= ReliabilityGraph_compact_fit->GetErrorYlow(pointCounter);
+			double yerr_up= ReliabilityGraph_compact_fit->GetErrorYhigh(pointCounter);
+			if(yerr_low>maxReliabilityErr){
+				ReliabilityGraph_compact_fit->SetPointEYlow(pointCounter,0);
+			}			
+			if(yerr_up>maxReliabilityErr){
+				ReliabilityGraph_compact_fit->SetPointEYhigh(pointCounter,0);
+			}
+	
 			ReliabilityGraph_compact_fit->SetPointEXhigh(pointCounter,0);
 			ReliabilityGraph_compact_fit->SetPointEXlow(pointCounter,0);	
 			pointCounter++;	
@@ -2234,8 +2537,16 @@ void Draw(){
 			cout<<"Bin "<<i<<", pointCounter="<<pointCounter<<", x="<<x<<", Reliability(@presel level)="<<y<<endl;
 			
 			if(x<minReliabilityX_draw || x>maxReliabilityX_draw) {
-				ReliabilityGraph_compact_fit_presel->RemovePoint(i);
+				ReliabilityGraph_compact_fit_presel->RemovePoint(pointCounter);
 				continue;
+			}
+			double yerr_low= ReliabilityGraph_compact_fit_presel->GetErrorYlow(pointCounter);
+			double yerr_up= ReliabilityGraph_compact_fit_presel->GetErrorYhigh(pointCounter);
+			if(yerr_low>maxReliabilityErr){
+				ReliabilityGraph_compact_fit_presel->SetPointEYlow(pointCounter,0);
+			}			
+			if(yerr_up>maxReliabilityErr){
+				ReliabilityGraph_compact_fit_presel->SetPointEYhigh(pointCounter,0);
 			}
 			ReliabilityGraph_compact_fit_presel->SetPointEXhigh(pointCounter,0);
 			ReliabilityGraph_compact_fit_presel->SetPointEXlow(pointCounter,0);	
@@ -2248,9 +2559,19 @@ void Draw(){
 			double x, y;
 			ReliabilityGraph_compact_fit_cutsel->GetPoint(pointCounter,x,y);
 			if(x<minReliabilityX_draw || x>maxReliabilityX_draw) {
-				ReliabilityGraph_compact_fit_cutsel->RemovePoint(i);
+				ReliabilityGraph_compact_fit_cutsel->RemovePoint(pointCounter);
 				continue;
 			}
+
+			double yerr_low= ReliabilityGraph_compact_fit_cutsel->GetErrorYlow(pointCounter);
+			double yerr_up= ReliabilityGraph_compact_fit_cutsel->GetErrorYhigh(pointCounter);
+			if(yerr_low>maxReliabilityErr){
+				ReliabilityGraph_compact_fit_cutsel->SetPointEYlow(pointCounter,0);
+			}			
+			if(yerr_up>maxReliabilityErr){
+				ReliabilityGraph_compact_fit_cutsel->SetPointEYhigh(pointCounter,0);
+			}
+
 			ReliabilityGraph_compact_fit_cutsel->SetPointEXhigh(pointCounter,0);
 			ReliabilityGraph_compact_fit_cutsel->SetPointEXlow(pointCounter,0);	
 			pointCounter++;	
@@ -2264,6 +2585,14 @@ void Draw(){
 			if(x<minReliabilityX_draw || x>maxReliabilityX_draw) {
 				ReliabilityGraph_compact_fit_nnsel->RemovePoint(pointCounter);
 				continue;
+			}
+			double yerr_low= ReliabilityGraph_compact_fit_nnsel->GetErrorYlow(pointCounter);
+			double yerr_up= ReliabilityGraph_compact_fit_nnsel->GetErrorYhigh(pointCounter);
+			if(yerr_low>maxReliabilityErr){
+				ReliabilityGraph_compact_fit_nnsel->SetPointEYlow(pointCounter,0);
+			}			
+			if(yerr_up>maxReliabilityErr){
+				ReliabilityGraph_compact_fit_nnsel->SetPointEYhigh(pointCounter,0);
 			}
 			ReliabilityGraph_compact_fit_nnsel->SetPointEXhigh(pointCounter,0);
 			ReliabilityGraph_compact_fit_nnsel->SetPointEXlow(pointCounter,0);	
@@ -2284,14 +2613,14 @@ void Draw(){
 	ReliabilityGraph_compact_fit_presel->SetLineColor(kRed);
 	ReliabilityGraph_compact_fit_presel->Draw("PZL same");
 
-	ReliabilityGraph_compact_fit_cutsel->SetMarkerStyle(23);
-	ReliabilityGraph_compact_fit_cutsel->SetMarkerSize(1.5);
+	ReliabilityGraph_compact_fit_cutsel->SetMarkerStyle(33);
+	ReliabilityGraph_compact_fit_cutsel->SetMarkerSize(1.7);
 	ReliabilityGraph_compact_fit_cutsel->SetMarkerColor(kBlue);
 	ReliabilityGraph_compact_fit_cutsel->SetLineColor(kBlue);
 	ReliabilityGraph_compact_fit_cutsel->Draw("PZL same");
 
 	ReliabilityGraph_compact_fit_nnsel->SetMarkerStyle(22);
-	ReliabilityGraph_compact_fit_nnsel->SetMarkerSize(1.5);
+	ReliabilityGraph_compact_fit_nnsel->SetMarkerSize(1.7);
 	ReliabilityGraph_compact_fit_nnsel->SetMarkerColor(kGreen+1);
 	ReliabilityGraph_compact_fit_nnsel->SetLineColor(kGreen+1);
 	ReliabilityGraph_compact_fit_nnsel->Draw("PZL same");
@@ -2341,9 +2670,6 @@ void Draw(){
 	double PosResolution_detectionAreaY[]= {minPosResolution_draw,minPosResolution_draw};
 
 	
-
-	
-
 	TCanvas* PosAccuracyPlot= new TCanvas("PosAccuracyPlot","PosAccuracyPlot",550,950);
 	PosAccuracyPlot->cd();
 
@@ -2474,7 +2800,9 @@ void Draw(){
 	yPosResolutionGraph_compact_fit->SetLineColor(kRed);
 	yPosResolutionGraph_compact_fit->Draw("PZ same");
 
-	double sigmaToFirstQuantile= ROOT::Math::gaussian_quantile(0.75,1);
+	double sigmaToQ1= ROOT::Math::gaussian_quantile(0.75,1);
+	double sigmaToIQR= 2*ROOT::Math::gaussian_quantile(0.75,1);
+	double sigmaToHalfIQR= ROOT::Math::gaussian_quantile(0.75,1);
 	
 	TF1* expPosXSigmaFcn_minus= new TF1("expPosXSigmaFcn_minus",FitPosErrFcn,xMin_draw,xMax_draw,5);
 	expPosXSigmaFcn_minus->SetNpx(50);
@@ -2485,7 +2813,7 @@ void Draw(){
 
 	TF1* expPosXSigmaFcn_plus= new TF1("expPosXSigmaFcn_plus",FitPosErrFcn,xMin_draw,xMax_draw,5);
 	expPosXSigmaFcn_plus->SetNpx(50);
-	expPosXSigmaFcn_plus->SetParameters(sigmaToFirstQuantile,opt.Bmaj,opt.Bmin,opt.pixSize,opt.noiseLevel_true);
+	expPosXSigmaFcn_plus->SetParameters(sigmaToHalfIQR,opt.Bmaj,opt.Bmin,opt.pixSize,opt.noiseLevel_true);
 	expPosXSigmaFcn_plus->SetLineColor(kBlack);
 	expPosXSigmaFcn_plus->SetLineStyle(9);
 	expPosXSigmaFcn_plus->Draw("C same");
@@ -2499,7 +2827,7 @@ void Draw(){
 
 	TF1* expPosYSigmaFcn_plus= new TF1("expPosYSigmaFcn_plus",FitPosErrFcn,xMin_draw,xMax_draw,5);
 	expPosYSigmaFcn_plus->SetNpx(50);
-	expPosYSigmaFcn_plus->SetParameters(sigmaToFirstQuantile,opt.Bmin,opt.Bmaj,opt.pixSize,opt.noiseLevel_true);
+	expPosYSigmaFcn_plus->SetParameters(sigmaToHalfIQR,opt.Bmin,opt.Bmaj,opt.pixSize,opt.noiseLevel_true);
 	expPosYSigmaFcn_plus->SetLineColor(kRed);
 	expPosYSigmaFcn_plus->SetLineStyle(kDotted);
 	expPosYSigmaFcn_plus->Draw("C same");
@@ -2562,22 +2890,42 @@ void Draw(){
 	//===============================================
 	//==          DRAW FLUX ACCURACY
 	//===============================================
-	//- FLux accuracy
-	double minFluxAccuracy_draw= -2;
-	double maxFluxAccuracy_draw= 2;
+	//- Flux accuracy
+	double minFluxAccuracy_draw= -0.5;
+	double maxFluxAccuracy_draw= 1.;
+	double minFluxResolution_draw= -0.2;
+	double maxFluxResolution_draw= 1.;
 	double minFluxAccuracyX_draw= -4;
 	double maxFluxAccuracyX_draw= 0.5;
+	
 
-	TCanvas* FluxAccuracyPlot= new TCanvas("FluxAccuracyPlot","FluxAccuracyPlot");
+	double detectionAreaX[]= {minFluxAccuracyX_draw,log10(5*opt.noiseLevel_true)};
+	double detectionAreaY[]= {minFluxAccuracy_draw,minFluxAccuracy_draw};
+	double detectionAreaX_reso[]= {minFluxAccuracyX_draw,log10(5*opt.noiseLevel_true)};
+	double detectionAreaY_reso[]= {minFluxResolution_draw,minFluxResolution_draw};
+
+	TCanvas* FluxAccuracyPlot= new TCanvas("FluxAccuracyPlot","FluxAccuracyPlot",550,950);
 	FluxAccuracyPlot->cd();
+
+	//Flux bias
+	TPad* FluxAccuracyPlotPad1= new TPad("FluxAccuracyPlotPad1","FluxAccuracyPlotPad1",0,0.5,1,1);
+	FluxAccuracyPlotPad1->SetBottomMargin(0);
+	FluxAccuracyPlotPad1->SetLeftMargin(0.15);
+  FluxAccuracyPlotPad1->SetRightMargin(0.05);
+	FluxAccuracyPlotPad1->cd();
 
 	TH2D* FluxAccuracyPlotBkg= new TH2D("FluxAccuracyPlotBkg","",100,minFluxAccuracyX_draw,maxFluxAccuracyX_draw,100,minFluxAccuracy_draw,maxFluxAccuracy_draw);
 	FluxAccuracyPlotBkg->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
 	FluxAccuracyPlotBkg->GetYaxis()->SetTitle("<#frac{S_{meas}-S_{gen}}{S_{gen}}>");
+	FluxAccuracyPlotBkg->GetXaxis()->SetTitleSize(0.08);
+	FluxAccuracyPlotBkg->GetXaxis()->SetTitleOffset(0.85);
+	FluxAccuracyPlotBkg->GetXaxis()->SetLabelSize(0.06);
+	FluxAccuracyPlotBkg->GetYaxis()->SetTitleSize(0.08);
+	FluxAccuracyPlotBkg->GetYaxis()->SetTitleOffset(0.8);
+	FluxAccuracyPlotBkg->GetYaxis()->SetLabelSize(0.06);
 	FluxAccuracyPlotBkg->Draw();
 	
-	double detectionAreaX[]= {minFluxAccuracyX_draw,log10(5*opt.noiseLevel_true)};
-	double detectionAreaY[]= {minFluxAccuracy_draw,minFluxAccuracy_draw};
+	
 	TGraph* sigmaDetectionArea = new TGraph(2,detectionAreaX,detectionAreaY);
   sigmaDetectionArea->SetLineColor(kGray+2);
   sigmaDetectionArea->SetLineWidth(15001);
@@ -2588,22 +2936,30 @@ void Draw(){
 	FluxDensityAccuracyGraphPoints_compact->SetMarkerColor(kGray);
 	FluxDensityAccuracyGraphPoints_compact->SetMarkerStyle(8);
 	FluxDensityAccuracyGraphPoints_compact->SetMarkerSize(0.3);
-	FluxDensityAccuracyGraphPoints_compact->Draw("P");
+	//FluxDensityAccuracyGraphPoints_compact->Draw("P");
 
 	FluxDensityAccuracyGraph_compact_fit->SetMarkerStyle(8);
 	FluxDensityAccuracyGraph_compact_fit->SetMarkerSize(1.3);
 	FluxDensityAccuracyGraph_compact_fit->SetMarkerColor(kBlack);
 	FluxDensityAccuracyGraph_compact_fit->SetLineColor(kBlack);
-	FluxDensityAccuracyGraph_compact_fit->Draw("EPZ same");
+	//FluxDensityAccuracyGraph_compact_fit->Draw("EPZ same");
 
-	FluxDensityAccuracyGraph_compact_fit_cutsel->SetMarkerStyle(21);
-	FluxDensityAccuracyGraph_compact_fit_cutsel->SetMarkerColor(kRed);
-	FluxDensityAccuracyGraph_compact_fit_cutsel->SetLineColor(kRed);
+	FluxDensityAccuracyGraph_compact_fit_presel->SetMarkerStyle(8);
+	FluxDensityAccuracyGraph_compact_fit_presel->SetMarkerSize(1.3);
+	FluxDensityAccuracyGraph_compact_fit_presel->SetMarkerColor(kBlack);
+	FluxDensityAccuracyGraph_compact_fit_presel->SetLineColor(kBlack);
+	FluxDensityAccuracyGraph_compact_fit_presel->Draw("EPZ same");
+
+	FluxDensityAccuracyGraph_compact_fit_cutsel->SetMarkerStyle(8);
+	FluxDensityAccuracyGraph_compact_fit_cutsel->SetMarkerSize(1.3);
+	FluxDensityAccuracyGraph_compact_fit_cutsel->SetMarkerColor(kBlack);
+	FluxDensityAccuracyGraph_compact_fit_cutsel->SetLineColor(kBlack);
 	//FluxDensityAccuracyGraph_compact_fit_cutsel->Draw("EPZ same");
 
-	FluxDensityAccuracyGraph_compact_fit_nnsel->SetMarkerStyle(21);
-	FluxDensityAccuracyGraph_compact_fit_nnsel->SetMarkerColor(kGreen+1);
-	FluxDensityAccuracyGraph_compact_fit_nnsel->SetLineColor(kGreen+1);
+	FluxDensityAccuracyGraph_compact_fit_nnsel->SetMarkerStyle(8);
+	FluxDensityAccuracyGraph_compact_fit_nnsel->SetMarkerSize(1.3);
+	FluxDensityAccuracyGraph_compact_fit_nnsel->SetMarkerColor(kBlack);
+	FluxDensityAccuracyGraph_compact_fit_nnsel->SetLineColor(kBlack);
 	//FluxDensityAccuracyGraph_compact_fit_nnsel->Draw("EPZ same");
 
 	TLine* refLine_fluxAccuracy= new TLine(minFluxAccuracyX_draw,0,maxFluxAccuracyX_draw,0);
@@ -2611,6 +2967,62 @@ void Draw(){
 	refLine_fluxAccuracy->SetLineStyle(kDashed);
 	refLine_fluxAccuracy->Draw("same");
 
+	TLegend* FluxAccuracyPlotLegend= new TLegend(0.6,0.7,0.7,0.8);
+	FluxAccuracyPlotLegend->SetFillColor(0);
+	FluxAccuracyPlotLegend->SetTextSize(0.045);
+	FluxAccuracyPlotLegend->SetTextFont(52);
+	FluxAccuracyPlotLegend->AddEntry(sigmaDetectionArea,"5#sigma detection limit","F");
+	FluxAccuracyPlotLegend->Draw("same");
+
+	//Flux resolution
+	TPad* FluxAccuracyPlotPad2= new TPad("FluxAccuracyPlotPad2","FluxAccuracyPlotPad2",0,0.01,1,0.5);
+	FluxAccuracyPlotPad2->SetTopMargin(0);
+	FluxAccuracyPlotPad2->SetLeftMargin(0.15);
+	FluxAccuracyPlotPad2->SetBottomMargin(0.12);
+  FluxAccuracyPlotPad2->SetRightMargin(0.05);
+	FluxAccuracyPlotPad2->cd();
+
+	TH2D* FluxAccuracyPlotBkg2= new TH2D("FluxAccuracyPlotBkg2","",100,minFluxAccuracyX_draw,maxFluxAccuracyX_draw,100,minFluxResolution_draw,maxFluxResolution_draw);
+	FluxAccuracyPlotBkg2->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+	FluxAccuracyPlotBkg2->GetYaxis()->SetTitle("#sigma(#frac{S_{meas}-S_{gen}}{S_{gen}})");
+	FluxAccuracyPlotBkg2->GetXaxis()->SetTitleSize(0.08);
+	FluxAccuracyPlotBkg2->GetXaxis()->SetTitleOffset(0.85);
+	FluxAccuracyPlotBkg2->GetXaxis()->SetLabelSize(0.06);
+	FluxAccuracyPlotBkg2->GetYaxis()->SetTitleSize(0.08);
+	FluxAccuracyPlotBkg2->GetYaxis()->SetTitleOffset(0.8);
+	FluxAccuracyPlotBkg2->GetYaxis()->SetLabelSize(0.06);
+	FluxAccuracyPlotBkg2->Draw();
+
+	TGraph* sigmaDetectionArea2 = new TGraph(2,detectionAreaX_reso,detectionAreaY_reso);
+  sigmaDetectionArea2->SetLineColor(kGray+2);
+  sigmaDetectionArea2->SetLineWidth(15001);
+  sigmaDetectionArea2->SetFillStyle(3005);	
+	sigmaDetectionArea2->SetFillColor(kGray);
+	sigmaDetectionArea2->Draw("C");
+
+	FluxDensityResolutionGraph_compact_fit->SetMarkerStyle(8);
+	FluxDensityResolutionGraph_compact_fit->SetMarkerSize(1.3);
+	FluxDensityResolutionGraph_compact_fit->SetMarkerColor(kBlack);
+	FluxDensityResolutionGraph_compact_fit->SetLineColor(kBlack);
+	//FluxDensityResolutionGraph_compact_fit->Draw("EPZ same");
+
+	FluxDensityResolutionGraph_compact_fit_presel->SetMarkerStyle(8);
+	FluxDensityResolutionGraph_compact_fit_presel->SetMarkerSize(1.3);
+	FluxDensityResolutionGraph_compact_fit_presel->SetMarkerColor(kBlack);
+	FluxDensityResolutionGraph_compact_fit_presel->SetLineColor(kBlack);
+	FluxDensityResolutionGraph_compact_fit_presel->Draw("EPZ same");
+
+	FluxDensityResolutionGraph_compact_fit_cutsel->SetMarkerStyle(8);
+	FluxDensityResolutionGraph_compact_fit_cutsel->SetMarkerSize(1.3);
+	FluxDensityResolutionGraph_compact_fit_cutsel->SetMarkerColor(kBlack);
+	FluxDensityResolutionGraph_compact_fit_cutsel->SetLineColor(kBlack);
+	//FluxDensityResolutionGraph_compact_fit_cutsel->Draw("EPZ same");
+
+	FluxDensityResolutionGraph_compact_fit_nnsel->SetMarkerStyle(8);
+	FluxDensityResolutionGraph_compact_fit_nnsel->SetMarkerSize(1.3);
+	FluxDensityResolutionGraph_compact_fit_nnsel->SetMarkerColor(kBlack);
+	FluxDensityResolutionGraph_compact_fit_nnsel->SetLineColor(kBlack);
+	//FluxDensityResolutionGraph_compact_fit_nnsel->Draw("EPZ same");
 
 	TF1* fluxDensityErrLine_1sigma_plus= new TF1("fluxDensityErrLine_1sigma_plus","[0]*[1]/pow(10,x)",minFluxAccuracyX_draw,maxFluxAccuracyX_draw);
 	fluxDensityErrLine_1sigma_plus->SetParameters(opt.noiseLevel_true,1);
@@ -2624,7 +3036,7 @@ void Draw(){
 	fluxDensityErrLine_1sigma_minus->SetLineColor(kBlack);
 	fluxDensityErrLine_1sigma_minus->SetLineStyle(kDashed);
 	fluxDensityErrLine_1sigma_minus->SetLineWidth(2);
-	fluxDensityErrLine_1sigma_minus->Draw("l same");
+	//fluxDensityErrLine_1sigma_minus->Draw("l same");
 
 	TF1* fluxDensityErrLine_3sigma_plus= new TF1("fluxDensityErrLine_3sigma_plus","[0]*[1]/pow(10,x)",minFluxAccuracyX_draw,maxFluxAccuracyX_draw);
 	fluxDensityErrLine_3sigma_plus->SetParameters(opt.noiseLevel_true,3);
@@ -2638,21 +3050,38 @@ void Draw(){
 	fluxDensityErrLine_3sigma_minus->SetLineColor(kBlack);
 	fluxDensityErrLine_3sigma_minus->SetLineStyle(kDotted);
 	fluxDensityErrLine_3sigma_minus->SetLineWidth(2);
-	fluxDensityErrLine_3sigma_minus->Draw("l same");
+	//fluxDensityErrLine_3sigma_minus->Draw("l same");
+
+	TLegend* FluxAccuracyPlotLegend2= new TLegend(0.6,0.7,0.7,0.8);
+	FluxAccuracyPlotLegend2->SetFillColor(0);
+	FluxAccuracyPlotLegend2->SetTextSize(0.045);
+	FluxAccuracyPlotLegend2->SetTextFont(52);
+	FluxAccuracyPlotLegend2->AddEntry(fluxDensityErrLine_1sigma_plus,"1#sigma","L");
+	FluxAccuracyPlotLegend2->AddEntry(fluxDensityErrLine_3sigma_plus,"3#sigma","L");
+	FluxAccuracyPlotLegend2->AddEntry(sigmaDetectionArea,"5#sigma detection limit","F");
+	FluxAccuracyPlotLegend2->Draw("same");
+
+	TPad* clearLabelPad2 = new TPad("clearLabelPad2", "clearLabelPad",0.05201342,0.479021,0.08557047,0.5314685);
+  clearLabelPad2->SetBorderMode(0);
+
+	FluxAccuracyPlot->cd();
+	FluxAccuracyPlotPad1->Draw();
+	FluxAccuracyPlotPad2->Draw();
+	clearLabelPad2->Draw();
+	FluxAccuracyPlot->Update();
 
 
-	TLegend* FluxAccuracyPlotLegend= new TLegend(0.6,0.7,0.7,0.8);
-	FluxAccuracyPlotLegend->SetFillColor(0);
-	FluxAccuracyPlotLegend->SetTextSize(0.045);
-	FluxAccuracyPlotLegend->SetTextFont(52);
-	//FluxAccuracyPlotLegend->AddEntry(FluxDensityAccuracyGraph_compact,"<S_{rec}/S_{true}-1>","PL");
-	//FluxAccuracyPlotLegend->AddEntry(FluxDensityAccuracyGraph_compact_fit,"presel","PL");
-	//FluxAccuracyPlotLegend->AddEntry(FluxDensityAccuracyGraph_compact_fit_cutsel,"cut sel","PL");
-	//FluxAccuracyPlotLegend->AddEntry(FluxDensityAccuracyGraph_compact_fit_nnsel,"NN sel","PL");
-	FluxAccuracyPlotLegend->AddEntry(fluxDensityErrLine_1sigma_plus,"#pm 1#sigma","L");
-	FluxAccuracyPlotLegend->AddEntry(fluxDensityErrLine_3sigma_plus,"#pm 3#sigma","L");
-	FluxAccuracyPlotLegend->AddEntry(sigmaDetectionArea,"5#sigma detection limit","F");
-	FluxAccuracyPlotLegend->Draw("same");
+	//Flux histos
+	TCanvas* FluxPullHistoPlot= 0;
+	
+	for(size_t i=0;i<FluxDensityPullHistos_compact_fit_presel.size();i++){
+		TString canvasName= Form("FluxPullHistoPlot_bin%d",(int)(i+1));
+		FluxPullHistoPlot= new TCanvas(canvasName,canvasName);
+		FluxPullHistoPlot->cd();
+
+		FluxDensityPullHistos_compact_fit_presel[i]->Draw("hist");
+	}
+
 
 
 	//- FLux accuracy for extended sources 
@@ -2681,89 +3110,7 @@ void Draw(){
 	detectionThrLine_fluxDensityAccuracy_ext->Draw("same");
 	*/
 
-	/*
-	//- FLux accuracy vs significance for extended sources 
-	TCanvas* FluxAccuracyVSSignificancePlot_ext= new TCanvas("FluxAccuracyVSSignificancePlot_ext","FluxAccuracyVSSignificancePlot_ext");
-	FluxAccuracyVSSignificancePlot_ext->cd();
-
-	TH2D* FluxAccuracyVSSignificancePlotBkg_ext= new TH2D("FluxAccuracyVSSignificancePlotBkg_ext","",100,ZMin_draw,ZMax_draw,100,-2,2);
-	FluxAccuracyVSSignificancePlotBkg_ext->GetXaxis()->SetTitle("significance level");
-	FluxAccuracyVSSignificancePlotBkg_ext->GetYaxis()->SetTitle("<#frac{S_{meas}-S_{gen}}{S_{gen}}>");
-	FluxAccuracyVSSignificancePlotBkg_ext->Draw();
-
 	
-	double FluxAccuracyVSSignificance_detectionAreaX_ext[]= {ZMin_draw,5};
-	double FluxAccuracyVSSignificance_detectionAreaY_ext[]= {-2,-2};
-
-	TGraph* FluxAccuracyVSSignificance_sigmaDetectionArea_ext = new TGraph(2,FluxAccuracyVSSignificance_detectionAreaX_ext,FluxAccuracyVSSignificance_detectionAreaY_ext);
-  FluxAccuracyVSSignificance_sigmaDetectionArea_ext->SetLineColor(kGray+2);
-  FluxAccuracyVSSignificance_sigmaDetectionArea_ext->SetLineWidth(15001);
-  FluxAccuracyVSSignificance_sigmaDetectionArea_ext->SetFillStyle(3005);	
-	FluxAccuracyVSSignificance_sigmaDetectionArea_ext->SetFillColor(kGray);
-	FluxAccuracyVSSignificance_sigmaDetectionArea_ext->Draw("C");
-
-	FluxDensityAccuracyVSSignificanceGraphPoints_ext->SetMarkerColor(kGray);
-	FluxDensityAccuracyVSSignificanceGraphPoints_ext->SetMarkerStyle(8);
-	FluxDensityAccuracyVSSignificanceGraphPoints_ext->SetMarkerSize(0.3);
-	FluxDensityAccuracyVSSignificanceGraphPoints_ext->Draw("P");
-
-	if(!opt.drawErrorX){
-		for(int i=0;i<FluxDensityAccuracyVSSignificanceGraph_ext->GetN();i++){
-			FluxDensityAccuracyVSSignificanceGraph_ext->SetPointEXhigh(i,0);
-			FluxDensityAccuracyVSSignificanceGraph_ext->SetPointEXlow(i,0);		
-		}//end loop graph points
-	}//close if
-
-	FluxDensityAccuracyVSSignificanceGraph_ext->SetMarkerStyle(8);
-	FluxDensityAccuracyVSSignificanceGraph_ext->SetMarkerSize(1.3);
-	FluxDensityAccuracyVSSignificanceGraph_ext->SetMarkerColor(kBlack);
-	FluxDensityAccuracyVSSignificanceGraph_ext->SetLineColor(kBlack);
-	FluxDensityAccuracyVSSignificanceGraph_ext->Draw("EPZ same");
-
-	TLine* refLine_fluxAccuracyVSSignificance= new TLine(ZMin_draw,0,ZMax_draw,0);
-	refLine_fluxAccuracyVSSignificance->SetLineColor(kBlack);
-	refLine_fluxAccuracyVSSignificance->SetLineStyle(kDashed);
-	refLine_fluxAccuracyVSSignificance->Draw("same");
-
-	TLegend* FluxAccuracyVSSignificancePlotLegend_ext= new TLegend(0.6,0.7,0.7,0.8);
-	FluxAccuracyVSSignificancePlotLegend_ext->SetFillColor(0);
-	FluxAccuracyVSSignificancePlotLegend_ext->SetTextSize(0.045);
-	FluxAccuracyVSSignificancePlotLegend_ext->SetTextFont(52);
-	FluxAccuracyVSSignificancePlotLegend_ext->AddEntry(FluxAccuracyVSSignificance_sigmaDetectionArea_ext,"5#sigma detection limit","F");
-	FluxAccuracyVSSignificancePlotLegend_ext->Draw("same");
-	*/
-
-	/*
-	//===============================================
-	//==          DRAW FIT ELLIPSE VS BEAM PARS
-	//===============================================
-	TCanvas* FitEllipseVSBeamPlot_compact= new TCanvas("FitEllipseVSBeamPlot_compact","FitEllipseVSBeamPlot_compact");
-	FitEllipseVSBeamPlot_compact->cd();
-	
-	TH2D* FitEllipseVSBeamPlotBkg_compact= new TH2D("FitEllipseVSBeamPlotBkg_compact","",100,-90,90,100,0.01,2);
-	FitEllipseVSBeamPlotBkg_compact->GetXaxis()->SetTitle("d#theta (deg)");
-	FitEllipseVSBeamPlotBkg_compact->GetYaxis()->SetTitle("E_{fit}/E_{beam}");
-	FitEllipseVSBeamPlotBkg_compact->Draw();
-
-	FitEllipseVSBeam_compact_real->SetMarkerColor(kBlack);
-	FitEllipseVSBeam_compact_real->SetMarkerStyle(8);
-	FitEllipseVSBeam_compact_real->SetMarkerSize(0.7);
-	FitEllipseVSBeam_compact_real->Draw("P");
-
-	FitEllipseVSBeam_compact_fake->SetMarkerColor(kRed);
-	FitEllipseVSBeam_compact_fake->SetMarkerStyle(8);
-	FitEllipseVSBeam_compact_fake->SetMarkerSize(0.7);
-	FitEllipseVSBeam_compact_fake->Draw("P");
-
-	TLegend* FitEllipseVSBeamPlotLegend= new TLegend(0.6,0.7,0.7,0.8);
-	FitEllipseVSBeamPlotLegend->SetFillColor(0);
-	FitEllipseVSBeamPlotLegend->SetTextSize(0.045);
-	FitEllipseVSBeamPlotLegend->SetTextFont(52);
-	FitEllipseVSBeamPlotLegend->AddEntry(FitEllipseVSBeam_compact_real,"real sources","P");
-	FitEllipseVSBeamPlotLegend->AddEntry(FitEllipseVSBeam_compact_fake,"false sources","P");
-	FitEllipseVSBeamPlotLegend->Draw("same");
-	*/
-
 }//close Draw()
 
 double FitPosErrFcn(double* x,double* par){
