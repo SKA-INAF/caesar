@@ -183,15 +183,15 @@ if [ "$NARGS" -lt 2 ]; then
 	echo ""
 	
 	echo "=== SFINDER SALIENCY FILTER OPTIONS ==="
-  echo "--spsize - Superpixel size (in pixels) used in hierarchical clustering (default=20)"	
-	echo "--spbeta - Superpixel regularization par (beta) used in hierarchical clustering (default=1)"	
-	echo "--spminarea - Superpixel min area (in pixels) used in hierarchical clustering (default=10)"
+  echo "--sp-size - Superpixel size (in pixels) used in hierarchical clustering (default=20)"	
+	echo "--sp-beta - Superpixel regularization par (beta) used in hierarchical clustering (default=1)"	
+	echo "--sp-minarea - Superpixel min area (in pixels) used in hierarchical clustering (default=10)"
 	echo "--saliency-nooptimalthr - Do not use optimal threshold in multiscale saliency estimation (e.g. use median thr) (default=use optimal)"	
-	echo "--saliencythr - Saliency map threshold factor wrt optimal/median threshold (default=2.8)"
-	echo "--saliencyminreso - Superpixel size (in pixels) used in multi-reso saliency map smallest scale (default=20 pixels)"
-	echo "--saliencymaxreso - Superpixel size (in pixels) used in multi-reso saliency map highest scale (default=60 pixels)"
-	echo "--saliencyresostep - Superpixel size step (in pixels) used in multi-reso saliency map computation (default=10 pixels)"
-	echo "--saliencynn - Fraction of most similar region neighbors used in saliency map computation (default=1)"
+	echo "--saliency-thr - Saliency map threshold factor wrt optimal/median threshold (default=2.8)"
+	echo "--saliency-minreso - Superpixel size (in pixels) used in multi-reso saliency map smallest scale (default=20 pixels)"
+	echo "--saliency-maxreso - Superpixel size (in pixels) used in multi-reso saliency map highest scale (default=60 pixels)"
+	echo "--saliency-resostep - Superpixel size step (in pixels) used in multi-reso saliency map computation (default=10 pixels)"
+	echo "--saliency-nn - Fraction of most similar region neighbors used in saliency map computation (default=1)"
 	echo "--saliency-usebkgmap - Use bkg map in saliency computation (default=not used)"
 	echo "--saliency-usermsmap - Use noise map in saliency computation (default=not used)"
 	echo "--saliency-userobustpars - Use robust pars in saliency computation (default=no)"
@@ -921,19 +921,19 @@ do
 			USE_OPTIMAL_THR_IN_SALIENCY="false"
 		;;
 
-		--saliencythr=*)
+		--saliency-thr=*)
     	SALIENCY_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
-		--saliencyminreso=*)
+		--saliency-minreso=*)
     	SALIENCY_MIN_RESO=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
-		--saliencymaxreso=*)
+		--saliency-maxreso=*)
     	SALIENCY_MAX_RESO=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
-		--saliencyresostep=*)
+		--saliency-resostep=*)
     	SALIENCY_RESO_STEP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
-		--saliencynn=*)
+		--saliency-nn=*)
     	SALIENCY_NN_PAR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--saliency-usebkgmap*)
@@ -946,13 +946,13 @@ do
 			SALIENCY_USE_ROBUST_PARS="true"
 		;;
 
-		--spsize=*)
+		--sp-size=*)
     	SP_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
-		--spbeta=*)
+		--sp-beta=*)
     	SP_BETA=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
-		--spminarea=*)
+		--sp-minarea=*)
     	SP_MINAREA=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
