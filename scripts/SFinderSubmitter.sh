@@ -194,6 +194,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--saliencynn - Fraction of most similar region neighbors used in saliency map computation (default=1)"
 	echo "--saliency-usebkgmap - Use bkg map in saliency computation (default=not used)"
 	echo "--saliency-usermsmap - Use noise map in saliency computation (default=not used)"
+	echo "--saliency-userobustpars - Use robust pars in saliency computation (default=no)"
 	echo ""
 
 	echo "=== SFINDER ACTIVE-CONTOUR MAIN OPTIONS ==="
@@ -358,6 +359,7 @@ SALIENCY_MIN_RESO="20"
 SALIENCY_MAX_RESO="60"
 SALIENCY_RESO_STEP="10"
 SALIENCY_NN_PAR="1"
+SALIENCY_USE_ROBUST_PARS="false"
 USE_BKG_MAP_IN_SALIENCY="false"
 USE_RMS_MAP_IN_SALIENCY="false"
 USE_OPTIMAL_THR_IN_SALIENCY="true"
@@ -940,6 +942,9 @@ do
 		--saliency-usermsmap*)
     	USE_RMS_MAP_IN_SALIENCY="true"
     ;;
+		--saliency-userobustpars*)
+			SALIENCY_USE_ROBUST_PARS="true"
+		;;
 
 		--spsize=*)
     	SP_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
@@ -1514,7 +1519,7 @@ generate_config(){
 		echo "saliencyResoMax = $SALIENCY_MAX_RESO								     | Saliency max reso par"
 		echo "saliencyResoStep = $SALIENCY_RESO_STEP							     | Saliency reso step par"
 		echo 'saliencyUseCurvInDiss = false 											     | Use curvature parameter in dissimilarity estimation (T/F)'
-		echo 'saliencyUseRobustPars = false												     | Use robust pars in saliency map computation (T/F)'
+		echo "saliencyUseRobustPars = $SALIENCY_USE_ROBUST_PARS        | Use robust pars in saliency map computation (T/F)"
 		echo "saliencyUseBkgMap = $USE_BKG_MAP_IN_SALIENCY    		     | Use bkg map in saliency map computation (T/F)"
 		echo "saliencyUseNoiseMap = $USE_RMS_MAP_IN_SALIENCY					 | Use noise map in saliency map computation (T/F)"
 		echo "saliencyNNFactor = $SALIENCY_NN_PAR   							     | Fraction of most similar neighbors used in saliency map computation"
