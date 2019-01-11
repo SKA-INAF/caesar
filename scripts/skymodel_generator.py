@@ -123,6 +123,9 @@ def get_args():
 	parser.add_argument('-zmin_model', '--zmin_model', dest='model_trunc_zmin', required=False, type=float, default=1, action='store',help='Minimum source significance level in sigmas above the bkg below which source data are set to 0 (default=1)')
 	parser.add_argument('-mask_boxsize', '--mask_boxsize', dest='mask_boxsize', required=False, type=float, default=10, action='store',help='Mask box size in pixels (default=10)')
 	parser.add_argument('-trunc_thr', '--trunc_thr', dest='trunc_thr', required=False, type=float, default=0.01, action='store',help='Source model truncation thr (default=0.01)')
+	parser.add_argument('-truncmodels','--truncmodels', dest='enable_model_truncation', action='store_true')	
+	parser.add_argument('-no-truncmodels','--no-truncmodels', dest='enable_model_truncation', action='store_false')	
+	parser.set_defaults(enable_model_truncation=True)	
 
 	# - OUTPUT FILE OPTIONS
 	parser.add_argument('-outputfile', '--outputfile', dest='outputfile', required=False, type=str, default='simmap.fits',action='store',help='Output filename')
@@ -1229,6 +1232,7 @@ def main():
 	#- Source model
 	model_trunc_zmin= args.model_trunc_zmin
 	trunc_thr= args.trunc_thr
+	enable_model_truncation= args.enable_model_truncation
 	npixels_min= args.npixels_min
 
 	# - Bkg info args
@@ -1310,6 +1314,8 @@ def main():
 
 	simulator.set_model_trunc_thr(trunc_thr)
 	simulator.set_model_trunc_significance(model_trunc_zmin)
+	simulator.truncate_models(enable_model_truncation)
+
 	simulator.set_npixels_min(npixels_min)
 	simulator.set_map_filename(outputfile)
 	simulator.set_model_filename(mask_outputfile)
