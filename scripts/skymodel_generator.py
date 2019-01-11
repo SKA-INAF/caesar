@@ -361,7 +361,7 @@ class SkyMapSimulator(object):
 		""" Set the minimum number of pixels for a generated source"""
 		self.npixels_min= value
 
-	def truncate_models(self,choice):
+	def enable_model_truncation(self,choice):
 		""" Enable/disable continuous model truncation (gaussian, airy disk, ...) """
 		self.truncate_models= choice
 
@@ -1314,7 +1314,7 @@ def main():
 
 	simulator.set_model_trunc_thr(trunc_thr)
 	simulator.set_model_trunc_significance(model_trunc_zmin)
-	simulator.truncate_models(truncate_models)
+	simulator.enable_model_truncation(truncate_models)
 
 	simulator.set_npixels_min(npixels_min)
 	simulator.set_map_filename(outputfile)
