@@ -766,13 +766,13 @@ class SkyMapSimulator(object):
 			#blob_data= self.generate_blob(ampl=S,x0=x0,y0=y0,sigmax=sigmax/self.pixsize,sigmay=sigmay/self.pixsize,theta=theta,trunc_thr=self.trunc_model_zmin)
 			blob_data= self.generate_blob(ampl=S,x0=x0,y0=y0,sigmax=sigmax/self.pixsize,sigmay=sigmay/self.pixsize,theta=theta,trunc_thr=self.trunc_thr)
 			t1 = time.time()
-			elapsed_read = t1-t0
+			elapsed_time = t1-t0
 
 			if blob_data is None:
 				print('Failed to generate blob (hint: too large trunc threshold), skip and regenerate...')
 				continue
 			
-			print ('INFO: Generated blob no. %s in %s (s)' % (str(index),str(elapsed)) )				
+			print ('INFO: Generated blob no. %s in %s (s)' % (str(index),str(elapsed_time)) )				
 
 			sources_data+= blob_data
 
@@ -790,13 +790,13 @@ class SkyMapSimulator(object):
 			t0 = time.time()
 			caesar_source= self.make_caesar_source(blob_data,source_name,source_id,source_type,Caesar.eBlobLike,ampl=S,x0=x0,y0=y0,source_max_scale=source_max_scale)
 			t1 = time.time()
-			elapsed_read = t1-t0
+			elapsed_time = t1-t0
 
 			if caesar_source is None:
 				print('Generate source has too few pixels, skip and regenerate...')
 				continue
 
-			print ('INFO: Make Caesar source %s from generated blob in %s (s)' % (source_name,str(elapsed)) )				
+			print ('INFO: Make Caesar source %s from generated blob in %s (s)' % (source_name,str(elapsed_time)) )				
 
 				
 			self.caesar_sources.append(caesar_source)
