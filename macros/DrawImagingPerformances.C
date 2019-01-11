@@ -183,8 +183,10 @@ int DrawImagingPerformances(std::string fileName){
 			double yerr_low= y-stats.Q1;
 			double yerr_up= stats.Q3-y;
 			double x= stats_x.median;
-			double xerr_low= x-stats_x.Q1;
-			double xerr_up= stats_x.Q3-x;
+			//double xerr_low= x-stats_x.Q1;
+			//double xerr_up= stats_x.Q3-x;
+			double xerr_low= 0;
+			double xerr_up= 0;
 			fluxAccuracy_compact->SetPoint(nPoints_compact,x,y);
 			fluxAccuracy_compact->SetPointError(nPoints_compact,xerr_low,xerr_up,yerr_low,yerr_up);
 			nPoints_compact++;
@@ -201,8 +203,10 @@ int DrawImagingPerformances(std::string fileName){
 			double yerr_low= y-stats.Q1;
 			double yerr_up= stats.Q3-y;
 			double x= stats_x.median;
-			double xerr_low= x-stats_x.Q1;
-			double xerr_up= stats_x.Q3-x;
+			//double xerr_low= x-stats_x.Q1;
+			//double xerr_up= stats_x.Q3-x;
+			double xerr_low= 0;
+			double xerr_up= 0;
 			fluxAccuracy_extended->SetPoint(nPoints_extended,x,y);
 			fluxAccuracy_extended->SetPointError(nPoints_extended,xerr_low,xerr_up,yerr_low,yerr_up);
 			nPoints_extended++;
@@ -219,8 +223,10 @@ int DrawImagingPerformances(std::string fileName){
 			double yerr_low= y-stats.Q1;
 			double yerr_up= stats.Q3-y;
 			double x= stats_x.median;
-			double xerr_low= x-stats_x.Q1;
-			double xerr_up= stats_x.Q3-x;
+			//double xerr_low= x-stats_x.Q1;
+			//double xerr_up= stats_x.Q3-x;
+			double xerr_low= 0;
+			double xerr_up= 0;
 			fluxAccuracy_compactextended->SetPoint(nPoints_compactextended,x,y);
 			fluxAccuracy_compactextended->SetPointError(nPoints_compactextended,xerr_low,xerr_up,yerr_low,yerr_up);
 			nPoints_compactextended++;
@@ -233,6 +239,7 @@ int DrawImagingPerformances(std::string fileName){
 	//==          DRAW PLOTS
 	//===============================================	
 	gROOT->SetStyle("myStyle2");
+	gStyle->SetPadRightMargin(0.05);
 	double fluxRatio_min= -10;
 	double fluxRatio_max= 10;
 
@@ -313,12 +320,13 @@ int DrawImagingPerformances(std::string fileName){
 	refLine_fluxAccuracy->Draw("same");
 
 	//### All sources
-	TCanvas* FluxAccuracyPlot_all= new TCanvas("FluxAccuracyPlot_all","FluxAccuracyPlot_all",1000,800);
+	//TCanvas* FluxAccuracyPlot_all= new TCanvas("FluxAccuracyPlot_all","FluxAccuracyPlot_all",1000,800);
+	TCanvas* FluxAccuracyPlot_all= new TCanvas("FluxAccuracyPlot_all","FluxAccuracyPlot_all");
 	FluxAccuracyPlot_all->cd();
 
 	TH2D* FluxAccuracyPlotBkg_all= new TH2D("FluxAccuracyPlotBkg_all","",100,LgFluxBins[0]-0.5,LgFluxBins[LgFluxBins.size()-1]+0.5,100,fluxRatio_min,fluxRatio_max);
 	FluxAccuracyPlotBkg_all->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
-	FluxAccuracyPlotBkg_all->GetYaxis()->SetTitle("(S-S_{gen})/S_{gen}");
+	FluxAccuracyPlotBkg_all->GetYaxis()->SetTitle("#frac{S-S_{gen}}{S_{gen}}");
 	FluxAccuracyPlotBkg_all->SetStats(0);
 	FluxAccuracyPlotBkg_all->Draw();
 
@@ -344,23 +352,23 @@ int DrawImagingPerformances(std::string fileName){
 
 	fluxAccuracy_compact->SetMarkerSize(1.3);
 	fluxAccuracy_compact->SetMarkerStyle(8);
-	fluxAccuracy_compact->SetMarkerColor(kRed);
-	fluxAccuracy_compact->SetLineColor(kRed);
-	fluxAccuracy_compact->Draw("ep same");
+	fluxAccuracy_compact->SetMarkerColor(kBlack);
+	fluxAccuracy_compact->SetLineColor(kBlack);
+	fluxAccuracy_compact->Draw("PZ same");
 
 
-	fluxAccuracy_extended->SetMarkerSize(1.3);
+	fluxAccuracy_extended->SetMarkerSize(1.5);
 	fluxAccuracy_extended->SetMarkerStyle(21);
-	fluxAccuracy_extended->SetMarkerColor(kGreen+1);
-	fluxAccuracy_extended->SetLineColor(kGreen+1);
-	fluxAccuracy_extended->Draw("ep same");
+	fluxAccuracy_extended->SetMarkerColor(kBlack);
+	fluxAccuracy_extended->SetLineColor(kBlack);
+	fluxAccuracy_extended->Draw("PZ same");
 
 	
-	fluxAccuracy_compactextended->SetMarkerSize(1.3);
-	fluxAccuracy_compactextended->SetMarkerStyle(22);
-	fluxAccuracy_compactextended->SetMarkerColor(kBlue);
-	fluxAccuracy_compactextended->SetLineColor(kBlue);
-	fluxAccuracy_compactextended->Draw("ep same");
+	fluxAccuracy_compactextended->SetMarkerSize(1.7);
+	fluxAccuracy_compactextended->SetMarkerStyle(26);
+	fluxAccuracy_compactextended->SetMarkerColor(kBlack);
+	fluxAccuracy_compactextended->SetLineColor(kBlack);
+	fluxAccuracy_compactextended->Draw("PZ same");
 
 	refLine_fluxAccuracy->Draw("same");
 
@@ -368,9 +376,9 @@ int DrawImagingPerformances(std::string fileName){
 	FluxAccuracyPlotLegend_all->SetFillColor(0);
 	FluxAccuracyPlotLegend_all->SetTextSize(0.045);
 	FluxAccuracyPlotLegend_all->SetTextFont(52);
-	FluxAccuracyPlotLegend_all->AddEntry(fluxAccuracy_compact,"point-like","pl");
+	FluxAccuracyPlotLegend_all->AddEntry(fluxAccuracy_compact,"point","pl");
 	FluxAccuracyPlotLegend_all->AddEntry(fluxAccuracy_extended,"extended","pl");
-	FluxAccuracyPlotLegend_all->AddEntry(fluxAccuracy_compactextended,"extended+point-like","pl");
+	FluxAccuracyPlotLegend_all->AddEntry(fluxAccuracy_compactextended,"extended + point","pl");
 	FluxAccuracyPlotLegend_all->Draw("same");
 
 	

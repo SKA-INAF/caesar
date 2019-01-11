@@ -23,9 +23,11 @@ using namespace Caesar;
 //int bkgEstimator= eMedianClippedBkg;
 int bkgEstimator= eMedianBkg;
 int bkgBoxBeamFactor= 30;
+//int bkgBoxBeamFactor= 10;
 double bkgGridStepSize= 0.2;
 bool use2ndPass= true;
 bool skipOutliers= true;
+//bool skipOutliers= false;
 double seedThr= 5;
 double mergeThr= 2.5;
 int minPixels= 5;
@@ -145,8 +147,8 @@ int ComputeImagingPerformances(std::string _fileName,std::string _fileName_rec,b
 }//close macro
 
 
-int AnalyzeData(std::string fileName,std::string fileName_rec){
-
+int AnalyzeData(std::string fileName,std::string fileName_rec)
+{
 	filename= fileName;
 	filename_rec= fileName_rec;
 
@@ -174,6 +176,30 @@ int AnalyzeData(std::string fileName,std::string fileName_rec){
 	}
 	INFO_LOG("Beam area="<<beamArea<<", pixelWidthInBeam="<<pixelWidthInBeam);
 
+	//## Compute bkg map in reconstructed data
+	INFO_LOG("Computing image stats...");
+	img_rec->ComputeStats(true);
+
+	INFO_LOG("Computing image bkg");
+	double bkgBoxSize= pixelWidthInBeam*bkgBoxBeamFactor;
+	double bkgGridSize= bkgGridStepSize*bkgBoxSize;
+	ImgBkgData* bkgData= img_rec->ComputeBkg(
+		bkgEstimator,true,bkgBoxSize,bkgBoxSize,bkgGridSize,bkgGridSize,
+		use2ndPass,skipOutliers,seedThr,mergeThr,minPixels
+	);
+	if(!bkgData){
+		ERROR_LOG("Failed to compute rec image bkg!");
+		if(img_rec){
+			delete img_rec;
+			img_rec= 0;
+		}
+		return -1;
+	}
+	
+	//## Compute bkg stats
+	(bkgData->BkgMap)->ComputeStats(true);
+	BkgAvg= (bkgData->BkgMap)->GetPixelStats()->median;
+
 
 	//## Read true source data
 	//Open file with source collection
@@ -198,6 +224,126 @@ int AnalyzeData(std::string fileName,std::string fileName_rec){
 
 	Source* aSource= 0;
 	sourceDataTree->SetBranchAddress("Source",&aSource);
+
+
+	//Read sources
+	INFO_LOG("Reading #"<<sourceDataTree->GetEntries()<<" true sources in file "<<fileName<<"...");
+	for(int i=0;i<sourceDataTree->GetEntries();i++){
+		sourceDataTree->GetEntry(i);
+
+		if(i%100==0) INFO_LOG("#"<<i+1<<"/"<<sourceDataTree->GetEntries()<<" true sources read...");
+
+		//Get source data
+		Npix= aSource->GetNPixels();
+		SourceName= aSource->GetName();	
+		type= aSource->Type;
+		simtype= aSource->SimType;
+		int flag= aSource->Flag;
+		simmaxscale= aSource->SimMaxScale;
+		X0= aSource->X0;
+		Y0= aSource->Y0;
+		S= aSource->GetS();//in Jy/beam
+		Smax= aSource->GetSmax();
+		S_true= aSource->GetTrueFlux();
+		double beamIntegral= aSource->GetBeamFluxIntegral(); 
+		S_true_estimated= S/beamIntegral;//convert to Jy/pixel
+		std::vector<Pixel*> pixels= aSource->GetPixels();
+	
+		//Get rec source 
+		Source* rec_source= new Source;
+		Pixel* aPixel= 0;
+		std::vector<double> bkgValues;
+		S_bkg= 0;
+		for(size_t k=0;k<pixels.size();k++){	
+			long int gBin= pixels[k]->id;
+			long int ix= pixels[k]->ix;
+			long int iy= pixels[k]->iy;
+			double x= pixels[k]->x;
+			double y= pixels[k]->y;
+			double flux= img_rec->GetPixelValue(gBin);
+			double bkgLevel= (bkgData->BkgMap)->GetPixelValue(gBin);
+			double bkgRMS= (bkgData->NoiseMap)->GetPixelValue(gBin);
+			S_bkg+= bkgLevel;
+
+			bkgValues.push_back(bkgLevel);
+
+			aPixel= new Pixel(gBin,ix,iy,x,y,flux);
+			aPixel->SetBkg(bkgLevel,bkgRMS);
+			rec_source->AddPixel(aPixel);
+		}
+
+		//## Compute stats
+		DEBUG_LOG("Computing source stats...");
+		rec_source->ComputeStats();
+		
+		//## Compute morphology parameters
+		DEBUG_LOG("Computing blob morphology params...");
+		rec_source->ComputeMorphologyParams();
+
+		//Get rec source pars
+		Npix_rec= rec_source->GetNPixels();
+		X0_rec= rec_source->X0;
+		Y0_rec= rec_source->Y0;
+		S_rec= rec_source->GetS();
+		Smax_rec= rec_source->GetSmax();
+		S_bkg_mean= StatsUtils::GetMedianFast(bkgValues);		
+
+		//Correct flux from Jy/beam to Jy
+		if(correctRecFlux){
+			S_rec/= beamArea;
+			//Smax_rec/= beamArea;
+		}
+		
+		//Store/compare data
+		INFO_LOG("True source no. "<<i+1<<" (type="<<type<<", pos("<<X0<<","<<Y0<<"), S="<<S<<"), Rec source: pos("<<X0_rec<<","<<Y0_rec<<"), S_rec="<<S_rec<<", BkgAvg="<<BkgAvg<<", S_bkg="<<S_bkg<<")");
+		outputTree->Fill();
+
+		//Delete source
+		if(rec_source){
+			delete rec_source;
+			rec_source= 0;
+		}	
+
+	}//end loop sources
+
+	
+	//## Clear stuff
+	if(img_rec){
+		delete img_rec;
+		img_rec= 0;
+	}
+	if(bkgData){
+		delete bkgData;
+		bkgData= 0;
+	}
+	
+
+
+	/*
+	//## Read true source data
+	//Open file with source collection
+	TFile* inputFile= new TFile(fileName.c_str(),"READ");
+	if(!inputFile){
+		ERROR_LOG("Failed to open file "<<fileName<<"!");
+		return -1;
+	}
+
+	//Get access to source trees
+	INFO_LOG("Get access to source tree from file "<<fileName<<"...");
+	
+	TTree* sourceDataTree= (TTree*)inputFile->Get("SourceInfo");
+	if(!sourceDataTree || sourceDataTree->IsZombie()){
+		ERROR_LOG("Failed to get access to source tree in file "<<fileName<<"!");	
+		if(img_rec){
+			delete img_rec;
+			img_rec= 0;
+		}
+		return -1;
+	}
+
+	Source* aSource= 0;
+	sourceDataTree->SetBranchAddress("Source",&aSource);
+
 
 	//Read sources
 	std::vector<Source*> sources;
@@ -332,6 +478,7 @@ int AnalyzeData(std::string fileName,std::string fileName_rec){
 		delete bkgData;
 		bkgData= 0;
 	}
+	*/
 
 	return 0;
 
