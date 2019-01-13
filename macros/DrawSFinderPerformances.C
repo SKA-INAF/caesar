@@ -162,7 +162,7 @@ std::vector<double> LgFluxBins= {
 	-4.5,-4,-3.5,-3.25,-3,-2.75,-2.5,-2.25,-2,-1.75,-1.5,-1.25,-1,-0.5,0,1,2
 };
 std::vector<double> LgFluxBins_ext= {
-	-4.5,-4,-3.5,-3.25,-3,-2.75,-2.5,-2.25,-2,-1.75,-1.5,-1.25,-1,-0.5,0,1,2
+	-4.5,-3.5,-3,-2.5,-2,-1.5,-1,-0.5,0,1,2
 };
 
 //- Output file
@@ -522,6 +522,7 @@ void Init()
 	
 
 	int nBins= (int)(LgFluxBins.size()-1);
+	int nBins_ext= (int)(LgFluxBins_ext.size()-1);
 	int nBins_Z= (int)(Zbins.size()-1);
 	
 	//## Init data vector
@@ -542,7 +543,9 @@ void Init()
 		FluxDensityPullList_compact_fit_presel.push_back( std::vector<double>() );
 		FluxDensityPullList_compact_fit_cutsel.push_back( std::vector<double>() );
 		FluxDensityPullList_compact_fit_nnsel.push_back( std::vector<double>() );
-		
+	}
+
+	for(int i=0;i<nBins_ext;i++){
 		FluxList_ext.push_back( std::vector<double>() );
 		xPosPullList_ext.push_back( std::vector<double>() );
 		yPosPullList_ext.push_back( std::vector<double>() );
@@ -573,22 +576,22 @@ void Init()
 	NRecSourceHisto_compact_fit_nnsel->Sumw2();
 
 	histoName= "NTrueSourceHisto_ext";
-	NTrueSourceHisto_ext= new TH1D(histoName,"True extended source distribution",nBins,LgFluxBins.data());
+	NTrueSourceHisto_ext= new TH1D(histoName,"True extended source distribution",nBins_ext,LgFluxBins_ext.data());
 	NTrueSourceHisto_ext->Sumw2();
 
 	histoName= "NRecSourceHisto_ext";
-	NRecSourceHisto_ext= new TH1D(histoName,"Rec extended source distribution",nBins,LgFluxBins.data());
+	NRecSourceHisto_ext= new TH1D(histoName,"Rec extended source distribution",nBins_ext,LgFluxBins_ext.data());
 	NRecSourceHisto_ext->Sumw2();
 		
 	TH1D* histo= 0;
 	for(int k=0;k<nSimTypes;k++){
 		histoName= Form("NTrueSourceHisto_ext_simtype%d",k+1);
-		histo= new TH1D(histoName,histoName,nBins,LgFluxBins.data());
+		histo= new TH1D(histoName,histoName,nBins_ext,LgFluxBins_ext.data());
 		histo->Sumw2();
 		NTrueSourceHisto_simtypes_ext.push_back(histo);
 	
 		histoName= Form("NRecSourceHisto_ext_simtype%d",k+1);
-		histo= new TH1D(histoName,histoName,nBins,LgFluxBins.data());
+		histo= new TH1D(histoName,histoName,nBins_ext,LgFluxBins_ext.data());
 		histo->Sumw2();
 		NRecSourceHisto_simtypes_ext.push_back(histo);		
 	}//end loop simtypes
@@ -628,11 +631,11 @@ void Init()
 
 
 	histoName= "NTrueSourceHisto_reliability_ext";
-	NTrueSourceHisto_reliability_ext= new TH1D(histoName,"True extended source distribution",nBins,LgFluxBins.data());
+	NTrueSourceHisto_reliability_ext= new TH1D(histoName,"True extended source distribution",nBins_ext,LgFluxBins_ext.data());
 	NTrueSourceHisto_reliability_ext->Sumw2();
 		
 	histoName= "NRecSourceHisto_reliability_ext";
-	NRecSourceHisto_reliability_ext= new TH1D(histoName,"Rec extended source distribution",nBins,LgFluxBins.data());
+	NRecSourceHisto_reliability_ext= new TH1D(histoName,"Rec extended source distribution",nBins_ext,LgFluxBins_ext.data());
 	NRecSourceHisto_reliability_ext->Sumw2();
 
 	//- Pos accuracy graphs
@@ -834,6 +837,7 @@ void ComputeAnalysisHistos()
 	//Compute data list stats
 	int nMinPointsToDraw= 2;
 	int nBins= (int)(LgFluxBins.size()-1);
+	int nBins_ext= (int)(LgFluxBins_ext.size()-1);
 	int nPoints_xPull_fit= 0;
 	int nPoints_yPull_fit= 0;	
 	int nPoints_xPull_fit_presel= 0;
@@ -873,7 +877,7 @@ void ComputeAnalysisHistos()
 				xerr_low= 0;
 				xerr_up= 0;
 			}
-
+           
 			double posx_mean= 0;
 			double posx_rms= 0;
 			Caesar::StatsUtils::ComputeMeanAndRMS(posx_mean,posx_rms,xPosPullList_compact_fit[i]);
@@ -1453,6 +1457,15 @@ void ComputeAnalysisHistos()
 
 		
 
+		
+	}//end loop bins
+
+	//Fill graph for ext
+	for(int i=0;i<nBins_ext;i++){
+		double x_avg= LgFluxBins_ext[i] + 0.5*(LgFluxBins_ext[i+1]-LgFluxBins_ext[i]);
+
+
+
 		//Compute Flux accuracy for extended sources
 		if(FluxDensityPullList_ext[i].size()>=nMinPointsToDraw){
 			Caesar::BoxStats<double> stats= StatsUtils::ComputeBoxStats(FluxDensityPullList_ext[i]);
@@ -1512,8 +1525,7 @@ void ComputeAnalysisHistos()
 			nPoints_yPull_ext++;
 		}	
 
-
-	}//end loop bins
+	}//end loop bin ext 
 
 }//close ComputeAnalysisHistos()
 
@@ -2464,7 +2476,7 @@ void Draw(){
 		EfficiencyGraph_simtypes_ext[k]->SetMarkerSize(1.3);
 		EfficiencyGraph_simtypes_ext[k]->SetMarkerColor(SimTypeColors[k]);
 		EfficiencyGraph_simtypes_ext[k]->SetLineColor(SimTypeColors[k]);
-		//EfficiencyGraph_simtypes_ext[k]->Draw("PLZ same");
+		EfficiencyGraph_simtypes_ext[k]->Draw("PLZ same");
 	}
 	
 	TLegend* EffPlotLegend_ext= new TLegend(0.6,0.7,0.7,0.8);
@@ -2472,7 +2484,7 @@ void Draw(){
 	EffPlotLegend_ext->SetTextSize(0.045);
 	EffPlotLegend_ext->SetTextFont(52);
 	EffPlotLegend_ext->AddEntry(EfficiencyGraph_ext,"all","PL");
-	//for(int k=0;k<nSimTypes;k++) EffPlotLegend_ext->AddEntry(EfficiencyGraph_simtypes_ext[k],SimTypeLabels[k].c_str(),"PL");
+	for(int k=0;k<nSimTypes;k++) EffPlotLegend_ext->AddEntry(EfficiencyGraph_simtypes_ext[k],SimTypeLabels[k].c_str(),"PL");
 	EffPlotLegend_ext->AddEntry(Eff_sigmaDetectionArea_ext,"5#sigma detection limit","F");
 	EffPlotLegend_ext->Draw("same");
 
