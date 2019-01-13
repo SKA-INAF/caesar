@@ -64,6 +64,7 @@ void ImgMetaData::Init()
 	BUnit= "";
 	Bmaj= 0; Bmin= 0; Bpa= 0;
 	Freq= 0; dFreq= 0; FreqRef= 0;
+	FreqUnit= "";
 	Epoch= 0;
 	m_wcsType= "";	
 
