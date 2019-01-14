@@ -215,6 +215,9 @@ do
 		--containerrun*)
     	RUN_IN_CONTAINER=true
     ;;
+		--containeroptions=*)
+    	CONTAINER_OPTIONS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
 
     *)
     # Unknown option
