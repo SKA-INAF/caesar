@@ -1728,7 +1728,8 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		if [ "$MPI_ENABLED" = true ]; then	
 			CMD="mpirun -np $NPROC_TOT $MPI_OPTIONS "
 			if [ "$HOSTFILE_GIVEN" = true ] ; then
-				CMD="$CMD -f $HOSTFILE "
+				##CMD="$CMD -f $HOSTFILE "
+				CMD="$CMD -hostfile $HOSTFILE "
 			fi
 		fi
 		if [ "$RUN_IN_CONTAINER" = true ] ; then
@@ -1802,7 +1803,8 @@ else
 	if [ "$MPI_ENABLED" = true ]; then	
 		CMD="mpirun -np $NPROC_TOT $MPI_OPTIONS "
 		if [ "$HOSTFILE_GIVEN" = true ] ; then
-			CMD="$CMD -f $HOSTFILE "
+			##CMD="$CMD -f $HOSTFILE "
+			CMD="$CMD -hostfile $HOSTFILE "
 		fi
 	fi
 
