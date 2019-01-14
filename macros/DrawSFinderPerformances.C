@@ -2476,7 +2476,7 @@ void Draw(){
 		EfficiencyGraph_simtypes_ext[k]->SetMarkerSize(1.3);
 		EfficiencyGraph_simtypes_ext[k]->SetMarkerColor(SimTypeColors[k]);
 		EfficiencyGraph_simtypes_ext[k]->SetLineColor(SimTypeColors[k]);
-		EfficiencyGraph_simtypes_ext[k]->Draw("PLZ same");
+		//EfficiencyGraph_simtypes_ext[k]->Draw("PLZ same");
 	}
 	
 	TLegend* EffPlotLegend_ext= new TLegend(0.6,0.7,0.7,0.8);
@@ -2484,7 +2484,7 @@ void Draw(){
 	EffPlotLegend_ext->SetTextSize(0.045);
 	EffPlotLegend_ext->SetTextFont(52);
 	EffPlotLegend_ext->AddEntry(EfficiencyGraph_ext,"all","PL");
-	for(int k=0;k<nSimTypes;k++) EffPlotLegend_ext->AddEntry(EfficiencyGraph_simtypes_ext[k],SimTypeLabels[k].c_str(),"PL");
+	//for(int k=0;k<nSimTypes;k++) EffPlotLegend_ext->AddEntry(EfficiencyGraph_simtypes_ext[k],SimTypeLabels[k].c_str(),"PL");
 	EffPlotLegend_ext->AddEntry(Eff_sigmaDetectionArea_ext,"5#sigma detection limit","F");
 	EffPlotLegend_ext->Draw("same");
 
