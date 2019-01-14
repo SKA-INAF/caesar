@@ -51,6 +51,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--submit - Submit the script to the batch system using queue specified"
 	echo "--containerrun - Run inside Caesar container"
 	echo "--containerimg=[CONTAINER_IMG] - Singularity container image file (.simg) with CAESAR installed software"
+	echo "--containeroptions=[CONTAINER_OPTIONS] - Options to be passed to container run (e.g. -B /home/user:/home/user) (default=none)"
 	echo "--queue=[BATCH_QUEUE] - Name of queue in batch system"
 	echo "--jobwalltime=[JOB_WALLTIME] - Job wall time in batch system (default=96:00:00)"
 	echo "--jobmemory=[JOB_MEMORY] - Memory in GB required for the job (default=4)"
@@ -98,6 +99,10 @@ JOB_WALLTIME="96:00:00"
 JOB_MEMORY="4"
 JOB_USER_GROUP=""
 JOB_USER_GROUP_OPTION=""
+
+CONTAINER_IMG=""
+CONTAINER_OPTIONS=""
+RUN_IN_CONTAINER=false
 
 for item in "$@"
 do
@@ -435,7 +440,7 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		## Define executable & args variables and generate script
 		shfile="Rec_$filename_base_noext"'-RUN'"$index.sh"
 		if [ "$RUN_IN_CONTAINER" = true ] ; then
-			EXE="singularity run --app imaging $CONTAINER_IMG"
+			EXE="singularity run $CONTAINER_OPTIONS --app imaging $CONTAINER_IMG"
 		else
 			EXE="$CASAPATH/bin/casa --nologger --log2term --nogui -c $CAESAR_SCRIPTS_DIR/imaging_observation.py"
 		fi
@@ -510,7 +515,7 @@ else
 	shfile="Rec_$filename_base_noext"'.sh'
 
 	if [ "$RUN_IN_CONTAINER" = true ] ; then
-		EXE="singularity run --app imaging $CONTAINER_IMG"
+		EXE="singularity run $CONTAINER_OPTIONS --app imaging $CONTAINER_IMG"
 	else
 		EXE="$CASAPATH/bin/casa --nologger --log2term --nogui -c $CAESAR_SCRIPTS_DIR/imaging_observation.py"
 	fi
