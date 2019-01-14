@@ -63,6 +63,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--startid=[START_ID] - Run start id (default: 1)"
 	echo "--containerrun - Run inside Caesar container"
 	echo "--containerimg=[CONTAINER_IMG] - Singularity container image file (.simg) with CAESAR installed software"
+	echo "--containeroptions=[CONTAINER_OPTIONS] - Options to be passed to container run (e.g. -B /home/user:/home/user) (default=none)"
 	echo "--with-graphics - Enable graphics in simobserve. NB: Container run crashes with CASA graphics enabled (default=disabled)" 
 	echo ""
 
@@ -95,6 +96,7 @@ SOURCE_GEN_MARGIN_SIZE=0
 GEN_SOURCES=true
 GEN_EXT_SOURCES=false
 CONTAINER_IMG=""
+CONTAINER_OPTIONS=""
 RUN_IN_CONTAINER=false
 BMAJ=9.8
 BMIN=5.8
@@ -297,6 +299,9 @@ do
 		--containerrun*)
     	RUN_IN_CONTAINER=true
     ;;
+		--containeroptions=*)
+    	CONTAINER_OPTIONS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
 		
 		--with-graphics*)
     	GRAPHICS_FLAG="--graphics"
@@ -482,7 +487,7 @@ for ((index=1; index<=$NRUNS; index=$index+1))
     echo 'cd $JOBDIR'
 
 		if [ "$RUN_IN_CONTAINER" = true ] ; then
-			echo 'EXE="'"singularity run --app skymodel $CONTAINER_IMG"'"'
+			echo 'EXE="'"singularity run $CONTAINER_OPTIONS --app skymodel $CONTAINER_IMG"'"'
 		else
 			echo 'EXE="'"$CAESAR_SCRIPTS_DIR/skymodel_generator.py"'"'
 		fi
@@ -504,7 +509,7 @@ for ((index=1; index<=$NRUNS; index=$index+1))
     echo 'cd $JOBDIR'
 
 		if [ "$RUN_IN_CONTAINER" = true ] ; then
-			echo 'EXE="'"singularity run --app simulation $CONTAINER_IMG"'"'
+			echo 'EXE="'"singularity run $CONTAINER_OPTIONS --app simulation $CONTAINER_IMG"'"'
 		else
 			echo 'EXE="'"$CASAPATH/bin/casa --nologger --log2term --nogui -c $CAESAR_SCRIPTS_DIR/simulate_observation.py"'"'
 		fi
