@@ -3988,7 +3988,7 @@ int SFinder::GatherTaskDataFromWorkers()
 			}
   
 			//## Probe for an incoming message from process zero
-			INFO_LOG("Probing for message from process "<<i<<"...");
+			DEBUG_LOG("Probing for message from process "<<i<<"...");
     	MPI_Status status;
 
 			if(MPI_Probe(i, MSG_TAG, MPI_COMM_WORLD, &status)==MPI_SUCCESS){
@@ -4044,7 +4044,7 @@ int SFinder::GatherTaskDataFromWorkers()
 		}
 
 		//## Send buffer to master processor	
-		INFO_LOG("Sending task data to master process (msg: "<<msg<<", size="<<msg_size<<")...");
+		DEBUG_LOG("Sending task data to master process (msg: "<<msg<<", size="<<msg_size<<")...");
 		MPI_Send((void*)(msg),msg_size, MPI_CHAR, MASTER_ID, MSG_TAG, MPI_COMM_WORLD);
 
 		//## Free buffer
