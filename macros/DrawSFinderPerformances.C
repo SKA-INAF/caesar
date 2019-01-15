@@ -1999,7 +1999,6 @@ int AnalyzeData(std::string filename){
 		double X_i= X0_true;
 		double Y_i= Y0_true;
 		
-
 		//Skip if source is at edge?	
 		bool atEdgeX= (X_i<opt.sourceRegionXMin || X_i>opt.sourceRegionXMax);
 		bool atEdgeY= (Y_i<opt.sourceRegionYMin || Y_i>opt.sourceRegionYMax);
@@ -2221,36 +2220,89 @@ int AnalyzeData(std::string filename){
 	}//end loop rec sources
 
 
+	
+	//============================================================
+	//===       SELECT TRUE EXTENDED SOURCES
+	//============================================================	
+	//Select true point-like sources to be included in the analysis?
+	std::vector<bool> trueExtSourceSelectionFlags(ExtSourceMatchInfo->GetEntries(),true);
+	std::map<std::string,bool> trueExtSourceSelectionFlagMap;
+	
+	//Init flags
+	for(int i=0;i<ExtSourceMatchInfo->GetEntries();i++){
+		ExtSourceMatchInfo->GetEntry(i);		
+		std::string sourceName_i= *Name_true;
+	
+		trueExtSourceSelectionFlags[i]= true;
+		trueExtSourceSelectionFlagMap[sourceName_i]= true;
+	}//end loop sources
+
+	//Set flags
+	for(int i=0;i<ExtSourceMatchInfo->GetEntries();i++){
+		//Get true source data
+		ExtSourceMatchInfo->GetEntry(i);		
+		std::string sourceName_i= *Name_true;
+		int sourceType_i= Type_true;
+		double X_i= X0_true;
+		double Y_i= Y0_true;
+		
+		//Skip if source is at edge?	
+		bool atEdgeX= (X_i<opt.sourceRegionXMin || X_i>opt.sourceRegionXMax);
+		bool atEdgeY= (Y_i<opt.sourceRegionYMin || Y_i>opt.sourceRegionYMax);
+		bool atEdge= (atEdgeX || atEdgeY);
+		if(opt.excludeSourceAtEdge && atEdge) {
+			INFO_LOG("Skipping true extended source "<<sourceName_i<<" at pos("<<X_i<<","<<Y_i<<") as found at border...");
+			trueExtSourceSelectionFlags[i]= false;
+			trueExtSourceSelectionFlagMap[sourceName_i]= false;
+			continue;		
+		}
+
+	}//end loop sources
+
 	//============================================================
 	//===    COMPUTE EXTENDED SOURCE FINDING EFFICIENCY
 	//============================================================	
 	//Loop over source entries
 	int nTrueSources_ext= 0;
+	int nRecSources_ext= 0;
+	std::vector<int> nTrueSources_simtypes_ext(SimTypeLabels.size(),0);
+	std::vector<int> nRecSources_simtypes_ext(SimTypeLabels.size(),0);
+ 
 	for(int i=0;i<ExtSourceMatchInfo->GetEntries();i++){
 		ExtSourceMatchInfo->GetEntry(i);		
 
-		//Fill true info
+		//Get source info
+		std::string sourceName_true= *Name_true;
 		double fluxDensity_true= S/beamArea_true;
 		double lgFlux_true= log10(fluxDensity_true);
-
 		double nBeams_true= (double)(NPix)/beamArea_true;
 		double Z_true= fluxDensity_true/(opt.noiseLevel_true*sqrt(nBeams_true));
 		//double Z_true= fluxDensity_true/(AvgRMS*sqrt(nBeams_true));
 		
+		//Apply selection cuts to true source
+		//- Skip true source if overlapping with another true source
+		if(!trueExtSourceSelectionFlags[i]) {
+			INFO_LOG("Skipping true extended source "<<sourceName_true<<" as not passing selection cuts...");
+			continue;
+		}		
+
+		//Fill true info
 		int gBin= NTrueSourceHisto_ext->FindBin(lgFlux_true);
 		if(NTrueSourceHisto_ext->IsBinUnderflow(gBin) || NTrueSourceHisto_ext->IsBinOverflow(gBin)) continue;	
 		NTrueSourceHisto_ext->Fill(lgFlux_true,1);
-		//NTrueSourceVSSignificanceHisto_ext->Fill(Z_true,1);
 		
 		int simtype_index= SimTypeToIndexMap[SimType_true];
 		NTrueSourceHisto_simtypes_ext[simtype_index]->Fill(lgFlux_true,1);
 		
 		nTrueSources_ext++;
+		nTrueSources_simtypes_ext[simtype_index]++;
 
 		//Skip if true source is not detected
 		if(found==0) continue;
 
 		//Fill rec info	
+		nRecSources_ext++;
+		nRecSources_simtypes_ext[simtype_index]++;
 		NRecSourceHisto_ext->Fill(lgFlux_true,1);
 		//NRecSourceVSSignificanceHisto_ext->Fill(Z_true,1);
 		NRecSourceHisto_simtypes_ext[simtype_index]->Fill(lgFlux_true,1);
@@ -2272,7 +2324,10 @@ int AnalyzeData(std::string filename){
 						
 	}//end loop sources
 
-	INFO_LOG("Selected "<<nTrueSources_ext<<"/"<<ExtSourceMatchInfo->GetEntries()<<" true extended sources for analysis...");
+	INFO_LOG("Detected "<<nRecSources_ext<<"/"<<nTrueSources_ext<<" selected (tot="<<ExtSourceMatchInfo->GetEntries()<<") true extended sources for analysis...");
+	for(size_t k=0;k<nTrueSources_simtypes_ext.size();k++){
+		INFO_LOG("Sim source type "<<SimTypeLabels[k]<<": detected/selected="<<nRecSources_simtypes_ext[k]<<"/"<<nTrueSources_simtypes_ext[k]);
+	}//end loop sim types
 
 	//============================================================
 	//===    COMPUTE EXTENDED SOURCE FINDING RELIABILITY
@@ -2324,6 +2379,8 @@ void Draw(){
 	double xMax_draw= 0.5;
 	double ZMin_draw= Zbins[0];
 	double ZMax_draw= Zbins[Zbins.size()-1];
+	double xMin_ext_draw= -4;
+	double xMax_ext_draw= 2;
 
 	//double zThr= 5;//(S-bkg)/noise= S/noise-bkg/noise= 5
 	//double SNThr= zThr + bkgLevel_true/noiseLevel_true;
@@ -2429,12 +2486,12 @@ void Draw(){
 	TCanvas* EffPlot_ext= new TCanvas("EffPlot_ext","EffPlot_ext");
 	EffPlot_ext->cd();
 
-	TH2D* EffPlotBkg_ext= new TH2D("EffPlotBkg_ext","",100,xMin_draw,xMax_draw,100,0,1.2);
+	TH2D* EffPlotBkg_ext= new TH2D("EffPlotBkg_ext","",100,xMin_ext_draw,xMax_ext_draw,100,0,1.1);
 	EffPlotBkg_ext->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
 	EffPlotBkg_ext->GetYaxis()->SetTitle("Completeness");
 	EffPlotBkg_ext->Draw();
 
-	double Eff_detectionAreaX_ext[]= {xMin_draw,log10(5*opt.noiseLevel_true)};
+	double Eff_detectionAreaX_ext[]= {xMin_ext_draw,log10(5*opt.noiseLevel_true)};
 	double Eff_detectionAreaY_ext[]= {0,0};
 
 	TGraph* Eff_sigmaDetectionArea_ext = new TGraph(2,Eff_detectionAreaX,Eff_detectionAreaY);
@@ -2650,20 +2707,53 @@ void Draw(){
 
 
 	//Extended
+	double minReliabilityX_ext_draw= -4;
+	double maxReliabilityX_ext_draw= 2;
+
 	TCanvas* ReliabilityPlot_ext= new TCanvas("ReliabilityPlot_ext","ReliabilityPlot_ext");
 	ReliabilityPlot_ext->cd();
 
-	TH2D* ReliabilityPlotBkg_ext= new TH2D("ReliabilityPlotBkg_ext","",100,xMin_draw,xMax_draw,100,0,1.2);
+	TH2D* ReliabilityPlotBkg_ext= new TH2D("ReliabilityPlotBkg_ext","",100,minReliabilityX_ext_draw,maxReliabilityX_ext_draw,100,0,1.1);
 	ReliabilityPlotBkg_ext->GetXaxis()->SetTitle("log_{10}(S_{rec}/Jy)");
 	ReliabilityPlotBkg_ext->GetYaxis()->SetTitle("Reliability");
 	ReliabilityPlotBkg_ext->Draw();
 
-	Reliability_ext->SetMarkerStyle(8);
-	Reliability_ext->SetMarkerColor(kBlack);
-	Reliability_ext->SetLineColor(kBlack);
-	Reliability_ext->Draw("p same");
+	TGraphAsymmErrors* ReliabilityGraph_ext= Reliability_ext->CreateGraph();
+	if(!opt.drawErrorX){
+		int pointCounter= 0;
+		int N= ReliabilityGraph_ext->GetN();
+		for(int i=0;i<N;i++){
+			
+			double x, y;
+			ReliabilityGraph_ext->GetPoint(pointCounter,x,y);
+			if(x<minReliabilityX_ext_draw || x>maxReliabilityX_ext_draw) {
+				ReliabilityGraph_ext->RemovePoint(pointCounter);
+				continue;
+			}
+
+			double yerr_low= ReliabilityGraph_ext->GetErrorYlow(pointCounter);
+			double yerr_up= ReliabilityGraph_ext->GetErrorYhigh(pointCounter);
+			if(yerr_low>maxReliabilityErr){
+				ReliabilityGraph_ext->SetPointEYlow(pointCounter,0);
+			}			
+			if(yerr_up>maxReliabilityErr){
+				ReliabilityGraph_ext->SetPointEYhigh(pointCounter,0);
+			}
 	
-	detectionThrLine->Draw("l");
+			ReliabilityGraph_ext->SetPointEXhigh(pointCounter,0);
+			ReliabilityGraph_ext->SetPointEXlow(pointCounter,0);	
+			pointCounter++;	
+
+		}//end loop graph points
+	}//close if
+
+	ReliabilityGraph_ext->SetMarkerStyle(8);
+	ReliabilityGraph_ext->SetMarkerSize(1.3);
+	ReliabilityGraph_ext->SetMarkerColor(kBlack);
+	ReliabilityGraph_ext->SetLineColor(kBlack);
+	ReliabilityGraph_ext->Draw("PZL same");
+	
+	//detectionThrLine->Draw("l");
 
 	
 
