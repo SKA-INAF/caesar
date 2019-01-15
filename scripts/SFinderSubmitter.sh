@@ -1037,8 +1037,8 @@ do
 
     *)
     # Unknown option
-    echo "WARN: Unknown option ($item)...ignored!"
-    #exit 1
+    echo "ERROR: Unknown option ($item)...exit!"
+    exit 1
     ;;
 	esac
 done
