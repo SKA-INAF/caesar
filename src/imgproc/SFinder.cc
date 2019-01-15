@@ -338,6 +338,13 @@ void SFinder::InitOptions()
 	sourceFitTime_min= 0;	
 	sourceFitTime_max= 0;	
 	sourceFitTime_sum= 0;		
+	
+	mergeTaskSourceTime= 0;
+	mergeTaskSourceTime_min= 0;	
+	mergeTaskSourceTime_max= 0;	
+	mergeTaskSourceTime_sum= 0;
+	workerDataCollectTime= 0;	
+	mergeEdgeSourceTime= 0;	
 	saveTime= 0;
 	virtMemPeak= 0;
 	virtMemPeak_min= 0;
@@ -453,7 +460,13 @@ int SFinder::Init()
 		m_PerfTree->Branch("extsfinder_min",&extendedSourceTime_min,"extsfinder_min/D");
 		m_PerfTree->Branch("extsfinder_max",&extendedSourceTime_max,"extsfinder_max/D");
 		m_PerfTree->Branch("extsfinder_sum",&extendedSourceTime_sum,"extsfinder_sum/D");
-		
+		m_PerfTree->Branch("datacollect",&workerDataCollectTime,"datacollect/D");
+		m_PerfTree->Branch("mergetasksources",&mergeTaskSourceTime,"mergetasksources/D");
+		m_PerfTree->Branch("mergetasksources_min",&mergeTaskSourceTime_min,"mergetasksources_min/D");
+		m_PerfTree->Branch("mergetasksources_max",&mergeTaskSourceTime_max,"mergetasksources_max/D");
+		m_PerfTree->Branch("mergetasksources_sum",&mergeTaskSourceTime_sum,"mergetasksources_sum/D");
+		m_PerfTree->Branch("mergeedgesources",&mergeEdgeSourceTime,"mergeedgesources/D");
+
 		m_PerfTree->Branch("virtMemPeak",&virtMemPeak,"virtMemPeak/D");
 		m_PerfTree->Branch("virtMemPeak_min",&virtMemPeak_min,"virtMemPeak_min/D");
 		m_PerfTree->Branch("virtMemPeak_max",&virtMemPeak_max,"virtMemPeak_max/D");
@@ -894,11 +907,15 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 	//== Merge task sources
 	//============================
 	if(!stopTask && m_mergeSources){
-		INFO_LOG("Merging task sources ...");
+		INFO_LOG("Merging task sources ...");	
+		auto t0_smerge = chrono::steady_clock::now();	
+
 		if(MergeTaskSources(taskImg,bkgData,taskData)<0){
 			ERROR_LOG("Merging task sources failed!");
 			status= -1;
 		}
+		auto t1_smerge = chrono::steady_clock::now();	
+		mergeTaskSourceTime+= chrono::duration <double, milli> (t1_smerge-t0_smerge).count();
 	}
 
 	//============================
@@ -1021,10 +1038,14 @@ int SFinder::Run()
 	#ifdef MPI_ENABLED
 	if(m_mpiEnabled){
 		INFO_LOG("Gathering task data from all workers...");
+	
+		auto t0_collect = chrono::steady_clock::now();
 		if(GatherTaskDataFromWorkers()<0){
 			ERROR_LOG("Gathering task data from workers failed!");
 			return -1;
 		}
+		auto t1_collect = chrono::steady_clock::now();
+		workerDataCollectTime= chrono::duration <double, milli> (t1_collect-t0_collect).count();
 	}
 	#endif
 
@@ -1050,10 +1071,13 @@ int SFinder::Run()
 		#endif
 		if(m_procId==MASTER_ID) {
 			INFO_LOG("Merging sources find at tile edges by all workers...");
+			auto t0_smerge = chrono::steady_clock::now();
 			if(MergeSourcesAtEdge()<0){
 				ERROR_LOG("Merging sources at tile edges failed!");
 				return -1;
 			}
+			auto t1_smerge = chrono::steady_clock::now();
+			mergeEdgeSourceTime= chrono::duration <double, milli> (t1_smerge-t0_smerge).count();
 		}
 	}//close if merge sources at edges
 
@@ -3613,6 +3637,9 @@ void SFinder::PrintPerformanceStats()
 	INFO_LOG("source fitting (ms)= "<<sourceFitTime<<" ["<<sourceFitTime/totTime*100.<<"%], min/max/sum="<<sourceFitTime_min<<"/"<<sourceFitTime_max<<"/"<<sourceFitTime_sum);
 	INFO_LOG("img residual (ms)= "<<imgResidualTime<<" ["<<imgResidualTime/totTime*100.<<"%], min/max/sum="<<imgResidualTime_min<<"/"<<imgResidualTime_max<<"/"<<imgResidualTime_sum);
 	INFO_LOG("ext source finding (ms)= "<<extendedSourceTime<<" ["<<extendedSourceTime/totTime*100.<<"%], min/max/sum="<<extendedSourceTime_min<<"/"<<extendedSourceTime_max<<"/"<<extendedSourceTime_sum);
+	INFO_LOG("merge task sources (ms)= "<<mergeTaskSourceTime<<" ["<<mergeTaskSourceTime/totTime*100.<<"%], min/max/sum="<<mergeTaskSourceTime_min<<"/"<<mergeTaskSourceTime_max<<"/"<<mergeTaskSourceTime_sum);
+	INFO_LOG("data collect (ms)= "<<workerDataCollectTime<<" ["<<workerDataCollectTime/totTime*100.<<"%]");
+	INFO_LOG("merge edge sources (ms)= "<<mergeEdgeSourceTime<<" ["<<mergeEdgeSourceTime/totTime*100.<<"%]");
 	INFO_LOG("save (ms)= "<<saveTime<<" ["<<saveTime/totTime*100.<<"%]");
 	INFO_LOG("virtMemPeak (kB)= "<<virtMemPeak<<", min/max="<<virtMemPeak_min<<"/"<<virtMemPeak_max);
 	INFO_LOG("===========================");
@@ -3900,7 +3927,7 @@ int SFinder::PrepareWorkerTasks()
 int SFinder::GatherTaskDataFromWorkers()
 {
 	//## Put a barrier and collect all sources from workers in the master processor
-	MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Barrier(MPI_COMM_WORLD);	
 
 	//## Sum and average all the elapsed timers across workers 
 	INFO_LOG("Summing up and averaging he elapsed cpu timers across workers...");
@@ -3957,8 +3984,11 @@ int SFinder::GatherTaskDataFromWorkers()
 	MPI_Reduce(&extendedSourceTime, &extendedSourceTime_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
 	MPI_Reduce(&extendedSourceTime, &extendedSourceTime_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
 
-	
-	DEBUG_LOG("CPU times (ms): {init="<<initTime<<", read="<<readImageTime<<", stats="<<imageStatsTime<<", bkg="<<imageBkgTime<<", blobmask="<<blobMaskTime<<", blobfind="<<blobFindingTime<<", sourcefind="<<compactSourceTime<<", residual="<<imgResidualTime<<", sourcesel="<<sourceSelectionTime<<", extsourcefind="<<extendedSourceTime<<", sourceFitTime="<<sourceFitTime<<"}");
+	MPI_Reduce(&mergeTaskSourceTime, &mergeTaskSourceTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&mergeTaskSourceTime, &mergeTaskSourceTime_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&mergeTaskSourceTime, &mergeTaskSourceTime_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
+
+	DEBUG_LOG("CPU times (ms): {init="<<initTime<<", read="<<readImageTime<<", stats="<<imageStatsTime<<", bkg="<<imageBkgTime<<", blobmask="<<blobMaskTime<<", blobfind="<<blobFindingTime<<", sourcefind="<<compactSourceTime<<", residual="<<imgResidualTime<<", sourcesel="<<sourceSelectionTime<<", extsourcefind="<<extendedSourceTime<<", sourceFitTime="<<sourceFitTime<<", mergetasksources="<<mergeTaskSourceTime<<"}");
 
 	if (m_procId == MASTER_ID) {
 		//initTime= initTime_sum;
@@ -3972,7 +4002,7 @@ int SFinder::GatherTaskDataFromWorkers()
 		//imgResidualTime= imgResidualTime_sum;
 		//extendedSourceTime= extendedSourceTime_sum;
 		//sourceFitTime= sourceFitTime_sum;
-		DEBUG_LOG("Cumulative cpu times (ms): {init="<<initTime_sum<<", read="<<readImageTime_sum<<", stats="<<imageStatsTime_sum<<", bkg="<<imageBkgTime_sum<<", blobmask="<<blobMaskTime_sum<<", blobfind="<<blobFindingTime_sum<<", sourcefind="<<compactSourceTime_sum<<", residual="<<imgResidualTime_sum<<", sourcesel="<<sourceSelectionTime_sum<<", extsourcefind="<<extendedSourceTime_sum<<", sourceFitTime="<<sourceFitTime_sum);
+		DEBUG_LOG("Cumulative cpu times (ms): {init="<<initTime_sum<<", read="<<readImageTime_sum<<", stats="<<imageStatsTime_sum<<", bkg="<<imageBkgTime_sum<<", blobmask="<<blobMaskTime_sum<<", blobfind="<<blobFindingTime_sum<<", sourcefind="<<compactSourceTime_sum<<", residual="<<imgResidualTime_sum<<", sourcesel="<<sourceSelectionTime_sum<<", extsourcefind="<<extendedSourceTime_sum<<", sourceFitTime="<<sourceFitTime_sum<<", mergetasksources="<<mergeTaskSourceTime_sum);
 	}
 
 	//## Merge all sources found by workers in a unique collection
@@ -4077,6 +4107,7 @@ int SFinder::GatherTaskDataFromWorkers()
 	}//close if
 	*/
 
+	
 	return 0;
 
 }//close GatherTaskDataFromWorkers()

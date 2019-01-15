@@ -2344,7 +2344,30 @@ int AnalyzeData(std::string filename){
 		bool atEdgeX= (X0_rec<opt.sourceRegionXMin || X0_rec>opt.sourceRegionXMax);
 		bool atEdgeY= (Y0_rec<opt.sourceRegionYMin || Y0_rec>opt.sourceRegionYMax);
 		bool atEdge= (atEdgeX || atEdgeY);
-		//if(opt.excludeSourceAtEdge && atEdge) continue;
+		if(opt.excludeSourceAtEdge && atEdge) continue;
+
+		//- Skip if source has matches with excluded true sources
+		if(nTrueMatchedSources>0){
+			int nTrueSourceMatch_sel= 0;
+			std::vector<std::string> sourceNames_true_removed;
+			for(size_t k=0;k<Names_true->size();k++){
+				std::string sourceName_true= Names_true->at(k);
+				bool isTrueSourceSelected= trueExtSourceSelectionFlagMap[sourceName_true];
+				if(isTrueSourceSelected) nTrueSourceMatch_sel++;
+				else sourceNames_true_removed.push_back(sourceName_true);
+			}//end loop true source match
+
+			if(nTrueSourceMatch_sel<=0){
+				INFO_LOG("Skipping rec extended source "<<*Name_rec<<" as it matches with true sources that have been excluded from the analysis...");
+				continue;
+			}
+			if(nTrueSourceMatch_sel!=nTrueMatchedSources){
+				DEBUG_LOG("Removed "<<nTrueMatchedSources-nTrueSourceMatch_sel<<"/"<<nTrueMatchedSources<<" true extended sources from rec source "<<*Name_rec<<" as it matches with true sources that have been excluded from the analysis...");
+				for(size_t k=0;k<sourceNames_true_removed.size();k++){
+					DEBUG_LOG("True extended source removed="<<sourceNames_true_removed[k]);
+				}
+			}
+		}//close if
 
 		//Fill rec info
 		double lgFlux_rec= log10(fluxDensity_rec/beamArea_rec);
