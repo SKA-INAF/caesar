@@ -1035,11 +1035,10 @@ do
 			JOB_USER_GROUP_OPTION="#PBS -A $JOB_USER_GROUP"
 		;;
 
-
     *)
     # Unknown option
-    echo "ERROR: Unknown option ($item)...exit!"
-    exit 1
+    echo "WARN: Unknown option ($item)...ignored!"
+    #exit 1
     ;;
 	esac
 done
