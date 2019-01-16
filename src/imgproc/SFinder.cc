@@ -2971,7 +2971,7 @@ bool SFinder::IsFittableSource(Source* aSource)
 }//close IsFittableSource()
 
 
-int SFinder::FitSources(std::vector<Source*>& sources,bool redoFit)
+int SFinder::FitSources(std::vector<Source*>& sources)
 {
 	//Check given source list
 	if(sources.empty()){
@@ -3097,7 +3097,7 @@ int SFinder::FitSources(std::vector<Source*>& sources,bool redoFit)
 		bool hasFitInfo= sources[i]->HasFitInfo();
 		int fitStatus= sources[i]->GetFitStatus();
 		//if(hasFitInfo) continue;
-		if(fitStatus!=eFitUnknownStatus && !redoFit) continue;
+		if(fitStatus!=eFitUnknownStatus) continue;
 
 		//If source is non-fittable fit only nested components individually, otherwise perform a joint fit
 		bool isFittable= IsFittableSource(sources[i]);

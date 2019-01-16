@@ -239,7 +239,7 @@ class SFinder : public TObject {
 		/**
 		* \brief Fit sources. If redoFit=true fit is repeated even if source was previously fitted
 		*/
-		int FitSources(std::vector<Source*>& sources,bool redoFit=false);
+		int FitSources(std::vector<Source*>& sources);
 
 		#ifdef MPI_ENABLED
 			/**
