@@ -472,9 +472,22 @@ class Source : public Blob {
 		bool HasFitInfo(){return m_HasFitInfo;}
 
 		/**
+		* \brief Set Has fit info (for serialization scopes)
+		*/
+		void SetHasFitInfo(bool flag){m_HasFitInfo= flag;}
+
+		/**
 		* \brief Get fit pars
 		*/
 		SourceFitPars& GetFitPars(){return m_fitPars;}
+
+		/**
+		* \brief Set fit pars (for serialization scopes)
+		*/
+		void SetFitPars(SourceFitPars& fitPars){
+			m_fitPars= fitPars;
+			m_HasTrueInfo= true;
+		}
 
 		/**
 		* \brief Get integrated flux density

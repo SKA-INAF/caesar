@@ -100,7 +100,6 @@ SFinder::~SFinder(){
 	Clear();
 	INFO_LOG("Clearup completed...");
 	
-
 }//close destructor
 
 
@@ -338,7 +337,7 @@ void SFinder::InitOptions()
 	sourceFitTime_min= 0;	
 	sourceFitTime_max= 0;	
 	sourceFitTime_sum= 0;		
-	
+	edgeSourceFitTime= 0;
 	mergeTaskSourceTime= 0;
 	mergeTaskSourceTime_min= 0;	
 	mergeTaskSourceTime_max= 0;	
@@ -452,6 +451,7 @@ int SFinder::Init()
 		m_PerfTree->Branch("sfit_min",&sourceFitTime_min,"sfit_min/D");	
 		m_PerfTree->Branch("sfit_max",&sourceFitTime_max,"sfit_max/D");
 		m_PerfTree->Branch("sfit_sum",&sourceFitTime_sum,"sfit_sum/D");
+		m_PerfTree->Branch("sfit_edge",&edgeSourceFitTime,"sfit_edge/D");
 		m_PerfTree->Branch("imgres",&imgResidualTime,"imgres/D");
 		m_PerfTree->Branch("imgres_min",&imgResidualTime_min,"imgres_min/D");
 		m_PerfTree->Branch("imgres_max",&imgResidualTime_max,"imgres_max/D");
@@ -942,7 +942,7 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 			}
 		}
 		auto t1_sfit = chrono::steady_clock::now();	
-		sourceFitTime= chrono::duration <double, milli> (t1_sfit-t0_sfit).count();
+		sourceFitTime+= chrono::duration <double, milli> (t1_sfit-t0_sfit).count();
 	}
 
 	//============================
@@ -1088,9 +1088,9 @@ int SFinder::Run()
 	}
 
 
-	//============================
-	//== Fit sources
-	//============================
+	//==================================================================
+	//== Fit sources (not fitted in tasks, e.g. those merged at edges)
+	//==================================================================
 	if(m_fitSources && m_procId==MASTER_ID) {
 		auto t0_sfit = chrono::steady_clock::now();	
 		if(FitSources(m_SourceCollection)<0){
@@ -1098,7 +1098,7 @@ int SFinder::Run()
 			return -1;
 		}
 		auto t1_sfit = chrono::steady_clock::now();	
-		sourceFitTime+= chrono::duration <double, milli> (t1_sfit-t0_sfit).count();
+		edgeSourceFitTime+= chrono::duration <double, milli> (t1_sfit-t0_sfit).count();
 	}
 
 	//Stop timer
@@ -3086,6 +3086,8 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	fitOptions.blobMapThrFactor= m_NestedBlobThrFactor;
 	fitOptions.blobMapKernelFactor= m_nestedBlobKernFactor; 
 
+	long int nFittedSources= 0;
+
 	#ifdef OPENMP_ENABLED
 		#pragma omp parallel for if(fitInMultithread)
 	#endif
@@ -3104,6 +3106,9 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 			#else
 				INFO_LOG("Source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") fittable as a whole...");
 			#endif
+
+			nFittedSources++;
+
 			if(sources[i]->Fit(fitOptions)<0) {
 				WARN_LOG("Failed to fit source no. "<<i+1<<" (name="<<sources[i]->GetName()<<"), skip to next...");
 				continue;
@@ -3133,6 +3138,8 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	
 	}//end loop sources
 	
+	INFO_LOG("Fitted #"<<nFittedSources<<"/"<<sources.size()<<" sources at this stage...");
+
 	return 0;
 
 }//close FitSources()
@@ -3635,6 +3642,7 @@ void SFinder::PrintPerformanceStats()
 	INFO_LOG("source finding (ms)= "<<compactSourceTime<<" ["<<compactSourceTime/totTime*100.<<"%], min/max/sum="<<compactSourceTime_min<<"/"<<compactSourceTime_max<<"/"<<compactSourceTime_sum);
 	INFO_LOG("source selection (ms)= "<<sourceSelectionTime<<" ["<<sourceSelectionTime/totTime*100.<<"%], min/max/sum="<<sourceSelectionTime_min<<"/"<<sourceSelectionTime_max<<"/"<<sourceSelectionTime_sum);
 	INFO_LOG("source fitting (ms)= "<<sourceFitTime<<" ["<<sourceFitTime/totTime*100.<<"%], min/max/sum="<<sourceFitTime_min<<"/"<<sourceFitTime_max<<"/"<<sourceFitTime_sum);
+	INFO_LOG("edge source fitting (ms)= "<<edgeSourceFitTime<<" ["<<edgeSourceFitTime/totTime*100.<<"%]");
 	INFO_LOG("img residual (ms)= "<<imgResidualTime<<" ["<<imgResidualTime/totTime*100.<<"%], min/max/sum="<<imgResidualTime_min<<"/"<<imgResidualTime_max<<"/"<<imgResidualTime_sum);
 	INFO_LOG("ext source finding (ms)= "<<extendedSourceTime<<" ["<<extendedSourceTime/totTime*100.<<"%], min/max/sum="<<extendedSourceTime_min<<"/"<<extendedSourceTime_max<<"/"<<extendedSourceTime_sum);
 	INFO_LOG("merge task sources (ms)= "<<mergeTaskSourceTime<<" ["<<mergeTaskSourceTime/totTime*100.<<"%], min/max/sum="<<mergeTaskSourceTime_min<<"/"<<mergeTaskSourceTime_max<<"/"<<mergeTaskSourceTime_sum);

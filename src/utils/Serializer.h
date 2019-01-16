@@ -167,7 +167,7 @@ class Serializer : public TObject {
 		/**
 		* \brief Deserialize protobuf source fit pars object
 		*/
-		static int EncodeProtobufToSourceFitPars(SourceFitPars& sourceFitPars,CaesarPB::SourceFitPars& sourceFitPars_pb);
+		static int EncodeProtobufToSourceFitPars(SourceFitPars& sourceFitPars,const CaesarPB::SourceFitPars& sourceFitPars_pb);
 
 		//## WORKER DATA SERIALIZATION ###
 		/**

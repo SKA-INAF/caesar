@@ -382,6 +382,8 @@ class SFinder : public TObject {
 		double sourceFitTime_max;
 		double sourceFitTime_sum;
 
+		double edgeSourceFitTime;
+
 		double mergeTaskSourceTime;
 		double mergeTaskSourceTime_min;
 		double mergeTaskSourceTime_max;

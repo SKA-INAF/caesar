@@ -635,6 +635,8 @@ int Serializer::EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* sourc
 		source_pb.set_m_y0_true(y0_true);
 
 		//Set fit pars
+		source_pb.set_m_hasfitinfo(source->HasFitInfo());
+
 		SourceFitPars fitPars= source->GetFitPars();
 		CaesarPB::SourceFitPars* fitPars_pb= new CaesarPB::SourceFitPars;
 		if(EncodeSourceFitParsToProtobuf(*fitPars_pb,fitPars)<0){
@@ -1024,7 +1026,7 @@ int Serializer::EncodeProtobufToSourceComponentPars(SourceComponentPars& sourceC
 
 }//close EncodeProtobufToSourceComponentPars()
 
-int Serializer::EncodeProtobufToSourceFitPars(SourceFitPars& sourceFitPars,CaesarPB::SourceFitPars& sourceFitPars_pb)
+int Serializer::EncodeProtobufToSourceFitPars(SourceFitPars& sourceFitPars,const CaesarPB::SourceFitPars& sourceFitPars_pb)
 {
 	try {	
 		if(sourceFitPars_pb.has_ncomponents()) sourceFitPars.SetNComponents(sourceFitPars_pb.ncomponents());	
@@ -1094,7 +1096,21 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 		if(source_pb.has_m_hastrueinfo()) {
 			source.SetTrueInfo(source_pb.m_s_true(),source_pb.m_x0_true(),source_pb.m_y0_true());
 		}
-		
+
+		if(source_pb.has_m_hasfitinfo()){
+			const CaesarPB::SourceFitPars fitPars_pb= source_pb.m_fitpars();
+			Caesar::SourceFitPars fitPars;
+			int status= EncodeProtobufToSourceFitPars(fitPars,fitPars_pb);
+			if(status<0){
+				std::stringstream errMsg;
+				errMsg<<"Source fitpars encoding from protobuf failed!";
+				throw std::runtime_error(errMsg.str().c_str());
+			}
+			source.SetFitPars(fitPars);
+		}
+		else{
+			source.SetHasFitInfo(false);
+		}
 		
 		//Set blob fields
 		if(source_pb.has_blob()){
@@ -1128,6 +1144,8 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 			source.AddNestedSource(aNestedSource);
 		}//end loop nested source
 
+
+		
 
 	}//close try block
 	catch(std::exception const & e) {
