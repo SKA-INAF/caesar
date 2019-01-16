@@ -237,9 +237,9 @@ class SFinder : public TObject {
 		bool IsPointLikeSource(Source* aSource);
 
 		/**
-		* \brief Fit sources
+		* \brief Fit sources. If redoFit=true fit is repeated even if source was previously fitted
 		*/
-		int FitSources(std::vector<Source*>& sources);
+		int FitSources(std::vector<Source*>& sources,bool redoFit=false);
 
 		#ifdef MPI_ENABLED
 			/**

@@ -121,6 +121,7 @@ void Source::Copy(TObject &obj) const {
 
 	((Source&)obj).m_HasFitInfo= m_HasFitInfo;
 	((Source&)obj).m_fitPars= m_fitPars;
+	((Source&)obj).m_fitStatus= m_fitStatus;
 	
 	//Delete first a previously existing vector
 	for(unsigned int i=0;i<(((Source&)obj).m_NestedSources).size();i++){
@@ -174,6 +175,7 @@ void Source::Init(){
 
 	//Init fit info
 	m_HasFitInfo= false;
+	m_fitStatus= eFitUnknownStatus;
 
 }//close Init()
 
@@ -1199,11 +1201,14 @@ int Source::Fit(SourceFitOptions& fitOptions)
 	fitPars.Print();
 
 	int fitStatus= fitter.GetFitStatus();
-	if(fitStatus==SourceFitter::eFitConverged || fitStatus==SourceFitter::eFitConvergedWithWarns){
+	if(fitStatus==eFitConverged || fitStatus==eFitConvergedWithWarns){
 		INFO_LOG("Fit of source "<<this->GetName()<<" converged (status="<<fitStatus<<"), storing fit parameters...");	
 		m_fitPars= fitPars;
 		m_HasFitInfo= true;
 	}
+	
+	//Store latest fit status
+	m_fitStatus= fitStatus;
 
 	return 0;
 

@@ -490,6 +490,16 @@ class Source : public Blob {
 		}
 
 		/**
+		* \brief Get fit status
+		*/
+		int GetFitStatus(){return m_fitStatus;}
+
+		/**
+		* \brief Set fit status (for serialization scopes)
+		*/
+		void SetFitStatus(int fitStatus){m_fitStatus=fitStatus;}
+
+		/**
 		* \brief Get integrated flux density
 		*/
 		int GetFluxDensity(double& fluxDensity){
@@ -667,6 +677,7 @@ class Source : public Blob {
 		//Fit info
 		bool m_HasFitInfo;
 		SourceFitPars m_fitPars;
+		int m_fitStatus;
 
 		ClassDef(Source,1)
 

@@ -2167,6 +2167,7 @@ class SourceFitter : public TObject {
 		/**
 		* \brief Fit status enum flag
 		*/
+		/*
 		enum FitStatusFlag {
 			eFitUnknownStatus= 0,
 			eFitAborted= 1,
@@ -2174,6 +2175,7 @@ class SourceFitter : public TObject {
 			eFitConverged= 3,
 			eFitConvergedWithWarns= 4
 		};
+		*/
 
 		/**
 		* \brief Source fit data

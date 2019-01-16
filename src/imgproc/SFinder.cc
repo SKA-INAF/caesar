@@ -2971,7 +2971,7 @@ bool SFinder::IsFittableSource(Source* aSource)
 }//close IsFittableSource()
 
 
-int SFinder::FitSources(std::vector<Source*>& sources)
+int SFinder::FitSources(std::vector<Source*>& sources,bool redoFit)
 {
 	//Check given source list
 	if(sources.empty()){
@@ -3095,7 +3095,9 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 		//Skip if already fitted (e.g. in worker tasks)
 		//NB: If fitting is done in worker tasks only edge merged source are to be fitted at this stage
 		bool hasFitInfo= sources[i]->HasFitInfo();
-		if(hasFitInfo) continue;
+		int fitStatus= sources[i]->GetFitStatus();
+		//if(hasFitInfo) continue;
+		if(fitStatus!=eFitUnknownStatus && !redoFit) continue;
 
 		//If source is non-fittable fit only nested components individually, otherwise perform a joint fit
 		bool isFittable= IsFittableSource(sources[i]);
@@ -4160,16 +4162,24 @@ int SFinder::MergeTaskData()
 		int nUnknown= 0;
 		int nEdgeSources= 0;
 		int nSources= 0;
+		int nCompactSourcesWithFitInfo= 0;
+		int nCompactSourcesWithFitInfo_edge= 0;
+		 
+
 		for(size_t i=0;i<m_taskDataPerWorkers.size();i++){
 			for(size_t j=0;j<m_taskDataPerWorkers[i].size();j++){
 
 				//Process sources not at edge
 				for(size_t k=0;k<(m_taskDataPerWorkers[i][j]->sources).size();k++){
 					int sourceType= (m_taskDataPerWorkers[i][j]->sources)[k]->Type;
+					bool hasFitInfo= (m_taskDataPerWorkers[i][j]->sources)[k]->HasFitInfo();
 					if(sourceType==eCompact) nCompactSources++;
 					else if(sourceType==eExtended) nExtendedSources++;
 					else if(sourceType==ePointLike) nPointLikeSources++;
 					else nUnknown++;
+
+					if( (sourceType==ePointLike || sourceType==eCompact) && hasFitInfo ) nCompactSourcesWithFitInfo++;
+
 					nSources++;
 					m_SourceCollection.push_back( (m_taskDataPerWorkers[i][j]->sources)[k] );
 				}//end loop sources per task
@@ -4177,10 +4187,13 @@ int SFinder::MergeTaskData()
 				//Add edge sources not merged (if merging was not selected as option)
 				for(size_t k=0;k<(m_taskDataPerWorkers[i][j]->sources_edge).size();k++){
 					int sourceType= (m_taskDataPerWorkers[i][j]->sources_edge)[k]->Type;
+					bool hasFitInfo= (m_taskDataPerWorkers[i][j]->sources_edge)[k]->HasFitInfo();
 					if(sourceType==eCompact) nCompactSources++;
 					else if(sourceType==eExtended) nExtendedSources++;
 					else if(sourceType==ePointLike) nPointLikeSources++;
 					else nUnknown++;
+					if( (sourceType==ePointLike || sourceType==eCompact) && hasFitInfo ) nCompactSourcesWithFitInfo_edge++;
+
 					nSources++;
 					nEdgeSources++;
 					if(!m_mergeSourcesAtEdge) m_SourceCollection.push_back( (m_taskDataPerWorkers[i][j]->sources_edge)[k] );
@@ -4192,7 +4205,7 @@ int SFinder::MergeTaskData()
 		//Add merged sources at edge	
 		m_SourceCollection.insert(m_SourceCollection.end(),m_SourcesMergedAtEdges.begin(),m_SourcesMergedAtEdges.end());
 	
-		INFO_LOG("#"<<nSources<<" sources found in total (#"<<nCompactSources<<" compact, #"<<nPointLikeSources<<" point-like, #"<<nExtendedSources<<" extended, #"<<nUnknown<<" unknown/unclassified, #"<<nEdgeSources<<" edge sources, #"<<m_SourcesMergedAtEdges.size()<<" merged at edges), #"<<m_SourceCollection.size()<<" sources added to collection ...");
+		INFO_LOG("#"<<nSources<<" sources found in total (#"<<nCompactSources<<" compact, #"<<nPointLikeSources<<" point-like (#"<<nCompactSourcesWithFitInfo<<" fit ok), #"<<nExtendedSources<<" extended, #"<<nUnknown<<" unknown/unclassified, #"<<nEdgeSources<<" edge sources (#"<<nCompactSourcesWithFitInfo_edge<<" fit ok), #"<<m_SourcesMergedAtEdges.size()<<" merged at edges), #"<<m_SourceCollection.size()<<" sources added to collection ...");
 		
 	}//close if
 
