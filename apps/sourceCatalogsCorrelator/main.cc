@@ -497,7 +497,7 @@ bool FindPointSourceMatch(int source_true_index)
 	AvgBkg= 0;
 	AvgRMS= 0;
 	HasFitInfo= 0;
-	FitStatus= SourceFitter::eFitUnknownStatus;
+	FitStatus= eFitUnknownStatus;
 	S_fit= -1;
 	X0_fit= -1;
 	Y0_fit= -1;
