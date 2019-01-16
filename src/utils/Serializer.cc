@@ -636,6 +636,7 @@ int Serializer::EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* sourc
 
 		//Set fit pars
 		source_pb.set_m_hasfitinfo(source->HasFitInfo());
+		source_pb.set_m_fitstatus(source->GetFitStatus());
 
 		SourceFitPars fitPars= source->GetFitPars();
 		CaesarPB::SourceFitPars* fitPars_pb= new CaesarPB::SourceFitPars;
@@ -1111,6 +1112,8 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 		else{
 			source.SetHasFitInfo(false);
 		}
+
+		if(source_pb.has_m_fitstatus()) source.SetFitStatus(source_pb.m_fitstatus());
 		
 		//Set blob fields
 		if(source_pb.has_blob()){
