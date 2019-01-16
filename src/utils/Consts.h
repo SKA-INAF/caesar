@@ -251,6 +251,17 @@ enum FitMinimizer {
 	eMINIMIZE= 5
 };
 
+/**
+* \brief Fit status enum flag
+*/
+enum SourceFitStatus {
+	eFitUnknownStatus= 0,
+	eFitAborted= 1,
+	eFitNotConverged= 2,
+	eFitConverged= 3,
+	eFitConvergedWithWarns= 4
+};
+
 #ifdef __MAKECINT__
 #pragma link C++ enum WCSType+;
 #pragma link C++ enum ImgFilters+;
