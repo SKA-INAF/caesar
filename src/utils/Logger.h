@@ -391,7 +391,7 @@ class ConsoleLogger : public Logger {
 			log4cxx::MDC::put("thread", threadid_str);
 	
 			//Define log layout
-			//cout<<"Creating log layout ..."<<endl;
+			cout<<"DEBUG: Creating log layout with this header info: {hostname="<<host<<", proc="<<procId<<", threadId="<<threadId<<"} ..."<<endl;
 
 			//layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d %-5p [%c] %m%n") );
 			//layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d %-5p %m%n") );
