@@ -679,7 +679,7 @@ class Source : public Blob {
 		SourceFitPars m_fitPars;
 		int m_fitStatus;
 
-		ClassDef(Source,1)
+		ClassDef(Source,2)
 
 	public:
 		
