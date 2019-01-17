@@ -3087,6 +3087,7 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	fitOptions.blobMapKernelFactor= m_nestedBlobKernFactor; 
 
 	long int nFittedSources= 0;
+	std::vector<std::string> fittedSourceNames;
 
 	#ifdef OPENMP_ENABLED
 		#pragma omp parallel for if(fitInMultithread)
@@ -3110,6 +3111,7 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 			#endif
 
 			nFittedSources++;
+			fittedSourceNames.push_back(sources[i]->GetName());
 
 			if(sources[i]->Fit(fitOptions)<0) {
 				WARN_LOG("Failed to fit source no. "<<i+1<<" (name="<<sources[i]->GetName()<<"), skip to next...");
@@ -3141,6 +3143,15 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	}//end loop sources
 	
 	INFO_LOG("Fitted #"<<nFittedSources<<"/"<<sources.size()<<" sources at this stage...");
+
+	//== DEBUG ==
+	std::stringstream ss;
+	ss<<"fitted sources {";
+	for(size_t i=0;i<fittedSourceNames.size();i++){
+		ss<<fittedSourceNames[i]<<",";
+	}
+	ss<<"}";
+	INFO_LOG(ss.str());
 
 	return 0;
 
