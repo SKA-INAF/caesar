@@ -4167,15 +4167,15 @@ int SFinder::MergeTaskData()
 		}//end loop workers
 
 		//Add sources
-		int nCompactSources= 0;
-		int nExtendedSources= 0;
-		int nPointLikeSources= 0;
-		int nUnknown= 0;
-		int nEdgeSources= 0;
-		int nSources= 0;
-		int nCompactSourcesWithFitInfo= 0;
-		int nCompactSourcesWithFitInfo_edge= 0;
-		 
+		long int nCompactSources= 0;
+		long int nExtendedSources= 0;
+		long int nPointLikeSources= 0;
+		long int nUnknown= 0;
+		long int nEdgeSources= 0;
+		long int nSources= 0;
+		long int nCompactSourcesWithFitInfo= 0;
+		long int nCompactSourcesWithFitInfo_edge= 0;
+		long int nSourcesFinal= 0;
 
 		for(size_t i=0;i<m_taskDataPerWorkers.size();i++){
 			for(size_t j=0;j<m_taskDataPerWorkers[i].size();j++){
@@ -4188,10 +4188,20 @@ int SFinder::MergeTaskData()
 					else if(sourceType==eExtended) nExtendedSources++;
 					else if(sourceType==ePointLike) nPointLikeSources++;
 					else nUnknown++;
-
 					if( (sourceType==ePointLike || sourceType==eCompact) && hasFitInfo ) nCompactSourcesWithFitInfo++;
 
+					//Reset source name (otherwise we have sources with same name coming from different workers)
+					(m_taskDataPerWorkers[i][j]->sources)[k]->SetId(nSourcesFinal);
+					(m_taskDataPerWorkers[i][j]->sources)[k]->SetName(Form("S%d",nSourcesFinal));
+					std::vector<Source*> nestedSources= (m_taskDataPerWorkers[i][j]->sources)[k]->GetNestedSources();
+					for(size_t l=0;l<nestedSources.size();l++){
+						nestedSources[l]->SetId((signed)(l+1));
+						nestedSources[l]->SetName(Form("S%d_N%d",nSourcesFinal,(signed)(l+1)));
+					}
+
+					//Add source to final collection
 					nSources++;
+					nSourcesFinal++;
 					m_SourceCollection.push_back( (m_taskDataPerWorkers[i][j]->sources)[k] );
 				}//end loop sources per task
 
@@ -4205,19 +4215,43 @@ int SFinder::MergeTaskData()
 					else nUnknown++;
 					if( (sourceType==ePointLike || sourceType==eCompact) && hasFitInfo ) nCompactSourcesWithFitInfo_edge++;
 
+					//Reset source name (otherwise we have sources with same name coming from different workers)
+					(m_taskDataPerWorkers[i][j]->sources_edge)[k]->SetId(nSourcesFinal);
+					(m_taskDataPerWorkers[i][j]->sources_edge)[k]->SetName(Form("Sedge%d",nSourcesFinal));
+					std::vector<Source*> nestedSources= (m_taskDataPerWorkers[i][j]->sources_edge)[k]->GetNestedSources();
+					for(size_t l=0;l<nestedSources.size();l++){
+						nestedSources[l]->SetId((signed)(l+1));
+						nestedSources[l]->SetName(Form("Sedge%d_N%d",nSourcesFinal,(signed)(l+1)));
+					}
+
+					//Add edge source to final collection
 					nSources++;
 					nEdgeSources++;
-					if(!m_mergeSourcesAtEdge) m_SourceCollection.push_back( (m_taskDataPerWorkers[i][j]->sources_edge)[k] );
+					if(!m_mergeSourcesAtEdge) {
+						m_SourceCollection.push_back( (m_taskDataPerWorkers[i][j]->sources_edge)[k] );
+						nSourcesFinal++;
+					}
 				}//end loop sources per task		
 
 			}//end loop tasks
 		}//end loop workers
 
-		//Add merged sources at edge	
-		m_SourceCollection.insert(m_SourceCollection.end(),m_SourcesMergedAtEdges.begin(),m_SourcesMergedAtEdges.end());
-	
-		INFO_LOG("#"<<nSources<<" sources found in total (#"<<nCompactSources<<" compact, #"<<nPointLikeSources<<" point-like (#"<<nCompactSourcesWithFitInfo<<" fit ok), #"<<nExtendedSources<<" extended, #"<<nUnknown<<" unknown/unclassified, #"<<nEdgeSources<<" edge sources (#"<<nCompactSourcesWithFitInfo_edge<<" fit ok), #"<<m_SourcesMergedAtEdges.size()<<" merged at edges), #"<<m_SourceCollection.size()<<" sources added to collection ...");
-		
+		//Add merged sources at edge
+		for(size_t k=0;k<m_SourcesMergedAtEdges.size();k++){	
+			m_SourcesMergedAtEdges[k]->SetId(nSourcesFinal);
+			m_SourcesMergedAtEdges[k]->SetName(Form("Smerged%d",nSourcesFinal));
+			std::vector<Source*> nestedSources= m_SourcesMergedAtEdges[k]->GetNestedSources();
+			for(size_t l=0;l<nestedSources.size();l++){
+				nestedSources[l]->SetId((signed)(l+1));
+				nestedSources[l]->SetName(Form("Smerged%d_N%d",nSourcesFinal,(signed)(l+1)));
+			}
+			nSourcesFinal++;
+			m_SourceCollection.push_back(m_SourcesMergedAtEdges[k]);
+		}
+		//m_SourceCollection.insert(m_SourceCollection.end(),m_SourcesMergedAtEdges.begin(),m_SourcesMergedAtEdges.end());
+
+		INFO_LOG("#"<<nSources<<" sources found in total (#"<<nCompactSources<<" compact, #"<<nPointLikeSources<<" point-like (#"<<nCompactSourcesWithFitInfo<<" fit ok), #"<<nExtendedSources<<" extended, #"<<nUnknown<<" unknown/unclassified, #"<<nEdgeSources<<" edge sources (#"<<nCompactSourcesWithFitInfo_edge<<" fit ok), #"<<m_SourcesMergedAtEdges.size()<<" merged at edges), #"<<nSourcesFinal<<" (collection size="<<m_SourceCollection.size()<<") sources added to collection ...");
+
 	}//close if
 
 	return 0;
