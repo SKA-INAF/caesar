@@ -18,6 +18,7 @@
 
 #include <Image.h>
 #include <Source.h>
+#include <Contour.h>
 
 #include <ConfigParser.h>
 #include <Logger.h>
@@ -114,6 +115,7 @@ int SourceFoundFlag;
 std::string SourceName;
 int sourceType;
 int SourceSimType;
+double sourceSimMaxScale;
 long int NPix;
 double X0;
 double Y0;
@@ -142,6 +144,7 @@ double MatchFraction;
 double MatchFraction_rec;
 double Sratio;
 double Sratio_rec;
+double sourceMaxScale_rec;
 double dX;
 double dY;
 double S_bkg;
@@ -657,6 +660,7 @@ bool FindExtendedSourceMatch(int source_true_index)
 	SourceName= std::string(source_true->GetName());
 	sourceType= source_true->Type;
 	SourceSimType= source_true->SimType;
+	sourceSimMaxScale= source_true->SimMaxScale;
 	X0= source_true->X0;
 	Y0= source_true->Y0;
 	X0_sweighted= source_true->GetSx();
@@ -870,6 +874,11 @@ int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex)
 		//Smax_rec/= beamArea_rec;
 		fluxDensity_rec/= beamArea_rec;
 	}
+
+	double BoundingBoxMax= 0;
+	if(source_rec->HasContours()) BoundingBoxMax= ((source_rec->GetContours())[0])->BoundingBoxMaj;
+	sourceMaxScale_rec= BoundingBoxMax;
+
 	HasFitInfo= source_rec->HasFitInfo();
 	sigmaX_fit= -1;
 	sigmaY_fit= -1;
@@ -1088,6 +1097,10 @@ int FindExtendedRealAndFakeSources(int source_rec_index)
 		//Smax_rec/= beamArea_rec;
 		fluxDensity_rec/= beamArea_rec;
 	}
+
+	double BoundingBoxMax= 0;
+	if(source_rec->HasContours()) BoundingBoxMax= ((source_rec->GetContours())[0])->BoundingBoxMaj;
+	sourceMaxScale_rec= BoundingBoxMax;
 			
 	//Find true sources associated to rec source
 	//NB: This should loop over all sources (independently of their type), as an extended source can reconstruct a compact source (for example when residual is not working properly)
@@ -1186,6 +1199,7 @@ void Init(){
 	matchedExtSourceInfo->Branch("name",&SourceName);
 	matchedExtSourceInfo->Branch("type",&sourceType,"type/I");
 	matchedExtSourceInfo->Branch("simtype",&SourceSimType,"simtype/I");
+	matchedExtSourceInfo->Branch("simmaxscale",&sourceSimMaxScale,"simmaxscale/I");
 	matchedExtSourceInfo->Branch("NPix",&NPix,"NPix/L");	
 	matchedExtSourceInfo->Branch("S",&S,"S/D");
 	matchedExtSourceInfo->Branch("Smax",&Smax,"Smax/D");	
@@ -1241,6 +1255,7 @@ void Init(){
 	recSourceInfo->Branch("name_true",&SourceNameList_true);
 	recSourceInfo->Branch("X0_true",&PosXList_true);
 	recSourceInfo->Branch("Y0_true",&PosYList_true);
+	recSourceInfo->Branch("sourceMaxScale_rec",&sourceMaxScale_rec,"sourceMaxScale_rec/D");
 
 	/*
 	if(!recExtSourceInfo) recExtSourceInfo= new TTree("RecExtSourceInfo","RecExtSourceInfo");
