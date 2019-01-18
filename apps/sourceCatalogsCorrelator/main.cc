@@ -1199,7 +1199,7 @@ void Init(){
 	matchedExtSourceInfo->Branch("name",&SourceName);
 	matchedExtSourceInfo->Branch("type",&sourceType,"type/I");
 	matchedExtSourceInfo->Branch("simtype",&SourceSimType,"simtype/I");
-	matchedExtSourceInfo->Branch("simmaxscale",&sourceSimMaxScale,"simmaxscale/I");
+	matchedExtSourceInfo->Branch("simmaxscale",&sourceSimMaxScale,"simmaxscale/D");
 	matchedExtSourceInfo->Branch("NPix",&NPix,"NPix/L");	
 	matchedExtSourceInfo->Branch("S",&S,"S/D");
 	matchedExtSourceInfo->Branch("Smax",&Smax,"Smax/D");	
