@@ -1193,6 +1193,8 @@ int Source::Fit(SourceFitOptions& fitOptions)
 	SourceFitter fitter;
 	if(fitter.FitSource(this,fitOptions)<0){	
 		WARN_LOG("Failed to fit source "<<this->GetName()<<" ...");
+		m_HasFitInfo= false;
+		m_fitStatus= fitter.GetFitStatus();
 		return -1;
 	}
 	

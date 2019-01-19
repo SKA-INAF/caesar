@@ -1092,6 +1092,7 @@ int SFinder::Run()
 	//== Fit sources (not fitted in tasks, e.g. those merged at edges)
 	//==================================================================
 	if(m_fitSources && m_procId==MASTER_ID) {
+		INFO_LOG("Fitting sources not already fitted by workers (e.g. edge merged sources)...");
 		auto t0_sfit = chrono::steady_clock::now();	
 		if(FitSources(m_SourceCollection)<0){
 			ERROR_LOG("Failed to fit sources!");
