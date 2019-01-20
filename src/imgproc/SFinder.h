@@ -390,6 +390,9 @@ class SFinder : public TObject {
 		double mergeTaskSourceTime_sum;
 		double workerDataCollectTime;
 		double workerDataReduceTime;
+		double workerDataSerializationTime;
+		double workerDataRecvTime;
+		double workerDataProbeTime;
 		double mergeEdgeSourceTime;
 		double saveTime;
 		double virtMemPeak;	

@@ -344,6 +344,10 @@ void SFinder::InitOptions()
 	mergeTaskSourceTime_sum= 0;
 	workerDataCollectTime= 0;	
 	workerDataReduceTime= 0;
+	workerDataSerializationTime= 0;
+	workerDataRecvTime= 0;
+	workerDataProbeTime= 0;
+
 	mergeEdgeSourceTime= 0;	
 	saveTime= 0;
 	virtMemPeak= 0;
@@ -3664,6 +3668,9 @@ void SFinder::PrintPerformanceStats()
 	INFO_LOG("merge task sources (ms)= "<<mergeTaskSourceTime<<" ["<<mergeTaskSourceTime/totTime*100.<<"%], min/max/sum="<<mergeTaskSourceTime_min<<"/"<<mergeTaskSourceTime_max<<"/"<<mergeTaskSourceTime_sum);
 	INFO_LOG("data reduce (ms)= "<<workerDataReduceTime<<" ["<<workerDataReduceTime/totTime*100.<<"%]");
 	INFO_LOG("data collect (ms)= "<<workerDataCollectTime<<" ["<<workerDataCollectTime/totTime*100.<<"%]");
+	INFO_LOG("data probe (ms)= "<<workerDataProbeTime<<" ["<<workerDataProbeTime/totTime*100.<<"%]");
+	INFO_LOG("data recv (ms)= "<<workerDataRecvTime<<" ["<<workerDataRecvTime/totTime*100.<<"%]");
+	INFO_LOG("data serialization (ms)= "<<workerDataSerializationTime<<" ["<<workerDataSerializationTime/totTime*100.<<"%]");
 	INFO_LOG("merge edge sources (ms)= "<<mergeEdgeSourceTime<<" ["<<mergeEdgeSourceTime/totTime*100.<<"%]");
 	INFO_LOG("save (ms)= "<<saveTime<<" ["<<saveTime/totTime*100.<<"%]");
 	INFO_LOG("virtMemPeak (kB)= "<<virtMemPeak<<", min/max="<<virtMemPeak_min<<"/"<<virtMemPeak_max);
@@ -4028,13 +4035,21 @@ int SFinder::GatherTaskDataFromWorkers()
 			DEBUG_LOG("Probing for message from process "<<i<<"...");
     	MPI_Status status;
 
-			if(MPI_Probe(i, MSG_TAG, MPI_COMM_WORLD, &status)==MPI_SUCCESS){
-				DEBUG_LOG("a message has been probed from process "<<i<<" (tag="<< status.MPI_TAG << ", source " << status.MPI_SOURCE<<")");
+			auto t0_probe = chrono::steady_clock::now();
+			int probe_status= MPI_Probe(i, MSG_TAG, MPI_COMM_WORLD, &status);
+			auto t1_probe = chrono::steady_clock::now();
+			workerDataProbeTime+= chrono::duration <double, milli> (t1_probe-t0_probe).count();
+
+			if(probe_status==MPI_SUCCESS){
+			//if(MPI_Probe(i, MSG_TAG, MPI_COMM_WORLD, &status)==MPI_SUCCESS){
+
+				DEBUG_LOG("A message has been probed from process "<<i<<" (tag="<< status.MPI_TAG << ", source " << status.MPI_SOURCE<<")");
 
     		//## When probe returns, the status object has the size and other
     		//## attributes of the incoming message. Get the message size
 				DEBUG_LOG("Getting size of message received from process "<<i<<" ... ");
     	
+				auto t0_recv = chrono::steady_clock::now();
 				int rcvMsgSize= 0;
     		MPI_Get_count(&status, MPI_CHAR, &rcvMsgSize);
 
@@ -4050,14 +4065,20 @@ int SFinder::GatherTaskDataFromWorkers()
     		//MPI_Recv(recvBuffer, rcvMsgSize, MPI_CHAR, MPI_ANY_SOURCE, MSG_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 				MPI_Recv(recvBuffer, rcvMsgSize, MPI_CHAR, i, MSG_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
+				auto t1_recv = chrono::steady_clock::now();
+				workerDataRecvTime+= chrono::duration <double, milli> (t1_recv-t0_recv).count();
+
     		DEBUG_LOG("Received a message of size "<<rcvMsgSize<<") from process "<<i);
 
 				//## Update task data with received worker data	
+				auto t0_serializer = chrono::steady_clock::now();
 				bool isTaskCollectionPreAllocated= true;
 				if(Serializer::CharArrayToTaskDataCollection(m_taskDataPerWorkers[i],recvBuffer,rcvMsgSize,isTaskCollectionPreAllocated)<0 ){
 					ERROR_LOG("Failed to decode recv message into task data list!");
     			if(recvBuffer) free(recvBuffer);
 				}
+				auto t1_serializer = chrono::steady_clock::now();
+				workerDataSerializationTime+= chrono::duration <double, milli> (t1_serializer-t0_serializer).count();
 
 				//## Free received buffer
     		if(recvBuffer) free(recvBuffer);
