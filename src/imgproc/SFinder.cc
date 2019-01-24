@@ -347,7 +347,9 @@ void SFinder::InitOptions()
 	workerDataSerializationTime= 0;
 	workerDataRecvTime= 0;
 	workerDataProbeTime= 0;
-
+	workerBarrier1= 0;
+	workerBarrier2= 0;
+	
 	mergeEdgeSourceTime= 0;	
 	saveTime= 0;
 	virtMemPeak= 0;
@@ -467,6 +469,11 @@ int SFinder::Init()
 		m_PerfTree->Branch("extsfinder_sum",&extendedSourceTime_sum,"extsfinder_sum/D");
 		m_PerfTree->Branch("datacollect",&workerDataCollectTime,"datacollect/D");
 		m_PerfTree->Branch("datareduce",&workerDataReduceTime,"datareduce/D");
+		m_PerfTree->Branch("dataprobe",&workerDataProbeTime,"dataprobe/D");	
+		m_PerfTree->Branch("datarecv",&workerDataRecvTime,"datarecv/D");
+		m_PerfTree->Branch("dataserialization",&workerDataSerializationTime,"dataserialization/D");
+		m_PerfTree->Branch("collectbarrier1",&workerBarrier1,"collectbarrier1/D");
+		m_PerfTree->Branch("collectbarrier2",&workerBarrier2,"collectbarrier2/D");
 		m_PerfTree->Branch("mergetasksources",&mergeTaskSourceTime,"mergetasksources/D");
 		m_PerfTree->Branch("mergetasksources_min",&mergeTaskSourceTime_min,"mergetasksources_min/D");
 		m_PerfTree->Branch("mergetasksources_max",&mergeTaskSourceTime_max,"mergetasksources_max/D");
@@ -3671,6 +3678,8 @@ void SFinder::PrintPerformanceStats()
 	INFO_LOG("data probe (ms)= "<<workerDataProbeTime<<" ["<<workerDataProbeTime/totTime*100.<<"%]");
 	INFO_LOG("data recv (ms)= "<<workerDataRecvTime<<" ["<<workerDataRecvTime/totTime*100.<<"%]");
 	INFO_LOG("data serialization (ms)= "<<workerDataSerializationTime<<" ["<<workerDataSerializationTime/totTime*100.<<"%]");
+	INFO_LOG("data collect barrier1 (ms)= "<<workerBarrier1<<" ["<<workerBarrier1/totTime*100.<<"%]");
+	INFO_LOG("data collect barrier2 (ms)= "<<workerBarrier2<<" ["<<workerBarrier2/totTime*100.<<"%]");
 	INFO_LOG("merge edge sources (ms)= "<<mergeEdgeSourceTime<<" ["<<mergeEdgeSourceTime/totTime*100.<<"%]");
 	INFO_LOG("save (ms)= "<<saveTime<<" ["<<saveTime/totTime*100.<<"%]");
 	INFO_LOG("virtMemPeak (kB)= "<<virtMemPeak<<", min/max="<<virtMemPeak_min<<"/"<<virtMemPeak_max);
@@ -3959,7 +3968,10 @@ int SFinder::PrepareWorkerTasks()
 int SFinder::GatherTaskDataFromWorkers()
 {
 	//## Put a barrier and collect all sources from workers in the master processor
+	auto t0_barrier1 = chrono::steady_clock::now();
 	MPI_Barrier(MPI_COMM_WORLD);	
+	auto t1_barrier1 = chrono::steady_clock::now();
+	workerBarrier1= chrono::duration <double, milli> (t1_barrier1-t0_barrier1).count();
 
 	//## Sum and average all the elapsed timers across workers 
 	INFO_LOG("Summing up and averaging the elapsed cpu timers across workers...");
@@ -4073,15 +4085,19 @@ int SFinder::GatherTaskDataFromWorkers()
 				//## Update task data with received worker data	
 				auto t0_serializer = chrono::steady_clock::now();
 				bool isTaskCollectionPreAllocated= true;
-				if(Serializer::CharArrayToTaskDataCollection(m_taskDataPerWorkers[i],recvBuffer,rcvMsgSize,isTaskCollectionPreAllocated)<0 ){
+				int serialization_status= Serializer::CharArrayToTaskDataCollection(m_taskDataPerWorkers[i],recvBuffer,rcvMsgSize,isTaskCollectionPreAllocated);
+				if(serialization_status<0){
 					ERROR_LOG("Failed to decode recv message into task data list!");
     			if(recvBuffer) free(recvBuffer);
+					continue;
 				}
-				auto t1_serializer = chrono::steady_clock::now();
-				workerDataSerializationTime+= chrono::duration <double, milli> (t1_serializer-t0_serializer).count();
 
 				//## Free received buffer
     		if(recvBuffer) free(recvBuffer);
+
+				auto t1_serializer = chrono::steady_clock::now();
+				workerDataSerializationTime+= chrono::duration <double, milli> (t1_serializer-t0_serializer).count();
+
 			}//close if
 			else{
 				ERROR_LOG("Message probing from process "<<i<<" failed!");
@@ -4107,34 +4123,13 @@ int SFinder::GatherTaskDataFromWorkers()
 
 		//## Free buffer
 		if(msg) free(msg);
+
 	}//close else
 
+	auto t0_barrier2 = chrono::steady_clock::now();
 	MPI_Barrier(MPI_COMM_WORLD);
-
-	//## Print sources
-	/*
-	if (m_procId == 0) {
-		INFO_LOG("Printing aggregated sources...");
-		for(size_t i=0;i<m_taskDataPerWorkers.size();i++){
-			if(m_taskDataPerWorkers[i].size()==0) continue;//no tasks present
-			
-			
-			for(size_t j=0;j<m_taskDataPerWorkers[i].size();j++){
-				INFO_LOG("Sources NOT at edge found in process "<<i<<", task "<<j<<" ...");
-				for(size_t k=0;k<(m_taskDataPerWorkers[i][j]->sources).size();k++){
-					(m_taskDataPerWorkers[i][j]->sources)[k]->Print();
-				}//end loop sources
-	
-				INFO_LOG("Sources at edge found in process "<<i<<", task "<<j<<" ...");
-				for(size_t k=0;k<(m_taskDataPerWorkers[i][j]->sources_edge).size();k++){
-					(m_taskDataPerWorkers[i][j]->sources_edge)[k]->Print();
-				}//end loop sources
-
-			}//end loop tasks in worker
-		}//end process loop
-	}//close if
-	*/
-
+	auto t1_barrier2 = chrono::steady_clock::now();
+	workerBarrier2= chrono::duration <double, milli> (t1_barrier2-t0_barrier2).count();
 	
 	return 0;
 
