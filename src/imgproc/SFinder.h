@@ -279,11 +279,13 @@ class SFinder : public TObject {
 		* \brief Find sources at image edges (for MPI run)
 		*/
 		int FindSourcesAtEdge();
+		int FindTaskSourcesAtEdge(TaskData* taskData);
 
 		/**
 		* \brief Fit all task sources not found at tile edge (for MPI run)
 		*/
-		int FitTaskSources();
+		//int FitTaskSources();
+		int FitTaskSources(TaskData* taskData);
 
 		/**
 		* \brief Merge sources at edge (for MPI run)

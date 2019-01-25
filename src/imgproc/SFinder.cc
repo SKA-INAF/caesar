@@ -846,7 +846,7 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 	int status= 0;
 
 	//==================================
-	//==   Read task input image
+	//==   READ TASK TILE IMG
 	//==================================
 	DEBUG_LOG("Reading input image ["<<ix_min<<","<<ix_max<<"] ["<<iy_min<<","<<iy_max<<"]...");
 	auto t0_read = chrono::steady_clock::now();	
@@ -870,9 +870,9 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 	readImageTime+= chrono::duration <double, milli> (t1_read-t0_read).count();
 	
 
-	//============================
-	//== Find image stats & bkg
-	//============================
+	//===================================
+	//== FIND TASK TILE IMG STATS & BKG
+	//===================================
 	if(!stopTask){
 		INFO_LOG("Computing image stats and bkg...");
 		bkgData= ComputeStatsAndBkg(taskImg);
@@ -883,9 +883,9 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 		}
 	}
 
-	//============================
-	//== Find compact sources
-	//============================	
+	//================================
+	//== FIND TASK EXTENDED SOURCES
+	//================================
 	if(!stopTask && m_SearchCompactSources ){ 	
 		INFO_LOG("Searching compact sources...");
 		auto t0_sfinder = chrono::steady_clock::now();	
@@ -899,9 +899,9 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 		compactSourceTime+= chrono::duration <double, milli> (t1_sfinder-t0_sfinder).count();
 	}
 
-	//============================
-	//== Find extended sources
-	//============================
+	//================================
+	//== FIND TASK EXTENDED SOURCES
+	//================================
 	if(!stopTask && m_SearchExtendedSources){
 		INFO_LOG("Searching extended sources...");
 		auto t0_extsfinder = chrono::steady_clock::now();	
@@ -917,7 +917,7 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 	}//close if search extended sources
 
 	//============================
-	//== Merge task sources
+	//== MERGE TASK SOURCES
 	//============================
 	if(!stopTask && m_mergeSources){
 		INFO_LOG("Merging task sources ...");	
@@ -932,24 +932,26 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 	}
 
 	//============================
-	//== Find edge sources
+	//== FIND TASK EDGE SOURCES
 	//============================
 	if(!stopTask){
 		INFO_LOG("Finding sources at tile edges ...");
-		if(FindSourcesAtEdge()<0){
+		//if(FindSourcesAtEdge()<0){
+		if(FindTaskSourcesAtEdge(taskData)<0){
 			ERROR_LOG("Finding sources at tile edges failed!");
 			status= -1;
 		}
 	}
 
-	//============================
-	//== Fit sources not at edge
-	//============================
+	//====================================
+	//== FIT TASK SOURCES (NOT AT EDGE)
+	//====================================
 	if(!stopTask){
 		auto t0_sfit = chrono::steady_clock::now();
 		if(m_fitSources){
 			INFO_LOG("Fitting task sources not located at tile edge ...");
-			if(FitTaskSources()<0){
+			//if(FitTaskSources()<0){
+			if(FitTaskSources(taskData)<0){
 				ERROR_LOG("Fitting sources not at tile edges failed!");
 				status= -1;
 			}
@@ -4574,6 +4576,34 @@ int SFinder::MergeSourcesAtEdge()
 
 }//close MergeSourcesAtEdge()
 
+
+int SFinder::FitTaskSources(TaskData* taskData)
+{
+	//Check input data
+	if(!taskData){
+		ERROR_LOG("Null ptr to input task data given!");
+		return -1;
+	}
+
+	//Return if there are no sources to be searched
+	if( (taskData->sources).empty() ){
+		INFO_LOG("No sources available to fit in worker "<<taskData->workerId<<", nothing to be done...");
+		return 0;
+	}
+
+	//Loop over sources not at edge
+	INFO_LOG("Fitting #"<<(taskData->sources).size()<<" task sources (not at tile edge) in worker "<<taskData->workerId<<" ...");
+	int status= FitSources( taskData->sources );
+	if(status<0){
+		WARN_LOG("Fitting task sources (worker="<<taskData->workerId<<") not at edge failed!");
+		return -1;
+	}
+
+	return 0;
+
+}//close FitTaskSources()
+
+/*
 int SFinder::FitTaskSources()
 {
 	//Loop over workers
@@ -4582,7 +4612,7 @@ int SFinder::FitTaskSources()
 
 		//Loop over tasks per worker
 		for(size_t j=0;j<m_taskDataPerWorkers[i].size();j++){
-			INFO_LOG("Fitting "<<(m_taskDataPerWorkers[i][j]->sources).size()<<" sources (not at tile edge) ...");
+			INFO_LOG("Fitting "<<(m_taskDataPerWorkers[i][j]->sources).size()<<" sources (not at tile edge) (worker="<<i<<", task="<<j<<") ...");
 	
 			int status= FitSources( m_taskDataPerWorkers[i][j]->sources );
 			if(status<0){
@@ -4596,6 +4626,102 @@ int SFinder::FitTaskSources()
 	return 0;
 
 }//close FitTaskSources()
+*/
+
+
+
+int SFinder::FindTaskSourcesAtEdge(TaskData* taskData)
+{	
+	//Check input data
+	if(!taskData){
+		ERROR_LOG("Null ptr to input task data given!");
+		return -1;
+	}
+
+	//Return if there are no sources to be searched
+	if( (taskData->sources).empty() ){
+		DEBUG_LOG("No task sources to be searched to set edge flag, nothing to be done...");
+		return 0;
+	}
+
+	//## Find if sources (both compact and extended) are at tile edge
+	//## Those found at the edge are removed from the list and added to the edge list for further processing
+	float xmin_s, xmax_s, ymin_s, ymax_s;
+	
+	std::vector<Source*> sources_not_at_edges;
+	long int nSources= static_cast<long int>( (taskData->sources).size() );
+	long int nEdgeSources= 0;
+
+	for(long int k=0;k<nSources;k++)	
+	{
+		//Get source coordinate range
+		(taskData->sources)[k]->GetSourceRange(xmin_s,xmax_s,ymin_s,ymax_s);
+
+		//Check if source is at the edge of its tile
+		long int workerId= taskData->workerId;
+		float xmin_tile= taskData->ix_min;// + m_ImgXmin;
+		float xmax_tile= taskData->ix_max;// + m_ImgXmin;
+		float ymin_tile= taskData->iy_min;// + m_ImgYmin;
+		float ymax_tile= taskData->iy_max;// + m_ImgYmin; 
+		bool isAtTileEdge= (taskData->sources)[k]->IsAtBoxEdge(xmin_tile,xmax_tile,ymin_tile,ymax_tile);
+				
+		if(isAtTileEdge){
+			DEBUG_LOG("Source no. "<<k<<"(x["<<xmin_s<<","<<xmax_s<<"] y["<<ymin_s<<","<<ymax_s<<"]) is at edge of its tile (x["<<xmin_tile<<","<<xmax_tile<<"] y["<<ymin_tile<<","<<ymax_tile<<"])");
+		}
+
+		//Check if source is inside neighbour tile, e.g. is in overlapping area
+		//NB: This is done only if source is not found at tile border previously
+		bool isInOverlapArea= false;
+
+		if(!isAtTileEdge){	
+			for(size_t l=0;l<(taskData->neighborWorkerId).size();l++) {	
+				long int neighborTaskId= (taskData->neighborTaskId)[l];
+				long int neighborWorkerId= (taskData->neighborWorkerId)[l];
+					
+				float xmin= (m_taskDataPerWorkers[neighborWorkerId][neighborTaskId])->ix_min;//+ m_ImgXmin;
+				float xmax= (m_taskDataPerWorkers[neighborWorkerId][neighborTaskId])->ix_max;//+ m_ImgXmin;
+				float ymin= (m_taskDataPerWorkers[neighborWorkerId][neighborTaskId])->iy_min;//+ m_ImgYmin;
+				float ymax= (m_taskDataPerWorkers[neighborWorkerId][neighborTaskId])->iy_max;//+ m_ImgYmin;
+				bool isOverlapping= (taskData->sources)[k]->HasBoxOverlap(xmin,xmax,ymin,ymax);
+				if(isOverlapping){
+					DEBUG_LOG("Source no. "<<k<<"(x["<<xmin_s<<","<<xmax_s<<"] y["<<ymin_s<<","<<ymax_s<<"]) overlaps with neighbor tile (x["<<xmin<<","<<xmax<<"] y["<<ymin<<","<<ymax<<"])");
+					isInOverlapArea= true;
+					break;
+				}
+			}//end loop neighbors
+		}//close if
+
+		//Tag source at edge is is located at the border of its tile or if it is located inside an overlapping area with another neighbor tile
+		bool isAtEdge= (isAtTileEdge || isInOverlapArea);
+
+		//Set edge flag in source
+		if(isAtEdge) {
+			(taskData->sources)[k]->SetEdgeFlag(true);
+			(taskData->sources_edge).push_back( (taskData->sources)[k] );
+			nEdgeSources++;
+		}
+		else {
+			(taskData->sources)[k]->SetEdgeFlag(false);
+			sources_not_at_edges.push_back( (taskData->sources)[k] );
+		}
+	}//end loop sources	
+
+	INFO_LOG("#"<<nEdgeSources<<"/"<<nSources<<" sources are found at tile edges...");
+	
+	//## Clear initial vector (DO NOT CLEAR MEMORY!) and fill with selection (then reset selection)
+	(taskData->sources).clear();
+	(taskData->sources).insert( 
+		(taskData->sources).end(),
+		sources_not_at_edges.begin(),
+		sources_not_at_edges.end()
+	);
+	sources_not_at_edges.clear();
+			
+	return 0;
+
+}//close FindTaskSourcesAtEdge()
+
+
 
 int SFinder::FindSourcesAtEdge()
 {	
@@ -4690,5 +4816,7 @@ int SFinder::FindSourcesAtEdge()
 	return 0;
 
 }//close FindSourcesAtEdge()
+
+
 
 }//close namespace
