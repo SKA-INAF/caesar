@@ -290,6 +290,15 @@ class SysUtils : public TObject {
 		* \brief Get processor id
 		*/
 		static int GetProcId();
+		/**
+		* \brief Get ascii art logo
+		*/
+		static std::string GetAsciiLogo();
+
+		/**
+		* \brief Print ascii art logo
+		*/
+		static void PrintAsciiLogo();
 
 	protected:
 		

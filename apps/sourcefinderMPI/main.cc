@@ -69,6 +69,11 @@ int ParseOptions(int argc, char *argv[]);
 int main(int argc, char *argv[])
 {
 	//================================
+	//== Print logo
+	//================================
+	SysUtils::PrintAsciiLogo();
+
+	//================================
 	//== Parse command line options
 	//================================
 	if(ParseOptions(argc,argv)<0){

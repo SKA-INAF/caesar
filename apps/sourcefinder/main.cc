@@ -64,6 +64,11 @@ int ParseOptions(int argc, char *argv[]);
 int main(int argc, char *argv[])
 {
 	//================================
+	//== Print logo
+	//================================
+	SysUtils::PrintAsciiLogo();
+
+	//================================
 	//== Parse command line options
 	//================================
 	if(ParseOptions(argc,argv)<0){
@@ -100,7 +105,6 @@ int main(int argc, char *argv[])
 
 int ParseOptions(int argc, char *argv[])
 {
-	
 	//## Check args
 	if(argc<2){
 		cerr<<"ERROR: Invalid number of arguments...see macro usage!"<<endl;

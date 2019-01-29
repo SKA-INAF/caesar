@@ -55,6 +55,7 @@
 #include <fstream>
 #include <stdio.h>
 #include <string>
+#include <sstream>
 #include <stdexcept>
 #include <algorithm>
 #include <math.h>
@@ -374,6 +375,26 @@ int SysUtils::GetProcId()
 
 	return procid;
 		
+}
+
+
+std::string SysUtils::GetAsciiLogo()
+{
+	std::stringstream ss;	
+	ss<<R"(   ______                              _____ _______           __         )"<<endl;
+  ss<<R"(  / ____/___ ____  _________ ______   / ___// ____(_)___  ____/ /__  _____)"<<endl;
+ 	ss<<R"( / /   / __ `/ _ \/ ___/ __ `/ ___/   \__ \/ /_  / / __ \/ __  / _ \/ ___/)"<<endl;
+	ss<<R"(/ /___/ /_/ /  __(__  ) /_/ / /      ___/ / __/ / / / / / /_/ /  __/ /    )"<<endl;
+	ss<<R"(\____/\__,_/\___/____/\__,_/_/      /____/_/   /_/_/ /_/\__,_/\___/_/     )"<<endl;
+                                                                          
+	return ss.str();
+}
+
+
+void SysUtils::PrintAsciiLogo()
+{
+	std::string logo_str= GetAsciiLogo();
+	cout<<logo_str<<endl;
 }
 
 
