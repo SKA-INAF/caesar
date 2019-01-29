@@ -372,6 +372,7 @@ class ConsoleLogger : public Logger {
 			if(!logger) return -1;
 			//cout<<"Initialized console logger with tag "<<m_tag<<" ..."<<endl;
 
+			/*
 			//Get hostname
 			std::string host= SysUtils::GetHost();
 			log4cxx::MDC::put("hostname", host);
@@ -382,7 +383,7 @@ class ConsoleLogger : public Logger {
 			procid_ss<<"PROC"<<procId;
 			std::string procid_str= procid_ss.str();
 			log4cxx::MDC::put("proc", procid_str);
-						
+			*/		
 			/*
 			//Get thread id
 			int threadId= SysUtils::GetOMPThreadId();
@@ -398,7 +399,8 @@ class ConsoleLogger : public Logger {
 			//layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d %-5p [%c] %m%n") );
 			//layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d %-5p %m%n") );
 			//layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d [%X{hostname}, %X{proc}, %X{thread}] %-5p %m%n") );			
-			layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d [%X{hostname}, %X{proc}] %-5p %m%n") );
+			//layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d [%X{hostname}, %X{proc}] %-5p %m%n") );
+			layout= log4cxx::LayoutPtr( new log4cxx::PatternLayout("%d %-5p %m%n") );
 			if(!layout) return -1;
 
 			//Create and add appender
@@ -672,6 +674,28 @@ inline std::string getClassNamePrefix(std::string fullFuncName,std::string funcN
 }
 
 /**
+* \brief Returns host/proc/thread prefix in which log is emitted
+*/
+inline std::string getRunPrefix()
+{
+	std::stringstream ss;
+	
+	//Get hostname
+	std::string host= SysUtils::GetHost();
+	
+	//Get processor id
+	int procId= SysUtils::GetProcId();
+						
+	//Get thread id
+	int threadId= SysUtils::GetOMPThreadId();
+
+	ss<<"["<<host<<", PROC"<<procId<<", TID"<<threadId<<"] ";
+	
+	return ss.str();
+
+}//close getRunPrefix()
+
+/**
 * \brief Returns thread id prefix in which log is emitted
 */
 inline std::string getThreadIdPrefix()
@@ -699,6 +723,12 @@ inline std::string getThreadIdPrefix()
 #define __THREAD_ID_PREFIX__ getThreadIdPrefix()
 
 /**
+* \brief Shortcut macro to get run info prefix
+*/
+#define __RUN_INFO_PREFIX__ getRunPrefix()
+
+
+/**
 * \brief Shortcut macro to get actual Tango device class name
 * \param deviceInstance - Tango device server class instance
 */
@@ -715,7 +745,7 @@ inline std::string getThreadIdPrefix()
 * \brief Shortcut macro to set a prefix for log message
 */
 #define LOG_PREFIX \
-	__THREAD_ID_PREFIX__ + __CLASS_PREFIX__ + __FUNCTION__ + std::string("() - ")
+	__RUN_INFO_PREFIX__ + __CLASS_PREFIX__ + __FUNCTION__ + std::string("() - ")
 
 //	__CLASS_PREFIX__ + __FUNCTION__ + std::string("() - ")
 
