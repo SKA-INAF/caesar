@@ -1085,7 +1085,7 @@ int SFinder::Run()
 			if(m_mpiEnabled) MPI_Barrier(MPI_COMM_WORLD);
 		#endif
 		if(m_procId==MASTER_ID) {
-			INFO_LOG("Merging sources find at tile edges by all workers...");
+			INFO_LOG("Merging sources found at tile edges by all workers...");
 			auto t0_smerge = chrono::steady_clock::now();
 			if(MergeSourcesAtEdge()<0){
 				ERROR_LOG("Merging sources at tile edges failed!");
@@ -3120,12 +3120,14 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 		bool isFittable= IsFittableSource(sources[i]);
 		if(isFittable) {
 			//Fit mother source
+			INFO_LOG("Source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") fittable as a whole...");
+			/*
 			#ifdef OPENMP_ENABLED
 				INFO_LOG("[PROC "<<m_procId<<", threadId="<<omp_get_thread_num()<<"] - Source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") fittable as a whole...");
 			#else
 				INFO_LOG("Source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") fittable as a whole...");
 			#endif
-
+			*/
 			nFittedSources++;
 			fittedSourceNames.push_back(sources[i]->GetName());
 
