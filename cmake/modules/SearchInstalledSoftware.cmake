@@ -134,11 +134,14 @@ endif()
 #==================================
 #==   Check for Log4Cxx         ===
 #==================================
-MESSAGE(STATUS "Looking for Log4Cxx")
-FIND_PACKAGE(Log4Cxx REQUIRED)
-MESSAGE(STATUS "LOG4CXX_INCLUDE_DIR: ${LOG4CXX_INCLUDE_DIRS}")
-MESSAGE(STATUS "LOG4CXX_LIBRARIES: ${LOG4CXX_LIBRARIES}")
-
+option(ENABLE_LOGGING "Enable Logging" ON)
+if(ENABLE_LOGGING)
+	MESSAGE(STATUS "Looking for Log4Cxx")
+	FIND_PACKAGE(Log4Cxx REQUIRED)
+	add_definitions(-DLOGGING_ENABLED=1)
+	MESSAGE(STATUS "LOG4CXX_INCLUDE_DIR: ${LOG4CXX_INCLUDE_DIRS}")
+	MESSAGE(STATUS "LOG4CXX_LIBRARIES: ${LOG4CXX_LIBRARIES}")
+endif()
 
 #==================================
 #==   Check for CFITSIO         ===
