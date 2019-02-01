@@ -24,8 +24,8 @@
 * @date 25/04/2010
 */
 
-#ifndef ConfigParser_h
-#define ConfigParser_h 1
+#ifndef _CONFIG_PARSER_h
+#define _CONFIG_PARSER_h 1
 
 #include <Option.h>
 

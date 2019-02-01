@@ -29,7 +29,10 @@
 
 #include <ImgUtils.h>
 #include <Image.h>
-#include <Logger.h>
+
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 //C++ headers
 #include <iomanip>
@@ -57,7 +60,9 @@ Image* ImgUtils::GetCircleLevelSetImage(long int nX,long int nY,double f)
 {
 	//Check inputs
 	if(nX<=0 || nY<=0){
-		ERROR_LOG("Invalid image dimensions given (must be >0)");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid image dimensions given (must be >0)");
+		#endif
 		return nullptr;
 	}
 
@@ -67,7 +72,9 @@ Image* ImgUtils::GetCircleLevelSetImage(long int nX,long int nY,double f)
 		img= new Image(nX,nY);
 	}
 	catch(...){
-		ERROR_LOG("Failed to allocate image of size ("<<nX<<" x "<<nY<<")!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to allocate image of size ("<<nX<<" x "<<nY<<")!");
+		#endif
 		return nullptr;
 	}	
 	
@@ -97,7 +104,9 @@ Image* ImgUtils::GetCheckerBoardLevelSetImage(long int nX,long int nY,double f)
 {
 	//Check inputs
 	if(nX<=0 || nY<=0){
-		ERROR_LOG("Invalid image dimensions given (must be >0)");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid image dimensions given (must be >0)");
+		#endif
 		return nullptr;
 	}
 
@@ -107,7 +116,9 @@ Image* ImgUtils::GetCheckerBoardLevelSetImage(long int nX,long int nY,double f)
 		img= new Image(nX,nY);
 	}
 	catch(...){
-		ERROR_LOG("Failed to allocate image of size ("<<nX<<" x "<<nY<<")!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to allocate image of size ("<<nX<<" x "<<nY<<")!");
+		#endif
 		return nullptr;
 	}	
 	

@@ -29,6 +29,7 @@
 #define _LOGGER_h 1
 
 #include <SysUtils.h>
+#include <Consts.h>
 
 #include <TObject.h>
 #include <TMath.h>
@@ -431,14 +432,7 @@ class ConsoleLogger : public Logger {
 #pragma link C++ class ConsoleLogger+;
 #endif
 
-/**
-* \brief Logger target enumerations
-*/
-enum LoggerTarget {
-	eCONSOLE_TARGET= 1,
-	eFILE_TARGET= 2,
-	eSYSLOG_TARGET= 3
-};
+
 
 class LoggerManager : public TObject {
 	

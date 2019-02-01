@@ -262,6 +262,15 @@ enum SourceFitStatus {
 	eFitConvergedWithWarns= 4
 };
 
+/**
+* \brief Logger target enumerations
+*/
+enum LoggerTarget {
+	eCONSOLE_TARGET= 1,
+	eFILE_TARGET= 2,
+	eSYSLOG_TARGET= 3
+};
+
 #ifdef __MAKECINT__
 #pragma link C++ enum WCSType+;
 #pragma link C++ enum ImgFilters+;

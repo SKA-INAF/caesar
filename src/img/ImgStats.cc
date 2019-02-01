@@ -28,8 +28,14 @@
 */
 
 #include <ImgStats.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
+#include <iostream>
+#include <sstream>
+
+using namespace std;
 
 ClassImp(Caesar::ImgStats)
 
@@ -73,8 +79,9 @@ void ImgStats::Reset(){
 void ImgStats::Log(std::string level)
 {
 	//Log stats
-	LOG(level,GetPrintable());
-
+	#ifdef LOGGING_ENABLED
+		LOG(level,GetPrintable());
+	#endif
 }
 
 void ImgStats::Print()

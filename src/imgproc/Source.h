@@ -30,6 +30,10 @@
 
 #include <SourceFitter.h>
 #include <Blob.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
+
 #include <TObject.h>
 #include <TMatrixD.h>
 
@@ -263,7 +267,9 @@ class Source : public Blob {
 
 			//Check input list
 			if(sources.empty()){
-				WARN_LOG("Given nested collection to be set is empty, will remove all existing sources!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Given nested collection to be set is empty, will remove all existing sources!");
+				#endif
 			}
 	
 			//Release memory of existing collection?
@@ -538,7 +544,9 @@ class Source : public Blob {
 			double rmsAvg= m_bkgRMSSum/NPix;
 			double dx= fabs(m_imgMetaData->dX);
  			double dy= fabs(m_imgMetaData->dY);
-			DEBUG_LOG("rmsAvg="<<rmsAvg<<", dx="<<dx<<", dy="<<dy);
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("rmsAvg="<<rmsAvg<<", dx="<<dx<<", dy="<<dy);
+			#endif
  
 			for(int k=0;k<nComponents;k++){
 				double A= m_fitPars.GetParValue(k,"A");
@@ -549,7 +557,9 @@ class Source : public Blob {
 				double IRelErr= sqrt(2./(TMath::Pi()*sigmaX*sigmaY))/SNR;
 				//double IVar= 2.*I*I*dx*dy*rmsAvg*rmsAvg/(TMath::Pi()*sigmaX*sigmaY*A*A);
 				double IErr= IRelErr*I;
-				DEBUG_LOG("A="<<A<<", sigmaX="<<sigmaX<<", sigmaY="<<sigmaY<<", SNR="<<SNR<<", I="<<I<<", IRelErr="<<IRelErr<<", IErr="<<IErr);
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("A="<<A<<", sigmaX="<<sigmaX<<", sigmaY="<<sigmaY<<", SNR="<<SNR<<", I="<<I<<", IRelErr="<<IRelErr<<", IErr="<<IErr);
+				#endif
 				fluxDensityErrList.push_back(IErr);
 			}//end loop components
 			return 0;

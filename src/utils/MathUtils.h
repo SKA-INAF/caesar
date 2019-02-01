@@ -29,7 +29,9 @@
 #ifndef _MATH_UTILS_h
 #define _MATH_UTILS_h 1
 
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 //OpenCV
 #include <opencv/cv.h>
@@ -297,7 +299,9 @@ class MathUtils : public TObject {
 		{
 			//Check if given type is not a float/double
 			if(std::numeric_limits<T>::is_exact){
-				WARN_LOG("Mod function requires float/double arguments, will return 0!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Mod function requires float/double arguments, will return 0!");
+				#endif
 				return 0;
 			}
 

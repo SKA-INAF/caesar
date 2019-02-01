@@ -20,6 +20,7 @@ set(
 	SourceCube.h
 	SFinder.h	
 	Contour.h
+	Graph.h
 	ChanVeseSegmenter.h
 	SLICSegmenter.h
 	LRACSegmenter.h
@@ -41,6 +42,7 @@ set(
 	${SRC_DIR}/BlobFinder.cc
 	${SRC_DIR}/SFinder.cc
 	${SRC_DIR}/Contour.cc
+	${SRC_DIR}/Graph.cc
 	${SRC_DIR}/ChanVeseSegmenter.cc
 	${SRC_DIR}/SLICSegmenter.cc
 	${SRC_DIR}/LRACSegmenter.cc

@@ -92,14 +92,16 @@ void ChanVeseSegmenter::SetCheckerBoardLevelSet(TMatrixD* M, double square_size)
 }//close SetCheckerBoardLevelSet()
 
 
-ChanVeseSegmenter::CVdata* ChanVeseSegmenter::Init(Image* img,Image* initSegmImg){
-
+ChanVeseSegmenter::CVdata* ChanVeseSegmenter::Init(Image* img,Image* initSegmImg)
+{
 	//## Normalize image
 	double norm_min= 0;
 	double norm_max= 255;
 	Image* img_norm= img->GetNormalizedImage("LINEAR",norm_min,norm_max);
 	if(!img_norm){
-		ERROR_LOG("Failed to normalize input image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to normalize input image!");
+		#endif
 		return 0;
 	}
 
@@ -108,7 +110,9 @@ ChanVeseSegmenter::CVdata* ChanVeseSegmenter::Init(Image* img,Image* initSegmImg
 	//## Convert image to matrix
 	(pCVdata->imgMatrix)= img_norm->GetMatrix();
 	if(!pCVdata->imgMatrix) {
-		ERROR_LOG("Failed to convert input norm image to matrix!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to convert input norm image to matrix!");
+		#endif
 		if(img_norm) img_norm->Delete();
 		if(pCVdata){
 			delete pCVdata;
@@ -132,7 +136,9 @@ ChanVeseSegmenter::CVdata* ChanVeseSegmenter::Init(Image* img,Image* initSegmImg
   
 
 	if(initSegmImg){
-		INFO_LOG("Initial segmentation given, initializing level set from that...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Initial segmentation given, initializing level set from that...");
+		#endif
 		for (int i=0; i<nRows; ++i) {
 			long int iy= i;
     	for (int j=0; j<nCols; ++j) {
@@ -146,7 +152,9 @@ ChanVeseSegmenter::CVdata* ChanVeseSegmenter::Init(Image* img,Image* initSegmImg
 	else{
 
 		//## Set level set to checkerboard
-		INFO_LOG("Initializing level set to circle model...");
+		#ifdef LOGGING_ENABLED		
+			INFO_LOG("Initializing level set to circle model...");
+		#endif
 		//SetCheckerBoardLevelSet(pCVdata->phi0);
 		//SetCircleLevelSet(pCVdata->phi0);
 
@@ -155,8 +163,10 @@ ChanVeseSegmenter::CVdata* ChanVeseSegmenter::Init(Image* img,Image* initSegmImg
 		double rowCenter= nRows/2.0;
 		double colCenter= nCols/2.0;
 		double initContourRadius= 0.5;//1
-		INFO_LOG("Initializing level set from dummy gaussian (center("<<rowCenter<<","<<colCenter<<", radius="<<initContourRadius<<")");
-	
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Initializing level set from dummy gaussian (center("<<rowCenter<<","<<colCenter<<", radius="<<initContourRadius<<")");
+		#endif
+
 		for (int i=0; i<nRows; ++i) {
     	for (int j=0; j<nCols; ++j) {
 				double x= double(i) - rowCenter;
@@ -178,7 +188,9 @@ Image* ChanVeseSegmenter::FindSegmentation(Image* img,Image* initSegmImg,bool re
 {
 	//Check input image
 	if(!img){
-		ERROR_LOG("Null ptr to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given image!");
+		#endif
 		return nullptr;
 	}
 
@@ -197,12 +209,16 @@ Image* ChanVeseSegmenter::FindSegmentation(Image* img,Image* initSegmImg,bool re
 	pCVinputs->niters_reinit = nIterationsReInit;
 	pCVinputs->niters_inner = nIterationsInner;
 	pCVinputs->tol= tol;
-	INFO_LOG("Running Chan-Vese segmentation with pars {dt="<<dt<<", h="<<h<<", lambda1="<<lambda1<<", lambda2="<<lambda2<<" mu="<<mu<<" nu="<<nu<<" p="<<p<<", niters="<<nIterations<<" tol="<<tol<<", niters_inner="<<nIterationsInner<<", niters_reinit="<<nIterationsReInit<<"}");
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Running Chan-Vese segmentation with pars {dt="<<dt<<", h="<<h<<", lambda1="<<lambda1<<", lambda2="<<lambda2<<" mu="<<mu<<" nu="<<nu<<" p="<<p<<", niters="<<nIterations<<" tol="<<tol<<", niters_inner="<<nIterationsInner<<", niters_reinit="<<nIterationsReInit<<"}");
+	#endif
+
 	//## Initialize algo data
 	ChanVeseSegmenter::CVdata* pCVdata= Init(img,initSegmImg);
 	if(!pCVdata){
-		ERROR_LOG("Failed to initialize!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to initialize!");
+		#endif
 		if(pCVinputs){
 			delete pCVinputs;
 			pCVinputs= 0;
@@ -213,16 +229,22 @@ Image* ChanVeseSegmenter::FindSegmentation(Image* img,Image* initSegmImg,bool re
 	int nCols= (pCVdata->imgMatrix)->GetNcols();
 
 	//## Run segmentation
-	INFO_LOG("Performing Chan-Vese segmentation...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Performing Chan-Vese segmentation...");
+	#endif
   CVSegmentation(pCVdata->imgMatrix,pCVdata->phi0, &(pCVdata->phi), pCVinputs);
 
 	//## Get zero crossing pixels
-  INFO_LOG("Getting zero crossings...");
+	#ifdef LOGGING_ENABLED
+ 		INFO_LOG("Getting zero crossings...");
+	#endif
   ZeroCrossings(pCVdata->phi,&(pCVdata->edges),norm_max,norm_min);
   *(pCVdata->imgMatrixOut)= *(pCVdata->imgMatrix);
   
 	//## Fill segmented image (or contour image)
-	INFO_LOG("Filling segmented image...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Filling segmented image...");
+	#endif
 	TString imgName= Form("%s_CVSegmented",img->GetName().c_str());
 	Image* outputImg= img->GetCloned(std::string(imgName),true,true);
 	outputImg->Reset();
@@ -381,17 +403,23 @@ void ChanVeseSegmenter::CVSegmentation(TMatrixD* img,TMatrixD* phi0,TMatrixD** p
 
 		eps= sqrt(resSum2/nPix);
 		if(eps<=tol){
-			INFO_LOG("Stopping condition reached (eps="<<eps<<"<="<<tol<<") after #"<<k<<" iterations.");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Stopping condition reached (eps="<<eps<<"<="<<tol<<") after #"<<k<<" iterations.");
+			#endif
 			fStop= true;
 		}
 		else{
-			INFO_LOG("#"<<k<<"/"<<nIterations<<" iterations performed (eps="<<eps<<", tol="<<tol<<")");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("#"<<k<<"/"<<nIterations<<" iterations performed (eps="<<eps<<", tol="<<tol<<")");
+			#endif
 		}
 		
   }//end loop outer iters
 
 	if(!fStop){
-		WARN_LOG("Maximum number of iterations reached without convergence (eps="<<eps<<", tol="<<tol<<")");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Maximum number of iterations reached without convergence (eps="<<eps<<", tol="<<tol<<")");
+		#endif
 	}
 
 }//close CVSegmentation()
@@ -538,7 +566,9 @@ void ChanVeseSegmenter::ReinitPhi(TMatrixD* phiIn,TMatrixD** psiOut,double dt,do
     
     if (Q < dt*h*h){
       fStop = true;
-      INFO_LOG("Stopping condition reached at " << k+1 << " iterations (Q="<<Q<<")");
+			#ifdef LOGGING_ENABLED
+      	INFO_LOG("Stopping condition reached at " << k+1 << " iterations (Q="<<Q<<")");
+			#endif
     }
     else {
       //cout << "Iteration " << k << ", Q = " << Q << " > " << dt*h*h << endl;

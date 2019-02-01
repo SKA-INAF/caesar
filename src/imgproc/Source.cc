@@ -34,6 +34,9 @@
 #include <GraphicsUtils.h>
 #include <WCSUtils.h>
 #include <Consts.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 #include <TObject.h>
 #include <TMatrixD.h>
@@ -94,7 +97,9 @@ Source::Source(const Source& source)
 //	: Blob() 
 {
   // Contour copy constructor
-	DEBUG_LOG("Copy constuctor called...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copy constuctor called...");
+	#endif
   Init();
   ((Source&)source).Copy(*this);
 }
@@ -187,7 +192,9 @@ int Source::Draw(int pixMargin,ImgType imgType,bool drawImg,bool drawContours,bo
 		//Get source image
 		Image* simg= GetImage(imgType,pixMargin);
 		if(!simg){
-			WARN_LOG("Failed to get image from source!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to get image from source!");
+			#endif
 			return -1;
 		}
 
@@ -213,7 +220,9 @@ int Source::Draw(int pixMargin,ImgType imgType,bool drawImg,bool drawContours,bo
 		else htemp->Draw("COLZ");
 
 		//Append Caesar image to current pad
-		INFO_LOG("Appending source "<<this->GetName()<<" image to current pad ...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Appending source "<<this->GetName()<<" image to current pad ...");
+		#endif
 		simg->AppendPad();
 
 		//Draw main source info
@@ -243,14 +252,18 @@ int Source::Draw(int pixMargin,ImgType imgType,bool drawImg,bool drawContours,bo
 				yaxis_wcs->Draw("same");
 			}
 			else{
-				WARN_LOG("Failed to set gAxis!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to set gAxis!");
+				#endif
 			}	
 		}//close if useWCS
 	}//close if draw image
 
 	//Drawing contours?
 	if(drawContours){
-		INFO_LOG("Drawing #"<<m_Contours.size()<<" contours present for source "<<this->GetName()<<"...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Drawing #"<<m_Contours.size()<<" contours present for source "<<this->GetName()<<"...");
+		#endif
 		for(size_t i=0;i<m_Contours.size();i++){		
 			TGraph* thisContourGraph= m_Contours[i]->GetGraph();
 			if(thisContourGraph) {
@@ -268,7 +281,9 @@ int Source::Draw(int pixMargin,ImgType imgType,bool drawImg,bool drawContours,bo
 	//Draw fitted components (if any)
 	if(drawFitComponents && m_HasFitInfo){
 		std::vector<TEllipse*> ellipses= m_fitPars.GetFittedEllipses();
-		INFO_LOG("Drawing #"<<ellipses.size()<<" fitted components present for source "<<this->GetName()<<"...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Drawing #"<<ellipses.size()<<" fitted components present for source "<<this->GetName()<<"...");
+		#endif
 		for(size_t i=0;i<ellipses.size();i++){
 			ellipses[i]->SetLineColor(lineColor);
 			ellipses[i]->SetLineStyle(kDotted);
@@ -282,7 +297,9 @@ int Source::Draw(int pixMargin,ImgType imgType,bool drawImg,bool drawContours,bo
 
 	//Drawing nested sources recursively?
 	if(drawNested){
-		INFO_LOG("Draw source nested ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Draw source nested ...");
+		#endif
 		bool drawNestedImage= false;
 		for(size_t i=0;i<m_NestedSources.size();i++){
 			if(m_NestedSources[i]) {
@@ -299,7 +316,9 @@ int Source::Draw(int pixMargin,ImgType imgType,bool drawImg,bool drawContours,bo
 void Source::Draw(bool drawBoundingBox,bool drawEllipse,bool drawNested,int lineColor,int lineStyle)
 {
 	//Drawing contours?
-	DEBUG_LOG("#"<<m_Contours.size()<<" contours present for source "<<Id<<"...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<m_Contours.size()<<" contours present for source "<<Id<<"...");
+	#endif
 	for(size_t i=0;i<m_Contours.size();i++){		
 		TGraph* thisContourGraph= m_Contours[i]->GetGraph();
 		if(thisContourGraph) {
@@ -365,7 +384,9 @@ const std::string Source::GetDS9Region(bool dumpNestedSourceInfo,bool convertToW
 		int pixOffset= 1;
 		std::vector<Contour*> contours_wcs= GetWCSContours(wcs,coordSystem,pixOffset);		
 		if(contours_wcs.empty()){
-			WARN_LOG("Failed to convert contours in WCS, region will be empty!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to convert contours in WCS, region will be empty!");
+			#endif
 		}
 		else{
 			//Loop over WCS contours
@@ -400,7 +421,9 @@ const std::string Source::GetDS9Region(bool dumpNestedSourceInfo,bool convertToW
 				int pixOffset= 1;
 				std::vector<Contour*> contours_wcs= m_NestedSources[k]->GetWCSContours(wcs,coordSystem,pixOffset);
 				if(contours_wcs.empty()){
-					WARN_LOG("Failed to convert contours in WCS, region will be empty!");
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Failed to convert contours in WCS, region will be empty!");
+					#endif
 				}
 				else{
 					//Loop over WCS contours
@@ -436,7 +459,9 @@ const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNested
 {
 	//Check WCS & metadata
 	if(convertToWCS && !wcs && !m_imgMetaData){
-		WARN_LOG("Requested to convert ellipse to WCS but no wcs was provided and no metadata to compute it are available!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Requested to convert ellipse to WCS but no wcs was provided and no metadata to compute it are available!");
+		#endif
 		return std::string("");
 	}
 
@@ -455,7 +480,9 @@ const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNested
 		std::vector<TEllipse*> ellipses;
 		
 		if(GetFitEllipses(ellipses,useFWHM,convertToWCS,wcs,coordSystem,pixOffset)<0){
-			ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			#endif
 			return std::string("");
 		}
 
@@ -551,17 +578,21 @@ const std::string Source::GetDS9EllipseRegion(bool dumpNestedSourceInfo)
 
 }//close GetDS9EllipseRegion()
 
-bool Source::IsAdjacentSource(Source* aSource){
-		
+bool Source::IsAdjacentSource(Source* aSource)
+{		
 	//Check input sources
 	if(!aSource){
-		ERROR_LOG("Null ptr to given input Source!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given input Source!");
+		#endif
 		return false;
 	}		
 
 	//Check if pixel collections are empty
 	if(GetNPixels()<=0 || aSource->GetNPixels()<=0){
-		DEBUG_LOG("This or given source have no pixels, return not adjacent.");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("This or given source have no pixels, return not adjacent.");
+		#endif
 		return false;
 	}	
 
@@ -569,12 +600,16 @@ bool Source::IsAdjacentSource(Source* aSource){
 	//NB: If not skip the adjacency check
 	bool areBoundingBoxesOverlapping= CheckBoxOverlapping(aSource);
 	if(!areBoundingBoxesOverlapping){
-		DEBUG_LOG("Sources not adjacent as their bounding boxes (S1(x["<<m_Xmin<<","<<m_Xmax<<"), y["<<m_Ymin<<","<<m_Ymax<<"]), S2(x["<<aSource->m_Xmin<<","<<aSource->m_Xmax<<"), y["<<aSource->m_Ymin<<","<<aSource->m_Ymax<<"]) do not overlap...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Sources not adjacent as their bounding boxes (S1(x["<<m_Xmin<<","<<m_Xmax<<"), y["<<m_Ymin<<","<<m_Ymax<<"]), S2(x["<<aSource->m_Xmin<<","<<aSource->m_Xmax<<"), y["<<aSource->m_Ymin<<","<<aSource->m_Ymax<<"]) do not overlap...");
+		#endif
 		return false;		
 	}
 
 	//Find if there are adjacent pixels
-	DEBUG_LOG("Finding if this source (pos=("<<X0<<","<<Y0<<"), #"<<m_Pixels.size()<<" pix) is adjacent to source (pos("<<aSource->X0<<","<<aSource->Y0<<"), #"<<(aSource->m_Pixels).size()<<" pix)");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Finding if this source (pos=("<<X0<<","<<Y0<<"), #"<<m_Pixels.size()<<" pix) is adjacent to source (pos("<<aSource->X0<<","<<aSource->Y0<<"), #"<<(aSource->m_Pixels).size()<<" pix)");
+	#endif
 	auto it = std::find_first_of(
 		(aSource->m_Pixels).begin(), (aSource->m_Pixels).end(), 
 		m_Pixels.begin(), m_Pixels.end(),
@@ -587,7 +622,9 @@ bool Source::IsAdjacentSource(Source* aSource){
   } 
 	else {
 		isAdjacent= true;
-  	DEBUG_LOG("Sources ("<<this->Id<<","<<aSource->Id<<") are adjacent (found a match at " << std::distance((aSource->m_Pixels).begin(), it)<<")");
+		#ifdef LOGGING_ENABLED
+  		DEBUG_LOG("Sources ("<<this->Id<<","<<aSource->Id<<") are adjacent (found a match at " << std::distance((aSource->m_Pixels).begin(), it)<<")");
+		#endif
   }
 
 	return isAdjacent;
@@ -601,13 +638,17 @@ long int Source::GetNMatchingPixels(std::vector<Pixel*>& matching_pixels,Source*
 
 	//Check input sources
 	if(!aSource){
-		ERROR_LOG("Null ptr to given input Source!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given input Source!");
+		#endif
 		return 0;
 	}	
 
 	//Check if pixel collections are empty
 	if(GetNPixels()<=0 || aSource->GetNPixels()<=0){
-		DEBUG_LOG("This or given source have no pixels, return 0.");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("This or given source have no pixels, return 0.");
+		#endif
 		return 0;
 	}	
 	
@@ -615,7 +656,9 @@ long int Source::GetNMatchingPixels(std::vector<Pixel*>& matching_pixels,Source*
 	//NB: If not skip the adjacency check
 	bool areBoundingBoxesOverlapping= CheckBoxOverlapping(aSource);
 	if(!areBoundingBoxesOverlapping){
-		DEBUG_LOG("Sources not overlapping as their bounding boxes (S1(x["<<m_Xmin<<","<<m_Xmax<<"), y["<<m_Ymin<<","<<m_Ymax<<"]), S2(x["<<aSource->m_Xmin<<","<<aSource->m_Xmax<<"), y["<<aSource->m_Ymin<<","<<aSource->m_Ymax<<"]) do not overlap...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Sources not overlapping as their bounding boxes (S1(x["<<m_Xmin<<","<<m_Xmax<<"), y["<<m_Ymin<<","<<m_Ymax<<"]), S2(x["<<aSource->m_Xmin<<","<<aSource->m_Xmax<<"), y["<<aSource->m_Ymin<<","<<aSource->m_Ymax<<"]) do not overlap...");
+		#endif
 		return 0;		
 	}
 
@@ -647,19 +690,25 @@ bool Source::FindSourceMatchByOverlapArea(SourceOverlapMatchPars& pars, const st
 
 	//Check given threshold
 	if(matchOverlapThr<=0){
-		WARN_LOG("Invalid threshold ("<<matchOverlapThr<<") given (hint: should be >0)!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Invalid threshold ("<<matchOverlapThr<<") given (hint: should be >0)!");
+		#endif
 		return false;
 	}
  
 	//Return if given source collection to be searched is empty
 	if(sources.empty()) {
-		WARN_LOG("Given source collection is empty, no match can be searched!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Given source collection is empty, no match can be searched!");
+		#endif
 		return false;
 	}
 
 	//Return if this source has no pixels
 	if(m_Pixels.empty() || NPix<=0){
-		WARN_LOG("This source has no pixels stored, cannot search for a match with a source catalog!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("This source has no pixels stored, cannot search for a match with a source catalog!");
+		#endif
 		return false;
 	}	
 
@@ -711,7 +760,9 @@ bool Source::FindSourceMatchByOverlapArea(SourceOverlapMatchPars& pars, const st
 			overlapPars.dY= dY;		
 			tmpMatchPars.push_back(overlapPars);
 	
-			INFO_LOG("Source "<<this->GetName()<<" (X0="<<X0<<", Y0="<<Y0<<", N="<<NPix<<"): found match with source "<<sources[j]->GetName()<<" (X0="<<sources[j]->X0<<", Y0="<<sources[j]->Y0<<", N="<<sources[j]->NPix<<"), NMatchingPixels="<<NMatchingPixels<<", f="<<f<<", f_rec="<<f_rec<<" (t="<<matchOverlapThr<<"), Sratio="<<Sratio<<", Sratio_rec="<<Sratio_rec<<", dX="<<dX<<", dY="<<dY);
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Source "<<this->GetName()<<" (X0="<<X0<<", Y0="<<Y0<<", N="<<NPix<<"): found match with source "<<sources[j]->GetName()<<" (X0="<<sources[j]->X0<<", Y0="<<sources[j]->Y0<<", N="<<sources[j]->NPix<<"), NMatchingPixels="<<NMatchingPixels<<", f="<<f<<", f_rec="<<f_rec<<" (t="<<matchOverlapThr<<"), Sratio="<<Sratio<<", Sratio_rec="<<Sratio_rec<<", dX="<<dX<<", dY="<<dY);
+			#endif
 		}
 		
 	}//end loop sources	
@@ -723,8 +774,10 @@ bool Source::FindSourceMatchByOverlapArea(SourceOverlapMatchPars& pars, const st
 	//NB: Consider 2 rec match sources: 1st) has larger f, 2nd) has larger f_rec. Which is the best one?
 	//    It is assumed here that the best is those that covers true source with a larger fraction, e.g. the 1st)
 	if(tmpMatchPars.size()>1) {
-		INFO_LOG("#"<<tmpMatchPars.size()<<" source matches found, searching for the best one ...");
-		
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("#"<<tmpMatchPars.size()<<" source matches found, searching for the best one ...");
+		#endif
+
 		double overlap_best= -1.e+99;
 		int best_index= 0;
 
@@ -759,19 +812,25 @@ bool Source::FindSourceMatchByPos(std::vector<SourcePosMatchPars>& matchPars, co
 
 	//Check given threshold
 	if(matchPosThr<=0){
-		WARN_LOG("Invalid threshold ("<<matchPosThr<<") given (hint: should be >0)!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Invalid threshold ("<<matchPosThr<<") given (hint: should be >0)!");
+		#endif
 		return false;
 	}
  
 	//Return if given source collection to be searched is empty
 	if(sources.empty()) {
-		WARN_LOG("Given source collection is empty, no match can be searched!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Given source collection is empty, no match can be searched!");
+		#endif
 		return false;
 	}
 
 	//Return if this source has no pixels
 	if(m_Pixels.empty() || NPix<=0){
-		WARN_LOG("This source has no pixels stored, cannot search for a match with a source catalog!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("This source has no pixels stored, cannot search for a match with a source catalog!");
+		#endif
 		return false;
 	}	
 
@@ -805,7 +864,9 @@ bool Source::FindSourceMatchByPos(std::vector<SourcePosMatchPars>& matchPars, co
 
 	//Search for best overlap in case of multiple matches
 	if(matchPars.size()>1) {
-		INFO_LOG("#"<<matchPars.size()<<" source matches found, sorting by position difference ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("#"<<matchPars.size()<<" source matches found, sorting by position difference ...");
+		#endif
 		std::sort(matchPars.begin(),matchPars.end());		
 	}
 
@@ -832,7 +893,9 @@ bool Source::FindSourceMatchByPos(std::vector<SourcePosMatchPars>& matchPars, lo
 		SourceFitPars fitPars= source->GetFitPars();
 		//double dist_best= 1.e+99;
 		//long int best_component= -1;
-		DEBUG_LOG("# fit components="<<fitPars.GetNComponents());
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("# fit components="<<fitPars.GetNComponents());
+		#endif
 		for(int k=0;k<fitPars.GetNComponents();k++){
 			double X0_fitcomp= fitPars.GetParValue(k,"x0");	
 			double Y0_fitcomp= fitPars.GetParValue(k,"y0");
@@ -846,7 +909,9 @@ bool Source::FindSourceMatchByPos(std::vector<SourcePosMatchPars>& matchPars, lo
 				matchPars.push_back(matchInfo);
 				//best_component= k;
 				//dist_best= dist;
-				DEBUG_LOG("Match info for source "<<this->GetName()<<" (pos("<<X0_ref<<","<<Y0_ref<<") against source "<<source->GetName()<<" (pos("<<X0_fitcomp<<","<<Y0_fitcomp<<"), dx="<<dx<<", dy="<<dy<<" dist="<<dist<<", matchPosThr="<<matchPosThr);	
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Match info for source "<<this->GetName()<<" (pos("<<X0_ref<<","<<Y0_ref<<") against source "<<source->GetName()<<" (pos("<<X0_fitcomp<<","<<Y0_fitcomp<<"), dx="<<dx<<", dy="<<dy<<" dist="<<dist<<", matchPosThr="<<matchPosThr);	
+				#endif
 			}
 			
 		}//end loop fitted components	
@@ -857,7 +922,9 @@ bool Source::FindSourceMatchByPos(std::vector<SourcePosMatchPars>& matchPars, lo
 			pars.posDiff= dist_best;
 			pars.fitComponentIndex= best_component;
 		}
-		INFO_LOG("Match info for source "<<this->GetName()<<" (pos("<<X0_ref<<","<<Y0_ref<<") against source "<<source->GetName()<<" (pos("<<source->X0<<","<<source->Y0<<"), found? "<<foundMatch<<", hasFitInfo? "<<hasFitInfo<<", dist_best="<<dist_best<<" best_component="<<best_component<<", matchPosThr="<<matchPosThr);
+		#ifdef LOGGING_ENABLED	
+			INFO_LOG("Match info for source "<<this->GetName()<<" (pos("<<X0_ref<<","<<Y0_ref<<") against source "<<source->GetName()<<" (pos("<<source->X0<<","<<source->Y0<<"), found? "<<foundMatch<<", hasFitInfo? "<<hasFitInfo<<", dist_best="<<dist_best<<" best_component="<<best_component<<", matchPosThr="<<matchPosThr);
+		#endif
 		*/
 
 	}//close if has fit info
@@ -875,7 +942,9 @@ bool Source::FindSourceMatchByPos(std::vector<SourcePosMatchPars>& matchPars, lo
 			matchPars.push_back(matchInfo);
 			//pars.posDiff= dist;
 			//pars.fitComponentIndex= -1;
-			DEBUG_LOG("Match info for source "<<this->GetName()<<" (pos("<<X0_ref<<","<<Y0_ref<<") against source "<<source->GetName()<<" (pos("<<source->X0<<","<<source->Y0<<"), found? "<<foundMatch<<", dx="<<dx<<", dy="<<dy<<" matchPosThr="<<matchPosThr); 
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Match info for source "<<this->GetName()<<" (pos("<<X0_ref<<","<<Y0_ref<<") against source "<<source->GetName()<<" (pos("<<source->X0<<","<<source->Y0<<"), found? "<<foundMatch<<", dx="<<dx<<", dy="<<dy<<" matchPosThr="<<matchPosThr); 
+			#endif
 		}
 
 	}//close else !has fit info
@@ -893,19 +962,25 @@ bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, const std::vector<So
 
 	//Check given threshold
 	if(matchPosThr<=0){
-		WARN_LOG("Invalid threshold ("<<matchPosThr<<") given (hint: should be >0)!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Invalid threshold ("<<matchPosThr<<") given (hint: should be >0)!");
+		#endif
 		return false;
 	}
  
 	//Return if given source collection to be searched is empty
 	if(sources.empty()) {
-		WARN_LOG("Given source collection is empty, no match can be searched!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Given source collection is empty, no match can be searched!");
+		#endif
 		return false;
 	}
 
 	//Return if this source has no pixels
 	if(m_Pixels.empty() || NPix<=0){
-		WARN_LOG("This source has no pixels stored, cannot search for a match with a source catalog!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("This source has no pixels stored, cannot search for a match with a source catalog!");
+		#endif
 		return false;
 	}	
 
@@ -960,7 +1035,9 @@ bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, const std::vector<So
 
 	//Search for best overlap in case of multiple matches
 	if(tmpMatchPars.size()>1) {
-		INFO_LOG("#"<<tmpMatchPars.size()<<" source matches found, searching for the best one ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("#"<<tmpMatchPars.size()<<" source matches found, searching for the best one ...");
+		#endif
 		
 		double dist_best= 1.e+99;
 		int best_index= -1;
@@ -992,11 +1069,13 @@ bool Source::FindSourceMatchByPos(SourcePosMatchPars& pars, const std::vector<So
 
 
 
-int Source::MergeSource(Source* aSource,bool copyPixels,bool checkIfAdjacent,bool computeStatPars,bool computeMorphPars,bool sumMatchingPixels){
-
+int Source::MergeSource(Source* aSource,bool copyPixels,bool checkIfAdjacent,bool computeStatPars,bool computeMorphPars,bool sumMatchingPixels)
+{
 	//Check input sources
 	if(!aSource){
-		ERROR_LOG("Null ptr to given input Source!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given input Source!");
+		#endif
 		return -1;
 	}	
 
@@ -1005,7 +1084,9 @@ int Source::MergeSource(Source* aSource,bool copyPixels,bool checkIfAdjacent,boo
 	if(checkIfAdjacent) {
 		bool areAdjacent= IsAdjacentSource(aSource);
 		if(!areAdjacent){
-			WARN_LOG("Sources are not adjacent nor overlapping, no merging will be performed!");
+			#ifdef LOGGING_ENABLED	
+				WARN_LOG("Sources are not adjacent nor overlapping, no merging will be performed!");
+			#endif
 			return -1;
 		}
 	}
@@ -1054,18 +1135,24 @@ int Source::MergeSource(Source* aSource,bool copyPixels,bool checkIfAdjacent,boo
 	//If no pixels are to be merged (e.g. all pixels overlapping) return?
 	int nMergedPixels= (int)pixelsToBeMerged.size();
 	if(nMergedPixels<=0){
-		WARN_LOG("No pixels to be merged (perfectly overlapping sources?)!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No pixels to be merged (perfectly overlapping sources?)!");
+		#endif
 		//return -1;
 	}
 	else{
-		INFO_LOG("# "<<nMergedPixels<<"/"<<aSource->GetNPixels()<<" pixels to be merged to this source (Npix="<<this->GetNPixels()<<")...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("# "<<nMergedPixels<<"/"<<aSource->GetNPixels()<<" pixels to be merged to this source (Npix="<<this->GetNPixels()<<")...");
+		#endif
 	}
 
 	//Now merge the pixels (if any to be merged)
 	//Source moments will be updated in AddPixel()
 	for(int i=0;i<nMergedPixels;i++){
 		if(this->AddPixel(pixelsToBeMerged[i],copyPixels)<0){
-			WARN_LOG("Failed to add pixel no. "<<i<<" to this source, skip to next pixel in list...");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to add pixel no. "<<i<<" to this source, skip to next pixel in list...");
+			#endif
 			continue;			
 		}
 	}//end loop pixels to be merged
@@ -1116,11 +1203,15 @@ int Source::MergeSource(Source* aSource,bool copyPixels,bool checkIfAdjacent,boo
 			int simtype_merged= SimType;
 			try{
 				simtype_merged= std::stoi(simtype12_str);
-				INFO_LOG("Changing simtype from (simtype1="<<SimType<<", simtype2="<<aSource->SimType<<") to simtype="<<simtype_merged);
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Changing simtype from (simtype1="<<SimType<<", simtype2="<<aSource->SimType<<") to simtype="<<simtype_merged);
+				#endif
 				SimType= simtype_merged;
 			}
 			catch(...){
-				ERROR_LOG("C++ exception occurred while converting merged stringified simtype "<<simtype12_str<<" to int code (will not add merged soure to simtype!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("C++ exception occurred while converting merged stringified simtype "<<simtype12_str<<" to int code (will not add merged soure to simtype!");
+				#endif
 			}
 		}//close if found
 	}//close if sim type
@@ -1148,7 +1239,9 @@ bool Source::CheckBoxOverlapping(Source* aSource)
 {
 	//Check input blob
 	if(!aSource){
-		ERROR_LOG("Null ptr to input source given!");
+		#ifdef LOGGING_ENABLED	
+			ERROR_LOG("Null ptr to input source given!");
+		#endif
 		return false;
 	}
 	
@@ -1167,13 +1260,17 @@ float Source::GetCentroidDistance(Source* aSource)
 {
 	//Check given source
 	if(!aSource){
-		ERROR_LOG("Null ptr to input source given, returning inf!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input source given, returning inf!");
+		#endif
 		return std::numeric_limits<float>::infinity();
 	}
 
 	//If one or both sources has no pars computed return inf
 	if(!this->HasStats() || aSource->HasStats()){
-		WARN_LOG("One or both sources has no stats computed (you must compute pars before getting distance, returning inf)");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("One or both sources has no stats computed (you must compute pars before getting distance, returning inf)");
+		#endif
 		return std::numeric_limits<float>::infinity();
 	}
 
@@ -1192,7 +1289,9 @@ int Source::Fit(SourceFitOptions& fitOptions)
 	//Create source fitter
 	SourceFitter fitter;
 	if(fitter.FitSource(this,fitOptions)<0){	
-		WARN_LOG("Failed to fit source "<<this->GetName()<<" ...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to fit source "<<this->GetName()<<" ...");
+		#endif
 		m_HasFitInfo= false;
 		m_fitStatus= fitter.GetFitStatus();
 		return -1;
@@ -1204,7 +1303,9 @@ int Source::Fit(SourceFitOptions& fitOptions)
 
 	int fitStatus= fitter.GetFitStatus();
 	if(fitStatus==eFitConverged || fitStatus==eFitConvergedWithWarns){
-		INFO_LOG("Fit of source "<<this->GetName()<<" converged (status="<<fitStatus<<"), storing fit parameters...");	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Fit of source "<<this->GetName()<<" converged (status="<<fitStatus<<"), storing fit parameters...");	
+		#endif
 		m_fitPars= fitPars;
 		m_HasFitInfo= true;
 	}
@@ -1225,20 +1326,26 @@ int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool
 
 	//Return empty vector if no fit info are available
 	if(!m_HasFitInfo){
-		WARN_LOG("Source "<<this->GetName()<<" has no fit info available, returning empty vector...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Source "<<this->GetName()<<" has no fit info available, returning empty vector...");
+		#endif
 		return 0;
 	}
 
 	//Check if metadata are not available and convertToWCS is requested
 	if(!m_imgMetaData && convertToWCS){
-		WARN_LOG("Requested to convert to WCS but not metadata have been set on this source to build the WCS!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Requested to convert to WCS but not metadata have been set on this source to build the WCS!");
+		#endif
 		return -1;
 	}
 
 	//Get ellipses from fit parameters in pixel coordinates
 	fitEllipses= m_fitPars.GetFittedEllipses(useFWHM);
 	if(fitEllipses.empty()){
-		WARN_LOG("No fitted ellipse returned (there should be at least one component fitted, check!)...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No fitted ellipse returned (there should be at least one component fitted, check!)...");
+		#endif
 		return -1;
 	}
 
@@ -1250,7 +1357,9 @@ int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool
 			//wcs= m_imgMetaData->GetWorldCoord(coordSystem);
 			wcs= m_imgMetaData->GetWCS(coordSystem);
 			if(!wcs){
-				ERROR_LOG("Failed to get WorldCoord system from metadata!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to get WorldCoord system from metadata!");
+				#endif
 				CodeUtils::DeletePtrCollection<TEllipse>(fitEllipses);
 				return -1;
 			}
@@ -1262,7 +1371,9 @@ int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool
 		for(size_t i=0;i<fitEllipses.size();i++){
 			TEllipse* fitEllipse_wcs= AstroUtils::PixelToWCSEllipse(fitEllipses[i],wcs,pixOffset);
 			if(!fitEllipse_wcs){
-				ERROR_LOG("Failed to convert fit ellipse no. "<<i+1<<" to WCS!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to convert fit ellipse no. "<<i+1<<" to WCS!");
+				#endif
 				CodeUtils::DeletePtrCollection<TEllipse>(fitEllipses);
 				//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
 				if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);	
@@ -1297,7 +1408,9 @@ int Source::FindComponentPeaks(std::vector<ImgPeak>& peaks,double peakZThr,int m
 	int pixMargin= 0;
 	Image* peakSearchMap= this->GetImage(eFluxMap,pixMargin);
 	if(!peakSearchMap){
-		ERROR_LOG("Failed to get source image!");	
+		#ifdef LOGGING_ENABLED	
+			ERROR_LOG("Failed to get source image!");	
+		#endif
 		return -1;
 	}
 
@@ -1313,18 +1426,24 @@ int Source::FindComponentPeaks(std::vector<ImgPeak>& peaks,double peakZThr,int m
 	double rmsMean= m_bkgRMSSum/(double)(m_Pixels.size());
 
 	//Finding peaks
-	INFO_LOG("Finding peaks in source (id="<<Id<<", name="<<this->GetName()<<")");	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Finding peaks in source (id="<<Id<<", name="<<this->GetName()<<")");	
+	#endif
 	//std::vector<TVector2> peakPoints;
 	std::vector<ImgPeak> peakPoints;
 	bool skipBorders= true;
 	if(peakSearchMap->FindPeaks(peakPoints,kernels,peakShiftTolerance,skipBorders,peakKernelMultiplicityThr)<0){
-		WARN_LOG("Failed to find peaks in source (id="<<Id<<", name="<<this->GetName()<<") image!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to find peaks in source (id="<<Id<<", name="<<this->GetName()<<") image!");
+		#endif
 		CodeUtils::DeletePtr<Image>(peakSearchMap);
 		return -1;
 	}
 
 	//Select peaks (skip peaks at boundary or faint peaks)
-	INFO_LOG("#"<<peakPoints.size()<<" peaks found in source (id="<<Id<<", name="<<this->GetName()<<"), apply selection...");	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<peakPoints.size()<<" peaks found in source (id="<<Id<<", name="<<this->GetName()<<"), apply selection...");	
+	#endif
 	//std::vector<TVector2> peakPoints_selected;
 	std::vector<ImgPeak> peakPoints_selected;
 	std::vector<double> peakFluxes_selected;
@@ -1335,7 +1454,9 @@ int Source::FindComponentPeaks(std::vector<ImgPeak>& peaks,double peakZThr,int m
 		double y= peakPoints[i].y;
 		long int gbin= peakSearchMap->FindBin(x,y);
 		if(gbin<0){
-			WARN_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
+			#endif
 			CodeUtils::DeletePtr<Image>(peakSearchMap);
 			return -1;
 		}
@@ -1348,15 +1469,19 @@ int Source::FindComponentPeaks(std::vector<ImgPeak>& peaks,double peakZThr,int m
 			if(rmsMean!=0) Zpeak_imgbkg= (Speak-bkgMean)/rmsMean;
 			if(Smad!=0) Zpeak_sourcebkg= (Speak-Smedian)/Smad;
 			if(Zpeak_imgbkg<peakZThr) {
-			//if(Zpeak_sourcebkg<peakZThr) {
-				INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak_imgbkg="<<Zpeak_imgbkg<<", Zpeak_sourcebkg="<<Zpeak_sourcebkg<<"<"<<peakZThr<<")");
+			//if(Zpeak_sourcebkg<peakZThr) {	
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak_imgbkg="<<Zpeak_imgbkg<<", Zpeak_sourcebkg="<<Zpeak_sourcebkg<<"<"<<peakZThr<<")");
+				#endif
 				continue;
 			}
 		}//close if
 
 		//Remove peaks lying on the source contour
 		if(this->HasContours() && this->IsPointOnContour(x,y,0.5)) {
-			INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as lying on source contour");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as lying on source contour");
+			#endif
 			continue;
 		}
 
@@ -1373,14 +1498,18 @@ int Source::FindComponentPeaks(std::vector<ImgPeak>& peaks,double peakZThr,int m
 	//Select peaks if more than max allowed
 	int nPeaks_selected= static_cast<int>(peakPoints_selected.size());
 	if(nPeaks_selected<=0){
-		WARN_LOG("No components left in source (id="<<Id<<", name="<<this->GetName()<<") after selection!");	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No components left in source (id="<<Id<<", name="<<this->GetName()<<") after selection!");	
+		#endif
 		CodeUtils::DeletePtr<Image>(peakSearchMap);
 		return 0;
 	}
 	
 	int nComponents= nPeaks_selected;
 	if(maxPeaks>0) nComponents= std::min(nPeaks_selected,maxPeaks);
-	INFO_LOG("#"<<nComponents<<" components found in source (id="<<Id<<", name="<<this->GetName()<<"), max peaks="<<maxPeaks<<") ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<nComponents<<" components found in source (id="<<Id<<", name="<<this->GetName()<<"), max peaks="<<maxPeaks<<") ...");
+	#endif
 
 	peaks.clear();
 	for(int i=0;i<nComponents;i++){
@@ -1407,7 +1536,9 @@ int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std:
 	//int pixMargin= 10;//NB: If set to 0 some peaks could be lost
 	Image* sourceImg= this->GetImage(eFluxMap,pixMargin);
 	if(!sourceImg){
-		ERROR_LOG("Failed to get source image!");	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get source image!");	
+		#endif
 		return -1;
 	}
 
@@ -1427,19 +1558,25 @@ int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std:
 		thrFactor,kernelFactor
 	);
 	if(status<0){
-		ERROR_LOG("Failed to find blended components in source "<<this->GetName()<<"!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to find blended components in source "<<this->GetName()<<"!");
+		#endif
 		return -1;
 	}
 
 	if(peakPoints.empty()){
-		INFO_LOG("No components found in source (name="<<this->GetName()<<")");	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("No components found in source (name="<<this->GetName()<<")");	
+		#endif
 		CodeUtils::DeletePtr<Image>(sourceImg);
 		CodeUtils::DeletePtrCollection<Source>(sources);
 		return 0;
 	}
 
 	//Select components by peak flux (skip peaks at boundary or faint peaks)
-	INFO_LOG("#"<<peakPoints.size()<<" peaks found in source (name="<<this->GetName()<<"), apply selection...");	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<peakPoints.size()<<" peaks found in source (name="<<this->GetName()<<"), apply selection...");	
+	#endif
 	std::vector<ImgPeak> peakPoints_selected;
 	std::vector<double> peakFluxes_selected;
 	std::vector<Source*> sources_selected;
@@ -1456,14 +1593,18 @@ int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std:
 			if(Smad!=0) Zpeak_sourcebkg= (Speak-Smedian)/Smad;
 			if(Zpeak_imgbkg<peakZThr) {
 			//if(Zpeak_sourcebkg<peakZThr) {
-				INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak_imgbkg="<<Zpeak_imgbkg<<", Zpeak_sourcebkg="<<Zpeak_sourcebkg<<"<"<<peakZThr<<")");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak_imgbkg="<<Zpeak_imgbkg<<", Zpeak_sourcebkg="<<Zpeak_sourcebkg<<"<"<<peakZThr<<")");
+				#endif
 				continue;
 			}
 		}//close if
 
 		//Remove peaks lying on the source contour
 		if(this->HasContours() && this->IsPointOnContour(x,y,0.5)) {
-			INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as lying on source contour...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as lying on source contour...");
+			#endif
 			continue;
 		}
 
@@ -1481,7 +1622,9 @@ int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std:
 	//Select peaks if more than max allowed
 	int nPeaks_selected= static_cast<int>(peakPoints_selected.size());
 	if(nPeaks_selected<=0){
-		WARN_LOG("No components left in source (id="<<Id<<", name="<<this->GetName()<<") after selection!");	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No components left in source (id="<<Id<<", name="<<this->GetName()<<") after selection!");	
+		#endif
 		CodeUtils::DeletePtr<Image>(sourceImg);
 		CodeUtils::DeletePtrCollection<Source>(sources);
 		return 0;
@@ -1489,7 +1632,9 @@ int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std:
 	
 	int nComponents= nPeaks_selected;
 	if(maxPeaks>0) nComponents= std::min(nPeaks_selected,maxPeaks);
-	INFO_LOG("#"<<nComponents<<" components found in source (id="<<Id<<", name="<<this->GetName()<<"), max peaks="<<maxPeaks<<") ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<nComponents<<" components found in source (id="<<Id<<", name="<<this->GetName()<<"), max peaks="<<maxPeaks<<") ...");
+	#endif
 
 	deblendedPeaks.clear();
 	deblendedComponents.clear();
@@ -1523,13 +1668,17 @@ std::string Source::GetIAUName(bool useWeightedPos,WCS* wcs,int coordSystem)
 	bool deleteWCS= false;
 	if(!wcs){
 		if(!m_imgMetaData){
-			WARN_LOG("No metadata are available to retrieve WCS!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("No metadata are available to retrieve WCS!");
+			#endif
 			return iau;
 		}
 		//wcs= m_imgMetaData->GetWorldCoord(coordSystem);	
 		wcs= m_imgMetaData->GetWCS(coordSystem);
 		if(!wcs){
-			ERROR_LOG("Failed to get WCS from metadata!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to get WCS from metadata!");
+			#endif
 			return iau;
 		}
 		deleteWCS= true;
@@ -1542,7 +1691,10 @@ std::string Source::GetIAUName(bool useWeightedPos,WCS* wcs,int coordSystem)
 	else status= AstroUtils::PixelToWCSStrCoords(wcspos_str,wcs,X0,Y0);
 
 	if(status<0){
-		WARN_LOG("Failed to compute WCS source pos in string format!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to compute WCS source pos in string format!");
+		#endif
+
 		//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
 		if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 		return iau;
@@ -1550,7 +1702,10 @@ std::string Source::GetIAUName(bool useWeightedPos,WCS* wcs,int coordSystem)
 
 	//Compute IAU name
 	if(AstroUtils::GetIAUCoords(iau,wcspos_str)<0){
-		WARN_LOG("Failed to compute IAU name from WCS string coords!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to compute IAU name from WCS string coords!");
+		#endif
+
 		iau= "";
 		//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);	
 		if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
@@ -1576,13 +1731,17 @@ int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WCS* wcs,in
 	bool deleteWCS= false;
 	if(!wcs){
 		if(!m_imgMetaData){
-			WARN_LOG("Requested to get WCS centroid coords but no wcs was provided and no metadata are available to retrieve it!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Requested to get WCS centroid coords but no wcs was provided and no metadata are available to retrieve it!");
+			#endif
 			return -1;
 		}
 		//wcs= m_imgMetaData->GetWorldCoord(coordSystem);
 		wcs= m_imgMetaData->GetWCS(coordSystem);
 		if(!wcs){
-			ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			#endif
 			return -1;
 		}
 		deleteWCS= true;
@@ -1591,7 +1750,9 @@ int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WCS* wcs,in
 	//Get WCS centroid coords
 	int status= AstroUtils::PixelToWCSCoords(xwcs,ywcs,wcs,x,y);
 	if(status<0){
-		WARN_LOG("Failed to get WCS coordinate corresponding to ("<<x<<","<<y<<")!");
+		#ifdef LOGGING_ENABLED	
+			WARN_LOG("Failed to get WCS coordinate corresponding to ("<<x<<","<<y<<")!");
+		#endif
 		return -1;
 	}
 
@@ -1612,7 +1773,9 @@ int Source::GetSpectralAxisInfo(double& val,double& dval,std::string& units)
 
 	//Check if metadata are available
 	if(!m_imgMetaData){
-		WARN_LOG("No metadata available to get spectral axis info!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No metadata available to get spectral axis info!");
+		#endif
 		return -1;
 	}
 

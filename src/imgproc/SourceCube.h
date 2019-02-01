@@ -28,7 +28,6 @@
 #ifndef _SOURCE_CUBE_h
 #define _SOURCE_CUBE_h 1
 
-#include <Logger.h>
 
 #include <TObject.h>
 #include <TCanvas.h>
@@ -112,19 +111,7 @@ class SourceCube : public TNamed {
 		/**
 		* \brief Add index to existing component
 		*/
-		int AddIndexToComponent(int cubeComponentIndex,size_t sindex,size_t componentIndex){
-			//Check if cube component id was allocated
-			int nComponents= static_cast<int>(m_componentIndexes.size());
-			if(nComponents<=0 || nComponents<cubeComponentIndex+1){
-				ERROR_LOG("Component with index "<<cubeComponentIndex<<" was not allocated!");
-				return -1;
-			}
-	
-			//Fill component indexes
-			m_componentIndexes[cubeComponentIndex].push_back(std::make_pair(sindex,componentIndex));
-				
-			return 0;
-		}
+		int AddIndexToComponent(int cubeComponentIndex,size_t sindex,size_t componentIndex);
 
 		/**
 		* \brief Draw source images

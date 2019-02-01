@@ -29,7 +29,9 @@
 #ifndef _CODE_UTILS_h
 #define _CODE_UTILS_h 1
 
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 #include <TObject.h>
 
@@ -147,11 +149,17 @@ class CodeUtils : public TObject {
 		
 	public:
 
+		/**
+		* \brief Generate uuid string
+		*/
 		static std::string GenerateUUID(){
 			boost::uuids::uuid random_uuid = boost::uuids::random_generator()();
 			return boost::lexical_cast<std::string>(random_uuid);
 		}
 
+		/**
+		* \brief Convert json to string
+		*/
 		static int JsonToString(std::string& jsonString,Json::Value& jsonObj,bool isMinified=true){
 			//Encode to string
 			try {
@@ -165,17 +173,24 @@ class CodeUtils : public TObject {
 				}
 			}//close try
 			catch(...){
-				ERROR_LOG("Failed to encode to json string!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to encode to json string!");
+				#endif
 				return -1;
 			}		
 			return 0;
 		}//close JsonToString()
 
-		static int StringToJson(Json::Value& root,std::string& jsonString){
-			
+		/**
+		* \brief Convert string to json
+		*/
+		static int StringToJson(Json::Value& root,std::string& jsonString)
+		{			
 			Json::Reader reader;
 			if(!reader.parse(jsonString, root)) {
-				ERROR_LOG("Failed to encode string to json ("<<reader.getFormattedErrorMessages()<<")");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to encode string to json ("<<reader.getFormattedErrorMessages()<<")");
+				#endif
 				return -1;
 			}
 			return 0;
@@ -449,7 +464,9 @@ class CodeUtils : public TObject {
 
 			//Check data size
 			if(data.empty()){
-				WARN_LOG("Input data are empty, nothing to be sampled!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Input data are empty, nothing to be sampled!");
+				#endif
 				return -1;
 			}
 			
@@ -501,7 +518,9 @@ class CodeUtils : public TObject {
 
 			//Check data size
 			if(data.empty()){
-				WARN_LOG("Input data are empty, nothing to be sampled!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Input data are empty, nothing to be sampled!");
+				#endif
 				return -1;
 			}
 
@@ -510,7 +529,9 @@ class CodeUtils : public TObject {
 				std::vector<T> sample_data;
 				int status= ExtractVectorRandomSample(sample_data,data,n,repeate);
 				if(status<0){
-					ERROR_LOG("Failed to generate random sample no. "<<i+1<<", exit generation!");
+					#ifdef LOGGING_ENABLED
+						ERROR_LOG("Failed to generate random sample no. "<<i+1<<", exit generation!");
+					#endif
 					data_samples.clear();
 					return -1;
 				}
@@ -636,7 +657,9 @@ class CodeUtils : public TObject {
 				);
 			}//close try
 			catch(std::exception& e){
-				ERROR_LOG("C++ exception ("<<e.what()<<") occurred while stripping blank spaces from string!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("C++ exception ("<<e.what()<<") occurred while stripping blank spaces from string!");
+				#endif
 				return -1;
 			}
 			return 0;

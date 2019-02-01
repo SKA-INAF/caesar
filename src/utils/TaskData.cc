@@ -26,7 +26,9 @@
 */
 
 #include <TaskData.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <Source.h>
 #include <CodeUtils.h>
 

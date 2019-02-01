@@ -28,7 +28,10 @@
 
 #include <SysUtils.h>
 #include <CodeUtils.h>
-#include <Logger.h>
+
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 //CFITSIO headers
 #include <fitsio.h>
@@ -84,7 +87,9 @@ bool SysUtils::CheckDir(std::string path)
 {
 	//Check input file path
 	if(path==""){	
-		WARN_LOG("Empty filename given!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Empty filename given!");
+		#endif
 		return false;
 	}
 
@@ -92,19 +97,25 @@ bool SysUtils::CheckDir(std::string path)
 		//Check if file exists on filesystem
 		boost::filesystem::path file_path(path.c_str());
 		if (!boost::filesystem::exists(file_path)){
-			ERROR_LOG("File "<<path<<" not found in local filesystem!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("File "<<path<<" not found in local filesystem!");
+			#endif
 			return false;
 		}
 
 		//Check if directory
 		if (!boost::filesystem::is_directory(file_path)){
-    	ERROR_LOG("File ("<<file_path<<") is not a directory!");
+			#ifdef LOGGING_ENABLED
+    		ERROR_LOG("File ("<<file_path<<") is not a directory!");
+			#endif
 			return false;
     }
 	
 	}//close try
 	catch (const boost::filesystem::filesystem_error& ex) {
-    ERROR_LOG("Exception detected while checking file (err: "<<ex.what()<<")!");
+		#ifdef LOGGING_ENABLED
+    	ERROR_LOG("Exception detected while checking file (err: "<<ex.what()<<")!");
+		#endif
 		return false;
   }
 
@@ -117,11 +128,15 @@ bool SysUtils::CheckFile(std::string path,Caesar::FileInfo& info,bool match_exte
 {
 	//Check input file path
 	if(path==""){	
-		WARN_LOG("Empty filename given!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Empty filename given!");
+		#endif
 		return false;
 	}
 	if(!(&info)){
-		ERROR_LOG("Null ptr to file info struct given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to file info struct given!");
+		#endif
 		return false;
 	}
 
@@ -130,21 +145,29 @@ bool SysUtils::CheckFile(std::string path,Caesar::FileInfo& info,bool match_exte
 		//Check if file exists on filesystem
 		boost::filesystem::path file_path(path.c_str());
 		if (!boost::filesystem::exists(file_path)){
-			ERROR_LOG("File "<<path<<" not found in local filesystem!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("File "<<path<<" not found in local filesystem!");
+			#endif
 			return false;
 		}
 		if (!boost::filesystem::is_regular_file(file_path)){
-			ERROR_LOG("File "<<path<<" is not a regular file!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("File "<<path<<" is not a regular file!");
+			#endif
 			return false;
 		}
 		if (boost::filesystem::is_directory(file_path)){
-    	ERROR_LOG("File ("<<file_path<<") is a directory!");
+			#ifdef LOGGING_ENABLED
+    		ERROR_LOG("File ("<<file_path<<") is a directory!");
+			#endif
 			return false;
     }
 	
 		//Get filename and extension
 		if(!file_path.has_filename()){
-			ERROR_LOG("File ("<<file_path<<") does not have a filename!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("File ("<<file_path<<") does not have a filename!");
+			#endif
 			return false;
 		}
 
@@ -155,7 +178,9 @@ bool SysUtils::CheckFile(std::string path,Caesar::FileInfo& info,bool match_exte
         	
 		//Check extension
 		if(!file_path.has_extension()){
-			ERROR_LOG("Given file without extension!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Given file without extension!");
+			#endif
 			return false;
 		}
 
@@ -163,19 +188,26 @@ bool SysUtils::CheckFile(std::string path,Caesar::FileInfo& info,bool match_exte
 		info.extension= file_extension;
 						
 		if(match_extension && file_extension!=extension){
-			ERROR_LOG("Invalid file extension detected ("<<file_extension<<"!="<<extension<<")...");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Invalid file extension detected ("<<file_extension<<"!="<<extension<<")...");
+			#endif
 			return false;
 		}
 	
 		//Dump file info
 		//info.Print();
 		std::string info_printable= info.GetPrintable();
-		DEBUG_LOG(info_printable);
+
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG(info_printable);
+		#endif
 
   }//close try block
 
   catch (const boost::filesystem::filesystem_error& ex) {
-    ERROR_LOG("Exception detected while checking file (err: "<<ex.what()<<")!");
+		#ifdef LOGGING_ENABLED
+    	ERROR_LOG("Exception detected while checking file (err: "<<ex.what()<<")!");
+		#endif
 		return false;
   }
 
@@ -183,8 +215,8 @@ bool SysUtils::CheckFile(std::string path,Caesar::FileInfo& info,bool match_exte
 
 }//close CheckFile()
 
-int SysUtils::GetFITSImageSize(const std::string& filename,long int& Nx,long int& Ny){
-
+int SysUtils::GetFITSImageSize(const std::string& filename,long int& Nx,long int& Ny)
+{
 	//Init	
 	Nx= 0;
 	Ny= 0;
@@ -194,7 +226,9 @@ int SysUtils::GetFITSImageSize(const std::string& filename,long int& Nx,long int
 	fitsfile *fptr;//pointer to the FITS file, defined in fitsio.h
   fits_open_file(&fptr, filename.c_str(), READONLY, &status);
   if(status){
-		ERROR_LOG("Failed to open given fits file "<<filename<<"!");	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to open given fits file "<<filename<<"!");	
+		#endif
 		return -1;
 	}
 
@@ -203,7 +237,9 @@ int SysUtils::GetFITSImageSize(const std::string& filename,long int& Nx,long int
 	long naxes[2];
 	fits_read_keys_lng(fptr, "NAXIS", 1, 2, naxes, &nfound, &status);
   if (status){
-		ERROR_LOG("Failed to get NAXIS keyword from given fits file "<<filename<<"!");	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get NAXIS keyword from given fits file "<<filename<<"!");	
+		#endif
 		return -1;
 	}
         
@@ -281,11 +317,9 @@ bool SysUtils::IsMPIInitialized(){
 		int mpi_init_flag= 0;
 		MPI_Initialized(&mpi_init_flag);
 		if(mpi_init_flag==1) {
-			//DEBUG_LOG("MPI is initialized for this run...");
 			isInitialized= true;	
 		}
 		else {
-			//WARN_LOG("MPI was not initialized for this run (hint: call MPI_Init), will run on single processor...");
 			isInitialized= false;
 		}
 	#endif
@@ -293,6 +327,25 @@ bool SysUtils::IsMPIInitialized(){
 	return isInitialized;
 
 }//close IsMPIInitialized()
+
+
+bool SysUtils::IsMPIFinalized()
+{
+	bool isFinalized= true;
+	#ifdef MPI_ENABLED
+		int mpi_finalized_flag= 0;
+		MPI_Finalized(&mpi_finalized_flag);
+		if(mpi_finalized_flag==1) {
+			isFinalized= true;	
+		}
+		else {
+			isFinalized= false;
+		}
+	#endif
+
+	return isFinalized;
+
+}//close IsMPIFinalized()
 
 int SysUtils::GetProcMemoryInfo(ProcMemInfo& info)
 {
@@ -306,7 +359,9 @@ int SysUtils::GetProcMemoryInfo(ProcMemInfo& info)
 	//Open linux file contains this process info
 	FILE* file= fopen("/proc/self/status", "r");
 	if (file == NULL) {
-		ERROR_LOG("File /proc/self/status not found!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("File /proc/self/status not found!");
+		#endif
 		return -1;
 	}
 
@@ -332,7 +387,9 @@ int SysUtils::GetProcMemoryInfo(ProcMemInfo& info)
 
 		//Check read was succesful
 		if(read_status!=1){
-			ERROR_LOG("Failed to read memory field from file /proc/self/status!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read memory field from file /proc/self/status!");
+			#endif
 			return -1;
 		}
     
@@ -364,8 +421,9 @@ int SysUtils::GetProcId()
 {
 	int procid= 0;			
 	#ifdef MPI_ENABLED
+		bool isMPIFinalized= IsMPIFinalized();
 		bool isMPIInitialized= IsMPIInitialized();
-		if(isMPIInitialized){
+		if(isMPIInitialized && !isMPIFinalized){
 			MPI_Comm_rank(MPI_COMM_WORLD, &procid);
 		}
 		else{

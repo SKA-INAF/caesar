@@ -170,16 +170,7 @@ class Region : public Blob {
 		/**
 		* \brief Add a sub-region id to list
 		*/
-		int AddSubRegionId(long int id){
-			//Search if a sub region with same id was already added
-			int pos= -1;
-			if(Caesar::CodeUtils::FindItem(m_SubRegionIds,id,pos)){
-				WARN_LOG("Sub-region id "<<id<<" was already added as sub-region for region id="<<Id<<" (CHECK!!!)");
-				return -1;
-			}
-			m_SubRegionIds.push_back(id);
-			return 0;
-		}
+		int AddSubRegionId(long int id);
 
 		/**
 		* \brief Get number of sub-regions present in list

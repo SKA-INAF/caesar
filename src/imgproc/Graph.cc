@@ -27,7 +27,9 @@
 
 #include <Graph.h>
 #include <CodeUtils.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 #include <TObject.h>
 #include <TMatrixD.h>
@@ -79,18 +81,22 @@ Graph::~Graph()
 }//close destructor
 
 
-int Graph::AddEdge(int v, int w){
-	
+int Graph::AddEdge(int v, int w)
+{	
 	//Check if vertexes has been allocated
 	if(m_adj.empty() || v<0 || v>=m_adj.size() || w<0 || w>=m_adj.size() ){
-		ERROR_LOG("Invalid edge specified ("<<v<<","<<w<<") (hint: check if graph has vertex)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid edge specified ("<<v<<","<<w<<") (hint: check if graph has vertex)!");
+		#endif
 		return -1;
 	}
 			
 	//Check if already inserted
 	std::list<int>::iterator it = std::find(m_adj[v].begin(), m_adj[v].end(), w);
 	if(it!=m_adj[v].end()){
-		WARN_LOG("Edge ("<<v<<","<<w<<") already inserted in graph!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Edge ("<<v<<","<<w<<") already inserted in graph!");
+		#endif
 		return -1;
 	}
 
@@ -101,12 +107,14 @@ int Graph::AddEdge(int v, int w){
 
 }//close AddEdge()
 
-TMatrixD* Graph::GetAdjacencyMatrix(){
-
+TMatrixD* Graph::GetAdjacencyMatrix()
+{
 	//Check if graph has vertexes
 	int nVertexes= GetNVertexes();
 	if(nVertexes<=0) {
-		WARN_LOG("No vertexes present in this graph!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No vertexes present in this graph!");
+		#endif
 		return nullptr;
 	}
 
@@ -144,7 +152,9 @@ int Graph::GetConnectedComponents(std::vector< std::vector<int> >& connected_ite
 {
 	//Check if graph has data
 	if(m_adj.empty()){
-		WARN_LOG("No data present in graph!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No data present in graph!");
+		#endif
 		return -1;
 	}
  

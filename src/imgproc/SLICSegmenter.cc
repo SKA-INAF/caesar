@@ -35,6 +35,10 @@
 #include <CodeUtils.h>
 #include <Image.h>
 
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
+
 #include <TObject.h>
 #include <TMatrixD.h>
 
@@ -69,25 +73,33 @@ SLICSegmenter::~SLICSegmenter(){
 }//close destructor
 
 
-int SLICSegmenter::CheckData(SLICData const& slicData){
-
+int SLICSegmenter::CheckData(SLICData const& slicData)
+{
 	//Check given slic input data
 	if(!slicData.inputImg){
-		ERROR_LOG("Null ptr to input image in slicData!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input image in slicData!");
+		#endif
 		return -1;
 	}
 	if(!slicData.edgeImg){
-		ERROR_LOG("Null ptr to edge image in slicData!");
+		#ifdef LOGGING_ENABLED	
+			ERROR_LOG("Null ptr to edge image in slicData!");
+		#endif
 		return -1;
 	}	
 	//if(!slicData.pixelLabels){
-	//	ERROR_LOG("Null ptr to pixel labels in slicData!");
+	//  #ifdef LOGGING_ENABLED
+	//	  ERROR_LOG("Null ptr to pixel labels in slicData!");
+	//  #endif
 	//	return -1;
 	//}
 
 	int nRegions= slicData.GetNRegions();
 	if(nRegions<=1){
-		WARN_LOG("No (or too few) regions (NR="<<nRegions<<" in slicData!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No (or too few) regions (NR="<<nRegions<<" in slicData!");
+		#endif
 		return -1;
 	}
 
@@ -99,9 +111,13 @@ int SLICSegmenter::CheckData(SLICData const& slicData){
 int SLICSegmenter::FindSegmentation(SLICData const& slicData,SLICData& segmSlicData,double SPMergingRegularization,bool use2ndNeighborsInSPMerging,int minMergedSP,double SPMergingRatio, double SPMergingMaxDissRatio,double SPMergingMaxDissRatio_2ndNeighbor,double SPMergingDissThreshold,bool SPMergingIncludeSpatialPars,bool SPMergingUseRobustPars,bool SPMergingUseCurvDist){
 
 	//## Check input data
-	INFO_LOG("Checking initial slic data given...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Checking initial slic data given...");
+	#endif
 	if(CheckData(slicData)<0){
-		ERROR_LOG("Invalid slicData given (missing edge image information or empty region list?)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid slicData given (missing edge image information or empty region list?)!");
+		#endif
 		return -1;
 	}
 	
@@ -117,15 +133,21 @@ int SLICSegmenter::FindSegmentation(SLICData const& slicData,SLICData& segmSlicD
 	segmSlicData= slicData;
 
 	//----DEBUG----
-	INFO_LOG("slic data edge image stats");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("slic data edge image stats");
+	#endif
 	(slicData.edgeImg)->PrintStats();
 
-	INFO_LOG("slic data edge image copy stats");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("slic data edge image copy stats");
+	#endif
 	(segmSlicData.edgeImg)->PrintStats();
 	//-------------
 	
 	//## Adaptively merge superpixels using max similarity measure
-	INFO_LOG("Adaptively merge superpixels using max similarity measure...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Adaptively merge superpixels using max similarity measure...");
+	#endif
 	int status= MultiStepSPMerger(
 		slicData, *slicData_segmMultiStep,
 		SPMergingRegularization, use2ndNeighborsInSPMerging,
@@ -133,7 +155,9 @@ int SLICSegmenter::FindSegmentation(SLICData const& slicData,SLICData& segmSlicD
 	);
 
 	if(status<0){
-		ERROR_LOG("Multi-step superpixel merger failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Multi-step superpixel merger failed!");
+		#endif
 		delete slicData_segmMultiStep;
 		slicData_segmMultiStep= 0;
 		return -1;
@@ -143,10 +167,14 @@ int SLICSegmenter::FindSegmentation(SLICData const& slicData,SLICData& segmSlicD
 	int nSig= 0;
 	int nBkg= 0;
 	int nUntagged= 0;
-	INFO_LOG("Counting tagged regions after adaptive merging stage...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Counting tagged regions after adaptive merging stage...");
+	#endif
 	SLIC::CountTaggedRegions(slicData_segmMultiStep->regions,nSig,nBkg,nUntagged);
 	if(nSig<=0 || slicData_segmMultiStep->GetNRegions()<=1){
-		WARN_LOG("No signal regions (or no regions) found after adaptive merging, stop processing.");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No signal regions (or no regions) found after adaptive merging, stop processing.");
+		#endif
 		delete slicData_segmMultiStep;
 		slicData_segmMultiStep= 0;
 		return 0;
@@ -154,7 +182,9 @@ int SLICSegmenter::FindSegmentation(SLICData const& slicData,SLICData& segmSlicD
 
 
 	//## Create a copy of original regions and change tag according to segmented regions
-	INFO_LOG("Create a copy of initial segmented regions (N="<<segmSlicData.GetNRegions()<<") and change tag according to segmented regions (N="<<slicData_segmMultiStep->GetNRegions()<<") ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Create a copy of initial segmented regions (N="<<segmSlicData.GetNRegions()<<") and change tag according to segmented regions (N="<<slicData_segmMultiStep->GetNRegions()<<") ...");
+	#endif
 	for(int i=0;i<segmSlicData.GetNRegions();i++) {
 		(segmSlicData.regions)[i]->Tag= Region::eBkgTag;
 	}//end loop original regions
@@ -162,7 +192,9 @@ int SLICSegmenter::FindSegmentation(SLICData const& slicData,SLICData& segmSlicD
 	for(int i=0;i<slicData_segmMultiStep->GetNRegions();i++) {
 		Region* region_postSegm= slicData_segmMultiStep->GetRegion(i);
 		if(!region_postSegm){
-			ERROR_LOG("Failed to get region no. "<<i<<" from slic data (this should not occur!)");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to get region no. "<<i<<" from slic data (this should not occur!)");
+			#endif
 			continue;
 		}
 		long int regionId= region_postSegm->Id;
@@ -174,22 +206,30 @@ int SLICSegmenter::FindSegmentation(SLICData const& slicData,SLICData& segmSlicD
 		//Get access to region in initial segmentation and set the new tag 
 		Region* region_initialSegm= segmSlicData.GetRegion(regionIndex_initialSegm);
 		if(!region_initialSegm){
-			ERROR_LOG("Failed to get region with index "<<regionIndex_initialSegm<<" from initial slic data (this should not occur!)");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to get region with index "<<regionIndex_initialSegm<<" from initial slic data (this should not occur!)");
+			#endif
 			continue;
 		}
 		region_initialSegm->Tag= regionTag;
 		
 		//Get access to merged regions in initial segmentation and set the new tag
-		INFO_LOG("Region no. "<<i<<" (id="<<regionId<<", tag="<<regionTag<<" initial_index="<<regionIndex_initialSegm<<") has "<<nSubRegions<<" sub-regions...");
+		#ifdef LOGGING_ENABLED	
+			INFO_LOG("Region no. "<<i<<" (id="<<regionId<<", tag="<<regionTag<<" initial_index="<<regionIndex_initialSegm<<") has "<<nSubRegions<<" sub-regions...");
+		#endif
 		for(int j=0;j<nSubRegions;j++){
 			//long int subregionId= (slicData_segmMultiStep->regions)[i]->GetSubRegionId(j);	
 			long int subregionId= region_postSegm->GetSubRegionId(j);
 			long int subregionIndex_initialSegm= regionIdMap_initialSegm[subregionId]; 
-			INFO_LOG("Sub-Region no. "<<j<<" (id="<<subregionId<<", initial_index="<<subregionIndex_initialSegm<<")");
-		
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Sub-Region no. "<<j<<" (id="<<subregionId<<", initial_index="<<subregionIndex_initialSegm<<")");
+			#endif
+
 			Region* subregion_initialSegm= segmSlicData.GetRegion(subregionIndex_initialSegm);
 			if(!subregion_initialSegm){
-				ERROR_LOG("Failed to get subregion with index "<<subregionIndex_initialSegm<<" from initial slic data (this should not occur!)");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to get subregion with index "<<subregionIndex_initialSegm<<" from initial slic data (this should not occur!)");
+				#endif
 				continue;
 			}
 			//(segmSlicData.regions)[subregionIndex_original]->Tag= regionTag;
@@ -197,15 +237,19 @@ int SLICSegmenter::FindSegmentation(SLICData const& slicData,SLICData& segmSlicD
 		}	
 	}//end loop regions
 	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Remove slic data computed in adaptive merging stage...");
+	#endif
 
-	INFO_LOG("Remove slic data computed in adaptive merging stage...");
 	if(slicData_segmMultiStep){
 		delete slicData_segmMultiStep;
 		slicData_segmMultiStep= 0;
 	}
 	
 	//## Hierarchically merge signal regions
-	INFO_LOG("Hierarchically merge signal regions (#"<<segmSlicData.GetNRegions()<<" regions present)...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Hierarchically merge signal regions (#"<<segmSlicData.GetNRegions()<<" regions present)...");
+	#endif
 	if(segmSlicData.GetNRegions()>2 && nSig>0){
 		bool includeSpatialPars= true;
 		int nRegions_beforeMerging= segmSlicData.GetNRegions();
@@ -216,17 +260,23 @@ int SLICSegmenter::FindSegmentation(SLICData const& slicData,SLICData& segmSlicD
 			SPMergingIncludeSpatialPars, SPMergingUseRobustPars, SPMergingUseCurvDist
 		);
 		if(mergingStatus<0){
-			ERROR_LOG("Merging of signal regions failed!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Merging of signal regions failed!");
+			#endif
 			return -1;
 		}	
 		int nRegions_afterMerging= segmSlicData.GetNRegions();
-		INFO_LOG("Merged signal regions (NR="<<nRegions_afterMerging-nRegions_beforeMerging<<")");
+		#ifdef LOGGING_ENABLED	
+			INFO_LOG("Merged signal regions (NR="<<nRegions_afterMerging-nRegions_beforeMerging<<")");
+		#endif
 	}//close if
 	
 
 	
 	//## Finally add all background regions together
-	INFO_LOG("Finally add all background regions together...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Finally add all background regions together...");
+	#endif
 	int bkgLabel= -1;
 	Region* bkgRegion= new Region;
 	bkgRegion->Id= 0;
@@ -263,8 +313,10 @@ int SLICSegmenter::FindSegmentation(SLICData const& slicData,SLICData& segmSlicD
 		else if(tag==Region::eSignalTag){
 			nSignalRegions++;
 		}
-		else{
-			WARN_LOG("Untagged region present (this should not occur CHECK!!!!)");
+		else{		
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Untagged region present (this should not occur CHECK!!!!)");
+			#endif
 		}
 	}//end loop regions
 
@@ -272,15 +324,19 @@ int SLICSegmenter::FindSegmentation(SLICData const& slicData,SLICData& segmSlicD
 	bkgRegion->Id= bkgLabel;
 	
 	//Remove merged regions and compute region pars	
-	INFO_LOG("Remove merged regions and compute region pars	...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Remove merged regions and compute region pars	...");
+	#endif
 	CodeUtils::DeletePtrItems(segmSlicData.regions, regionsToBeDeleted);
 	for(int i=0;i<segmSlicData.GetNRegions();i++){
 		segmSlicData.regions[i]->ComputeStats(true,false);
 	}//end loop merged regions
 
 	
-	//Update pixel labels	
-	INFO_LOG("Update pixel labels	...");
+	//Update pixel labels
+	#ifdef LOGGING_ENABLED	
+		INFO_LOG("Update pixel labels	...");
+	#endif
 	/*
 	for(size_t i=0;i<(segmSlicData.labels).size();i++) {
 		for(size_t j=0;j<(segmSlicData.labels)[i].size();j++) {
@@ -310,11 +366,15 @@ int SLICSegmenter::MultiStepSPMerger(SLICData const& slicData,SLICData& segmSlic
 	int nUntagged= 0;
 	int status= SLIC::CountTaggedRegions(segmSlicData.regions,nSig,nBkg,nUntagged);
 	if(status<0 || (nSig==0 && nBkg==0) ){
-		ERROR_LOG("Regions are not tagged (hint: you must tag regions before running segmentation)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Regions are not tagged (hint: you must tag regions before running segmentation)!");
+		#endif
 		return -1;
 	}	
-	if(nSig==0){//Tag all untagged regions as bkg and end!		
-		WARN_LOG("No signal-tagged regions available, tagging all regions as background...");
+	if(nSig==0){//Tag all untagged regions as bkg and end!	
+		#ifdef LOGGING_ENABLED	
+			WARN_LOG("No signal-tagged regions available, tagging all regions as background...");
+		#endif
 		for(int i=0;i<segmSlicData.GetNRegions();i++) {
 			int tag= (segmSlicData.regions)[i]->Tag;
 			if(tag==Region::eUntagged) (segmSlicData.regions)[i]->Tag= Region::eBkgTag;
@@ -335,15 +395,19 @@ int SLICSegmenter::MultiStepSPMerger(SLICData const& slicData,SLICData& segmSlic
 			SLIC::CountTaggedRegions(segmSlicData.regions,nSig,nBkg,nUntagged);
 		}
 		stageCounter++;
-		INFO_LOG("Stage no. "<<stageCounter<<" NR="<<segmSlicData.GetNRegions()<<": (nBkg,nSig,nUntagged)=("<<nBkg<<","<<nSig<<","<<nUntagged<<")");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Stage no. "<<stageCounter<<" NR="<<segmSlicData.GetNRegions()<<": (nBkg,nSig,nUntagged)=("<<nBkg<<","<<nSig<<","<<nUntagged<<")");
+		#endif
 		
 		//## == STAGE 1==
 		//## Merge non-tagged regions with bkg-tagged regions
 		if(nBkg>0 && nUntagged>0) {//start 1st stage if there are untagged regions present	
-			INFO_LOG("=================");
-			INFO_LOG("==   STAGE 1   ==");
-			INFO_LOG("=================");
-			INFO_LOG("Start 1st stage...");		
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("=================");
+				INFO_LOG("==   STAGE 1   ==");
+				INFO_LOG("=================");
+				INFO_LOG("Start 1st stage...");		
+			#endif
 			int nregions_preStage1= segmSlicData.GetNRegions();
 			SPMaxSimilarityMerger(
 				segmSlicData, Region::eBkgTag, Region::eUntagged,
@@ -357,15 +421,19 @@ int SLICSegmenter::MultiStepSPMerger(SLICData const& slicData,SLICData& segmSlic
 
 		//Update tagging stats
 		SLIC::CountTaggedRegions(segmSlicData.regions,nSig,nBkg,nUntagged);
-		INFO_LOG("After 1st stage: NR="<<segmSlicData.GetNRegions()<<": (nBkg,nSig,nUntagged)=("<<nBkg<<","<<nSig<<","<<nUntagged<<")");
-		
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("After 1st stage: NR="<<segmSlicData.GetNRegions()<<": (nBkg,nSig,nUntagged)=("<<nBkg<<","<<nSig<<","<<nUntagged<<")");
+		#endif
+
 		//## == STAGE 2 ==
 		//## Merge non-tagged regions adaptively
 		if(nUntagged>0){//start 2nd stage if there are untagged regions available
-			INFO_LOG("=================");
-			INFO_LOG("==   STAGE 2   ==");
-			INFO_LOG("=================");
-			INFO_LOG("Start 2nd stage...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("=================");
+				INFO_LOG("==   STAGE 2   ==");
+				INFO_LOG("=================");
+				INFO_LOG("Start 2nd stage...");
+			#endif
 			int nregions_preStage2= segmSlicData.GetNRegions();
 			SPMaxSimilarityMerger(	
 				segmSlicData, Region::eUntagged, Region::eUntagged,
@@ -379,15 +447,21 @@ int SLICSegmenter::MultiStepSPMerger(SLICData const& slicData,SLICData& segmSlic
 		
 		//Update tagging stats
 		SLIC::CountTaggedRegions(segmSlicData.regions,nSig,nBkg,nUntagged);
-		INFO_LOG("After 2nd stage: NR="<<segmSlicData.GetNRegions()<<": (nBkg,nSig,nUntagged)=("<<nBkg<<","<<nSig<<","<<nUntagged<<")");
-	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("After 2nd stage: NR="<<segmSlicData.GetNRegions()<<": (nBkg,nSig,nUntagged)=("<<nBkg<<","<<nSig<<","<<nUntagged<<")");
+		#endif
+
 		//## Check end condition
 		if(nUntagged<=0) {
-			INFO_LOG("NR="<<segmSlicData.GetNRegions()<<": No untagged regions left, algorithm end!");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("NR="<<segmSlicData.GetNRegions()<<": No untagged regions left, algorithm end!");
+			#endif
 			stopAlgo= true;
 		}
 		if(nTotMergedRegions==0){
-			INFO_LOG("NR="<<segmSlicData.GetNRegions()<<": No regions merged in all stages, mark remaining as signal and end algorithm!");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("NR="<<segmSlicData.GetNRegions()<<": No regions merged in all stages, mark remaining as signal and end algorithm!");
+			#endif
 			for(int i=0;i<segmSlicData.GetNRegions();i++) {
 				int tag= (segmSlicData.regions)[i]->Tag;
 				if(tag==Region::eUntagged) (segmSlicData.regions)[i]->Tag= Region::eSignalTag;
@@ -403,20 +477,26 @@ int SLICSegmenter::MultiStepSPMerger(SLICData const& slicData,SLICData& segmSlic
 
 
 
-int SLICSegmenter::SPMaxSimilarityMerger(SLICData& segmSlicData,int mergerTag,int mergedTag,double SPMergingRegularization,bool use2ndNeighborsInSPMerging,bool SPMergingIncludeSpatialPars,bool SPMergingUseRobustPars,bool SPMergingUseCurvDist){
-
+int SLICSegmenter::SPMaxSimilarityMerger(SLICData& segmSlicData,int mergerTag,int mergedTag,double SPMergingRegularization,bool use2ndNeighborsInSPMerging,bool SPMergingIncludeSpatialPars,bool SPMergingUseRobustPars,bool SPMergingUseCurvDist)
+{
 	//## Check regions
 	int nRegions= segmSlicData.GetNRegions();
 	if(nRegions<=0) {
-		WARN_LOG("No regions available, nothing to be merged!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No regions available, nothing to be merged!");
+		#endif
 		return 0;
 	}
 	
-	//## Compute region contour info (neighbors, ...)
-	INFO_LOG("Finding region neighbors (NR="<<nRegions<<") ...");
+	//## Compute region contour info (neighbors, ...)	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Finding region neighbors (NR="<<nRegions<<") ...");
+	#endif
 	SLICContourData* contourData= SLIC::ComputeBoundaryContours(&segmSlicData);
 	if(!contourData){
-		ERROR_LOG("Failed to compute the slic contour data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute the slic contour data!");
+		#endif
 		return -1;
 	}
 	
@@ -427,7 +507,9 @@ int SLICSegmenter::SPMaxSimilarityMerger(SLICData& segmSlicData,int mergerTag,in
 	
 	int status= SLIC::FindNeighbors(neighbors,&segmSlicData,contourData,use2ndNeighborsInSPMerging,selectedTag,SPMergingIncludeSpatialPars,normalizeParams,SPMergingUseRobustPars,SPMergingUseCurvDist);
 	if(status<0){
-		ERROR_LOG("Failed to find neighbors list!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to find neighbors list!");
+		#endif
 		return -1;
 	}
 
@@ -438,28 +520,39 @@ int SLICSegmenter::SPMaxSimilarityMerger(SLICData& segmSlicData,int mergerTag,in
 	}
 
 
-	//## Compute similarity matrix	
-	INFO_LOG("Compute region similarity matrix...");
+	//## Compute similarity matrix
+	#ifdef LOGGING_ENABLED	
+		INFO_LOG("Compute region similarity matrix...");
+	#endif
+
 	SLICSimilarityData* similarityData= SLIC::ComputeRegionSimilarity(&segmSlicData,neighbors,SPMergingRegularization);
 	if(!similarityData){
-		ERROR_LOG("Failed to compute region similarity matrix, cannot perform region merging!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute region similarity matrix, cannot perform region merging!");
+		#endif
 		return -1;
 	}
 	TMatrixD* AdjacencyMatrix= similarityData->AdjacencyMatrix;
 	
 	//## Compute page rank of segments and sort
-	INFO_LOG("Compute page rank ...");
+	#ifdef LOGGING_ENABLED	
+		INFO_LOG("Compute page rank ...");
+	#endif
 	std::vector<double> ranks;
 	status= StatsUtils::ComputePageRank(ranks,AdjacencyMatrix->T());//pass transpose of adjacency matrix
 	if(status<0 || ranks.empty()){
-		WARN_LOG("PageRank failed, cannot perform region merging!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("PageRank failed, cannot perform region merging!");
+		#endif
 		delete similarityData;
 		similarityData= 0;
 		return -1;
 	}
 
 	//## Delete similarity data
-	DEBUG_LOG("Deleting similarity data...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Deleting similarity data...");
+	#endif
 	if(similarityData){
 		delete similarityData;
 		similarityData= 0;
@@ -472,7 +565,9 @@ int SLICSegmenter::SPMaxSimilarityMerger(SLICData& segmSlicData,int mergerTag,in
 		
 	
 	//## Loop over sorted ranks and select regions to be merged
-	INFO_LOG("Start region merging loop ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Start region merging loop ...");
+	#endif
 	std::vector< std::vector<int> > regionsToBeMerged;
 	for(size_t i=0;i<(segmSlicData.regions).size();i++) regionsToBeMerged.push_back( std::vector<int>() );
 	std::vector<size_t> regionsToBeDeleted;
@@ -486,15 +581,21 @@ int SLICSegmenter::SPMaxSimilarityMerger(SLICData& segmSlicData,int mergerTag,in
 		
 		//Skip if region tag is different from merger tag 
 		if(regionTag!=mergerTag && mergerTag!=-1) {
-			DEBUG_LOG("Skip region no. "<<i<<" (id="<<regionId<<", tag="<<regionTag<<")...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Skip region no. "<<i<<" (id="<<regionId<<", tag="<<regionTag<<")...");
+			#endif
 			continue;
 		}
 
 		//Check if this seed was not already merged by a previous (best ranked) region
-		INFO_LOG("Checking if seed region "<<index<<" (id="<<regionId<<") was not already merged by a previous (best ranked) region");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Checking if seed region "<<index<<" (id="<<regionId<<") was not already merged by a previous (best ranked) region");
+		#endif
 		std::vector<size_t>::iterator seedfinderIt= std::find(regionsToBeDeleted.begin(),regionsToBeDeleted.end(),index);
 		if(seedfinderIt!=regionsToBeDeleted.end()){
-			INFO_LOG("Seed ranked region (id="<<regionId<<") was already selected for merging in a previous node, skip this merging!");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Seed ranked region (id="<<regionId<<") was already selected for merging in a previous node, skip this merging!");
+			#endif
 			continue;
 		}
 
@@ -537,7 +638,9 @@ int SLICSegmenter::SPMaxSimilarityMerger(SLICData& segmSlicData,int mergerTag,in
 
 			//If diss Dij is the maximum among Djk(s) merge ij!
 			if(closerIndex!=(int)index) {
-				INFO_LOG("Skip merging of seed region "<<index<<" (id="<<regionId<<") with region "<<neighborIndex<<" (id="<<neighborId<<") as not the best possible merging for merged region...");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Skip merging of seed region "<<index<<" (id="<<regionId<<") with region "<<neighborIndex<<" (id="<<neighborId<<") as not the best possible merging for merged region...");
+				#endif
 				continue;
 			}
 
@@ -545,18 +648,24 @@ int SLICSegmenter::SPMaxSimilarityMerger(SLICData& segmSlicData,int mergerTag,in
 			//Check if this closer region was not already selected to be merged to another node previously	
 			std::vector<size_t>::iterator finderIt= std::find(regionsToBeDeleted.begin(),regionsToBeDeleted.end(),neighborIndex);				
 			if(finderIt!=regionsToBeDeleted.end()){	
-				INFO_LOG("Closer neighbor no. "<<neighborIndex<<" (id="<<neighborId<<") was already selected for merging in a previous node, skip this merging!");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Closer neighbor no. "<<neighborIndex<<" (id="<<neighborId<<") was already selected for merging in a previous node, skip this merging!");
+				#endif
 				continue;
 			}
 
 			//Check if this neighbor was not previously selected as a merger
 			if(regionsToBeMerged[neighborIndex].size()>0){
-				INFO_LOG("Closer neighbor no. "<<neighborIndex<<" (id="<<neighborId<<") was previously selected as a merger, skip this merging!");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Closer neighbor no. "<<neighborIndex<<" (id="<<neighborId<<") was previously selected as a merger, skip this merging!");
+				#endif
 				continue;
 			}
 
 			//Merging selected!
-			INFO_LOG("Regions ("<<index<<"-"<<neighborIndex<<") selected for merging (Delta_ij="<<Delta_ij<<" closerDiss="<<closerDiss<<")");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Regions ("<<index<<"-"<<neighborIndex<<") selected for merging (Delta_ij="<<Delta_ij<<" closerDiss="<<closerDiss<<")");
+			#endif
 			regionsToBeMerged[index].push_back(neighborIndex);
 			regionsToBeDeleted.push_back(neighborIndex);
 			regionsIdToBeDeleted.push_back(neighborId);		
@@ -568,7 +677,9 @@ int SLICSegmenter::SPMaxSimilarityMerger(SLICData& segmSlicData,int mergerTag,in
 		
 	/*
 	//## Delete similarity data
-	DEBUG_LOG("Deleting similarity data...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Deleting similarity data...");
+	#endif
 	if(similarityData){
 		delete similarityData;
 		similarityData= 0;
@@ -577,7 +688,9 @@ int SLICSegmenter::SPMaxSimilarityMerger(SLICData& segmSlicData,int mergerTag,in
 		
 	//## Merge regions and update region and label list
 	if(nMergedRegions>0){
-		INFO_LOG("Merge the selected regions...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Merge the selected regions...");
+		#endif
 		std::map<long int,long int> newLabelMap;
 		bool copyPixels= true;
 		bool addPixels= true;
@@ -593,7 +706,9 @@ int SLICSegmenter::SPMaxSimilarityMerger(SLICData& segmSlicData,int mergerTag,in
 				int mergedRegionTag= (segmSlicData.regions)[mergedRegionIndex]->Tag;
 				newLabelMap[mergedRegionId]= regionId;
 
-				INFO_LOG("Region no. "<<k<<" (id="<<regionId<<", tag="<<regionTag<<"): merging region id="<<mergedRegionId<<", tag="<<mergedRegionTag<<" (index="<<mergedRegionIndex<<")");			
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Region no. "<<k<<" (id="<<regionId<<", tag="<<regionTag<<"): merging region id="<<mergedRegionId<<", tag="<<mergedRegionTag<<" (index="<<mergedRegionIndex<<")");			
+				#endif
 				(segmSlicData.regions)[k]->AddRegion((segmSlicData.regions)[mergedRegionIndex],addPixels,copyPixels);//NB: This also adds the sub-regions id
 				//(segmSlicData.regions)[k]->AddSubRegionId(mergedRegionId);//No need to call this!!!
 			
@@ -601,18 +716,24 @@ int SLICSegmenter::SPMaxSimilarityMerger(SLICData& segmSlicData,int mergerTag,in
 		}//end loop regions
 	
 		//## Delete aggregated region from region list and index map
-		INFO_LOG("Deleting regions aggregated in this step from the main list...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Deleting regions aggregated in this step from the main list...");
+		#endif
 		CodeUtils::DeletePtrItems((segmSlicData.regions), regionsToBeDeleted);
 		
 		//## Update map and recompute parameters & contours (will be used by nearest neighbors search)
-		INFO_LOG("Updating region parameters & contours...");
+		#ifdef LOGGING_ENABLED	
+			INFO_LOG("Updating region parameters & contours...");
+		#endif
 		bool forceRecomputing= true;
 		for(unsigned int k=0;k<(segmSlicData.regions).size();k++){
 			(segmSlicData.regions)[k]->ComputeStats(SPMergingUseRobustPars,forceRecomputing);
 		}
 
 		//## Update pixel labels
-		INFO_LOG("Updating pixel labels...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Updating pixel labels...");
+		#endif
 		for(size_t i=0;i<(segmSlicData.pixel_labels).size();i++) {
 			long int label_old= (segmSlicData.pixel_labels)[i];
 			long int label_new= newLabelMap[label_old];
@@ -621,24 +742,30 @@ int SLICSegmenter::SPMaxSimilarityMerger(SLICData& segmSlicData,int mergerTag,in
 
 	}//close if merge regions
 		
-	INFO_LOG(nMergedRegions<<"/"<<segmSlicData.GetNRegions()<<" regions merged at this stage...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG(nMergedRegions<<"/"<<segmSlicData.GetNRegions()<<" regions merged at this stage...");
+	#endif
 
 	return 0;
 
 }//close SPMaxSimilarityMerger()
 
 
-int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mergedTag,int minMergedSP,double SPMergingRatio,double SPMergingRegularization,bool use2ndNeighborsInSPMerging,double SPMergingMaxDissRatio,double SPMergingMaxDissRatio_2ndNeighbor,double SPMergingDissThreshold, bool SPMergingIncludeSpatialPars,bool SPMergingUseRobustPars,bool SPMergingUseCurvDist){
-
+int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mergedTag,int minMergedSP,double SPMergingRatio,double SPMergingRegularization,bool use2ndNeighborsInSPMerging,double SPMergingMaxDissRatio,double SPMergingMaxDissRatio_2ndNeighbor,double SPMergingDissThreshold, bool SPMergingIncludeSpatialPars,bool SPMergingUseRobustPars,bool SPMergingUseCurvDist)
+{
 	//## Check regions
 	int nRegions= slicData.GetNRegions();
 	if(nRegions<=0) {
-		WARN_LOG("No regions available, nothing to be merged!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No regions available, nothing to be merged!");
+		#endif
 		return 0;
 	}
 
 	//----
-	INFO_LOG("slic data edge image stats");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("slic data edge image stats");
+	#endif
 	(slicData.edgeImg)->PrintStats();
 	//---
 
@@ -649,18 +776,24 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 	int itemPos= -1;
 	bool normalizeParams= true;
 	
-	INFO_LOG("Starting hierarchical merging...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Starting hierarchical merging...");
+	#endif
 
 	while( (slicData.GetNRegions())>minMergedSP ){
 		nMergedRegionsInHierarchyLevel= 0;
 		
 		//## Create the mapping of regionId and vector index
-		//INFO_LOG("Create the mapping of regionId and region list index...");
+		//#ifdef LOGGING_ENABLED
+		//	INFO_LOG("Create the mapping of regionId and region list index...");
+		//#endif
 		//std::map<long int,long int> regionIdMap;
 		//slicData.GetRegionIdMap(regionIdMap);
 
 		//## Compute region contour info (neighbors, ...)
-		INFO_LOG("Finding region neighbors at hierarchy level "<<hierarchyLevel<<", NR="<<slicData.GetNRegions()<<" ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Finding region neighbors at hierarchy level "<<hierarchyLevel<<", NR="<<slicData.GetNRegions()<<" ...");
+		#endif
 		SLICContourData* contourData= SLIC::ComputeBoundaryContours(&slicData);
 		
 		//## Find neighbors list
@@ -668,7 +801,9 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 		int selectedTag= mergedTag;
 		int status= SLIC::FindNeighbors(neighbors,&slicData,contourData,use2ndNeighborsInSPMerging,selectedTag,SPMergingIncludeSpatialPars,normalizeParams,SPMergingUseRobustPars,SPMergingUseCurvDist);
 		if(status<0){
-			ERROR_LOG("Failed to find neighbors list!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to find neighbors list!");
+			#endif
 			return -1;
 		}
 		if(contourData){
@@ -678,10 +813,14 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 	
 		
 		//## Compute similarity matrix	
-		INFO_LOG("Compute region similarity at hierarchy level "<<hierarchyLevel<<" ...");
+		#ifdef LOGGING_ENABLED	
+			INFO_LOG("Compute region similarity at hierarchy level "<<hierarchyLevel<<" ...");
+		#endif
 		SLICSimilarityData* similarityData= SLIC::ComputeRegionSimilarity(&slicData,neighbors,SPMergingRegularization);
 		if(!similarityData){
-			ERROR_LOG("Failed to compute region similarity matrix, cannot perform region hierarchical merging!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute region similarity matrix, cannot perform region hierarchical merging!");
+			#endif
 			return -1;
 		}
 		TMatrixD* AdjacencyMatrix= similarityData->AdjacencyMatrix;
@@ -692,16 +831,22 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 
 
 		//## Compute page rank of segments and sort
-		INFO_LOG("Compute page rank at hierarchy level "<<hierarchyLevel<<" ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Compute page rank at hierarchy level "<<hierarchyLevel<<" ...");
+		#endif
 		std::vector<double> ranks;
 		status= StatsUtils::ComputePageRank(ranks,AdjacencyMatrix->T());//pass transpose of adjacency matrix
 		if(status<0 || ranks.size()<=0){
-			WARN_LOG("PageRank failed, cannot perform region merging!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("PageRank failed, cannot perform region merging!");	
+			#endif
 			return -1;
 		}
 		
-		//## Delete similarity data
-		DEBUG_LOG("Deleting similarity data...");
+		//## Delete similarity data	
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Deleting similarity data...");
+		#endif
 		if(similarityData){
 			delete similarityData;
 			similarityData= 0;
@@ -721,7 +866,9 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 			nMaxMergeableRegions++;
 		}//end loop regions
 		int maxRegionsToMerge= std::round(nMaxMergeableRegions*SPMergingRatio);
-		INFO_LOG(maxRegionsToMerge<<" regions can be merged at maximum at this hierarchy level ("<<hierarchyLevel<<") given the number of mergeable regions found (N="<<nMaxMergeableRegions<<") and the chosen merging ratio option (ratio="<<SPMergingRatio<<")");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG(maxRegionsToMerge<<" regions can be merged at maximum at this hierarchy level ("<<hierarchyLevel<<") given the number of mergeable regions found (N="<<nMaxMergeableRegions<<") and the chosen merging ratio option (ratio="<<SPMergingRatio<<")");
+		#endif
 
 		//## Loop over sorted ranks and select regions to be merged
 		int nMergedRegions= 0;
@@ -739,20 +886,26 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 			//int mapIndex= regionIdMap[regionId];
 			
 			if(regionTag!=mergerTag && mergerTag!=-1) {
-				INFO_LOG("Skip ranked seed region (id="<<regionId<<",tag="<<regionTag<<") as tag is different from merger region (tag="<<mergerTag<<")");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Skip ranked seed region (id="<<regionId<<",tag="<<regionTag<<") as tag is different from merger region (tag="<<mergerTag<<")");
+				#endif
 				continue;
 			}
 
 			//Stop merging above nmerge threshold						
 			if(nMergeableRegions+1>maxRegionsToMerge) {
-				INFO_LOG("Maximum number of regions mergeable reached for this hierarchy level ("<<nMergeableRegions+1<<">"<<maxRegionsToMerge<<")");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Maximum number of regions mergeable reached for this hierarchy level ("<<nMergeableRegions+1<<">"<<maxRegionsToMerge<<")");
+				#endif
 				break;
 			}
 			
 			//Check if this seed was not already merged by a previous (best ranked) region
 			//NB: If it is found int the regionsIdToBeDeleted collection skip the merging
 			if(CodeUtils::FindItem(regionsIdToBeDeleted,regionId,itemPos)){
-				INFO_LOG("Seed ranked region (id="<<regionId<<") was already selected for merging in a previous node, skip this merging!");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Seed ranked region (id="<<regionId<<") was already selected for merging in a previous node, skip this merging!");
+				#endif
 				continue;
 			}
 
@@ -760,7 +913,9 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 			//Chech if the seed region has any neighbors (according to the selected merged tag)
 			int NN= (int)neighbors[index].GetN();
 			if(NN<=0){
-				INFO_LOG("Skip ranked seed region (id="<<regionId<<",tag="<<regionTag<<") as no neighbors are available!");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Skip ranked seed region (id="<<regionId<<",tag="<<regionTag<<") as no neighbors are available!");
+				#endif
 				continue;
 			}
 			/*
@@ -791,11 +946,15 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 			int closerNeighborIndex= closerNeighbor->Index;//regionIdMap[closerNeighborId];
 			
 			if(closerNeighborId==regionId) {//skip same region
-				INFO_LOG("Skip neighbor (id="<<closerNeighborId<<") as equal to seed region!");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Skip neighbor (id="<<closerNeighborId<<") as equal to seed region!");
+				#endif
 				continue;
 			}
 			if(closerNeighborTag!=mergedTag && mergedTag!=-1) {	
-				INFO_LOG("Skip ranked seed region (id="<<regionId<<",tag="<<regionTag<<") as neighbor (id="<<closerNeighborId<<",tag="<<closerNeighborTag<<") tag is different from merged region (tag="<<mergedTag<<")");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Skip ranked seed region (id="<<regionId<<",tag="<<regionTag<<") as neighbor (id="<<closerNeighborId<<",tag="<<closerNeighborTag<<") tag is different from merged region (tag="<<mergedTag<<")");
+				#endif
 				continue;
 			}
 			nMergeableRegions++;
@@ -810,7 +969,9 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 			if(N_half>=2){
 				bool isSeedAmongNeighborCloser= neighbors[closerNeighborIndex].IsIdAmongNClosersByTotDiss(regionId,N_half);
 				if(!isSeedAmongNeighborCloser){
-					INFO_LOG("Neighbor region id="<<closerNeighborId<<" rejected for merging with region "<<regionId<<" since this is not among the closest neighbors of the selected neighbor!");
+					#ifdef LOGGING_ENABLED
+						INFO_LOG("Neighbor region id="<<closerNeighborId<<" rejected for merging with region "<<regionId<<" since this is not among the closest neighbors of the selected neighbor!");
+					#endif
 					continue;
 				}
 			}
@@ -853,13 +1014,17 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 
 			//Check if this closer region was not already selected as a seed merger previously
 			if( regionsToBeMerged[closerNeighborIndex].size()>0 ){	
-				INFO_LOG("Closer neighbor (id="<<closerNeighborId<<") selected for merging was before selected as a primary merger, skip this merging!");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Closer neighbor (id="<<closerNeighborId<<") selected for merging was before selected as a primary merger, skip this merging!");
+				#endif
 				continue;
 			}
 
 			//Check if this closer region was not already selected to be merged to another node previously	
 			if(CodeUtils::FindItem(regionsIdToBeDeleted,closerNeighborId,itemPos)){
-				INFO_LOG("Closer neighbor (id="<<closerNeighborId<<") was already selected for merging in a previous node, skip this merging!");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Closer neighbor (id="<<closerNeighborId<<") was already selected for merging in a previous node, skip this merging!");
+				#endif
 				continue;
 			}
 
@@ -869,11 +1034,15 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 				double DissThreshold= SPMergingDissThreshold*DissMedian0;
 			
 				if(Delta_ji>Delta_ij*SPMergingMaxDissRatio_2ndNeighbor){
-					INFO_LOG("Neighbor region id="<<closerNeighborId<<" (2nd neighbor) rejected for merging with region "<<regionId<<"(Delta_ji="<<Delta_ji<<">"<<SPMergingMaxDissRatio_2ndNeighbor<<"*Delta_ij="<<Delta_ij);
+					#ifdef LOGGING_ENABLED
+						INFO_LOG("Neighbor region id="<<closerNeighborId<<" (2nd neighbor) rejected for merging with region "<<regionId<<"(Delta_ji="<<Delta_ji<<">"<<SPMergingMaxDissRatio_2ndNeighbor<<"*Delta_ij="<<Delta_ij);
+					#endif
 					continue;
 				}
 				if(AbsDelta_ij>DissThreshold){
-					INFO_LOG("Region id="<<regionId<<": closer neighbor (id="<<closerNeighborId<<") cannot be merged as dissimilarity is too large (AbsDiss="<<AbsDelta_ij<<", Diss="<<Delta_ij<<">"<<DissThreshold<<")");
+					#ifdef LOGGING_ENABLED
+						INFO_LOG("Region id="<<regionId<<": closer neighbor (id="<<closerNeighborId<<") cannot be merged as dissimilarity is too large (AbsDiss="<<AbsDelta_ij<<", Diss="<<Delta_ij<<">"<<DissThreshold<<")");
+					#endif
 					continue;
 				}	
 			}//close if
@@ -891,8 +1060,9 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 			}
 			*/
 
-			INFO_LOG("Region (id="<<regionId<<") merging neighbor (id="<<closerNeighborId<<"): order="<<closerNeighborOrder<<", Delta_ij="<<Delta_ij<<", Delta_ji="<<Delta_ji<<" ratio="<<Delta_ji/Delta_ij);
-
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Region (id="<<regionId<<") merging neighbor (id="<<closerNeighborId<<"): order="<<closerNeighborOrder<<", Delta_ij="<<Delta_ij<<", Delta_ji="<<Delta_ji<<" ratio="<<Delta_ji/Delta_ij);
+			#endif
 			
 			//int regionIndex_A= regionIdMap_top[regionId];
 			//int regionIndex_B= regionIdMap_top[closerNeighborId];
@@ -916,7 +1086,9 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 		
 		
 		//## Merge regions
-		INFO_LOG("Merge the selected regions at hierarchy level "<<hierarchyLevel<<" ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Merge the selected regions at hierarchy level "<<hierarchyLevel<<" ...");
+		#endif
 		std::map<long int,long int> newLabelMap;
 		bool copyPixels= true;
 		bool addPixels= true;
@@ -929,18 +1101,24 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 				int mergedRegionIndex= regionsToBeMerged[k][j];
 				long int mergedRegionId= (slicData.regions)[mergedRegionIndex]->Id;
 				newLabelMap[mergedRegionId]= regionId;
-				INFO_LOG("Region no. "<<k<<" (id="<<regionId<<") : merging region id="<<mergedRegionId<<" (index="<<mergedRegionIndex<<")");		
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Region no. "<<k<<" (id="<<regionId<<") : merging region id="<<mergedRegionId<<" (index="<<mergedRegionIndex<<")");		
+				#endif
 				(slicData.regions)[k]->AddRegion((slicData.regions)[mergedRegionIndex],addPixels,copyPixels);
 			}//end loop regions to be merged
 		}//end loop regions
 	
 		//## Delete aggregated region from region list and index map
-		INFO_LOG("Deleting regions aggregated in this step from the main list...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Deleting regions aggregated in this step from the main list...");
+		#endif
 		CodeUtils::DeletePtrItems((slicData.regions), regionsToBeDeleted);
 		//for(size_t k=0;k<regionsIdToBeDeleted.size();k++) regionIdMap.erase(regionsIdToBeDeleted[k]);
 
 		//## Update map and recompute parameters & contours (will be used by nearest neighbors search)
-		INFO_LOG("Updating region parameters & contours...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Updating region parameters & contours...");
+		#endif
 		for(int k=0;k<slicData.GetNRegions();k++){
 			(slicData.regions)[k]->ComputeStats(false,true);
 			//int regionId= (slicData.regions)[k]->Id;
@@ -948,7 +1126,9 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 		}//end loop regions
 	
 		//## Update pixel labels
-		INFO_LOG("Updating pixel labels...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Updating pixel labels...");
+		#endif
 		for(size_t i=0;i<(slicData.pixel_labels).size();i++) {
 			long int label_old= (slicData.pixel_labels)[i];
 			long int label_new= newLabelMap[label_old];
@@ -959,17 +1139,21 @@ int SLICSegmenter::SPHierarchicalMerger(SLICData& slicData,int mergerTag,int mer
 		hierarchyLevel++;
 
 		if(nMergedRegionsInHierarchyLevel==0){
-			WARN_LOG("No regions merged in this stage, exit to avoid stuck!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("No regions merged in this stage, exit to avoid stuck!");
+			#endif
 			break;
 		}
-		INFO_LOG(nMergedRegionsInHierarchyLevel<<"/"<<slicData.GetNRegions()<<" regions aggregated at this level hierarchy...");
-		
+
+		#ifdef LOGGING_ENABLED
+			INFO_LOG(nMergedRegionsInHierarchyLevel<<"/"<<slicData.GetNRegions()<<" regions aggregated at this level hierarchy...");
+		#endif
 
 	}//end while loop
 
-
-	INFO_LOG("#"<<hierarchyLevel<<" hierarchy levels aggregated (N="<<slicData.GetNRegions()<<" regions left)");
-
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<hierarchyLevel<<" hierarchy levels aggregated (N="<<slicData.GetNRegions()<<" regions left)");
+	#endif
 
 	/*
 	//## Final tag of composite regions according to a majority criterion, that is region tagged as bkg if the majority of sub-regions are non-significative

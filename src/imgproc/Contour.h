@@ -28,7 +28,9 @@
 #ifndef _CONTOUR_h
 #define _CONTOUR_h 1
 
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 #include <TGraph.h>
 #include <TPolyLine.h>
@@ -202,7 +204,9 @@ class Contour : public TObject {
 		int SortPointsCounterClockWise(){
 			if(!HasParameters){
 				if(ComputeParameters()<0){
-					WARN_LOG("Failed to compute contour parameters!");
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Failed to compute contour parameters!");
+					#endif
 					return -1;
 				}
 			}
@@ -289,7 +293,9 @@ class Contour : public TObject {
 		* \brief Log 
 		*/
 		void Log(std::string level="INFO"){
-			LOG(level,GetPrintable());
+			#ifdef LOGGING_ENABLED
+				LOG(level,GetPrintable());
+			#endif
 		}
 
 		/**

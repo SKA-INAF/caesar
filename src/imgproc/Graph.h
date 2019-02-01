@@ -30,8 +30,6 @@
 #ifndef _GRAPH_h
 #define _GRAPH_h 1
 
-#include <Logger.h>
-
 #include <TObject.h>
 #include <TMatrixD.h>
 
@@ -45,6 +43,7 @@
 #include <stdexcept>
 
 #include <vector>
+#include <list>  
 #include <algorithm>
 #include <map>
 #include <string>

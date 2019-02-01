@@ -275,6 +275,10 @@ class SysUtils : public TObject {
 		* \brief Is MPI run initialized (return 0 if MPI is disabled at build)
 		*/
 		static bool IsMPIInitialized();
+		/**
+		* \brief Is MPI run finalized (return true if MPI is disabled at build)
+		*/
+		static bool IsMPIFinalized();
 
 		/**
 		* \brief Get process used virtual memory

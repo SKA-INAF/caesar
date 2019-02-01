@@ -64,7 +64,9 @@
 #include <SaliencyFilter.h>
 #include <GausFilter.h>
 
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 //ROOT headers
 #include <TFile.h>
@@ -139,7 +141,9 @@ Image::Image(long int nbinsx,long int nbinsy,std::string name)
 	if(nbinsx<=0 || nbinsy<=0){
 		std::stringstream ss;
 		ss<<"Invalid image size (<=0) given!";
-		ERROR_LOG(ss.str());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG(ss.str());
+		#endif
 		throw std::out_of_range(ss.str().c_str());
 	}
 	
@@ -162,7 +166,9 @@ Image::Image(long int nbinsx,long int nbinsy,float xlow,float ylow,std::string n
 	if(nbinsx<=0 || nbinsy<=0){
 		std::stringstream ss;
 		ss<<"Invalid image size (<=0) given!";
-		ERROR_LOG(ss.str());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG(ss.str());
+		#endif
 		throw std::out_of_range(ss.str().c_str());
 	}
 	
@@ -185,7 +191,9 @@ Image::Image(long int nbinsx,long int nbinsy,std::vector<float>const& pixels,std
 	if(nbinsx<=0 || nbinsy<=0 || npixels<=0 || npixels!=(nbinsx*nbinsy)){
 		std::stringstream ss;
 		ss<<"Invalid image size (<=0) or pixel size given (should be equal to Nx*Ny)!";
-		ERROR_LOG(ss.str());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG(ss.str());
+		#endif
 		throw std::out_of_range(ss.str().c_str());
 	}
 
@@ -215,7 +223,9 @@ Image::Image(long int nbinsx,long int nbinsy,std::vector<float>const& pixels,flo
 	if(nbinsx<=0 || nbinsy<=0 || npixels<=0 || npixels!=(nbinsx*nbinsy)){
 		std::stringstream ss;
 		ss<<"Invalid image size (<=0) or pixel size given (should be equal to Nx*Ny)!";
-		ERROR_LOG(ss.str());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG(ss.str());
+		#endif
 		throw std::out_of_range(ss.str().c_str());
 	}
 
@@ -244,7 +254,9 @@ Image::Image(long int nbinsx,long int nbinsy,float w,std::string name)
 	if(nbinsx<=0 || nbinsy<=0){
 		std::stringstream ss;
 		ss<<"Invalid image size (<=0) or pixel size given (should be equal to Nx*Ny)!";
-		ERROR_LOG(ss.str());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG(ss.str());
+		#endif
 		throw std::out_of_range(ss.str().c_str());
 	}
 	long int npixels= nbinsx*nbinsy;
@@ -273,7 +285,9 @@ Image::Image(long int nbinsx,long int nbinsy,float w,float xlow,float ylow,std::
 	if(nbinsx<=0 || nbinsy<=0){
 		std::stringstream ss;
 		ss<<"Invalid image size (<=0) or pixel size given (should be equal to Nx*Ny)!";
-		ERROR_LOG(ss.str());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG(ss.str());
+		#endif
 		throw std::out_of_range(ss.str().c_str());
 	}
 	long int npixels= nbinsx*nbinsy;
@@ -308,7 +322,9 @@ Image::Image(const TH2& histo,std::string name)
 	if(nbinsx<=0 || nbinsy<=0){
 		std::stringstream ss;
 		ss<<"Invalid histo size (<=0) given (hint: histo shall have dimensions)!";
-		ERROR_LOG(ss.str());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG(ss.str());
+		#endif
 		throw std::out_of_range(ss.str().c_str());
 	}
 		
@@ -332,7 +348,9 @@ Image::Image(const TH2& histo,std::string name)
 Image::Image(const Image &img)
 {
 	// Copy constructor
-	DEBUG_LOG("Copy constuctor called...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copy constuctor called...");
+	#endif
   ((Image&)img).Copy(*this);
 }//close copy constructor
 
@@ -340,40 +358,43 @@ Image::Image(const Image &img)
 
 void Image::Copy(TObject& obj) const
 {
-	DEBUG_LOG("Copying parent TNamed...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copying parent TNamed...");
+	#endif
 	TNamed::Copy((Image&)obj);
 
-	DEBUG_LOG("Copying main vars...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copying main vars...");
+	#endif
 	((Image&)obj).m_name= m_name;
 	((Image&)obj).m_Nx= m_Nx;
 	((Image&)obj).m_Ny= m_Ny;
 	((Image&)obj).m_Xmin= m_Xmin;
 	((Image&)obj).m_Ymin= m_Ymin;
 	
-	DEBUG_LOG("Copying pixel collection...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copying pixel collection...");
+	#endif
 	((Image&)obj).m_pixels= m_pixels;
 		
-	DEBUG_LOG("Copying stats vars...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copying stats vars...");
+	#endif
 	((Image&)obj).m_HasMetaData= m_HasMetaData;
 	((Image&)obj).m_HasStats= m_HasStats;
 	((Image&)obj).m_StatMoments= m_StatMoments;
-	/*
-	((Image&)obj).m_Npix= m_Npix;
-	((Image&)obj).m_M1= m_M1;
-	((Image&)obj).m_M2= m_M2;
-	((Image&)obj).m_M3= m_M3;
-	((Image&)obj).m_M4= m_M4;
-	((Image&)obj).m_PixelMin= m_PixelMin;
-	((Image&)obj).m_PixelMax= m_PixelMax;
-	*/
-
-	DEBUG_LOG("Copying meta data...");
+	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copying meta data...");
+	#endif
 	if(m_MetaData){
 		((Image&)obj).m_MetaData= new ImgMetaData;
 		*((Image&)obj).m_MetaData = *m_MetaData;
 	}
 	
-	DEBUG_LOG("Copying stats data...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copying stats data...");
+	#endif
 	((Image&)obj).m_StatMoments= m_StatMoments;
 	if(m_Stats){
 		((Image&)obj).m_Stats= new ImgStats;
@@ -383,16 +404,20 @@ void Image::Copy(TObject& obj) const
 }//close Copy()
 
 
-Image::~Image(){
-
+Image::~Image()
+{
 	if(m_Stats){
-		DEBUG_LOG("Deleting stats...");	
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Deleting stats...");	
+		#endif
 		delete m_Stats;
 		m_Stats= 0;
 	}
 
 	if(m_MetaData){
-		DEBUG_LOG("Deleting meta-data...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Deleting meta-data...");
+		#endif
 		delete m_MetaData;
 		m_MetaData= 0;	
 	}	
@@ -434,7 +459,9 @@ int Image::SetSize(long int Nx,long int Ny,float xlow,float ylow){
 			
 	//Check dimensions
 	if(Nx<=0 || Ny<=0) {
-		ERROR_LOG("Invalid (empty or negative) sizes given, nothing will be done!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid (empty or negative) sizes given, nothing will be done!");
+		#endif
 		return -1;
 	}
 
@@ -454,7 +481,9 @@ int Image::SetSize(long int Nx,long int Ny,float xlow,float ylow){
 		m_pixels.resize(N);
 	}
 	catch(std::exception& e){
-		ERROR_LOG("C++ exception occurred while allocating memory (N="<<N<<") for pixel vector!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("C++ exception occurred while allocating memory (N="<<N<<") for pixel vector!");
+		#endif
 		return -1;
 	}
 
@@ -486,11 +515,15 @@ int Image::ReadFITS(std::string filename,int hdu_id,int ix_min,int ix_max,int iy
 	//Stop timer and print
 	auto end = chrono::steady_clock::now();
 	double dt= chrono::duration <double, milli> (end-start).count();
-	DEBUG_LOG("Read FITS image "<<filename<<" in "<<dt<<" ms");	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Read FITS image "<<filename<<" in "<<dt<<" ms");	
+	#endif
 
 	//Check error status
 	if(status<0){
-		ERROR_LOG("Failed to fill image from FITS file!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to fill image from FITS file!");
+		#endif
 		return -1;
 	}
 
@@ -503,7 +536,9 @@ int Image::WriteFITS(std::string outfilename){
 		
 	//## Write fits to file
 	if(FITSWriter::WriteFITS(this,outfilename)<0){
-		ERROR_LOG("Failed to write image to FITS file!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to write image to FITS file!");
+		#endif
 		return -1;
 	}
 	
@@ -517,7 +552,9 @@ int Image::ReadFile(std::string filename,bool invert){
 	//## Detect file extension
 	std::string extension= filename.substr(filename.find_last_of(".") + 1);
 	if(extension!= "png" && extension!="jpg" && extension!="bmp" && extension!="gif" ) {
-		ERROR_LOG("Unknown file extension detected: ext="<<extension<<" (valid ones are png/jpg/bmp/gif)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Unknown file extension detected: ext="<<extension<<" (valid ones are png/jpg/bmp/gif)!");
+		#endif
 		return -1;
 	}
 	
@@ -568,7 +605,9 @@ Image* Image::GetTile(long int ix_min,long int ix_max,long int iy_min,long int i
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
 	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max)<0){
-		ERROR_LOG("Failed to extract pixel rectangular data, returning nullptr!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to extract pixel rectangular data, returning nullptr!");
+		#endif
 		return nullptr;
 	}
 
@@ -579,8 +618,10 @@ Image* Image::GetTile(long int ix_min,long int ix_max,long int iy_min,long int i
 	std::string name= imgname;
 	if(name=="") name= "tileimg";
 
-	DEBUG_LOG("ix min/max="<<ix_min<<"/"<<ix_max<<", iy min/max="<<iy_min<<"/"<<iy_max<<" TileSizeX="<<TileSizeX<<", TileSizeY="<<TileSizeY<<", pixels size="<<tile_pixels.size());
-	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("ix min/max="<<ix_min<<"/"<<ix_max<<", iy min/max="<<iy_min<<"/"<<iy_max<<" TileSizeX="<<TileSizeX<<", TileSizeY="<<TileSizeY<<", pixels size="<<tile_pixels.size());
+	#endif
+
 	Image* tile= new Image(TileSizeX,TileSizeY,tile_pixels,xlow,ylow,name);
 	tile->CopyMetaData(this->m_MetaData);
 	
@@ -595,11 +636,15 @@ int Image::CheckFillPixel(long int gbin,double w){
 
 	//Check bin & value
 	if(gbin<0 || gbin>=(long int)(m_pixels.size())) {
-		WARN_LOG("Invalid pixel bin ("<<gbin<<") given to be filled (hint: check if image size is not initialized or given bin exceed size)!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Invalid pixel bin ("<<gbin<<") given to be filled (hint: check if image size is not initialized or given bin exceed size)!");
+		#endif
 		return -1;
 	}
 	if(TMath::IsNaN(w) || fabs(w)==TMath::Infinity()) {
-		DEBUG_LOG("Given value (w="<<w<<") for bin "<<gbin<<" is NaN or inf, skipping!");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Given value (w="<<w<<") for bin "<<gbin<<" is NaN or inf, skipping!");
+		#endif
 		return 0;
 	}
 
@@ -610,7 +655,9 @@ int Image::CheckFillPixel(long int gbin,double w){
 	//Check if pixel value has been already filled
 	double w_old= m_pixels[gbin];
 	if( w_old!=0 ){
-		WARN_LOG("Pixel "<<gbin<<" ("<<binx<<","<<biny<<") has been already filled (w="<<w_old<<"), skipping...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Pixel "<<gbin<<" ("<<binx<<","<<biny<<") has been already filled (w="<<w_old<<"), skipping...");
+		#endif
 		return -1;
 	}
 	
@@ -623,7 +670,9 @@ int Image::FillPixel(long int gbin,double w,bool useNegativePixInStats){
 
 	//Check bin & value
 	if(CheckFillPixel(gbin,w)<0) {
-		WARN_LOG("Invalid bin given (gbin="<<gbin<<") or or pixel already filled!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Invalid bin given (gbin="<<gbin<<") or or pixel already filled!");
+		#endif
 		return -1;
 	}
 
@@ -651,12 +700,14 @@ int Image::FillPixel(long int ix,long int iy,double w,bool useNegativePixInStats
 }//close FillPixel()
 
 
-int Image::Fill(double x,double y,double w,bool useNegativePixInStats){
-
+int Image::Fill(double x,double y,double w,bool useNegativePixInStats)
+{
 	//Find global bin
 	long int gbin= FindBin(x,y);
 	if(gbin<0 || gbin>=(long int)(m_pixels.size())) {
-		WARN_LOG("Underflow/overflow bin ("<<gbin<<") corresponding to (x,y)=("<<x<<","<<y<<") given to be filled (hint: check if image size is not initialized)!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Underflow/overflow bin ("<<gbin<<") corresponding to (x,y)=("<<x<<","<<y<<") given to be filled (hint: check if image size is not initialized)!");
+		#endif
 		return -1;
 	}
 	
@@ -667,11 +718,13 @@ int Image::Fill(double x,double y,double w,bool useNegativePixInStats){
 
 
 #ifdef OPENMP_ENABLED
-int Image::FillPixelMT(Caesar::StatMoments<double>& moments,long int gbin,double w,bool useNegativePixInStats){
-
+int Image::FillPixelMT(Caesar::StatMoments<double>& moments,long int gbin,double w,bool useNegativePixInStats)
+{
 	//Check bin & value
 	if(CheckFillPixel(gbin,w)<0) {
-		WARN_LOG("Invalid bin given (gbin="<<gbin<<") or nan/inf value given (w="<<w<<") or pixel already filled!");
+		#ifdef LOGGING_ENABLED			
+			WARN_LOG("Invalid bin given (gbin="<<gbin<<") or nan/inf value given (w="<<w<<") or pixel already filled!");
+		#endif
 		return -1;
 	}
 
@@ -689,8 +742,8 @@ int Image::FillPixelMT(Caesar::StatMoments<double>& moments,long int gbin,double
 #endif
 
 #ifdef OPENMP_ENABLED
-int Image::FillPixelMT(Caesar::StatMoments<double>& moments,long int ix,long int iy,double w,bool useNegativePixInStats){
-
+int Image::FillPixelMT(Caesar::StatMoments<double>& moments,long int ix,long int iy,double w,bool useNegativePixInStats)
+{
 	//Compute global bin
 	long int gbin= GetBin(ix,iy);
 	
@@ -701,12 +754,14 @@ int Image::FillPixelMT(Caesar::StatMoments<double>& moments,long int ix,long int
 #endif
 
 #ifdef OPENMP_ENABLED
-int Image::FillMT(Caesar::StatMoments<double>& moments,double x,double y,double w,bool useNegativePixInStats){
-
+int Image::FillMT(Caesar::StatMoments<double>& moments,double x,double y,double w,bool useNegativePixInStats)
+{
 	//Find global bin
 	long int gbin= FindBin(x,y);
 	if(gbin<0) {
-		WARN_LOG("Underflow/overflow bin requested to be filled!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Underflow/overflow bin requested to be filled!");	
+		#endif
 	}
 
 	//Fill pixel
@@ -716,19 +771,23 @@ int Image::FillMT(Caesar::StatMoments<double>& moments,double x,double y,double 
 #endif
 
 
-int Image::FillFromMat(cv::Mat& mat,bool useNegativePixInStats){
-
+int Image::FillFromMat(cv::Mat& mat,bool useNegativePixInStats)
+{
 	//Get image size
 	long int nRows = mat.rows;
   long int nCols = mat.cols;
 	long int Ny= this->GetNy();
 	long int Nx= this->GetNx();
 	if(nRows<=0 || nCols<=0){
-		ERROR_LOG("Matrix has zero rows and/or cols!");
+		#ifdef LOGGING_ENABLED		
+			ERROR_LOG("Matrix has zero rows and/or cols!");
+		#endif
 		return -1;
 	}
 	if(nCols!=Nx || nRows!=Ny){
-		ERROR_LOG("Invalid nrows/ncols (hint: should be equal to image size "<<Nx<<" x "<<Ny<<")!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid nrows/ncols (hint: should be equal to image size "<<Nx<<" x "<<Ny<<")!");
+		#endif
 		return -1;
 	}
 
@@ -772,7 +831,9 @@ int Image::FillFromMat(cv::Mat& mat,bool useNegativePixInStats){
 		//Update moments from parallel estimates
 		Caesar::StatMoments<double> moments;
 		if(Caesar::StatsUtils::ComputeMomentsFromParallel(moments,parallel_moments)<0){
-			ERROR_LOG("Failed to compute cumulative moments from parallel estimates (NB: image will have wrong moments!)");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute cumulative moments from parallel estimates (NB: image will have wrong moments!)");
+			#endif
 			return -1;
 		}	
 		this->SetMoments(moments);
@@ -804,11 +865,15 @@ int Image::FillFromTMatrix(TMatrixD& mat,bool useNegativePixInStats){
 	long int Ny= this->GetNy();
 	long int Nx= this->GetNx();
 	if(nRows<=0 || nCols<=0){
-		ERROR_LOG("Matrix has zero rows and/or cols!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Matrix has zero rows and/or cols!");
+		#endif
 		return -1;
 	}
 	if(nCols!=Nx || nRows!=Ny){
-		ERROR_LOG("Invalid nrows/ncols (hint: should be equal to image size "<<Nx<<" x "<<Ny<<")!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid nrows/ncols (hint: should be equal to image size "<<Nx<<" x "<<Ny<<")!");
+		#endif
 		return -1;
 	}
 
@@ -850,7 +915,9 @@ int Image::FillFromTMatrix(TMatrixD& mat,bool useNegativePixInStats){
 		//Update moments from parallel estimates
 		Caesar::StatMoments<double> moments;
 		if(Caesar::StatsUtils::ComputeMomentsFromParallel(moments,parallel_moments)<0){
-			ERROR_LOG("Failed to compute cumulative moments from parallel estimates (NB: image will have wrong moments!)");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute cumulative moments from parallel estimates (NB: image will have wrong moments!)");
+			#endif
 			return -1;
 		}	
 		this->SetMoments(moments);
@@ -881,11 +948,15 @@ int Image::FillFromTH2(const TH2& histo,bool useNegativePixInStats){
 	long int Ny= this->GetNy();
 	long int Nx= this->GetNx();
 	if(nBinsX<=0 || nBinsY<=0){
-		ERROR_LOG("Histo has zero bins in one/both dimensions!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Histo has zero bins in one/both dimensions!");
+		#endif
 		return -1;
 	}
 	if(nBinsX!=Nx || nBinsY!=Ny){
-		ERROR_LOG("Invalid bins given (hint: should be equal to image size "<<Nx<<" x "<<Ny<<")!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid bins given (hint: should be equal to image size "<<Nx<<" x "<<Ny<<")!");
+		#endif
 		return -1;
 	}
 
@@ -925,7 +996,9 @@ int Image::FillFromTH2(const TH2& histo,bool useNegativePixInStats){
 		//Update moments from parallel estimates
 		Caesar::StatMoments<double> moments;
 		if(Caesar::StatsUtils::ComputeMomentsFromParallel(moments,parallel_moments)<0){
-			ERROR_LOG("Failed to compute cumulative moments from parallel estimates (NB: image will have wrong moments!)");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute cumulative moments from parallel estimates (NB: image will have wrong moments!)");
+			#endif
 			return -1;
 		}	
 		this->SetMoments(moments);
@@ -951,14 +1024,18 @@ int Image::FillFromVtkImage(vtkSmartPointer<vtkImageData> imageData,bool useNega
 {
 	//Check image data
 	if(!imageData){
-		ERROR_LOG("Null ptr to input VTK image data given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input VTK image data given!");
+		#endif
 		return -1;
 	}
 
 	//Check dims
 	int* dims = imageData->GetDimensions();
 	if(dims[2]!=1){
-		ERROR_LOG("Invalid z dimension (must be =1) in VTK image data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid z dimension (must be =1) in VTK image data!");
+		#endif
 		return -1;
 	}
 
@@ -1005,7 +1082,9 @@ int Image::FillFromVtkImage(vtkSmartPointer<vtkImageData> imageData,bool useNega
 		//Update moments from parallel estimates
 		Caesar::StatMoments<double> moments;
 		if(Caesar::StatsUtils::ComputeMomentsFromParallel(moments,parallel_moments)<0){
-			ERROR_LOG("Failed to compute cumulative moments from parallel estimates (NB: image will have wrong moments!)");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute cumulative moments from parallel estimates (NB: image will have wrong moments!)");
+			#endif
 			return -1;
 		}	
 		this->SetMoments(moments);
@@ -1047,26 +1126,26 @@ void Image::ResetImgStats(bool resetMoments,bool clearStats){
 
 }//close ResetImgStats()
 
-//int Image::ComputeMoments(bool skipNegativePixels){
-int Image::ComputeMoments(bool useRange,double minThr,double maxThr){
-
-	//#### DEBUG ####
-	DEBUG_LOG("m_StatMoments min/max (before): "<<m_StatMoments.minVal<<"/"<<m_StatMoments.maxVal);
-	//###############
-
+int Image::ComputeMoments(bool useRange,double minThr,double maxThr)
+{
+	#ifdef LOGGING_ENABLED	
+		DEBUG_LOG("m_StatMoments min/max (before): "<<m_StatMoments.minVal<<"/"<<m_StatMoments.maxVal);
+	#endif
+	
 	//## Recompute stat moments
 	//## NB: If OMP is enabled this is done in parallel and moments are aggregated to return the correct cumulative estimate 
 	bool maskNanInfValues= true;
 	//int status= Caesar::StatsUtils::ComputeStatsMoments(m_StatMoments,m_pixels,skipNegativePixels,maskNanInfValues);
 	int status= Caesar::StatsUtils::ComputeStatsMoments(m_StatMoments,m_pixels,useRange,minThr,maxThr,maskNanInfValues);
 	if(status<0){
-		ERROR_LOG("Failed to compute stat moments!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute stat moments!");
+		#endif
 	}
 
-	//#### DEBUG ####
-	DEBUG_LOG("m_StatMoments min/max (after): "<<m_StatMoments.minVal<<"/"<<m_StatMoments.maxVal);
-	//###############
-
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("m_StatMoments min/max (after): "<<m_StatMoments.minVal<<"/"<<m_StatMoments.maxVal);
+	#endif
 
 	return status;
 
@@ -1079,10 +1158,10 @@ void Image::ComputeStatsParams(bool computeRobustStats,bool useRange,double minT
 	//## Reset previous stats params (Reset only Stats not moments!)
 	ResetImgStats(false);
 
-	//-- DEBUG
-	DEBUG_LOG("Npix="<<m_StatMoments.N<<", M1="<<m_StatMoments.M1<<", M2="<<m_StatMoments.M2<<", M3="<<m_StatMoments.M3<<", M4="<<m_StatMoments.M4<<", pixel sizes="<<m_pixels.size());
-	//----
-	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Npix="<<m_StatMoments.N<<", M1="<<m_StatMoments.M1<<", M2="<<m_StatMoments.M2<<", M3="<<m_StatMoments.M3<<", M4="<<m_StatMoments.M4<<", pixel sizes="<<m_pixels.size());
+	#endif
+
 	//##########################################
 	//##  COMPUTE STANDARD STATS PARAMETERS
 	//##########################################
@@ -1116,8 +1195,11 @@ void Image::ComputeStatsParams(bool computeRobustStats,bool useRange,double minT
 	
 	auto end_stats = chrono::steady_clock::now();
 	double dt_stats= chrono::duration <double, milli> (end_stats-start_stats).count();
-	DEBUG_LOG("Image standard stats computed in "<<dt_stats<<" ms");
-  
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Image standard stats computed in "<<dt_stats<<" ms");
+  #endif
+
 	//## End if no robust stats are to be computed
 	if(!computeRobustStats) return;
 
@@ -1149,8 +1231,11 @@ void Image::ComputeStatsParams(bool computeRobustStats,bool useRange,double minT
 	m_Stats->medianRMS= medianRMS;
 	auto end_median = chrono::steady_clock::now();
 	double dt_median= chrono::duration <double, milli> (end_median-start_median).count();
-	DEBUG_LOG("Image median pars computed in "<<dt_median<<" ms");
-  
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Image median pars computed in "<<dt_median<<" ms");
+  #endif
+
 	//## Compute biweight robust estimators	
 	/*
 	auto start_biweights = chrono::steady_clock::now();
@@ -1162,7 +1247,9 @@ void Image::ComputeStatsParams(bool computeRobustStats,bool useRange,double minT
 	m_Stats->bwScale= biweightEstimators.second;
 	auto end_biweights = chrono::steady_clock::now();
 	double dt_biweights= chrono::duration <double, milli> (end_biweights-start_biweights).count();
-	INFO_LOG("Image biweight pars computed in "<<dt_biweights<<" ms");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Image biweight pars computed in "<<dt_biweights<<" ms");
+	#endif
   */
 
 	//## Compute clipped estimators
@@ -1178,12 +1265,18 @@ void Image::ComputeStatsParams(bool computeRobustStats,bool useRange,double minT
 	m_Stats->clippedRMS= clipped_stats.stddev;
 	auto end_clipped = chrono::steady_clock::now();
 	double dt_clipped= chrono::duration <double, milli> (end_clipped-start_clipped).count();
-	DEBUG_LOG("Image clipped stats pars computed in "<<dt_clipped<<" ms");
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Image clipped stats pars computed in "<<dt_clipped<<" ms");
+	#endif
 
 	auto end_robuststats = chrono::steady_clock::now();
 	double dt_robuststats= chrono::duration <double, milli> (end_robuststats-start_robuststats).count();
-	DEBUG_LOG("Image robust stats computed in "<<dt_robuststats<<" ms");	
-	
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Image robust stats computed in "<<dt_robuststats<<" ms");	
+	#endif
+
 }//close ComputeStatsParams()
 
 
@@ -1197,8 +1290,10 @@ int Image::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool useRa
 	if(!HasStats()){
 		m_Stats= new Caesar::ImgStats;
 	}
-	else{		
-		DEBUG_LOG("Image has stats already computed...");
+	else{	
+		#ifdef LOGGING_ENABLED	
+			DEBUG_LOG("Image has stats already computed...");
+		#endif
 	}
 
 	//## If recomputing is not requested (i.e. some pixels has been reset by the user, just set the stats params!
@@ -1208,23 +1303,25 @@ int Image::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool useRa
 		
 		auto stop = chrono::steady_clock::now();
 		double elapsed_time= chrono::duration <double, milli> (stop-start).count();
-		DEBUG_LOG("Image stats computed in "<<elapsed_time<<" ms");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Image stats computed in "<<elapsed_time<<" ms");
+		#endif
 		return 0;
 	}
 
 	
 	//## Recompute the moments and stats params
-	DEBUG_LOG("Recomputing image stats...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Recomputing image stats...");
+	#endif
 
 	//--> Reset stats
 	ResetImgStats(true);
 
 	//--> Recompute moments
-	//ComputeMoments(skipNegativePixels);
 	ComputeMoments(useRange,minThr,maxThr);
 
 	//--> Recompute stats params
-	//ComputeStatsParams(computeRobustStats,skipNegativePixels,useParallelVersion);
 	ComputeStatsParams(computeRobustStats,useRange,minThr,maxThr,useParallelVersion);
 
 	m_HasStats= true;
@@ -1232,29 +1329,36 @@ int Image::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool useRa
 	//Stop timer
 	auto end = chrono::steady_clock::now();
 	double dt= chrono::duration <double, milli> (end-start).count();
-	DEBUG_LOG("Image stats recomputed in "<<dt<<" ms");
-	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Image stats recomputed in "<<dt<<" ms");
+	#endif
+
 	return 0;
 
 }//close ComputeStats()
 
 
-//int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels)
 int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr)
 {
 	//Check range given
 	if(ix_min<0 || ix_max<0 || ix_max>=m_Nx || ix_min>=ix_max){
-		ERROR_LOG("Invalid x range given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid x range given!");
+		#endif
 		return -1;
 	}
 	if(iy_min<0 || iy_max<0 || iy_max>=m_Ny || iy_min>=iy_max){
-		ERROR_LOG("Invalid y range given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid y range given!");
+		#endif
 		return -1;
 	}
 
 	//Check thr
 	if(minThr>=maxThr){
-		ERROR_LOG("Invalid min/max threshold given (hint: max thr must be larger then min thr)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid min/max threshold given (hint: max thr must be larger then min thr)!");
+		#endif
 		return -1;
 	}
 	
@@ -1315,7 +1419,6 @@ int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_
 }//close GetTilePixels()
 
 
-//int Image::GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels)
 int Image::GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr)
 {
 	//Init
@@ -1325,9 +1428,10 @@ int Image::GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix
 
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
-	//if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,skipNegativePixels)<0){
 	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr)<0){
-		ERROR_LOG("Failed to extract pixel rectangular data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to extract pixel rectangular data!");
+		#endif
 		return -1;
 	}
 	
@@ -1339,10 +1443,9 @@ int Image::GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix
 
 }//close GetTileMeanStats()
 		
-//int Image::GetTileMedianStats(float& median,float& mad_rms,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels)
+
 int Image::GetTileMedianStats(float& median,float& mad_rms,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr)
 {
-
 	//Init
 	median= 0;
 	mad_rms= 0;
@@ -1350,9 +1453,10 @@ int Image::GetTileMedianStats(float& median,float& mad_rms,long int& npix,long i
 
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
-	//if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,skipNegativePixels)<0){
 	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr)<0){
-		ERROR_LOG("Failed to extract pixel rectangular data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to extract pixel rectangular data!");
+		#endif
 		return -1;
 	}
 	
@@ -1367,7 +1471,6 @@ int Image::GetTileMedianStats(float& median,float& mad_rms,long int& npix,long i
 }//close GetTileMedianStats()
 
 
-//int Image::GetTileClippedStats(ClippedStats<float>& clipped_stats,long int& npix,double clipSigma,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels)
 int Image::GetTileClippedStats(ClippedStats<float>& clipped_stats,long int& npix,double clipSigma,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr)
 {
 	//Init
@@ -1375,9 +1478,10 @@ int Image::GetTileClippedStats(ClippedStats<float>& clipped_stats,long int& npix
 	
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
-	//if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,skipNegativePixels)<0){
 	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr)<0){
-		ERROR_LOG("Failed to extract pixel rectangular data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to extract pixel rectangular data!");
+		#endif
 		return -1;
 	}
 	
@@ -1399,7 +1503,6 @@ int Image::GetTileClippedStats(ClippedStats<float>& clipped_stats,long int& npix
 }//close GetTileClippedStats()
 		
 
-//int Image::GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,double C,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels)
 int Image::GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,double C,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr)
 {
 	//Init
@@ -1409,9 +1512,10 @@ int Image::GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,
 
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
-	//if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,skipNegativePixels)<0){
 	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr)<0){
-		ERROR_LOG("Failed to extract pixel rectangular data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to extract pixel rectangular data!");
+		#endif
 		return -1;
 	}
 	
@@ -1435,10 +1539,9 @@ int Image::GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,
 //================================================================
 //===    BACKGROUND CALCULATION
 //================================================================
-ImgBkgData* Image::ComputeBkg(int estimator,bool computeLocalBkg,int boxSizeX,int boxSizeY, double gridStepSizeX,double gridStepSizeY,bool use2ndPass,bool skipOutliers,double seedThr,double mergeThr,int minPixels,bool useRange,double minThr,double maxThr){
-	
+ImgBkgData* Image::ComputeBkg(int estimator,bool computeLocalBkg,int boxSizeX,int boxSizeY, double gridStepSizeX,double gridStepSizeY,bool use2ndPass,bool skipOutliers,double seedThr,double mergeThr,int minPixels,bool useRange,double minThr,double maxThr)
+{	
 	//## Compute bkg data
-	DEBUG_LOG("Using grid bkg method...");
 	ImgBkgData* bkgData= BkgFinder::FindBkg(
 		this,estimator,
 		computeLocalBkg, boxSizeX, boxSizeY, gridStepSizeX,gridStepSizeY,
@@ -1447,7 +1550,9 @@ ImgBkgData* Image::ComputeBkg(int estimator,bool computeLocalBkg,int boxSizeX,in
 		useRange,minThr,maxThr
 	);	
 	if(!bkgData){
-		ERROR_LOG("Computation of local background failed for this image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Computation of local background failed for this image!");
+		#endif
 		return 0;
 	}
 	return bkgData;
@@ -1455,10 +1560,9 @@ ImgBkgData* Image::ComputeBkg(int estimator,bool computeLocalBkg,int boxSizeX,in
 }//close ComputeBkg()
 
 
-ImgBkgData* Image::ComputeBkg(ImgBkgPars pars){
-	
+ImgBkgData* Image::ComputeBkg(ImgBkgPars pars)
+{	
 	//## Compute bkg data
-	DEBUG_LOG("Using grid bkg method...");
 	ImgBkgData* bkgData= BkgFinder::FindBkg(
 		this,pars.estimator,
 		pars.computeLocalBkg, pars.boxSizeX, pars.boxSizeY, pars.gridStepSizeX, pars.gridStepSizeY,
@@ -1467,7 +1571,9 @@ ImgBkgData* Image::ComputeBkg(ImgBkgPars pars){
 		pars.useRange,pars.minThr,pars.maxThr
 	);	
 	if(!bkgData){
-		ERROR_LOG("Computation of local background failed for this image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Computation of local background failed for this image!");
+		#endif
 		return 0;
 	}
 	return bkgData;
@@ -1475,11 +1581,13 @@ ImgBkgData* Image::ComputeBkg(ImgBkgPars pars){
 }//close ComputeBkg()
 
 
-Image* Image::GetSignificanceMap(ImgBkgData* bkgData,bool useLocalBkg){
-
+Image* Image::GetSignificanceMap(ImgBkgData* bkgData,bool useLocalBkg)
+{
 	//Check image
 	if(!bkgData){
-		ERROR_LOG("Null ptr to bkg data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to bkg data!");
+		#endif
 		return 0;
 	}
 
@@ -1488,13 +1596,17 @@ Image* Image::GetSignificanceMap(ImgBkgData* bkgData,bool useLocalBkg){
 	long int Ny= this->GetNy();
 	if(useLocalBkg){
 		if(!bkgData->HasLocalBkg()){
-			ERROR_LOG("Local bkg option requested but no local bkg data are available!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Local bkg option requested but no local bkg data are available!");
+			#endif
 			return 0;
 		}
 		if( Nx!=(bkgData->BkgMap)->GetNx() || Ny!=(bkgData->BkgMap)->GetNy() ||
 				Nx!=(bkgData->NoiseMap)->GetNx() || Ny!=(bkgData->NoiseMap)->GetNy()
 		){
-			ERROR_LOG("Bkg/Noise maps have different size!");		
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Bkg/Noise maps have different size!");		
+			#endif
 			return 0;
 		}
 	}//close if
@@ -1529,7 +1641,9 @@ Image* Image::GetSignificanceMap(ImgBkgData* bkgData,bool useLocalBkg){
 						double bkgLevel= (bkgData->BkgMap)->GetBinContent(i,j);
 						double bkgRMS= (bkgData->NoiseMap)->GetBinContent(i,j);
 						if( w==0 || bkgRMS<=0) {
-							DEBUG_LOG("Empty pixel or invalid bkg  ("<<i<<","<<j<<") skip it!");
+							#ifdef LOGGING_ENABLED
+								DEBUG_LOG("Empty pixel or invalid bkg  ("<<i<<","<<j<<") skip it!");
+							#endif
 							continue;
 						}
 						double Z= (w-bkgLevel)/bkgRMS;
@@ -1565,8 +1679,10 @@ Image* Image::GetSignificanceMap(ImgBkgData* bkgData,bool useLocalBkg){
 		}//close parallel section
 
 		//Update moments from parallel estimates
-		if(Caesar::StatsUtils::ComputeMomentsFromParallel(m_StatMoments,parallel_moments)<0){
-			ERROR_LOG("Failed to compute cumulative moments from parallel estimates (NB: image will have wrong moments!)");
+		if(Caesar::StatsUtils::ComputeMomentsFromParallel(m_StatMoments,parallel_moments)<0){	
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute cumulative moments from parallel estimates (NB: image will have wrong moments!)");	
+			#endif
 			if(significanceMap){
 				delete significanceMap;
 				significanceMap= 0;
@@ -1583,8 +1699,10 @@ Image* Image::GetSignificanceMap(ImgBkgData* bkgData,bool useLocalBkg){
 					double w= m_pixels[gBin];											
 					double bkgLevel= (bkgData->BkgMap)->GetBinContent(i,j);
 					double bkgRMS= (bkgData->NoiseMap)->GetBinContent(i,j);
-					if( w==0 || bkgRMS<=0) {
-						DEBUG_LOG("Empty pixel or invalid bkg  ("<<i<<","<<j<<") skip it!");
+					if( w==0 || bkgRMS<=0) {	
+						#ifdef LOGGING_ENABLED
+							DEBUG_LOG("Empty pixel or invalid bkg  ("<<i<<","<<j<<") skip it!");
+						#endif
 						continue;
 					}
 					double Z= (w-bkgLevel)/bkgRMS;
@@ -1621,46 +1739,24 @@ int Image::FindCompactSource(std::vector<Source*>& sources,double thr,int minPix
 
 	//Find sources by simple thresholding using the same image as significance map and no bkgdata
 	bool findNestedSources= false;
-	//bool findNegativeExcess= false;
-	//bool mergeBelowSeed= false;	
-	//if(this->FindCompactSource(sources,this,0,thr,thr,minPixels,findNegativeExcess,mergeBelowSeed,findNestedSources)<0){
 	if(this->FindCompactSource(sources,this,0,thr,thr,minPixels,findNestedSources)<0){
-		ERROR_LOG("Compact source finder failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Compact source finder failed!");	
+		#endif
 		return -1;
 	}
 	return 0;
 
 }//close FindCompactSource()
 
-/*
-int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBkgData* bkgData,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,bool findNestedSources,double nestedBlobThreshold,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested,double nestedBlobPeakZThr,Image* curvMap)
-{
-	//Find sources
-	int status= BlobFinder::FindBlobs(this,sources,floodImg,bkgData,seedThr,mergeThr,minPixels,findNegativeExcess,mergeBelowSeed,curvMap);
-	if(status<0){
-		ERROR_LOG("Blob finder failed!");
-		CodeUtils::DeletePtrCollection<Source>(sources);
-		return -1;
-	}
-
-	//Find nested sources?
-	if(findNestedSources && sources.size()>0){
-		int status_nested= FindNestedSource(sources,bkgData,minPixels,nestedBlobThreshold,minNestedMotherDist,maxMatchingPixFraction,nPixThrToSearchNested,nestedBlobPeakZThr,curvMap);
-		if(status_nested<0){
-			WARN_LOG("Nested source search failed!");
-		}
-	}//close if
-
-	return 0;
-
-}//close FindCompactSource()
-*/
 
 int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBkgData* bkgData,double seedThr,double mergeThr,int minPixels,bool findNestedSources,Image* blobMask,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested)
 {
 	//Check blob mask (if nested source search is required)
 	if(findNestedSources && !blobMask){
-		ERROR_LOG("Null ptr to blob mask given (hint: you must provide a binary blob mask to search nested sources!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to blob mask given (hint: you must provide a binary blob mask to search nested sources!");
+		#endif
 		return -1;
 	}
 
@@ -1669,7 +1765,9 @@ int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBk
 	bool mergeBelowSeed= false;
 	int status= BlobFinder::FindBlobs(this,sources,floodImg,bkgData,seedThr,mergeThr,minPixels,findNegativeExcess,mergeBelowSeed);
 	if(status<0){
-		ERROR_LOG("Blob finder failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Blob finder failed!");
+		#endif
 		CodeUtils::DeletePtrCollection<Source>(sources);
 		return -1;
 	}
@@ -1678,7 +1776,9 @@ int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBk
 	if(findNestedSources && sources.size()>0){
 		int status_nested= FindNestedSource(sources,blobMask,bkgData,minPixels,minNestedMotherDist,maxMatchingPixFraction,nPixThrToSearchNested);
 		if(status_nested<0){
-			WARN_LOG("Nested source search failed!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Nested source search failed!");
+			#endif
 		}
 	}//close if
 
@@ -1686,274 +1786,6 @@ int Image::FindCompactSource(std::vector<Source*>& sources,Image* floodImg,ImgBk
 
 }//close FindCompactSource()
 
-/*
-int Image::FindNestedSource(std::vector<Source*>& sources,ImgBkgData* bkgData,int minPixels,double nestedBlobThreshold,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested,double nestedBlobPeakZThr,Image* curvMap){
-
-	//Check if given mother source list is empty
-	int nSources= static_cast<int>(sources.size());
-	if(nSources<=0){
-		WARN_LOG("Empty source list given!");
-		return 0;
-	}
-
-	//Find image mask of found sources
-	Image* sourceMask= this->GetSourceMask(sources,false);
-	if(!sourceMask){
-		ERROR_LOG("Null ptr to computed source mask!");
-		return -1;
-	}
-
-	//Find curvature map
-	bool deleteCurvMap= false;
-	if(!curvMap){
-		INFO_LOG("Curvature map was not given in input, will compute it now...");
-		curvMap= this->GetLaplacianImage(true);
-		if(!curvMap){
-			ERROR_LOG("Failed to compute curvature map!");
-			delete sourceMask;
-			sourceMask= 0;
-			return -1;
-		}
-		deleteCurvMap= true;
-	}
-
-	//Compute curvature map stats
-	bool computeRobustStats= true;
-	//bool skipNegativePixels= true;
-	bool useRange= true;
-	double minThr= 0;
-	bool forceRecompute= false;
-	//if(curvMap->ComputeStats(computeRobustStats,skipNegativePixels,forceRecompute)<0){
-	if(curvMap->ComputeStats(computeRobustStats,forceRecompute,useRange,minThr)<0){
-		ERROR_LOG("Failed to compute curvature map stats!");
-		delete sourceMask;
-		sourceMask= 0;
-		if(deleteCurvMap && curvMap){
-			delete curvMap;
-			curvMap= 0;
-		}
-		return -1;
-	}
-
-	//Thresholding the curvature map
-	double curvMapMedian= curvMap->GetPixelStats()->median;
-	double curvMapThr= nestedBlobThreshold*curvMapMedian;
-	Image* blobMask= curvMap->GetBinarizedImage(curvMapThr);
-	if(!blobMask){
-		ERROR_LOG("Failed to compute curvature blob mask!");
-		delete sourceMask;
-		sourceMask= 0;
-		if(deleteCurvMap && curvMap){
-			delete curvMap;
-			curvMap= 0;
-		}
-		return -1;
-	}
-
-	//Find blob+source mask
-	Image* sourcePlusBlobMask= sourceMask->GetMask(blobMask,true);
-	if(!sourcePlusBlobMask){
-		ERROR_LOG("Failed to compute (source+blob) mask!");
-		delete sourceMask;
-		sourceMask= 0;
-		if(deleteCurvMap && curvMap){
-			delete curvMap;
-			curvMap= 0;
-		}
-		delete blobMask;
-		blobMask= 0;
-		return -1;
-	}
-
-	//Find nested blobs 
-	std::vector<Source*> NestedSources;
-	double fgValue= 1;
-	int status= BlobFinder::FindBlobs(this,NestedSources,sourcePlusBlobMask,bkgData,fgValue,fgValue,minPixels,false,false);
-	if(status<0){
-		ERROR_LOG("Nested blob finder failed!");
-		delete sourceMask;
-		sourceMask= 0;
-		if(deleteCurvMap && curvMap){
-			delete curvMap;
-			curvMap= 0;
-		}
-		delete blobMask;
-		blobMask= 0;
-		delete sourcePlusBlobMask;
-		sourcePlusBlobMask= 0;
-		for(size_t k=0;k<NestedSources.size();k++){
-			if(NestedSources[k]){
-				delete NestedSources[k];
-				NestedSources[k]= 0;
-			}	
-		}//end loop sources
-		NestedSources.clear();
-		return -1;
-	}//close if
-
-	//Add nested sources to mother source
-	int nNestedSources= static_cast<int>(NestedSources.size());
-	
-	if(nNestedSources>=0){
-		INFO_LOG("#"<<nNestedSources<<" blobs found in curvature map!");
-
-		//## Init mother-nested association list
-		std::vector<int> nestedSourcesToBeRemoved;
-		std::vector< std::vector<int> > MotherNestedAssociationList;
-		for(int i=0;i<nSources;i++) MotherNestedAssociationList.push_back( std::vector<int>() );
-
-		//## Find matching between mother and nested sources
-		for(int j=0;j<nNestedSources;j++){
-			bool isMotherFound= false;
-			DEBUG_LOG("Finding matching for nested source no. "<<j);
-			
-			for(int i=0;i<nSources;i++){
-				int sourceId= sources[i]->Id;
-				//bool isInside= NestedSources[j]->IsInsideSource(sources[i]);
-				bool isOverlapping= NestedSources[j]->IsAdjacentSource(sources[i]);
-				
-				if(isOverlapping){
-					DEBUG_LOG("Nested source no. "<<j<<" added to source id="<<sourceId<<" ...");
-					MotherNestedAssociationList[i].push_back(j);
-					isMotherFound= true;
-					break;
-				}
-				
-			}//end loop mother sources
-
-			//If nested is not associated to any mother source, mark for removal
-			if(!isMotherFound){
-				WARN_LOG("Cannot find mother source for nested source no. "<<j<<", will remove it from the list of nested sources...");
-				nestedSourcesToBeRemoved.push_back(j);
-			}			
-
-		}//end loop nested sources	
-
-		//## Select nested
-		int nSelNestedSources= 0;
-		for(size_t i=0;i<MotherNestedAssociationList.size();i++){
-			long int NPix= sources[i]->GetNPixels(); 
-			double beamArea= sources[i]->GetBeamFluxIntegral();
-			bool isMotherSourceSplittableInNestedComponents= (NPix>nPixThrToSearchNested);
-			int nComponents= static_cast<int>(MotherNestedAssociationList[i].size());
-			if(nComponents<=0 || !isMotherSourceSplittableInNestedComponents) continue;
-
-			//Get mother source stats
-			if(!sources[i]->HasStats()){
-				sources[i]->ComputeStats();
-			}
-			double Smax_mother= sources[i]->GetSmax();
-			double Smedian_mother= sources[i]->Median;
-			double Srms_mother= sources[i]->MedianRMS;
-			
-
-			//If only one component is present select it if:
-			//  1) mother and nested distance is > thr (e.g. 
-			//  2) mother and nested pix superposition is <thr (e.g. 50%)
-			for(int j=0;j<nComponents;j++){
-				int nestedIndex= MotherNestedAssociationList[i][j];
-
-				//Set pars
-				NestedSources[nestedIndex]->SetBeamFluxIntegral(beamArea);
-
-				//Compute nested source stats & pars
-				NestedSources[nestedIndex]->ComputeStats();
-				NestedSources[nestedIndex]->ComputeMorphologyParams();
-
-				//Check significance of blob peak	
-				double Smax= NestedSources[nestedIndex]->GetSmax();
-				double Z= (Smax-Smedian_mother)/Srms_mother;
-				double peakRatio= Smax/Smax_mother;
-				if(Z<nestedBlobPeakZThr){
-					INFO_LOG("Skip nested source no. "<<j<<" as blob peak significance below desired threshold (Smax="<<Smax<<", peakRatio="<<peakRatio<<", Z="<<Z<<", ZThr="<<nestedBlobPeakZThr<<") ...");
-					continue;
-				}
-				else{
-					INFO_LOG("Nested source no. "<<j<<" blob peak significance above desired threshold (Smax="<<Smax<<", peakRatio="<<peakRatio<<", Z="<<Z<<", ZThr="<<nestedBlobPeakZThr<<") ...");
-				}
-				
-				//if(bkgData && bkgData->BkgMap && bkgData->NoiseMap){
-				//	long int blobPeakId= NestedSources[nestedIndex]->GetSmaxPixId();		
-				//	double bkg= (bkgData->BkgMap)->GetPixelValue(blobPeakId);
-				//	double rms= (bkgData->NoiseMap)->GetPixelValue(blobPeakId);
-				//	double Z= (Smax-bkg)/rms;
-				//	if(Z<nestedBlobPeakZThr){
-				//		INFO_LOG("Skip nested source no. "<<j<<" as blob peak significance below desired threshold (Smax="<<Smax<<", Z="<<Z<<", ZThr="<<nestedBlobPeakZThr<<") ...");
-				//		continue;
-				//	}
-				//	else{
-				//		INFO_LOG("Nested source no. "<<j<<" blob peak significance above desired threshold (Smax="<<Smax<<", Z="<<Z<<", ZThr="<<nestedBlobPeakZThr<<") ...");
-				//	}
-				//}//close if
-				
-		
-				if(nComponents==1){
-					//Compute centroid distances
-					float centroidDistX= fabs(sources[i]->X0-NestedSources[nestedIndex]->X0);
-					float centroidDistY= fabs(sources[i]->Y0-NestedSources[nestedIndex]->Y0);
-					
-					//Compute nmatching pixels
-					long int nMatchingPixels= sources[i]->GetNMatchingPixels(NestedSources[nestedIndex]);
-					float matchingPixFraction= (float)(nMatchingPixels)/(float)(NPix);
-
-					//Select nested?
-					bool areOffset= (centroidDistX>minNestedMotherDist || centroidDistY>minNestedMotherDist);
-					bool isNestedSmaller= (matchingPixFraction<maxMatchingPixFraction);
-					
-					if( areOffset || isNestedSmaller){//Add nested to mother source
-						INFO_LOG("Adding nested source to mother source (name="<<sources[i]->GetName()<<", id="<<sources[i]->Id<<", nPix="<<NPix<<"): areOffset? "<<areOffset<<" (dist_x="<<centroidDistX<<", dist_y="<<centroidDistY<<"), isNestedSmaller?"<<isNestedSmaller<<" (matchingPixFraction="<<matchingPixFraction<<", maxMatchingPixFraction="<<maxMatchingPixFraction<<", nPixThrToSearchNested="<<nPixThrToSearchNested<<")");					
-
-						sources[i]->AddNestedSource(NestedSources[nestedIndex]);
-						nSelNestedSources++;
-					}
-					else{//do not select nested!
-						nestedSourcesToBeRemoved.push_back(nestedIndex);
-					}
-				}//close if
-				else{
-					//Add nested to mother source
-					sources[i]->AddNestedSource(NestedSources[nestedIndex]);
-					nSelNestedSources++;
-				}
-			}//end loop nested components
-		}//end loop mother sources
-
-		INFO_LOG("#"<<nSelNestedSources<<" nested sources found and added to mother sources...");
-
-		//Delete nested source selected for removal
-		for(size_t k=0;k<nestedSourcesToBeRemoved.size();k++){
-			int nestedSourceIndex= nestedSourcesToBeRemoved[k];
-			if(NestedSources[nestedSourceIndex]){
-				delete NestedSources[nestedSourceIndex];
-				NestedSources[nestedSourceIndex]= 0;
-			}
-		}
-		NestedSources.clear();
-						
-	}//close nNestedBlobs>0
-
-	//Clear
-	if(sourceMask) {
-		delete sourceMask;
-		sourceMask= 0;
-	}
-	if(deleteCurvMap && curvMap) {
-		delete curvMap;
-		curvMap= 0;
-	}
-	if(blobMask) {
-		delete blobMask;
-		blobMask= 0;
-	}
-	if(sourcePlusBlobMask) {
-		delete sourcePlusBlobMask;
-		sourcePlusBlobMask= 0;
-	}
-
-	return 0;
-
-}//close FindNestedSources()
-*/
 
 
 int Image::FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkgData* bkgData,int minPixels,double minNestedMotherDist,double maxMatchingPixFraction,long int nPixThrToSearchNested)
@@ -1961,27 +1793,35 @@ int Image::FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkg
 	//Check if given mother source list is empty
 	int nSources= static_cast<int>(sources.size());
 	if(nSources<=0){
-		WARN_LOG("Empty source list given!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Empty source list given!");
+		#endif
 		return 0;
 	}
 
 	//Check blob mask given
 	if(!blobMask){
-		ERROR_LOG("Null ptr to blob mask given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to blob mask given!");
+		#endif
 		return -1;
 	}
 
 	//Find image mask of found sources
 	Image* sourceMask= this->GetSourceMask(sources,false);
 	if(!sourceMask){
-		ERROR_LOG("Null ptr to computed source mask!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to computed source mask!");
+		#endif
 		return -1;
 	}
 
 	//Find blob+source mask
 	Image* sourcePlusBlobMask= sourceMask->GetMask(blobMask,true);
 	if(!sourcePlusBlobMask){
-		ERROR_LOG("Failed to compute (source+blob) mask!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute (source+blob) mask!");
+		#endif
 		CodeUtils::DeletePtrCollection<Image>({sourceMask});	
 		return -1;
 	}
@@ -1991,7 +1831,9 @@ int Image::FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkg
 	double fgValue= 1;
 	int status= BlobFinder::FindBlobs(this,NestedSources,sourcePlusBlobMask,bkgData,fgValue,fgValue,minPixels,false,false);
 	if(status<0){
-		ERROR_LOG("Nested blob finder failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Nested blob finder failed!");
+		#endif
 		CodeUtils::DeletePtrCollection<Image>({sourceMask,sourcePlusBlobMask});	
 		CodeUtils::DeletePtrCollection<Source>(NestedSources);	
 		return -1;
@@ -2004,7 +1846,9 @@ int Image::FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkg
 	int nNestedSources= static_cast<int>(NestedSources.size());
 	
 	if(nNestedSources>=0){
-		DEBUG_LOG("#"<<nNestedSources<<" blobs found in curvature map ...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("#"<<nNestedSources<<" blobs found in curvature map ...");
+		#endif
 
 		//## Init mother-nested association list
 		std::vector<int> nestedSourcesToBeRemoved;
@@ -2014,14 +1858,18 @@ int Image::FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkg
 		//## Find matching between mother and nested sources
 		for(int j=0;j<nNestedSources;j++){
 			bool isMotherFound= false;
-			DEBUG_LOG("Finding matching for nested source no. "<<j);
-			
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Finding matching for nested source no. "<<j);
+			#endif
+
 			for(int i=0;i<nSources;i++){
 				int sourceId= sources[i]->Id;
 				bool isOverlapping= NestedSources[j]->IsAdjacentSource(sources[i]);
 				
 				if(isOverlapping){
-					DEBUG_LOG("Nested source no. "<<j<<" added to source id="<<sourceId<<" ...");
+					#ifdef LOGGING_ENABLED
+						DEBUG_LOG("Nested source no. "<<j<<" added to source id="<<sourceId<<" ...");
+					#endif
 					MotherNestedAssociationList[i].push_back(j);
 					isMotherFound= true;
 					break;
@@ -2031,7 +1879,9 @@ int Image::FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkg
 
 			//If nested is not associated to any mother source, mark for removal
 			if(!isMotherFound){
-				WARN_LOG("Cannot find mother source for nested source no. "<<j<<", will remove it from the list of nested sources...");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Cannot find mother source for nested source no. "<<j<<", will remove it from the list of nested sources...");
+				#endif
 				nestedSourcesToBeRemoved.push_back(j);
 			}			
 
@@ -2078,7 +1928,9 @@ int Image::FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkg
 					bool isNestedSmaller= (matchingPixFraction<maxMatchingPixFraction);
 					
 					if( areOffset || isNestedSmaller){//Add nested to mother source
-						DEBUG_LOG("Adding nested source to mother source (name="<<sources[i]->GetName()<<", id="<<sources[i]->Id<<", nPix="<<NPix<<"): areOffset? "<<areOffset<<" (dist_x="<<centroidDistX<<", dist_y="<<centroidDistY<<"), isNestedSmaller?"<<isNestedSmaller<<" (matchingPixFraction="<<matchingPixFraction<<", maxMatchingPixFraction="<<maxMatchingPixFraction<<", nPixThrToSearchNested="<<nPixThrToSearchNested<<")");					
+						#ifdef LOGGING_ENABLED
+							DEBUG_LOG("Adding nested source to mother source (name="<<sources[i]->GetName()<<", id="<<sources[i]->Id<<", nPix="<<NPix<<"): areOffset? "<<areOffset<<" (dist_x="<<centroidDistX<<", dist_y="<<centroidDistY<<"), isNestedSmaller?"<<isNestedSmaller<<" (matchingPixFraction="<<matchingPixFraction<<", maxMatchingPixFraction="<<maxMatchingPixFraction<<", nPixThrToSearchNested="<<nPixThrToSearchNested<<")");					
+						#endif
 
 						sources[i]->AddNestedSource(NestedSources[nestedIndex]);
 						nSelNestedSources++;
@@ -2095,7 +1947,9 @@ int Image::FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkg
 			}//end loop nested components
 		}//end loop mother sources
 
-		INFO_LOG("#"<<nSelNestedSources<<" nested sources found and added to mother sources ...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("#"<<nSelNestedSources<<" nested sources found and added to mother sources ...");
+		#endif
 
 		//Delete nested source selected for removal
 		for(size_t k=0;k<nestedSourcesToBeRemoved.size();k++){
@@ -2126,7 +1980,9 @@ int Image::FindBlendedSources(std::vector<Source*>& deblendedSources,std::vector
 	);
 
 	if(status<0){
-		ERROR_LOG("Failed to find blended sources inside image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to find blended sources inside image!");
+		#endif
 		return -1;
 	}
 
@@ -2140,7 +1996,9 @@ int Image::FindExtendedSource_CV(std::vector<Source*>& sources,Image* initSegmIm
 	//## Compute segmented image
 	Image* segmentedImg= ChanVeseSegmenter::FindSegmentation(this,initSegmImg,false,dt,h,lambda1,lambda2,mu,nu,p,niters,tol,niters_inner,niters_reinit);
 	if(!segmentedImg){
-		ERROR_LOG("Failed to compute ChanVese image segmentation!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute ChanVese image segmentation!");
+		#endif
 		return -1;
 	}
 	
@@ -2149,7 +2007,9 @@ int Image::FindExtendedSource_CV(std::vector<Source*>& sources,Image* initSegmIm
 	bool findNestedSources= false;
 	int status= this->FindCompactSource(sources,segmentedImg,bkgData,fgValue,fgValue,minPixels,findNestedSources);
 	if(status<0){
-		ERROR_LOG("Finding sources in Chan-Vese segmented mask failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Finding sources in Chan-Vese segmented mask failed!");
+		#endif
 		return -1;
 	}
 	
@@ -2167,7 +2027,9 @@ int Image::FindExtendedSource_CV(std::vector<Source*>& sources,Image* initSegmIm
 			this->ComputeStats(true,false,false);
 		}	
 		if(!m_Stats){
-			ERROR_LOG("Failed to compute image stats, clearing all detected sources and returning empty list!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute image stats, clearing all detected sources and returning empty list!");
+			#endif
 			for(size_t k=0;k<sources.size();k++){
 				if(sources[k]){
 					delete sources[k];
@@ -2205,7 +2067,9 @@ Image* Image::GetMask(Image* mask,bool isBinary)
 
 	//## Check input mask
 	if(!mask) {
-		ERROR_LOG("Null ptr to given image mask!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given image mask!");
+		#endif
 		return 0;
 	}
 		
@@ -2213,7 +2077,9 @@ Image* Image::GetMask(Image* mask,bool isBinary)
 	long int Nx= mask->GetNx();
 	long int Ny= mask->GetNy();
 	if(Nx!=this->GetNx() || Ny!=this->GetNy()){
-		ERROR_LOG("Mask binning is different than current image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Mask binning is different than current image!");
+		#endif
 		return 0;
 	}	
 
@@ -2262,20 +2128,26 @@ int Image::SubtractFittedSources(const std::vector<Source*>& sources,bool subtra
 {
 	//Nothing to be done is source collection is empty
 	if(sources.empty()){
-		WARN_LOG("Given source collection is empty, nothing to be done!");	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Given source collection is empty, nothing to be done!");	
+		#endif
 		return 0;
 	}
 
 	//Get source fit model image
 	Image* modelImg= GetSourceFitModelImage(sources,subtractNested,nsigmaTrunc);
 	if(!modelImg){
-		ERROR_LOG("Failed to compute source fit model image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute source fit model image!");
+		#endif
 		return -1;
 	}
 	
 	//Subtract model image from current image
-	if(this->Add(modelImg,-1,recomputeStats)<0){
-		ERROR_LOG("Failed to subtract model image from this image!");
+	if(this->Add(modelImg,-1,recomputeStats)<0){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to subtract model image from this image!");
+		#endif
 		delete modelImg;
 		modelImg= 0;
 		return -1;
@@ -2295,7 +2167,9 @@ int Image::SubtractFittedSource(Source* source,bool subtractNested,bool recomput
 {
 	//Nothing to be done is source collection is empty
 	if(!source){
-		ERROR_LOG("Null ptr to input source given!");	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input source given!");	
+		#endif
 		return -1;
 	}
 
@@ -2303,13 +2177,17 @@ int Image::SubtractFittedSource(Source* source,bool subtractNested,bool recomput
 	std::vector<Source*> sources {source};
 	Image* modelImg= GetSourceFitModelImage(sources,subtractNested,nsigmaTrunc);
 	if(!modelImg){
-		ERROR_LOG("Failed to compute source fit model image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute source fit model image!");
+		#endif
 		return -1;
 	}
 	
 	//Subtract model image from current image
 	if(this->Add(modelImg,-1,recomputeStats)<0){
-		ERROR_LOG("Failed to subtract model image from this image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to subtract model image from this image!");
+		#endif
 		delete modelImg;
 		modelImg= 0;
 		return -1;
@@ -2330,7 +2208,9 @@ int Image::FillFromSourceFitModel(Source* source,bool useNested,double nsigmaTru
 {
 	//Check source
 	if(!source){
-		ERROR_LOG("Null ptr to source given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to source given!");
+		#endif
 		return -1;
 	}
 
@@ -2350,7 +2230,9 @@ int Image::FillFromSourceFitModel(Source* source,bool useNested,double nsigmaTru
 			long int boxHalfWidthY= std::ceil(nsigmaTrunc*sigmaY);
 			long int binId_centroid= this->FindBin(X0,Y0);
 			if(binId_centroid<0) {
-				WARN_LOG("Source fitted centroid ("<<X0<<","<<Y0<<") outside image range, skip source...");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Source fitted centroid ("<<X0<<","<<Y0<<") outside image range, skip source...");
+				#endif
 				continue;
 			}
 		
@@ -2358,8 +2240,10 @@ int Image::FillFromSourceFitModel(Source* source,bool useNested,double nsigmaTru
 			long int iy_centroid= GetBinY(binId_centroid);
 
 			//Loop over model box
-			DEBUG_LOG("Source "<<source->GetName()<<", component "<<k+1<<": A="<<A<<", pos("<<X0<<","<<Y0<<"), sigma("<<sigmaX<<","<<sigmaY<<"), theta="<<theta<<", box half widths=("<<boxHalfWidthX<<","<<boxHalfWidthY<<"), centroid bin("<<ix_centroid<<","<<iy_centroid<<")");
-	
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Source "<<source->GetName()<<", component "<<k+1<<": A="<<A<<", pos("<<X0<<","<<Y0<<"), sigma("<<sigmaX<<","<<sigmaY<<"), theta="<<theta<<", box half widths=("<<boxHalfWidthX<<","<<boxHalfWidthY<<"), centroid bin("<<ix_centroid<<","<<iy_centroid<<")");
+			#endif
+
 			for(long int ix=-boxHalfWidthX;ix<=boxHalfWidthX;ix++){
 				for(long int iy=-boxHalfWidthY;iy<=boxHalfWidthY;iy++){
 					//Check bin exists
@@ -2381,7 +2265,9 @@ int Image::FillFromSourceFitModel(Source* source,bool useNested,double nsigmaTru
 	}//close if
 	else{	
 		if(useNested){
-			DEBUG_LOG("Source "<<source->GetName()<<" without fit info, check nested sources...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Source "<<source->GetName()<<" without fit info, check nested sources...");	
+			#endif
 			std::vector<Source*> nestedSources= source->GetNestedSources();
 			for(size_t k=0;k<nestedSources.size();k++){
 				this->FillFromSourceFitModel(nestedSources[k],nsigmaTrunc);
@@ -2401,7 +2287,9 @@ Image* Image::GetSourceFitModelImage(const std::vector<Source*>& sources,bool us
 	
 	// Check if source collection is empty
 	if(sources.empty()){
-		WARN_LOG("Source collection is empty, no model can be created, returning empty image!");	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Source collection is empty, no model can be created, returning empty image!");	
+		#endif
 		return modelImg;
 	}
 
@@ -2419,7 +2307,9 @@ int Image::MaskSources(std::vector<Source*>const& sources,float maskValue)
 	//## Check source list
 	int nSources= static_cast<int>(sources.size());
 	if(nSources<=0) {
-		WARN_LOG("Source list is empty, nothing to be done...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Source list is empty, nothing to be done...");
+		#endif
 		return 0;	
 	}
 
@@ -2451,13 +2341,17 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 {
 	//Check source
 	if(!source){
-		ERROR_LOG("Null ptr to input source given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input source given!");
+		#endif
 		return -1;
 	}
 
 	//Check box size
 	if(boxThickness<=0){
-		ERROR_LOG("Box size must be >0!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Box size must be >0!");	
+		#endif
 		return -1;
 	}
 
@@ -2469,11 +2363,15 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 	source->GetSourcePixelRange(ix_min,ix_max,iy_min,iy_max);
 
 	if(ix_min<0 || ix_min>=ix_max || ix_max>=m_Nx){
-		ERROR_LOG("Invalid source x range ("<<ix_min<<","<<ix_max<<")!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid source x range ("<<ix_min<<","<<ix_max<<")!");
+		#endif
 		return -1;
 	}
 	if(iy_min<0 || iy_min>=iy_max || iy_max>=m_Ny){
-		ERROR_LOG("Invalid source y range ("<<iy_min<<","<<iy_max<<")!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid source y range ("<<iy_min<<","<<iy_max<<")!");
+		#endif
 		return -1;
 	}
 
@@ -2499,7 +2397,9 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 		}//end loop y
 	}//end loop x
 
-	DEBUG_LOG("#"<<pixels.size()<<" pixels selected to measure box around source "<<source->GetName()<<" ...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<pixels.size()<<" pixels selected to measure box around source "<<source->GetName()<<" ...");
+	#endif
 
 	//Compute bkg info
 	double bkgLevel= 0;
@@ -2544,7 +2444,9 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 		bkgRMS= rms;
 	}
 	else{
-		ERROR_LOG("Invalid bkg estimator ("<<bkgEstimator<<") given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid bkg estimator ("<<bkgEstimator<<") given!");
+		#endif
 		return -1;
 	}
 
@@ -2562,8 +2464,8 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 }//close GetBkgInfoAroundSource()
 
 
-Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,bool invert){
-
+Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,bool invert)
+{
 	//## Clone map
 	long int Nx= this->GetNx();
 	long int Ny= this->GetNy();
@@ -2573,12 +2475,16 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 	//Image* maskedImage= this->GetCloned(std::string(imgName),copyMetaData,resetStats);
 	Image* maskedImage= this->GetCloned("",copyMetaData,resetStats);
 	
-	DEBUG_LOG("pixel size="<<maskedImage->GetPixelDataSize()<<" (original size="<<this->GetPixelDataSize()<<")");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("pixel size="<<maskedImage->GetPixelDataSize()<<" (original size="<<this->GetPixelDataSize()<<")");
+	#endif
 
 	//## Check source list
 	int nSources= static_cast<int>(sources.size());
 	if(nSources<=0) {
-		WARN_LOG("Source list is empty, returning same image!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Source list is empty, returning same image!");
+		#endif
 		return maskedImage;	
 	}
 
@@ -2656,8 +2562,9 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 
 	}//close else
 
-	DEBUG_LOG("(after) pixel size="<<maskedImage->GetPixelDataSize()<<" (original size="<<this->GetPixelDataSize()<<")");
-
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("(after) pixel size="<<maskedImage->GetPixelDataSize()<<" (original size="<<this->GetPixelDataSize()<<")");
+	#endif
 
 	return maskedImage;
 
@@ -2669,11 +2576,15 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 	//Check bkg data
 	if(dilateModel==eDilateWithBkg){
 	 	if(!bkgData){
-			ERROR_LOG("Selected to use bkg dilation but null ptr to bkg data!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Selected to use bkg dilation but null ptr to bkg data!");	
+			#endif
 			return nullptr;
 		}
-		if(useLocalBkg && !bkgData->HasLocalBkg()){
-			ERROR_LOG("Selected to use local bkg but no local bkg data are available!");
+		if(useLocalBkg && !bkgData->HasLocalBkg()){		
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Selected to use local bkg but no local bkg data are available!");
+			#endif
 			return nullptr;
 		}
 	}//close if
@@ -2681,7 +2592,9 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 	
 	//Check thresholds
 	if(zBrightThr<zThr){
-		ERROR_LOG("Invalid z threshold given (hint: zBrightThr shall be >= than zThr)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid z threshold given (hint: zBrightThr shall be >= than zThr)!");
+		#endif
 		return nullptr;
 	}
 
@@ -2689,13 +2602,17 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 	TString imgName= Form("%s_Residual",m_name.c_str());	
 	Image* residualImg= this->GetCloned(std::string(imgName),true,true);
 	if(!residualImg){
-		ERROR_LOG("Failed to clone input image, returning nullptr!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to clone input image, returning nullptr!");
+		#endif
 		return nullptr;
 	}
 
 	//Check source list
 	if(sources.size()<=0){
-		WARN_LOG("Source list empty, nothing to be dilated!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Source list empty, nothing to be dilated!");
+		#endif
 		return residualImg;
 	}
 
@@ -2718,14 +2635,18 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 		//Check is source stats are available
 		bool hasStats= source->HasStats();
 		if(!hasStats){
-			WARN_LOG("No stats computed for input source "<<source->GetName()<<"...computing!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("No stats computed for input source "<<source->GetName()<<"...computing!");
+			#endif
 			source->ComputeStats(true,true);
 		}
 
 		//Check if bright source
 		Pixel* seedPixel= source->GetSeedPixel();
 		if(!seedPixel){
-			WARN_LOG("Failed to find seed pixel for source "<<source->GetName()<<", skip to next!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to find seed pixel for source "<<source->GetName()<<", skip to next!");
+			#endif
 			continue;
 		}
 		std::pair<double,double> bkgInfo= seedPixel->GetBkg();
@@ -2738,8 +2659,9 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 		if(fabs(Z)>zThr) isDilatedSource= true;
 		if(fabs(Z)>zBrightThr) isBrightSource= true;
 		
-		DEBUG_LOG("Source "<<source->GetName()<<" sourceType="<<sourceType<<", hasFitInfo?"<<hasFitInfo<<", hasNestedSources?"<<hasNestedSources<<", isSelectedSource?"<<isSelectedSource<<", addToPSList? "<<addToPSList<<" (psSubtractionMethod="<<psSubtractionMethod<<", dilateSourceType="<<dilateSourceType<<"), isDilatedSource? "<<isDilatedSource<<", isBrightSource? "<<isBrightSource);
-
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Source "<<source->GetName()<<" sourceType="<<sourceType<<", hasFitInfo?"<<hasFitInfo<<", hasNestedSources?"<<hasNestedSources<<", isSelectedSource?"<<isSelectedSource<<", addToPSList? "<<addToPSList<<" (psSubtractionMethod="<<psSubtractionMethod<<", dilateSourceType="<<dilateSourceType<<"), isDilatedSource? "<<isDilatedSource<<", isBrightSource? "<<isBrightSource);
+		#endif
 
 		//Select source
 		if(!isDilatedSource) continue;
@@ -2776,15 +2698,21 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 		}//close else bright source
 	}//end loop sources
 
-	INFO_LOG("#"<<psSources.size()<<" point-sources selected for subtraction...");
-	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<psSources.size()<<" point-sources selected for subtraction...");
+	#endif
+
 	//Subtract point-source using fit information?
 	if( psSubtractionMethod==ePS_MODELSUBTRACTION ){
-		INFO_LOG("Subtracting "<<psSources.size()<<" point-source from input map...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Subtracting "<<psSources.size()<<" point-source from input map...");
+		#endif
 		bool subtractNested= false;
 		bool recomputeStats= false;
 		if(residualImg->SubtractFittedSources(psSources,subtractNested,recomputeStats)<0){
-			ERROR_LOG("Failed to subtract point-sources from input map!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to subtract point-sources from input map!");
+			#endif
 			if(residualImg) {
 				delete residualImg;
 				residualImg= 0;
@@ -2794,7 +2722,9 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 	}//close if point source subtraction
 
 	//Dilate sources from input map (consider only non-point source if PS_MODELSUBTRACTION flag is used)
-	INFO_LOG("#"<<dilatedSources.size()<<" sources to be dilated from input map...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<dilatedSources.size()<<" sources to be dilated from input map...");
+	#endif
 	for(size_t i=0;i<dilatedSources.size();i++){
 		//Dilate source from image
 		int status= MorphFilter::DilateAroundSource(
@@ -2805,7 +2735,9 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 		);
 
 		if(status<0){
-			ERROR_LOG("Failed to dilate source "<<dilatedSources[i]->GetName()<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to dilate source "<<dilatedSources[i]->GetName()<<"!");
+			#endif
 			if(residualImg) {
 				delete residualImg;
 				residualImg= 0;
@@ -2815,60 +2747,23 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 	}//end loop dilated sources
 
 	//Re-compute stats of residual image
-	DEBUG_LOG("Recomputing stats of residual image...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Recomputing stats of residual image...");
+	#endif
 	residualImg->ComputeStats(true,true,false);
 
 	return residualImg;
 
 }//close GetSourceResidual()
 
-/*
-Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int KernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr,int psSubtractionMethod)
+
+Image* Image::GetNormalizedImage(std::string normScale,int normmin,int normmax,bool skipEmptyBins)
 {
-	//Check thresholds
-	if(zBrightThr<zThr){
-		ERROR_LOG("Invalid z threshold given (hint: zBrightThr shall be >= than zThr)!");
-		return nullptr;
-	}
-
-	//Clone input image	
-	TString imgName= Form("%s_Residual",m_name.c_str());	
-	Image* residualImg= this->GetCloned(std::string(imgName),true,true);
-	if(!residualImg){
-		ERROR_LOG("Failed to clone input image, returning nullptr!");
-		return nullptr;
-	}
-
-	//Dilate source pixels
-	int status= MorphFilter::DilateAroundSources(
-		residualImg,sources,
-		KernSize,dilateModel,dilateSourceType,skipToNested,
-		bkgData,useLocalBkg,randomize,
-		zThr,zBrightThr
-	);
-
-	if(status<0){
-		ERROR_LOG("Failed to dilate sources!");
-		if(residualImg) {
-			delete residualImg;
-			residualImg= 0;
-		}
-		return 0;		
-	}
-
-	//Re-Compute stats
-	residualImg->ComputeStats(true,false,true);
-
-	return residualImg;
-
-}//close GetSourceResidual()
-*/
-
-Image* Image::GetNormalizedImage(std::string normScale,int normmin,int normmax,bool skipEmptyBins){
-
 	//Check if image has data
 	if(m_pixels.empty()){
-		ERROR_LOG("Image has no data stored!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Image has no data stored!");
+		#endif
 		return nullptr;
 	}
 
@@ -2876,7 +2771,9 @@ Image* Image::GetNormalizedImage(std::string normScale,int normmin,int normmax,b
 	double wmin= (this->m_StatMoments).minVal;
 	double wmax= (this->m_StatMoments).maxVal;
 	if(TMath::IsNaN(wmin) || fabs(wmin)==TMath::Infinity() || TMath::IsNaN(wmax) || fabs(wmax)==TMath::Infinity()){
-		ERROR_LOG("Min ("<<wmin<<") or max ("<<wmax<<") image values are nan or inf, this should not occur (hint: check moment calculation!)");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Min ("<<wmin<<") or max ("<<wmax<<") image values are nan or inf, this should not occur (hint: check moment calculation!)");
+		#endif
 		return nullptr;
 	}
 	
@@ -2916,7 +2813,9 @@ Image* Image::GetNormalizedImage(std::string normScale,int normmin,int normmax,b
 
 	}//close else if
 	else{
-		WARN_LOG("Invalid norm scale option selected ("<<normScale<<") no transform applied to original image!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Invalid norm scale option selected ("<<normScale<<") no transform applied to original image!");
+		#endif
 		return norm_img;
 	}
 
@@ -2931,7 +2830,9 @@ Image* Image::GetNormalizedImage(std::string normScale,int normmin,int normmax,b
 	if(this->HasStats()) status= norm_img->ComputeStats(computeRobustStats,forceRecomputing,useRange);
 	else status= norm_img->ComputeMoments(useRange);
 	if(status<0){
-		WARN_LOG("Failed to re-compute moments/stats for normalized image!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to re-compute moments/stats for normalized image!");
+		#endif
 	}
 	
 	return norm_img;
@@ -3005,7 +2906,9 @@ Image* Image::GetGuidedFilterImage(int radius,double eps)
 	Image* img_norm= this->GetNormalizedImage("LINEAR",1,256);
 	img_norm->SetName("tmpImg");
 	if(!img_norm) {
-		ERROR_LOG("Failed to get normalized image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get normalized image!");
+		#endif
 		return 0;
 	}
 
@@ -3054,9 +2957,8 @@ Image* Image::GetSmoothedImage(int size_x,int size_y,double sigma_x,double sigma
 
 }//close GetSmoothedImage()
 
-std::vector<Image*> Image::GetWaveletDecomposition(int nScales){
-
-	DEBUG_LOG("Computing wavelet decomposition up to scale J="<<nScales<<" ...");
+std::vector<Image*> Image::GetWaveletDecomposition(int nScales)
+{
 	std::vector<Image*> img_decomposition;
 	img_decomposition= WTFilter::GetDecomposition(this,nScales);
 	
@@ -3071,7 +2973,9 @@ Image* Image::GetSaliencyMap(int reso,double regFactor,int minRegionSize,double 
 	Image* saliencyMap= 0;
 	saliencyMap= SaliencyFilter::ComputeSaliencyMap(this,reso,regFactor,minRegionSize,knnFactor,useRobust,expFalloffPar,distanceRegPar);
 	if(!saliencyMap){
-		ERROR_LOG("Saliency map estimation failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Saliency map estimation failed!");
+		#endif
 		return nullptr;
 	}
 
@@ -3086,7 +2990,9 @@ Image* Image::GetMultiResoSaliencyMap(int resoMin,int resoMax,int resoStep,doubl
 	Image* saliencyMap= 0;
 	saliencyMap= SaliencyFilter::ComputeMultiResoSaliencyMap(this,resoMin,resoMax,resoStep,beta,minRegionSize,knnFactor,useRobustPars,expFalloffPar,distanceRegPar, salientMultiplicityThrFactor,addBkgMap,addNoiseMap,bkgData,saliencyThrFactor,imgThrFactor,useOptimalThr);
 	if(!saliencyMap){
-		ERROR_LOG("Multi-resolution saliency map estimation failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Multi-resolution saliency map estimation failed!");
+		#endif
 		return nullptr;
 	}
 
@@ -3107,7 +3013,9 @@ TGraph* Image::ComputePeakGraph(std::vector<int> kernelSizes,int peakShiftTolera
 	//std::vector<TVector2> peakPoints;
 	std::vector<ImgPeak> peakPoints;
 	if(this->FindPeaks(peakPoints,kernelSizes,peakShiftTolerance,skipBorders,multiplicityThr)<0){
-		ERROR_LOG("Failed to find peaks in image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to find peaks in image!");
+		#endif
 		return nullptr;
 	}
 
@@ -3175,18 +3083,24 @@ int Image::Add(Image* img,double c,bool computeStats)
 
 	//Check input image
 	if(!img){
-		ERROR_LOG("Null ptr to given input image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given input image!");
+		#endif
 		return -1;
 	}
 	long int Nx= img->GetNx();
 	long int Ny= img->GetNy();
 	long int PixDataSize= img->GetPixelDataSize();
 	if(m_Nx!=Nx || m_Ny!=Ny){
-		ERROR_LOG("Image to be added has different size ("<<Nx<<","<<Ny<<") wrt to this image ("<<m_Nx<<","<<m_Ny<<")!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Image to be added has different size ("<<Nx<<","<<Ny<<") wrt to this image ("<<m_Nx<<","<<m_Ny<<")!");
+		#endif
 		return -1;
 	}
 	if(PixDataSize!=this->GetPixelDataSize()){
-		ERROR_LOG("Image to be added has different pixel vector size ("<<PixDataSize<<") wrt to this image ("<<m_pixels.size()<<")!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Image to be added has different pixel vector size ("<<PixDataSize<<") wrt to this image ("<<m_pixels.size()<<")!");
+		#endif
 		return -1;
 	}
 
@@ -3205,7 +3119,9 @@ int Image::Add(Image* img,double c,bool computeStats)
 		{
 			int thread_id= omp_get_thread_num();
 			int nthreads= SysUtils::GetOMPThreads();
-			DEBUG_LOG("Starting multithread image add (thread_id="<<thread_id<<", nthreads="<<nthreads<<")");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Starting multithread image add (thread_id="<<thread_id<<", nthreads="<<nthreads<<")");
+			#endif
 
 			#pragma omp single
    		{
@@ -3227,7 +3143,9 @@ int Image::Add(Image* img,double c,bool computeStats)
 		
 		//Update moments from parallel estimates
 		if(Caesar::StatsUtils::ComputeMomentsFromParallel(m_StatMoments,parallel_moments)<0){
-			ERROR_LOG("Failed to compute cumulative moments from parallel estimates (NB: image will have wrong moments!)");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute cumulative moments from parallel estimates (NB: image will have wrong moments!)");
+			#endif
 			return -1;
 		}
 
@@ -3249,7 +3167,9 @@ int Image::Add(Image* img,double c,bool computeStats)
 		bool forceRecomputing= false;
 		//if(ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing)<0){
 		if(ComputeStats(computeRobustStats,forceRecomputing,useRange)<0){
-			WARN_LOG("Failed to compute stats after adding the two images!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to compute stats after adding the two images!");
+			#endif
 			return -1;
 		}	
 	}//close if computeStats
@@ -3292,7 +3212,9 @@ TH1D* Image::GetPixelHisto(int nbins,bool normalize){
 
 	//Check if image has stats computed
 	if(!HasStats()){
-		WARN_LOG("No stats computed, returning nullptr!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No stats computed, returning nullptr!");
+		#endif
 		return nullptr;
 	}
 
@@ -3322,7 +3244,9 @@ double Image::FindOtsuThreshold(TH1D* hist){
 
 	//Check input histo
 	if(!hist){
-		ERROR_LOG("Null ptr to input pixel histo, returning inf!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input pixel histo, returning inf!");
+		#endif
 		return TMath::Infinity();
 	}
 
@@ -3383,7 +3307,9 @@ double Image::FindOtsuThreshold(int nbins){
 	//## Get histo and normalize
 	TH1D* hist= this->GetPixelHisto(nbins,true);
 	if(!hist) {
-		ERROR_LOG("Failed to compute pixel histo, return thr=0!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute pixel histo, return thr=0!");
+		#endif
 		return 0;
 	}
 
@@ -3395,10 +3321,14 @@ double Image::FindOtsuThreshold(int nbins){
 double Image::FindMedianThreshold(double thrFactor){
 
 	//Check if image has stats and get median
-	if(!this->HasStats()){
-		INFO_LOG("Image has no stats computed, computing them...");
+	if(!this->HasStats()){	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Image has no stats computed, computing them...");
+		#endif
 		if(ComputeStats(true,false,false)<0){
-			ERROR_LOG("Failed to compute image stats!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute image stats!");
+			#endif
 			return TMath::Infinity();
 		}
 	}
@@ -3421,7 +3351,9 @@ double Image::FindOptimalGlobalThreshold(double thrFactor,int nbins,bool smooth)
 			TMath::IsNaN(valleyThr) || fabs(valleyThr)==TMath::Infinity() 
 	)
 	{
-		ERROR_LOG("Failed to compute one/more thresholds (inf values), returning inf!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute one/more thresholds (inf values), returning inf!");
+		#endif
 		return TMath::Infinity();
 	}
 
@@ -3442,8 +3374,10 @@ double Image::FindValleyThreshold(int nbins,bool smooth){
 
 	//## Get pixel histo (invert to find peaks corresponding to valley in original histo)
 	TH1D* histo= this->GetPixelHisto(nbins);
-	if(!histo){
-		ERROR_LOG("Failed to get pixel histo (hint: check if image stats were computed)!");
+	if(!histo){		
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get pixel histo (hint: check if image stats were computed)!");
+		#endif
 		return 0;
 	}
 
@@ -3510,8 +3444,10 @@ double Image::FindValleyThreshold(int nbins,bool smooth){
 		}
 	}//end loop bins
 
-	DEBUG_LOG("#"<<npeaks<<" valleys detected!");
-	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<npeaks<<" valleys detected!");
+	#endif
+
 	//## Clear stuff
 	if(histo){
 		histo->Delete();
@@ -3535,7 +3471,9 @@ double Image::FindCumulativeSumThr(double threshold,bool useRange,double minThr,
 {
 	//Check if image has pixels
 	if(m_pixels.empty()){
-		WARN_LOG("Image has no pixels stored, returning 0!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Image has no pixels stored, returning 0!");
+		#endif
 		return 0;
 	}
 
@@ -3582,7 +3520,9 @@ Image* Image::GetBinarizedImage(double threshold,double fgValue,bool isLowerThre
 	//bool skipNegativePixels= false;
 	bool useRange= false;
 	if(BinarizedImg->ComputeMoments(useRange)<0){
-		ERROR_LOG("Failed to re-compute moments of binarized image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to re-compute moments of binarized image!");
+		#endif
 		return nullptr;
 	}	
 	
@@ -3591,8 +3531,8 @@ Image* Image::GetBinarizedImage(double threshold,double fgValue,bool isLowerThre
 }//close GetBinarizedImage()
 
 
-int Image::ApplyThreshold(double thr_min,double thr_max,double maskedValue){
-
+int Image::ApplyThreshold(double thr_min,double thr_max,double maskedValue)
+{
 	#ifdef OPENMP_ENABLED
 	#pragma omp parallel for
 	#endif
@@ -3612,14 +3552,18 @@ int Image::ApplyThreshold(double thr_min,double thr_max,double maskedValue){
 	if(this->HasStats()){
 		//if(ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing)<0){
 		if(ComputeStats(computeRobustStats,forceRecomputing,useRange)<0){
-			ERROR_LOG("Failed to re-compute stats of thresholded image!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to re-compute stats of thresholded image!");
+			#endif
 			return -1;
 		}
 	}
 	else{
 		//if(this->ComputeMoments(skipNegativePixels)<0){
 		if(this->ComputeMoments(useRange)<0){
-			ERROR_LOG("Failed to re-compute moments of thresholded image!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to re-compute moments of thresholded image!");
+			#endif
 			return -1;
 		}	
 	}
@@ -3632,11 +3576,13 @@ int Image::ApplyThreshold(double thr_min,double thr_max,double maskedValue){
 //================================================================
 //===    CONVERSION METHODS
 //================================================================
-TH2D* Image::GetHisto2D(std::string histoname){
-
+TH2D* Image::GetHisto2D(std::string histoname)
+{
 	//Check if image is not empty
 	if(m_pixels.empty() || m_Nx<=0 || m_Ny<=0){
-		WARN_LOG("Image is empty or has no data/size stored, returning nullptr!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Image is empty or has no data/size stored, returning nullptr!");
+		#endif
 		return nullptr;
 	}
 
@@ -3667,136 +3613,23 @@ TH2D* Image::GetHisto2D(std::string histoname){
 
 }//close GetHisto2D()
 
-/*
-TH2D* Image::GetWCSHisto2D(std::string histoname,WorldCoor* wcs,bool useImageCoord)
-{
-	//Check if image is not empty
-	if(m_pixels.empty() || m_Nx<=0 || m_Ny<=0){
-		WARN_LOG("Image is empty or has no data/size stored, returning nullptr!");
-		return nullptr;
-	}
-
-	//Check WCS
-	if(!wcs){
-		WARN_LOG("No WCS given!");
-		return nullptr;
-	}
-
-	//Compute bin x & y min values and convert to WCS
-	std::vector<double> x_min;
-	std::vector<double> y_min;
-	for(long int i=0;i<m_Nx;i++){
-		double x= i;
-		double y= 0;
-
-		//If using phys coords add xmin/ymin
-		if(!useImageCoord){
-			x+= m_Xmin;
-			y+= m_Ymin;
-		}	
-		
-		//Take pix low edge
-		x-= 0.5;
-		y-= 0.5;
-
-		//Convert to WCS coords
-		double x_wcs, y_wcs;
-		if(AstroUtils::PixelToWCSCoords(x_wcs,y_wcs,wcs,x,y)<0){
-			WARN_LOG("Failed to convert x axis coords to WCS");
-			return nullptr;
-		} 	
-		x_min.push_back(x_wcs);
-		
-	}//end loop x axis
-	
-	for(long int i=0;i<m_Ny;i++){
-		double x= 0;
-		double y= i;
-
-		//If using phys coords add xmin/ymin
-		if(!useImageCoord){
-			x+= m_Xmin;
-			y+= m_Ymin;
-		}	
-		
-		//Take pix low edge
-		x-= 0.5;
-		y-= 0.5;
-
-		//Convert to WCS coords
-		double x_wcs, y_wcs;
-		if(AstroUtils::PixelToWCSCoords(x_wcs,y_wcs,wcs,x,y)<0){
-			WARN_LOG("Failed to convert y axis coords to WCS");
-			return nullptr;
-		} 	
-		y_min.push_back(y_wcs);
-		
-	}//end loop y axis
-
-	//Sort axis ascending
-	std::sort(x_min.begin(),x_min.end());
-	std::sort(y_min.begin(),y_min.end());
-	
-	//Create histo 2D with variable bin width
-	std::string hname= m_name;
-	if(histoname!="") hname= histoname;
-	int nBinsX= (int)(x_min.size()-1);
-	int nBinsY= (int)(y_min.size()-1);
-	TH2D* histo= new TH2D(hname.c_str(),hname.c_str(),nBinsX,x_min.data(),nBinsY,y_min.data());
-	histo->Sumw2();	
-	
-	//Fill histo
-	if(useImageCoord){
-		for(long int j=0;j<m_Ny;j++){
-			double y= j;
-			for(long int i=0;i<m_Nx;i++){
-				double x= i;
-				long int gBin= this->GetBin(i,j);
-				double w= m_pixels[gBin];
-				double x_wcs, y_wcs;
-				if(AstroUtils::PixelToWCSCoords(x_wcs,y_wcs,wcs,x,y)<0){
-					WARN_LOG("Failed to convert bin ("<<x<<","<<y<<") coords to WCS!");
-					return nullptr;
-				}
-				histo->Fill(x,y,w);
-			}//end loop x
-		}//end loop y
-	}//close if
-	else{
-		for(long int j=0;j<m_Ny;j++){
-			double y= this->GetY(j);
-			for(long int i=0;i<m_Nx;i++){
-				double x= this->GetX(i); 
-				long int gBin= this->GetBin(i,j);
-				double w= m_pixels[gBin];
-				double x_wcs, y_wcs;
-				if(AstroUtils::PixelToWCSCoords(x_wcs,y_wcs,wcs,x,y)<0){
-					WARN_LOG("Failed to convert bin ("<<x<<","<<y<<") coords to WCS!");
-					return nullptr;
-				}
-				histo->Fill(x,y,w);
-			}//end loop x
-		}//end loop y
-	}//close else
-
-	return histo;
-
-}//close GetWCSHisto2D()
-*/
-
 
 
 TH2D* Image::GetWCSHisto2D(std::string histoname,WCS* wcs,bool useImageCoord)
 {
 	//Check if image is not empty
 	if(m_pixels.empty() || m_Nx<=0 || m_Ny<=0){
-		WARN_LOG("Image is empty or has no data/size stored, returning nullptr!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Image is empty or has no data/size stored, returning nullptr!");
+		#endif
 		return nullptr;
 	}
 
 	//Check WCS
 	if(!wcs){
-		WARN_LOG("No WCS given!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No WCS given!");
+		#endif
 		return nullptr;
 	}
 
@@ -3820,7 +3653,9 @@ TH2D* Image::GetWCSHisto2D(std::string histoname,WCS* wcs,bool useImageCoord)
 		//Convert to WCS coords
 		double x_wcs, y_wcs;
 		if(AstroUtils::PixelToWCSCoords(x_wcs,y_wcs,wcs,x,y)<0){
-			WARN_LOG("Failed to convert x axis coords to WCS");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to convert x axis coords to WCS");
+			#endif
 			return nullptr;
 		} 	
 		x_min.push_back(x_wcs);
@@ -3844,7 +3679,9 @@ TH2D* Image::GetWCSHisto2D(std::string histoname,WCS* wcs,bool useImageCoord)
 		//Convert to WCS coords
 		double x_wcs, y_wcs;
 		if(AstroUtils::PixelToWCSCoords(x_wcs,y_wcs,wcs,x,y)<0){
-			WARN_LOG("Failed to convert y axis coords to WCS");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to convert y axis coords to WCS");
+			#endif
 			return nullptr;
 		} 	
 		y_min.push_back(y_wcs);
@@ -3873,7 +3710,9 @@ TH2D* Image::GetWCSHisto2D(std::string histoname,WCS* wcs,bool useImageCoord)
 				double w= m_pixels[gBin];
 				double x_wcs, y_wcs;
 				if(AstroUtils::PixelToWCSCoords(x_wcs,y_wcs,wcs,x,y)<0){
-					WARN_LOG("Failed to convert bin ("<<x<<","<<y<<") coords to WCS!");
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Failed to convert bin ("<<x<<","<<y<<") coords to WCS!");
+					#endif
 					return nullptr;
 				}
 				histo->Fill(x,y,w);
@@ -3889,7 +3728,9 @@ TH2D* Image::GetWCSHisto2D(std::string histoname,WCS* wcs,bool useImageCoord)
 				double w= m_pixels[gBin];
 				double x_wcs, y_wcs;
 				if(AstroUtils::PixelToWCSCoords(x_wcs,y_wcs,wcs,x,y)<0){
-					WARN_LOG("Failed to convert bin ("<<x<<","<<y<<") coords to WCS!");
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Failed to convert bin ("<<x<<","<<y<<") coords to WCS!");
+					#endif
 					return nullptr;
 				}
 				histo->Fill(x,y,w);
@@ -3980,7 +3821,9 @@ cv::Mat Image::GetOpenCVMat(std::string encoding){
 	else if(encoding=="32") mat= cv::Mat::zeros(Ny,Nx,CV_32FC1);
 	else if(encoding=="32I") mat= cv::Mat::zeros(Ny,Nx,CV_32SC1);
 	else{
-		WARN_LOG("Invalid encoding selected, using default 64bit encoding");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Invalid encoding selected, using default 64bit encoding");
+		#endif
 		mat= cv::Mat::zeros(Ny,Nx,CV_64FC1);
 	}
 
@@ -4074,7 +3917,9 @@ int Image::Draw(int palette,bool drawFull,bool useCurrentCanvas,std::string unit
 	//Get temp histogram
 	TH2D* htemp= GetHisto2D("htemp");
 	if(!htemp){
-		ERROR_LOG("Failed to get histo from this image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get histo from this image!");
+		#endif
 		return -1;
 	}
 	
@@ -4093,7 +3938,9 @@ int Image::Draw(int palette,bool drawFull,bool useCurrentCanvas,std::string unit
 	}
 
 	if(!canvas){
-		ERROR_LOG("Failed to retrieve or set canvas!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to retrieve or set canvas!");
+		#endif
 		return -1;
 	}
 
@@ -4144,7 +3991,9 @@ int Image::Draw(std::vector<Source*>const& sources,int palette,bool drawFull,boo
 	//Retrieve canvas and draw sources	
 	TCanvas* canvas= gPad->GetCanvas();
 	if(!canvas){
-		WARN_LOG("Failed to get access to current canvas!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to get access to current canvas!");
+		#endif
 		return -1;
 	}
 
@@ -4174,7 +4023,9 @@ int Image::Plot(std::vector<Source*>const& sources,bool useCurrentCanvas,bool dr
 	//Get temp histogram
 	TH2D* htemp= GetHisto2D("htemp");
 	if(!htemp){
-		ERROR_LOG("Failed to get histo from this image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get histo from this image!");
+		#endif
 		return -1;
 	}
 	
@@ -4191,7 +4042,9 @@ int Image::Plot(std::vector<Source*>const& sources,bool useCurrentCanvas,bool dr
 	}
 
 	if(!canvas){
-		ERROR_LOG("Failed to retrieve or set canvas!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to retrieve or set canvas!");
+		#endif
 		return -1;
 	}
 
@@ -4253,7 +4106,9 @@ int Image::Plot(std::vector<Source*>const& sources,bool useCurrentCanvas,bool dr
 			yaxis_wcs->Draw("same");
 		}
 		else{
-			WARN_LOG("Failed to set gAxis!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to set gAxis!");
+			#endif
 		}
 	}//close if
 
