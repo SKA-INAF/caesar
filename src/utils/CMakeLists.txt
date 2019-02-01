@@ -77,7 +77,7 @@ set(THIS_DICT_SRCS ${THIS_DICT_SRCS}
 
 if (ENABLE_LOGGING)
 	list (APPEND THIS_SRCS ${SRC_DIR}/Logger.cc)
-	list (APPEND THIS_HEADERS Logger.h)
+	list (APPEND THIS_HEADERS ${INC_DIR}/Logger.h)
 	list (APPEND THIS_DICT_HEADERS Logger.h)
 	list (APPEND THIS_DICT_SRCS ${SRC_DIR}/Logger.cc)
 endif()
