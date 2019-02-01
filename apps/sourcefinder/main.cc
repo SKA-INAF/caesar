@@ -20,7 +20,9 @@
 #include <SFinder.h>
 
 #include <ConfigParser.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <CodeUtils.h>
 
 #include <iostream>
@@ -72,27 +74,37 @@ int main(int argc, char *argv[])
 	//== Parse command line options
 	//================================
 	if(ParseOptions(argc,argv)<0){
-		ERROR_LOG("Failed to parse command line options!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to parse command line options!");
+		#endif
 		return -1;
 	}
 	
 	//=======================
 	//== Run SourceFinder
 	//=======================
-	INFO_LOG("Starting source finding");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Starting source finding");
+	#endif
 	SFinder* finder= new SFinder;
 	if(finder->Run()<0){
-		ERROR_LOG("Source finding failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Source finding failed!");
+		#endif
 	}
 	else{
-		INFO_LOG("End source finding");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("End source finding");
+		#endif
 	}
 
 	//=======================
 	//== Clear
 	//=======================
 	if(finder){
-		INFO_LOG("Clear finder");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Clear finder");
+		#endif
 		delete finder;
 		finder= 0;
 	}
@@ -175,6 +187,7 @@ int ParseOptions(int argc, char *argv[])
 	}
 
 	//Init logger
+	#ifdef LOGGING_ENABLED
 	if(loggerTarget==eCONSOLE_TARGET){
 		std::string consoleTarget= "";
 		GET_OPTION_VALUE(consoleTarget,consoleTarget);
@@ -200,13 +213,16 @@ int ParseOptions(int argc, char *argv[])
 		cerr<<"ERROR: Failed to initialize logger!"<<endl;
 		return -1;
 	}
+	#endif
 
 	//=======================
 	//== Init thread numbers 
 	//=======================
 	int nThreads;
 	if(GET_OPTION_VALUE(nThreads,nThreads)<0){
-		ERROR_LOG("Failed to get nThreads option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get nThreads option!");
+		#endif
 		return -1;
 	}
 	if(nThreads>0) SysUtils::SetOMPThreads(nThreads);

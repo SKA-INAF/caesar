@@ -23,8 +23,9 @@
 #include <BkgFinder.h>
 #include <ConfigParser.h>
 #include <Consts.h>
-#include <Logger.h>
-
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 #include <TFile.h>
 
@@ -117,7 +118,9 @@ int main(int argc, char *argv[]){
 	//================================
 	auto t0_parse = chrono::steady_clock::now();
 	if(ParseOptions(argc,argv)<0){
-		ERROR_LOG("Failed to parse command line options!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to parse command line options!");
+		#endif
 		Clear();
 		return -1;
 	}
@@ -130,7 +133,9 @@ int main(int argc, char *argv[]){
 	//=======================		
 	auto t0_outfile = chrono::steady_clock::now();
 	if(OpenOutputFile()<0){
-		ERROR_LOG("Failed to open output file!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to open output file!");
+		#endif
 		Clear();
 		return -1;	
 	}
@@ -142,7 +147,9 @@ int main(int argc, char *argv[]){
 	//=======================	
 	auto t0_read = chrono::steady_clock::now();
 	if(ReadImage()<0){
-		ERROR_LOG("Failed to read image from file!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read image from file!");
+		#endif
 		Clear();
 		return -1;
 	}
@@ -155,7 +162,9 @@ int main(int argc, char *argv[]){
 	//=======================
 	auto t0_smooth = chrono::steady_clock::now();	
 	if(ApplySmoothing()<0){
-		ERROR_LOG("Failed to perform image smoothing!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to perform image smoothing!");
+		#endif
 		Clear();
 		return -1;
 	}
@@ -167,7 +176,9 @@ int main(int argc, char *argv[]){
 	//=======================
 	auto t0_stats = chrono::steady_clock::now();
 	if(ComputeStats()<0){
-		ERROR_LOG("Failed to read image from file!");		
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read image from file!");		
+		#endif
 		Clear();
 		return -1;
 	}
@@ -180,7 +191,9 @@ int main(int argc, char *argv[]){
 	//=======================
 	auto t0_bkg = chrono::steady_clock::now();	
 	if(ComputeBkg()<0){
-		ERROR_LOG("Failed to compute bkg!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute bkg!");
+		#endif
 		Clear();
 		return -1;
 	}
@@ -193,7 +206,9 @@ int main(int argc, char *argv[]){
 	//=======================
 	auto t0_sal = chrono::steady_clock::now();	
 	if(FindSaliency()<0){
-		ERROR_LOG("Failed to compute saliency map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute saliency map!");
+		#endif
 		Clear();
 		return -1;
 	}		
@@ -220,22 +235,36 @@ int main(int argc, char *argv[]){
 	auto t1 = chrono::steady_clock::now();
 	double dt= chrono::duration <double, milli> (t1-t0).count();
 
-	INFO_LOG("===========================");
-	INFO_LOG("===   PERFORMANCE INFO  ===");
-	INFO_LOG("===========================");
-	INFO_LOG("dt(ms)= "<<dt);
-	INFO_LOG("dt_read(ms)= "<<dt_read<<" ["<<dt_read/dt*100.<<"%]");
-	INFO_LOG("dt_stats(ms)= "<<dt_stats<<" ["<<dt_stats/dt*100.<<"%]");
-	INFO_LOG("dt_bkg(ms)= "<<dt_bkg<<" ["<<dt_bkg/dt*100.<<"%]");
-	INFO_LOG("dt_smooth(ms)= "<<dt_smooth<<" ["<<dt_smooth/dt*100.<<"%]");
-	INFO_LOG("dt_saliency(ms)= "<<dt_sal<<" ["<<dt_sal/dt*100.<<"%]");
-	INFO_LOG("dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]");
-	INFO_LOG("===========================");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("===========================");
+		INFO_LOG("===   PERFORMANCE INFO  ===");
+		INFO_LOG("===========================");
+		INFO_LOG("dt(ms)= "<<dt);
+		INFO_LOG("dt_read(ms)= "<<dt_read<<" ["<<dt_read/dt*100.<<"%]");
+		INFO_LOG("dt_stats(ms)= "<<dt_stats<<" ["<<dt_stats/dt*100.<<"%]");
+		INFO_LOG("dt_bkg(ms)= "<<dt_bkg<<" ["<<dt_bkg/dt*100.<<"%]");
+		INFO_LOG("dt_smooth(ms)= "<<dt_smooth<<" ["<<dt_smooth/dt*100.<<"%]");
+		INFO_LOG("dt_saliency(ms)= "<<dt_sal<<" ["<<dt_sal/dt*100.<<"%]");
+		INFO_LOG("dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]");
+		INFO_LOG("===========================");
+	#else
+		cout<<"==========================="<<endl;
+		cout<<"===   PERFORMANCE INFO  ==="<<endl;
+		cout<<"==========================="<<endl;
+		cout<<"dt(ms)= "<<dt<<endl;
+		cout<<"dt_read(ms)= "<<dt_read<<" ["<<dt_read/dt*100.<<"%]"<<endl;
+		cout<<"dt_stats(ms)= "<<dt_stats<<" ["<<dt_stats/dt*100.<<"%]"<<endl;
+		cout<<"dt_bkg(ms)= "<<dt_bkg<<" ["<<dt_bkg/dt*100.<<"%]"<<endl;
+		cout<<"dt_smooth(ms)= "<<dt_smooth<<" ["<<dt_smooth/dt*100.<<"%]"<<endl;
+		cout<<"dt_saliency(ms)= "<<dt_sal<<" ["<<dt_sal/dt*100.<<"%]"<<endl;
+		cout<<"dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]"<<endl;
+		cout<<"==========================="<<endl;
+	#endif
 	
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("End saliency finder");
+	#endif
 
-	INFO_LOG("End saliency finder");
-	
 	return 0;
 
 }//close main
@@ -309,6 +338,7 @@ int ParseOptions(int argc, char *argv[])
 	}
 
 	//Init logger
+	#ifdef LOGGING_ENABLED
 	if(loggerTarget==eCONSOLE_TARGET){
 		std::string consoleTarget= "";
 		GET_OPTION_VALUE(consoleTarget,consoleTarget);
@@ -334,13 +364,16 @@ int ParseOptions(int argc, char *argv[])
 		cerr<<"ERROR: Failed to initialize logger!"<<endl;
 		return -1;
 	}
+	#endif
 
 	//=======================
 	//== Init thread numbers 
 	//=======================
 	int nThreads;
 	if(GET_OPTION_VALUE(nThreads,nThreads)<0){
-		ERROR_LOG("Failed to get nThreads option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get nThreads option!");
+		#endif
 		return -1;
 	}
 	if(nThreads>0) SysUtils::SetOMPThreads(nThreads);
@@ -357,26 +390,36 @@ int FindSaliency(){
 	int saliencyResoMax = 0; 
 	int saliencyResoStep= 0;
 	if(GET_OPTION_VALUE(saliencyResoMin,saliencyResoMin)<0){
-		ERROR_LOG("Failed to get saliencyResoMin option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saliencyResoMin option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(saliencyResoMax,saliencyResoMax)<0){
-		ERROR_LOG("Failed to get saliencyResoMax option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saliencyResoMax option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(saliencyResoStep,saliencyResoStep)<0){
-		ERROR_LOG("Failed to get saliencyResoStep option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saliencyResoStep option!");
+		#endif
 		return -1;
 	}
 
 	double spBeta;
 	int spMinArea;
 	if(GET_OPTION_VALUE(spBeta,spBeta)<0){
-		ERROR_LOG("Failed to get spBeta option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get spBeta option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(spMinArea,spMinArea)<0){
-		ERROR_LOG("Failed to get spMinArea option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get spMinArea option!");
+		#endif
 		return -1;
 	}
 
@@ -386,55 +429,77 @@ int FindSaliency(){
 	double saliencyDissExpFalloffPar;
 	double saliencySpatialDistRegPar;
 	if(GET_OPTION_VALUE(saliencyNNFactor,saliencyNNFactor)<0){
-		ERROR_LOG("Failed to get saliencyNNFactor option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saliencyNNFactor option!");
+		#endif
 		return -1;
 	}
-	if(GET_OPTION_VALUE(saliencyUseRobustPars,saliencyUseRobustPars)<0){
-		ERROR_LOG("Failed to get saliencyUseRobustPars option!");
+	if(GET_OPTION_VALUE(saliencyUseRobustPars,saliencyUseRobustPars)<0){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saliencyUseRobustPars option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(saliencyMultiResoCombThrFactor,saliencyMultiResoCombThrFactor)<0){
-		ERROR_LOG("Failed to get saliencyMultiResoCombThrFactor option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saliencyMultiResoCombThrFactor option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(saliencyDissExpFalloffPar,saliencyDissExpFalloffPar)<0){
-		ERROR_LOG("Failed to get saliencyDissExpFalloffPar option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saliencyDissExpFalloffPar option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(saliencySpatialDistRegPar,saliencySpatialDistRegPar)<0){
-		ERROR_LOG("Failed to get saliencySpatialDistRegPar option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saliencySpatialDistRegPar option!");
+		#endif
 		return -1;
 	}
 
 	bool saliencyUseBkgMap, saliencyUseNoiseMap;
 	if(GET_OPTION_VALUE(saliencyUseBkgMap,saliencyUseBkgMap)<0){
-		ERROR_LOG("Failed to get saliencyUseBkgMap option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saliencyUseBkgMap option!");
+		#endif
 		return -1;
 	} 
-	if(GET_OPTION_VALUE(saliencyUseNoiseMap,saliencyUseNoiseMap)<0){
-		ERROR_LOG("Failed to get saliencyUseNoiseMap option!");
+	if(GET_OPTION_VALUE(saliencyUseNoiseMap,saliencyUseNoiseMap)<0){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saliencyUseNoiseMap option!");
+		#endif
 		return -1;
 	} 
 
 	double saliencyThrFactor, saliencyImgThrFactor;
 	if(GET_OPTION_VALUE(saliencyThrFactor,saliencyThrFactor)<0){
-		ERROR_LOG("Failed to get saliencyThrFactor option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saliencyThrFactor option!");
+		#endif
 		return -1;
 	} 
 	if(GET_OPTION_VALUE(saliencyImgThrFactor,saliencyImgThrFactor)<0){
-		ERROR_LOG("Failed to get saliencyImgThrFactor option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saliencyImgThrFactor option!");
+		#endif
 		return -1;
 	}
 		
 	/*
 	bool saliencyUseCurvInDiss;	
 	if(GET_OPTION_VALUE(saliencyUseCurvInDiss,saliencyUseCurvInDiss)<0){
-		ERROR_LOG("Failed to get saliencyUseCurvInDiss option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saliencyUseCurvInDiss option!");
+		#endif
 		return -1;
 	}
 	*/
 		
-	INFO_LOG("saliencyReso("<<saliencyResoMin<<","<<saliencyResoMax<<","<<saliencyResoStep<<") spBeta="<<spBeta<<". spMinArea="<<spMinArea<<", saliencyNNFactor="<<saliencyNNFactor<<",  saliencyUseRobustPars="<<saliencyUseRobustPars<<" saliencyDissExpFalloffPar="<<saliencyDissExpFalloffPar<<", saliencySpatialDistRegPar="<<saliencySpatialDistRegPar<<", saliencyMultiResoCombThrFactor="<<saliencyMultiResoCombThrFactor<<" saliencyUseBkgMap="<<saliencyUseBkgMap<<" saliencyUseNoiseMap="<<saliencyUseNoiseMap<<" saliencyThrFactor="<<saliencyThrFactor<<", saliencyImgThrFactor="<<saliencyImgThrFactor);
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("saliencyReso("<<saliencyResoMin<<","<<saliencyResoMax<<","<<saliencyResoStep<<") spBeta="<<spBeta<<". spMinArea="<<spMinArea<<", saliencyNNFactor="<<saliencyNNFactor<<",  saliencyUseRobustPars="<<saliencyUseRobustPars<<" saliencyDissExpFalloffPar="<<saliencyDissExpFalloffPar<<", saliencySpatialDistRegPar="<<saliencySpatialDistRegPar<<", saliencyMultiResoCombThrFactor="<<saliencyMultiResoCombThrFactor<<" saliencyUseBkgMap="<<saliencyUseBkgMap<<" saliencyUseNoiseMap="<<saliencyUseNoiseMap<<" saliencyThrFactor="<<saliencyThrFactor<<", saliencyImgThrFactor="<<saliencyImgThrFactor);
+	#endif
 
 	//## Compute saliency
 	saliencyImg= inputImg->GetMultiResoSaliencyMap(
@@ -446,7 +511,9 @@ int FindSaliency(){
 	);
 
 	if(!saliencyImg){
-		ERROR_LOG("Failed to compute saliency map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute saliency map!");
+		#endif
 		return -1;
 	}
 
@@ -460,11 +527,15 @@ int ApplySmoothing(){
 	//## Get options
 	bool usePreSmoothing;
 	if(GET_OPTION_VALUE(usePreSmoothing,usePreSmoothing)<0){
-		ERROR_LOG("Failed to get usePreSmoothing option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get usePreSmoothing option!");
+		#endif
 		return -1;
 	}
 	if(!usePreSmoothing){
-		INFO_LOG("No pre-smoothing selected");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("No pre-smoothing selected");
+		#endif
 		return 0;
 	}
 
@@ -473,23 +544,33 @@ int ApplySmoothing(){
 	double gausFilterSigma;
 	double guidedFilterRadius, guidedFilterColorEps;
 	if(GET_OPTION_VALUE(smoothFilter,smoothFilter)<0){
-		ERROR_LOG("Failed to get smoothFilter option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get smoothFilter option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(gausFilterKernSize,gausFilterKernSize)<0){
-		ERROR_LOG("Failed to get gausFilterKernSize option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get gausFilterKernSize option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(gausFilterSigma,gausFilterSigma)<0){
-		ERROR_LOG("Failed to get gausFilterSigma option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get gausFilterSigma option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(guidedFilterRadius,guidedFilterRadius)<0){
-		ERROR_LOG("Failed to get guidedFilterRadius option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get guidedFilterRadius option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(guidedFilterColorEps,guidedFilterColorEps)<0){
-		ERROR_LOG("Failed to get guidedFilterColorEps option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get guidedFilterColorEps option!");
+		#endif
 		return -1;
 	}	
 
@@ -503,12 +584,16 @@ int ApplySmoothing(){
 		smoothedImg= inputImg->GetGuidedFilterImage(guidedFilterRadius,guidedFilterColorEps);
 	}
 	else{
-		ERROR_LOG("Invalid smoothing algo selected!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid smoothing algo selected!");
+		#endif
 		return -1;
 	}
 
 	if(!smoothedImg){
-		ERROR_LOG("Computation of smoothed map failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Computation of smoothed map failed!");
+		#endif
 		return -1;
 	}
 	
@@ -525,12 +610,16 @@ int ApplySmoothing(){
 int ComputeStats(){
 
 	//## Compute stats
-	INFO_LOG("Computing input image stats...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing input image stats...");
+	#endif
 	bool computeRobustStats= true;
 	bool useRange= false;
 	bool forceRecomputing= false;	
 	if(inputImg->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0){
-		ERROR_LOG("Stats computing failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Stats computing failed!");
+		#endif
 		return -1;
 	}
 	inputImg->PrintStats();	
@@ -546,7 +635,9 @@ int ComputeBkg(){
 	//Beam info
 	bool useBeamInfoInBkg;
 	if(GET_OPTION_VALUE(useBeamInfoInBkg,useBeamInfoInBkg)<0){
-		ERROR_LOG("Failed to get useBeamInfoInBkg option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get useBeamInfoInBkg option!");
+		#endif
 		return -1;
 	}
 	int nPixelsInBeam= 0;
@@ -556,19 +647,25 @@ int ComputeBkg(){
 		
 	//Box size
 	if(GET_OPTION_VALUE(boxSizeX,boxSizeX)<0 || GET_OPTION_VALUE(boxSizeY,boxSizeY)<0){
-		ERROR_LOG("Failed to get boxSize option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get boxSize option!");
+		#endif
 		return -1;
 	}
 
 	//Grid size
 	if(GET_OPTION_VALUE(gridSizeX,gridSizeX)<0 || GET_OPTION_VALUE(gridSizeY,gridSizeY)<0){
-		ERROR_LOG("Failed to get gridSize option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get gridSize option!");
+		#endif
 		return -1;
 	}
 	
 	//Bkg estimator
 	if(GET_OPTION_VALUE(bkgEstimator,bkgEstimator)<0){
-		ERROR_LOG("Failed to get bkgEstimator option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get bkgEstimator option!");
+		#endif
 		return -1;
 	}
 
@@ -582,42 +679,52 @@ int ComputeBkg(){
 	double mergeThr;
 
 	if(GET_OPTION_VALUE(useLocalBkg,useLocalBkg)<0){
-		ERROR_LOG("Failed to get useLocalBkg option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get useLocalBkg option!");
+		#endif
 		return -1;
 	}
 
-	if(GET_OPTION_VALUE(use2ndPassInLocalBkg,use2ndPassInLocalBkg)<0){
-		ERROR_LOG("Failed to get use2ndPassInLocalBkg option!");
+	if(GET_OPTION_VALUE(use2ndPassInLocalBkg,use2ndPassInLocalBkg)<0){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get use2ndPassInLocalBkg option!");
+		#endif
 		return -1;
 	}
 	
 	if(GET_OPTION_VALUE(skipOutliersInLocalBkg,skipOutliersInLocalBkg)<0){
-		ERROR_LOG("Failed to get skipOutliersInLocalBkg option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get skipOutliersInLocalBkg option!");
+		#endif
 		return -1;
 	}
 	
 	if(GET_OPTION_VALUE(minNPix,minNPix)<0){
-		ERROR_LOG("Failed to get minNPix option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get minNPix option!");
+		#endif
 		return -1;
 	}
 	
-	//if(GET_OPTION_VALUE(seedBrightThr,seedBrightThr)<0){
-	//	ERROR_LOG("Failed to get seedBrightThr option!");
-	//	return -1;
-	//}
 	
 	if(GET_OPTION_VALUE(seedThr,seedThr)<0){
-		ERROR_LOG("Failed to get seedThr option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get seedThr option!");
+		#endif
 		return -1;
 	}
 
 	if(GET_OPTION_VALUE(dilateZThr,dilateZThr)<0){
-		ERROR_LOG("Failed to get dilateZThr option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get dilateZThr option!");
+		#endif
 		return -1;
 	}
 	
 	if(GET_OPTION_VALUE(mergeThr,mergeThr)<0){
-		ERROR_LOG("Failed to get mergeThr option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get mergeThr option!");
+		#endif
 		return -1;
 	}
 
@@ -628,25 +735,35 @@ int ComputeBkg(){
 	double Nx= static_cast<double>(inputImg->GetNx());
 	double Ny= static_cast<double>(inputImg->GetNy());
 	if(useBeamInfoInBkg && nPixelsInBeam>0){
-		INFO_LOG("Setting bkg boxes as ("<<boxSizeX<<","<<boxSizeY<<") x beam (beam="<<nPixelsInBeam<<" pixels) ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Setting bkg boxes as ("<<boxSizeX<<","<<boxSizeY<<") x beam (beam="<<nPixelsInBeam<<" pixels) ...");
+		#endif
 		boxSizeX*= nPixelsInBeam;
 		boxSizeY*= nPixelsInBeam;
 	}
 	else{
-		WARN_LOG("Beam information is not available or its usage has been turned off, using image fractions...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Beam information is not available or its usage has been turned off, using image fractions...");
+		#endif
 		
 		boxSizeX*= Nx;
 		boxSizeY*= Ny;
 	}
-	INFO_LOG("Setting bkg boxes to ("<<boxSizeX<<","<<boxSizeY<<") pixels ...");	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Setting bkg boxes to ("<<boxSizeX<<","<<boxSizeY<<") pixels ...");	
+	#endif
 
 	gridSizeX*= boxSizeX;
-	gridSizeY*= boxSizeY;
-	INFO_LOG("Setting grid size to ("<<gridSizeX<<","<<gridSizeY<<") pixels ...");
+	gridSizeY*= boxSizeY;	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Setting grid size to ("<<gridSizeX<<","<<gridSizeY<<") pixels ...");
+	#endif
 	
 	//## Check grid & box size
 	if(boxSizeX>=Nx || boxSizeY>=Ny || gridSizeX>=Nx || gridSizeY>=Ny){
-		ERROR_LOG("Box/grid size are too large compared to image size ("<<Nx<<","<<Ny<<")");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Box/grid size are too large compared to image size ("<<Nx<<","<<Ny<<")");
+		#endif
 		return -1;
 	}
 
@@ -658,14 +775,18 @@ int ComputeBkg(){
 		skipOutliersInLocalBkg,seedThr,mergeThr,minNPix
 	);
 	if(!bkgData){
-		ERROR_LOG("Failed to compute bkg data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute bkg data!");
+		#endif
 		return -1;
 	}
 
 	//Compute significance
 	significanceMap= inputImg->GetSignificanceMap(bkgData,useLocalBkg);
 	if(!significanceMap){
-		ERROR_LOG("Failed to compute significance map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute significance map!");
+		#endif
 		return -1;
 	}
 
@@ -678,57 +799,77 @@ int ReadImage(){
 
 	//## Get options
 	if(GET_OPTION_VALUE(inputFile,inputFileName)<0){
-		ERROR_LOG("Failed to get inputFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get inputFile option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(inputImage,imageName)<0){
-		ERROR_LOG("Failed to get inputImage option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get inputImage option!");
+		#endif
 		return -1;
 	}
 	
 	//## Check given input file and get info
 	Caesar::FileInfo info;
 	if(!Caesar::SysUtils::CheckFile(inputFileName,info,false)){
-		ERROR_LOG("Invalid input file ("<<inputFileName<<") specified!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid input file ("<<inputFileName<<") specified!");
+		#endif
 		return -1;
 	}
 	std::string file_extension= info.extension;
 	if(file_extension!= ".fits" && file_extension!=".root") {
-		ERROR_LOG("Invalid file extension ("<<file_extension<<")...nothing to be done!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid file extension ("<<file_extension<<")...nothing to be done!");
+		#endif
 		return -1;
 	}
 
 	//## Read image
 	//===== ROOT reading =====
 	if(file_extension==".root"){// Read image from ROOT file
-		INFO_LOG("Reading ROOT input file "<<inputFileName<<" (image name="<<imageName<<")...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Reading ROOT input file "<<inputFileName<<" (image name="<<imageName<<")...");
+		#endif
 		inputFile = new TFile(inputFileName.c_str(),"READ");
 		if(!inputFile || inputFile->IsZombie()){
-			ERROR_LOG("Cannot open input file "<<inputFileName<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Cannot open input file "<<inputFileName<<"!");
+			#endif
 			return -1;
 		}
 		//inputImg=  (Img*)inputFile->Get(imageName.c_str());	
 		inputImg=  (Image*)inputFile->Get(imageName.c_str());
 		if(!inputImg){
-			ERROR_LOG("Cannot get image from input file "<<inputFileName<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Cannot get image from input file "<<inputFileName<<"!");
+			#endif
 			return -1;
 		}
 	}//close if
 
 	//===== FITS reading =====
 	if(file_extension==".fits"){// Read image from FITS file
-		INFO_LOG("Reading FITS input file "<<inputFileName<<"...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Reading FITS input file "<<inputFileName<<"...");
+		#endif
 		//inputImg= new Caesar::Img; 
 		inputImg= new Caesar::Image; 	
 		inputImg->SetNameTitle(imageName.c_str(),imageName.c_str());
 		if(inputImg->ReadFITS(inputFileName)<0){
-			ERROR_LOG("Failed to read image from input file "<<inputFileName<<"!");	
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read image from input file "<<inputFileName<<"!");	
+			#endif
 			return -1;
 		}
 	}//close else if
 
 	if(!inputImg){
-		ERROR_LOG("Failed to read image from input file "<<inputFileName<<"!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read image from input file "<<inputFileName<<"!");
+		#endif
 		return -1;
 	}
 
@@ -740,79 +881,115 @@ int OpenOutputFile(){
 
 	//Get options
 	if(GET_OPTION_VALUE(outputFile,outputFileName)<0){
-		ERROR_LOG("Failed to get outputFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get outputFile option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(saveToFile,saveToFile)<0){
-		ERROR_LOG("Failed to get saveToFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveToFile option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(saveConfig,saveConfig)<0){
-		ERROR_LOG("Failed to get saveConfig option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveConfig option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(saveResidualMap,saveResidualMap)<0){
-		ERROR_LOG("Failed to get saveResidualMap option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveResidualMap option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(saveBkgMap,saveBkgMap)<0){
-		ERROR_LOG("Failed to get saveBkgMap option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveBkgMap option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(saveNoiseMap,saveNoiseMap)<0){
-		ERROR_LOG("Failed to get saveNoiseMap option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveNoiseMap option!");
+		#endif
 		return -1;
 	}		
 	if(GET_OPTION_VALUE(saveSignificanceMap,saveSignificanceMap)<0){
-		ERROR_LOG("Failed to get saveSignificanceMap option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveSignificanceMap option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(saveInputMap,saveInputMap)<0){
-		ERROR_LOG("Failed to get saveInputMap option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveInputMap option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(saveSaliencyMap,saveSaliencyMap)<0){
-		ERROR_LOG("Failed to get saveSaliencyMap option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveSaliencyMap option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(saveSources,saveSources)<0){
-		ERROR_LOG("Failed to get saveSources option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveSources option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(saveToFITSFile,saveToFITSFile)<0){
-		ERROR_LOG("Failed to get saveToFITSFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveToFITSFile option!");
+		#endif
 		return -1;
 	}
 
 	if(GET_OPTION_VALUE(residualMapFITSFile,residualMapFITSFile)<0){
-		ERROR_LOG("Failed to get residualMapFITSFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get residualMapFITSFile option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(inputMapFITSFile,inputMapFITSFile)<0){
-		ERROR_LOG("Failed to get inputMapFITSFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get inputMapFITSFile option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(saliencyMapFITSFile,saliencyMapFITSFile)<0){
-		ERROR_LOG("Failed to get saliencyMapFITSFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saliencyMapFITSFile option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(bkgMapFITSFile,bkgMapFITSFile)<0){
-		ERROR_LOG("Failed to get bkgMapFITSFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get bkgMapFITSFile option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(noiseMapFITSFile,noiseMapFITSFile)<0){
-		ERROR_LOG("Failed to get noiseMapFITSFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get noiseMapFITSFile option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(significanceMapFITSFile,significanceMapFITSFile)<0){
-		ERROR_LOG("Failed to get significanceMapFITSFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get significanceMapFITSFile option!");
+		#endif
 		return -1;
 	}
 
 	if(saveToFile){
 		outputFile= new TFile(outputFileName.c_str(),"RECREATE");
 		if(!outputFile || !outputFile->IsOpen()){
-			ERROR_LOG("Failed to open output file!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to open output file!");
+			#endif
 			return -1;
 		}
 	}

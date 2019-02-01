@@ -21,7 +21,9 @@
 #include <SourceCube.h>
 
 #include <ConfigParser.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <CodeUtils.h>
 #include <MathUtils.h>
 #include <EllipseUtils.h>
@@ -335,44 +337,62 @@ int main(int argc, char *argv[])
 	//== Parse command line options
 	//================================
 	if(ParseOptions(argc,argv)<0){
-		ERROR_LOG("Failed to parse command line options!");
+		#ifdef LOGGING_ENABLED	
+			ERROR_LOG("Failed to parse command line options!");
+		#endif
 		return -1;
 	}
 	
 	//=======================
 	//== Init
 	//=======================
-	INFO_LOG("Initializing data...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Initializing data...");
+	#endif
 	if(Init()<0){
-		ERROR_LOG("Failed to initialize data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to initialize data!");
+		#endif
 		return -1;
 	}
 
 	//=======================
 	//== Read data
 	//=======================
-	INFO_LOG("Reading source data from given files...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Reading source data from given files...");
+	#endif
 	if(ReadData()<0){
-		ERROR_LOG("Reading of source data failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Reading of source data failed!");
+		#endif
 		return -1;
 	}
 
 	//=======================
 	//== Find source matches
 	//=======================
-	INFO_LOG("Correlating source catalogs to find matches...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Correlating source catalogs to find matches...");
+	#endif
 	if(FindSourceMatchesInTiles()<0){
-		ERROR_LOG("Correlating source data to find matches failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Correlating source data to find matches failed!");
+		#endif
 		return -1;
 	}
 
 	//=======================
 	//== Save
 	//=======================
-	INFO_LOG("Saving data to file ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Saving data to file ...");
+	#endif
 	Save();
 
-	INFO_LOG("End source match finder");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("End source match finder");
+	#endif
 
 	return 0;
 
@@ -382,7 +402,6 @@ int main(int argc, char *argv[])
 
 int ParseOptions(int argc, char *argv[])
 {
-	
 	//## Check args
 	if(argc<2){
 		cerr<<"ERROR: Invalid number of arguments...see macro usage!"<<endl;
@@ -535,25 +554,33 @@ int ParseOptions(int argc, char *argv[])
 	//=======================
 	//## Set logging level
 	std::string sloglevel= GetStringLogLevel(verbosity);
-	LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
-	
+	#ifdef LOGGING_ENABLED
+		LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
+	#endif
+
 	//=======================
 	//== Check options
 	//=======================
 	if( tileXmin==tileXmax || (tileXmax==0 && tileXmin==0) || tileXstep==0){
-		ERROR_LOG("Invalid or missing tile x range options!");
+		#ifdef LOGGING_ENABLED	
+			ERROR_LOG("Invalid or missing tile x range options!");
+		#endif
 		return -1;
 	}
 	if( tileYmin==tileYmax || (tileYmax==0 && tileYmin==0) || tileYstep==0){
-		ERROR_LOG("Invalid or missing tile y range options!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid or missing tile y range options!");
+		#endif
 		return -1;
 	}	
 
 	//=======================
 	//== Print options
 	//=======================
-	INFO_LOG("matchSourcesByPos? "<<matchSourcesByPos<<", matchPosThr(arcsec)="<<matchPosThr);
-	INFO_LOG("matchSourcesByOverlap? "<<matchSourcesByOverlap<<", matchOverlapThr="<<matchOverlapThr);
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("matchSourcesByPos? "<<matchSourcesByPos<<", matchPosThr(arcsec)="<<matchPosThr);
+		INFO_LOG("matchSourcesByOverlap? "<<matchSourcesByOverlap<<", matchOverlapThr="<<matchOverlapThr);
+	#endif
 
 	return 0;
 
@@ -571,7 +598,9 @@ int Init(){
 
 	//Initialize tile data grid
 	if(InitGrid(tileXmin,tileXmax,tileXstep,tileYmin,tileYmax,tileYstep)<0){
-		WARN_LOG("Failed to initialize tile data grid!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to initialize tile data grid!");
+		#endif
 		return -1;
 	}
 
@@ -583,7 +612,9 @@ int Init(){
 int InitGrid(float xmin,float xmax,float xstep,float ymin,float ymax,float ystep)
 {
 	//Create 2d grid
-	INFO_LOG("Creating 2d tile grid (x min/max/step="<<xmin<<"/"<<xmax<<"/"<<xstep<<", y min/max/step="<<ymin<<"/"<<ymax<<"/"<<ystep);
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Creating 2d tile grid (x min/max/step="<<xmin<<"/"<<xmax<<"/"<<xstep<<", y min/max/step="<<ymin<<"/"<<ymax<<"/"<<ystep);
+	#endif
 	std::vector<float> ix_min;
 	std::vector<float> ix_max;
 	std::vector<float> iy_min;
@@ -591,7 +622,9 @@ int InitGrid(float xmin,float xmax,float xstep,float ymin,float ymax,float ystep
 	MathUtils::Compute2DFloatGrid(ix_min,ix_max,iy_min,iy_max,xmin,xmax,xstep,ymin,ymax,ystep);
 	nTilesX= static_cast<long int>(ix_min.size());
 	nTilesY= static_cast<long int>(iy_min.size());
-	INFO_LOG("#"<<nTilesX<<" x "<<nTilesY<<" tiles created...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<nTilesX<<" x "<<nTilesY<<" tiles created...");
+	#endif
 
 	TileData* aTileData= 0;
 	for(size_t j=0;j<iy_min.size();j++){
@@ -607,23 +640,31 @@ int InitGrid(float xmin,float xmax,float xstep,float ymin,float ymax,float ystep
 		}//end loop x
 	}//end loop y
 
-	INFO_LOG("#"<<tileDataList.size()<<" tile initialized...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<tileDataList.size()<<" tile initialized...");
+	#endif
 
 	//Fill neighbors id per tile
 	for(size_t i=0;i<tileDataList.size()-1;i++){
-		cout<<"Tile no. "<<i<<": xrange["<<tileDataList[i]->xmin<<","<<tileDataList[i]->xmax<<"], yrange=["<<tileDataList[i]->ymin<<","<<tileDataList[i]->ymax<<"]"<<endl;
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Tile no. "<<i<<": xrange["<<tileDataList[i]->xmin<<","<<tileDataList[i]->xmax<<"], yrange=["<<tileDataList[i]->ymin<<","<<tileDataList[i]->ymax<<"]");
+		#endif
 
 		for(size_t j=i+1;j<tileDataList.size();j++){
 			bool areNeighbors= tileDataList[i]->IsNeighbor(tileDataList[j]);
 			if(areNeighbors){
-				INFO_LOG("Tiles ("<<i<<","<<j<<") are neighbors");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Tiles ("<<i<<","<<j<<") are neighbors");
+				#endif
 				tileDataList[i]->AddNeighbor(j);
 				tileDataList[j]->AddNeighbor(i);		
 			}
 		}//end loop tiles next
 	}//end loop tiles
-	cout<<"Tile no. "<<tileDataList.size()-1<<": xrange["<<tileDataList[tileDataList.size()-1]->xmin<<","<<tileDataList[tileDataList.size()-1]->xmax<<"], yrange="<<tileDataList[tileDataList.size()-1]->ymin<<","<<tileDataList[tileDataList.size()-1]->ymax<<"]"<<endl;
-	
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Tile no. "<<tileDataList.size()-1<<": xrange["<<tileDataList[tileDataList.size()-1]->xmin<<","<<tileDataList[tileDataList.size()-1]->xmax<<"], yrange="<<tileDataList[tileDataList.size()-1]->ymin<<","<<tileDataList[tileDataList.size()-1]->ymax<<"]");
+	#endif
 
 	return 0;
 
@@ -664,8 +705,10 @@ int FindSourceMatchesInTiles()
 	for(size_t i=0;i<tileDataList.size();i++){
 		size_t index= i;
 		long int NSourcePars= tileDataList[i]->GetNSourcePars();
-		INFO_LOG("#"<<NSourcePars<<" sources to be cross-matched...");
-		
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("#"<<NSourcePars<<" sources to be cross-matched...");
+		#endif
+
 		//Fill list of source pars to be cross-matched 
 		//NB: Include only this tile and neighbor tiles not searched before
 		std::vector<SourcePars*> sourceParsToBeMatched;
@@ -680,7 +723,9 @@ int FindSourceMatchesInTiles()
 			sstream<<neighbors[j]<<",";
 		}
 		sstream<<"}";
-		INFO_LOG(sstream.str());
+		#ifdef LOGGING_ENABLED	
+			DEBUG_LOG(sstream.str());
+		#endif
 		//====DEBUG
 		
 
@@ -689,7 +734,9 @@ int FindSourceMatchesInTiles()
 			std::pair<size_t,size_t> indexLink(index,neighborIndex);
 			bool linkSearched= tileLinkSearched[indexLink];
 			if(linkSearched){
-				INFO_LOG("Skip tile link ("<<index<<"-"<<neighborIndex<<") as already searched before...");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Skip tile link ("<<index<<"-"<<neighborIndex<<") as already searched before...");
+				#endif
 				continue;
 			}
 			sourceParsToBeMatched.insert(sourceParsToBeMatched.end(),(tileDataList[neighborIndex]->sourcePars).begin(),(tileDataList[neighborIndex]->sourcePars).end());
@@ -705,7 +752,9 @@ int FindSourceMatchesInTiles()
 
 		//Check if there are sources to be crossmatched
 		if(sourceParsToBeMatched.empty()){
-			INFO_LOG("No sources to be crossmatched for tile no. "<<i+1<<" and its neighbors, skip to next tile...");
+			#ifdef LOGGING_ENABLED	
+				DEBUG_LOG("No sources to be crossmatched for tile no. "<<i+1<<" and its neighbors, skip to next tile...");
+			#endif
 			continue;
 		}
 
@@ -716,7 +765,9 @@ int FindSourceMatchesInTiles()
 
 		//Loop over source parameters and build adjacency list
 		for(size_t k=0;k<sourceParsToBeMatched.size()-1;k++){
-			if(k%100==0) INFO_LOG("#"<<k+1<<"/"<<sourceParsToBeMatched.size()<<" source scanned for adjacency for tile no. "<<i+1<<" ...");
+			#ifdef LOGGING_ENABLED
+				if(k%100==0) INFO_LOG("#"<<k+1<<"/"<<sourceParsToBeMatched.size()<<" source scanned for adjacency for tile no. "<<i+1<<" ...");
+			#endif
 
 			for(size_t l=k+1;l<sourceParsToBeMatched.size();l++){
 				bool hasMatch= HaveContourMatch(sourceParsToBeMatched[k],sourceParsToBeMatched[l]);
@@ -727,12 +778,16 @@ int FindSourceMatchesInTiles()
 		}//end loop source pars
 
 		// Use the Bron-Kerbosch algorithm to find all cliques, printing them as they are found
-		INFO_LOG("Using the Bron-Kerbosch algorithm to find all source matches (min clust size="<<minSourceMatchClusterSize<<") ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Using the Bron-Kerbosch algorithm to find all source matches (min clust size="<<minSourceMatchClusterSize<<") ...");
+		#endif
 		std::size_t minCliqueSize= minSourceMatchClusterSize;
 		bron_kerbosch_all_cliques(undirGraph, vis, minCliqueSize);
 
 		//Get cluster ids from clique and print them
-		INFO_LOG("#"<<clusterIds.size()<<" source match clusters found with multiplicity >"<<minCliqueSize<<" in tile no. "<<i+1<<" and its neighbors ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("#"<<clusterIds.size()<<" source match clusters found with multiplicity >"<<minCliqueSize<<" in tile no. "<<i+1<<" and its neighbors ...");
+		#endif
 		std::stringstream ss;
 	
 
@@ -754,7 +809,10 @@ int FindSourceMatchesInTiles()
 				if(l==clusterIds[k].size()-1) ss<<"(CAT"<<catalogIndex<<", index="<<index<<", pos("<<posX<<","<<posY<<"), sname="<<sname<<")}";
 				else ss<<"(CAT"<<catalogIndex<<", index="<<index<<", pos("<<posX<<","<<posY<<"), sname="<<sname<<"), ";
 			}//end loop cluster members in this cluster
-			INFO_LOG(ss.str());		
+
+			#ifdef LOGGING_ENABLED
+				INFO_LOG(ss.str());		
+			#endif
 
 			//Fill list of components for graph search
 			std::vector<MatchComponentPars*> matchComponentParList;
@@ -772,7 +830,9 @@ int FindSourceMatchesInTiles()
 			}//end loop source contour cluster
 
 			//Search for match in components for this contour cluster
-			INFO_LOG("Searching for cluster components in source contour cluster no. "<<k+1<<" (#"<<clusterIds[k].size()<<" sources present) for tile no. "<<i+1<<" ...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Searching for cluster components in source contour cluster no. "<<k+1<<" (#"<<clusterIds[k].size()<<" sources present) for tile no. "<<i+1<<" ...");
+			#endif
 			UndirectedGraph undirGraph_component(matchComponentParList.size());
 			std::vector<std::vector<size_t>> clusterComponentIds;
  	 		clique_store vis_component(clusterComponentIds);
@@ -785,8 +845,10 @@ int FindSourceMatchesInTiles()
 					}
 				}//end loop next component pars
 			}//end loop component pars
-		
-			INFO_LOG("Using the Bron-Kerbosch algorithm to find all source component matches (min clust size="<<minSourceMatchClusterSize<<") ...");
+			
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Using the Bron-Kerbosch algorithm to find all source component matches (min clust size="<<minSourceMatchClusterSize<<") ...");
+			#endif
 			std::size_t minCliqueSize_component= minSourceMatchClusterSize;
 			bron_kerbosch_all_cliques(undirGraph_component, vis_component, minCliqueSize_component);
 
@@ -811,12 +873,16 @@ int FindSourceMatchesInTiles()
 					if(t==clusterComponentIds[l].size()-1) ss<<"(index="<<index<<", pos("<<posX<<","<<posY<<", sname="<<sname<<")}";
 					else ss<<"(index="<<index<<", pos("<<posX<<","<<posY<<", sname="<<sname<<"), "; 
 				}
-				INFO_LOG(ss.str());		
+				#ifdef LOGGING_ENABLED
+					INFO_LOG(ss.str());		
+				#endif
 			}//end loop cluster components
 
 			//Check if any cluster component is found
 			if(clusterComponentIds.empty()){
-				INFO_LOG("No cluster found with components, skip to next cluster...");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("No cluster found with components, skip to next cluster...");
+				#endif
 				continue;
 			}
 
@@ -826,7 +892,9 @@ int FindSourceMatchesInTiles()
 			//}
 
 			//Store source cube found
-			INFO_LOG("Filling source cube info...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Filling source cube info...");
+			#endif
 			TString scubeName= Form("SCube%d",scubeCounter);
 			aSourceCube= new SourceCube(std::string(scubeName));
 			scubeCounter++;
@@ -848,7 +916,9 @@ int FindSourceMatchesInTiles()
 				}
 
 				if(!sourceToBeStored){
-					WARN_LOG("Cannot retrieve source to be stored (catalogIndex="<<catalogIndex<<", sindex="<<sourceIndex<<", nestedSourceIndex="<<nestedSourceIndex<<")");
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Cannot retrieve source to be stored (catalogIndex="<<catalogIndex<<", sindex="<<sourceIndex<<", nestedSourceIndex="<<nestedSourceIndex<<")");	
+					#endif
 					continue;
 				}
 
@@ -865,8 +935,10 @@ int FindSourceMatchesInTiles()
 					MatchComponentPars* matchCPars= matchComponentParList[index];
 					size_t sindex= matchCPars->sourceClusterIndex;
 					size_t cindex= matchCPars->componentIndex;
-					if(aSourceCube->AddIndexToComponent(l,sindex,cindex)<0){
-						ERROR_LOG("Failed to add component index to source cube!");
+					if(aSourceCube->AddIndexToComponent(l,sindex,cindex)<0){	
+						#ifdef LOGGING_ENABLED
+							ERROR_LOG("Failed to add component index to source cube!");
+						#endif
 						continue;
 					}
 				}//end loop components in cluster
@@ -880,8 +952,9 @@ int FindSourceMatchesInTiles()
 
 	}//end loop tiles
 
-
-	INFO_LOG("#"<<sourceCubes.size()<<" source cubes found and added to collection...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<sourceCubes.size()<<" source cubes found and added to collection...");
+	#endif
 
 	return 0;
 
@@ -1015,13 +1088,17 @@ bool HaveContourMatch(SourcePars* pars1,SourcePars* pars2)
 {
 	//## Check input data
 	if(!pars1 || !pars2){
-		ERROR_LOG("Null ptr given for contour!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr given for contour!");
+		#endif
 		return false;
 	}
 
 	//## If sources are from the same collection return NO MATCH
 	if(pars1->catalogIndex==pars2->catalogIndex) {
-		DEBUG_LOG("Skip match as sources are from same collection (catalogIndex_1="<<pars1->catalogIndex<<", catalogIndex_2="<<pars2->catalogIndex<<")...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Skip match as sources are from same collection (catalogIndex_1="<<pars1->catalogIndex<<", catalogIndex_2="<<pars2->catalogIndex<<")...");
+		#endif
 		return false;
 	}
 
@@ -1029,13 +1106,17 @@ bool HaveContourMatch(SourcePars* pars1,SourcePars* pars2)
 	Contour* cont1= pars1->contour;
 	Contour* cont2= pars2->contour;
 	if(!cont1 || !cont2){
-		WARN_LOG("One/both contour are nullptr!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("One/both contour are nullptr!");
+		#endif
 		return false;
 	}
 	
 	//## Check if contour pars were computed
 	if(!cont1->HasParameters || !cont2->HasParameters){
-		WARN_LOG("One/both contours have no computed parameters!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("One/both contours have no computed parameters!");
+		#endif
 		return false;
 	}
 
@@ -1047,10 +1128,14 @@ bool HaveContourMatch(SourcePars* pars1,SourcePars* pars2)
 		double posDist= AstroUtils::GetWCSPointDist_Haversine(centroid_1.X(),centroid_1.Y(),centroid_2.X(),centroid_2.Y());
 		
 		if(fabs(posDist)>posThr) {	
-			INFO_LOG("NO POS MATCH: Source (CAT"<<pars1->catalogIndex<<", name="<<pars1->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<"), Source (CAT"<<pars2->catalogIndex<<", name="<<pars2->sname<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<"), dist(arcsec)="<<posDist*3600.);
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("NO POS MATCH: Source (CAT"<<pars1->catalogIndex<<", name="<<pars1->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<"), Source (CAT"<<pars2->catalogIndex<<", name="<<pars2->sname<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<"), dist(arcsec)="<<posDist*3600.);
+			#endif
 			return false;
 		}
-		INFO_LOG("POS MATCH: Source (CAT"<<pars1->catalogIndex<<", name="<<pars1->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<"), Source (CAT"<<pars2->catalogIndex<<", name="<<pars2->sname<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<"), dist(arcsec)="<<posDist*3600.);
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("POS MATCH: Source (CAT"<<pars1->catalogIndex<<", name="<<pars1->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<"), Source (CAT"<<pars2->catalogIndex<<", name="<<pars2->sname<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<"), dist(arcsec)="<<posDist*3600.);
+		#endif
 	}
 
 	//## Compute contour overlap
@@ -1058,17 +1143,23 @@ bool HaveContourMatch(SourcePars* pars1,SourcePars* pars2)
 		double contArea_1= 0;
 		double contArea_2= 0;
 		if(MathUtils::ComputeContourArea(contArea_1,cont1)<0){
-			WARN_LOG("Failed to compute contour 1 area!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to compute contour 1 area!");
+			#endif
 			return false;
 		}
 		if(MathUtils::ComputeContourArea(contArea_2,cont2)<0){
-			WARN_LOG("Failed to compute contour 2 area!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to compute contour 2 area!");
+			#endif
 			return false;
 		} 
 		double overlapArea= 0;
 		int overlapFlag;
 		if(MathUtils::ComputeContourOverlapArea(overlapArea,overlapFlag,cont1,cont2)<0){
-			WARN_LOG("Failed to compute contour overlap area!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to compute contour overlap area!");
+			#endif
 			return false;
 		}
 
@@ -1080,25 +1171,35 @@ bool HaveContourMatch(SourcePars* pars1,SourcePars* pars2)
 		double overlapAreaFraction_1= overlapArea/contArea_1;
 		double overlapAreaFraction_2= overlapArea/contArea_2;
 		if(overlapFlag==eCONT_NOT_OVERLAPPING){
-			INFO_LOG("NO CONTOUR OVERLAP: Source (CAT"<<pars1->catalogIndex<<", name="<<pars1->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Source (CAT"<<pars2->catalogIndex<<", name="<<pars2->sname<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+			#ifdef LOGGING_ENABLED	
+				INFO_LOG("NO CONTOUR OVERLAP: Source (CAT"<<pars1->catalogIndex<<", name="<<pars1->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Source (CAT"<<pars2->catalogIndex<<", name="<<pars2->sname<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+			#endif
 			return false;
 		}
 		else if(overlapFlag==eCONT1_INSIDE_CONT2 && overlapAreaFraction_2<matchOverlapThr){
-			INFO_LOG("CONT1 INSIDE CONT2 (OVERLAP BELOW THR): Source (CAT"<<pars1->catalogIndex<<", name="<<pars1->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Source (CAT"<<pars2->catalogIndex<<", name="<<pars2->sname<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("CONT1 INSIDE CONT2 (OVERLAP BELOW THR): Source (CAT"<<pars1->catalogIndex<<", name="<<pars1->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Source (CAT"<<pars2->catalogIndex<<", name="<<pars2->sname<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+			#endif
 			return false;
 		}
 		else if(overlapFlag==eCONT2_INSIDE_CONT1 && overlapAreaFraction_1<matchOverlapThr){
-			INFO_LOG("CONT2 INSIDE CONT1 (OVERLAP BELOW THR): Source (CAT"<<pars1->catalogIndex<<", name="<<pars1->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Source (CAT"<<pars2->catalogIndex<<", name="<<pars2->sname<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("CONT2 INSIDE CONT1 (OVERLAP BELOW THR): Source (CAT"<<pars1->catalogIndex<<", name="<<pars1->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Source (CAT"<<pars2->catalogIndex<<", name="<<pars2->sname<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+			#endif
 			return false;
 		}
 		else if(overlapFlag==eCONT_OVERLAPPING){
 			if(overlapAreaFraction_1<matchOverlapThr || overlapAreaFraction_2<matchOverlapThr){
-				INFO_LOG("CONT OVERLAP BELOW THR: Source (CAT"<<pars1->catalogIndex<<", name="<<pars1->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Source (CAT"<<pars2->catalogIndex<<", name="<<pars2->sname<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("CONT OVERLAP BELOW THR: Source (CAT"<<pars1->catalogIndex<<", name="<<pars1->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Source (CAT"<<pars2->catalogIndex<<", name="<<pars2->sname<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+				#endif
 				return false;
 			}
 		}
 	
-		INFO_LOG("CONTOUR OVERLAP MATCH: Source (CAT"<<pars1->catalogIndex<<", name="<<pars1->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Source (CAT"<<pars2->catalogIndex<<", name="<<pars2->sname<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("CONTOUR OVERLAP MATCH: Source (CAT"<<pars1->catalogIndex<<", name="<<pars1->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Source (CAT"<<pars2->catalogIndex<<", name="<<pars2->sname<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+		#endif
 
 	}//close if
 
@@ -1120,7 +1221,9 @@ bool HaveSourceComponentMatch(ComponentPars* pars1,ComponentPars* pars2)
 {
 	//## Check data
 	if(!pars1 || !pars2){
-		ERROR_LOG("Null ptr given for component pars!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr given for component pars!");
+		#endif
 		return false;
 	}
 
@@ -1130,8 +1233,10 @@ bool HaveSourceComponentMatch(ComponentPars* pars1,ComponentPars* pars2)
 	//## Check fit ellipses
 	TEllipse* ellipse1= pars1->fitEllipse;
 	TEllipse* ellipse2= pars2->fitEllipse;
-	if(!ellipse1 || !ellipse2){
-		WARN_LOG("One/both fit ellipses are nullptr!");
+	if(!ellipse1 || !ellipse2){		
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("One/both fit ellipses are nullptr!");
+		#endif
 		return false;
 	}
 
@@ -1144,7 +1249,9 @@ bool HaveSourceComponentMatch(ComponentPars* pars1,ComponentPars* pars2)
 		double Yc_2= ellipse2->GetY1();
 		double posDist= AstroUtils::GetWCSPointDist_Haversine(Xc_1,Yc_1,Xc_2,Yc_2);
 		if(fabs(posDist)>posThr) {
-			INFO_LOG("Ellipse pos diff above thr ("<<posDist<<">"<<posThr<<", pos1("<<Xc_1<<","<<Yc_1<<"), pos2("<<Xc_2<<","<<Yc_2<<"))");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Ellipse pos diff above thr ("<<posDist<<">"<<posThr<<", pos1("<<Xc_1<<","<<Yc_1<<"), pos2("<<Xc_2<<","<<Yc_2<<"))");
+			#endif
 			return false;
 		}
 	}
@@ -1157,7 +1264,9 @@ bool HaveSourceComponentMatch(ComponentPars* pars1,ComponentPars* pars2)
 		double err= 0;
 		int rtn= 0;
 		if(MathUtils::ComputeEllipseOverlapArea(ellipseOverlapArea,err,rtn,ellipse1,ellipse2)<0){
-			WARN_LOG("Failed to compute ellipse overlap area (err status="<<rtn<<"), return no match!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to compute ellipse overlap area (err status="<<rtn<<"), return no match!");
+			#endif
 			return false;
 		}
 
@@ -1169,20 +1278,28 @@ bool HaveSourceComponentMatch(ComponentPars* pars1,ComponentPars* pars2)
 		double overlapAreaFraction_1= ellipseOverlapArea/ellipseArea_1;
 		double overlapAreaFraction_2= ellipseOverlapArea/ellipseArea_2;
 		if(rtn==EllipseUtils::DISJOINT_ELLIPSES){
-			INFO_LOG("Disjoint ellipses");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Disjoint ellipses");
+			#endif
 			return false;
 		}
 		else if(rtn==EllipseUtils::ELLIPSE1_INSIDE_ELLIPSE2 && overlapAreaFraction_2<matchOverlapThr){
-			INFO_LOG("Ellipse 1 inside 2 below overlap thr ("<<overlapAreaFraction_2<<"<"<<matchOverlapThr<<")");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Ellipse 1 inside 2 below overlap thr ("<<overlapAreaFraction_2<<"<"<<matchOverlapThr<<")");
+			#endif
 			return false;
 		}
 		else if(rtn==EllipseUtils::ELLIPSE2_INSIDE_ELLIPSE1 && overlapAreaFraction_1<matchOverlapThr){
-			INFO_LOG("Ellipse 2 inside 1 below overlap thr ("<<overlapAreaFraction_1<<"<"<<matchOverlapThr<<")");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Ellipse 2 inside 1 below overlap thr ("<<overlapAreaFraction_1<<"<"<<matchOverlapThr<<")");
+			#endif
 			return false;
 		}
 		else {
 			if(overlapAreaFraction_1<matchOverlapThr || overlapAreaFraction_2<matchOverlapThr){	
-				INFO_LOG("Ellipse overlap below thr ("<<overlapAreaFraction_1<<"<"<<matchOverlapThr<<", "<<overlapAreaFraction_2<<"<"<<matchOverlapThr<<")");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Ellipse overlap below thr ("<<overlapAreaFraction_1<<"<"<<matchOverlapThr<<", "<<overlapAreaFraction_2<<"<"<<matchOverlapThr<<")");
+				#endif
 				return false;
 			}
 		}
@@ -1208,7 +1325,9 @@ int ReadData()
 	std::ifstream fileStream(fileName);	
 	std::string line;
 	if (fileStream.fail() || !fileStream.is_open()){
-		ERROR_LOG("Failed to open file "<<fileName<<" for reading...");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to open file "<<fileName<<" for reading...");
+		#endif
 		return -1;
 	}
 
@@ -1218,19 +1337,25 @@ int ReadData()
 	while (std::getline(fileStream, line)) {
   	std::istringstream iss(line);
     if (!(iss >> filename)) { 
-			ERROR_LOG("Failed to read line from file "<<fileName<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read line from file "<<fileName<<"!");
+			#endif
 			return -1; 
 		}
     fileNames.push_back(filename);
 	}//end file read
 				
-	INFO_LOG("#"<<fileNames.size()<<" files present...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<fileNames.size()<<" files present...");
+	#endif
 
 	//Finally reading source data
 	source_pars.clear();
 	for(size_t i=0;i<fileNames.size();i++){
 		if(ReadSourceData(fileNames[i],i)<0){
-			ERROR_LOG("Failed to read source data for file no. "<<i+1<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read source data for file no. "<<i+1<<"!");
+			#endif
 			return -1;
 		}
 	}//end loop files
@@ -1238,7 +1363,9 @@ int ReadData()
 	//Printing num sources in each tile
 	for(size_t i=0;i<tileDataList.size();i++){
 		long int nSourcePars= tileDataList[i]->GetNSourcePars();
-		INFO_LOG("Tile no. "<<i+1<<": #"<<nSourcePars<<" sources to be matched...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Tile no. "<<i+1<<": #"<<nSourcePars<<" sources to be matched...");
+		#endif
 	}
 
 	return 0;
@@ -1251,7 +1378,9 @@ int ReadSourceData(std::string filename,int catalogIndex)
 	//Open files
 	TFile* f= new TFile(filename.c_str(),"READ");
 	if(!f){
-		ERROR_LOG("Failed to open file "<<filename<<"!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to open file "<<filename<<"!");
+		#endif
 		return -1;
 	}
 
@@ -1260,7 +1389,9 @@ int ReadSourceData(std::string filename,int catalogIndex)
 
 	TTree* sourceTree= (TTree*)f->Get("SourceInfo");
 	if(!sourceTree || sourceTree->IsZombie()){
-		ERROR_LOG("Failed to get access to source tree in file "<<filename<<"!");	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get access to source tree in file "<<filename<<"!");	
+		#endif
 		return -1;
 	}
 	sourceTree->SetBranchAddress("Source",&aSource);
@@ -1275,7 +1406,9 @@ int ReadSourceData(std::string filename,int catalogIndex)
 	sources.push_back(std::vector<Source*>());
 
 	//Read sources
-	INFO_LOG("Reading #"<<sourceTree->GetEntries()<<" sources in file "<<filename<<"...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Reading #"<<sourceTree->GetEntries()<<" sources in file "<<filename<<"...");
+	#endif
 	for(int i=0;i<sourceTree->GetEntries();i++){
 		sourceTree->GetEntry(i);
 		int type= aSource->Type;
@@ -1283,17 +1416,22 @@ int ReadSourceData(std::string filename,int catalogIndex)
 
 		//Select source by type?
 		if( selectTrueSourceByType && type!=selectedTrueSourceType && type!=-1) {
-			INFO_LOG("Skip true source type "<<type<<" (selected type="<<selectedTrueSourceType<<")...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Skip true source type "<<type<<" (selected type="<<selectedTrueSourceType<<")...");
+			#endif
 			continue;
 		}
 		//Select source by sim type?
 		if( selectTrueSourceBySimType && simType!=selectedTrueSourceSimType && simType!=-1) {
-			INFO_LOG("Skip true source type "<<simType<<" (selected type="<<selectedTrueSourceSimType<<")...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Skip true source type "<<simType<<" (selected type="<<selectedTrueSourceSimType<<")...");
+			#endif
 			continue;
 		}
 
-
-		INFO_LOG("Reading source (CAT"<<catalogIndex<<", name="<<aSource->GetName()<<")...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Reading source (CAT"<<catalogIndex<<", name="<<aSource->GetName()<<")...");
+		#endif
 
 		//Copy source
 		Source* source= new Source;
@@ -1303,7 +1441,9 @@ int ReadSourceData(std::string filename,int catalogIndex)
 		if(!wcs){
 			wcs= source->GetWCS(coordSys);
 			if(!wcs){
-				ERROR_LOG("Failed to compute WCS from source no. "<<i+1<<" (name="<<source->GetName()<<")!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to compute WCS from source no. "<<i+1<<" (name="<<source->GetName()<<")!");
+				#endif
 				return -1;
 			}
 		}
@@ -1311,7 +1451,9 @@ int ReadSourceData(std::string filename,int catalogIndex)
 		//Fill source pars
 		std::vector<SourcePars*> thisPars;
 		if(FillSourcePars(thisPars,source,catalogIndex,sourceIndex,-1,wcs,wcsType)<0){
-			ERROR_LOG("Failed to fill pars for source no. "<<i+1<<" (name="<<source->GetName()<<", collectioIndex="<<catalogIndex<<")!");
+			#ifdef LOGGING_ENABLED	
+				ERROR_LOG("Failed to fill pars for source no. "<<i+1<<" (name="<<source->GetName()<<", collectioIndex="<<catalogIndex<<")!");
+			#endif
 			return -1;
 		}
 
@@ -1327,7 +1469,9 @@ int ReadSourceData(std::string filename,int catalogIndex)
 	//Append source pars to main collection
 	source_pars.insert(source_pars.end(),pars.begin(),pars.end());
 
-	INFO_LOG("#"<<sources[catalogIndex].size()<<" sources to be cross-matched in this collection (#"<<source_pars.size()<<" source pars added from catalog no. "<<catalogIndex<<")...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<sources[catalogIndex].size()<<" sources to be cross-matched in this collection (#"<<source_pars.size()<<" source pars added from catalog no. "<<catalogIndex<<")...");
+	#endif
 
 	//Delete WCS for this collection
 	//CodeUtils::DeletePtr<WorldCoor>(wcs);
@@ -1356,7 +1500,9 @@ int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogInd
 
 	//Check input source
 	if(!aSource) {
-		WARN_LOG("Nullptr to input source given!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Nullptr to input source given!");
+		#endif
 		return -1;	
 	}
 
@@ -1377,7 +1523,9 @@ int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogInd
 		bool computeContourPars= true;
 		Contour* contour= aSource->GetWCSContour(0,wcs,coordSystem,pixOffset,computeContourPars);
 		if(!contour){
-			ERROR_LOG("Failed to compute WCS contour for source "<<sourceName<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute WCS contour for source "<<sourceName<<"!");
+			#endif
 			return -1;
 		}
 
@@ -1389,14 +1537,18 @@ int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogInd
 		int nComponents= fitPars.GetNComponents();
 		std::vector<TEllipse*> fitEllipses;
 		if(aSource->GetFitEllipses(fitEllipses,useFWHM,convertToWCS,wcs,coordSystem)<0){
-			ERROR_LOG("Failed to compute WCS ellipse for fitted components of source "<<sourceName<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute WCS ellipse for fitted components of source "<<sourceName<<"!");
+			#endif
 			CodeUtils::DeletePtr<Contour>(contour);
 			return -1;
 		}
 
 		//Check ellipses and pars size
 		if(nComponents!=(int)(fitEllipses.size())){
-			ERROR_LOG("Number of fit components shall be equal to fitted ellipses (this should not occur)!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Number of fit components shall be equal to fitted ellipses (this should not occur)!");
+			#endif
 			CodeUtils::DeletePtr<Contour>(contour);
 			CodeUtils::DeletePtrCollection<TEllipse>(fitEllipses);
 			return -1;
@@ -1448,13 +1600,19 @@ int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogInd
 			nTilesY,tileYmin,tileYmax,tileYstep
 		);
 		if(tileIndex<0){
-			INFO_LOG("Cannot find tile index of source (CAT"<<catalogIndex<<", name="<<sourceName<<", pos("<<contourCentroid.X()<<","<<contourCentroid.Y()<<")!");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Cannot find tile index of source (CAT"<<catalogIndex<<", name="<<sourceName<<", pos("<<contourCentroid.X()<<","<<contourCentroid.Y()<<")!");
+			#endif
 		}
-		else if(tileIndex>=(long int)(tileDataList.size())){
-			DEBUG_LOG("Invalid tile index found (index="<<tileIndex<<", tilesize="<<tileDataList.size()<<"), check tile index calculation!");
+		else if(tileIndex>=(long int)(tileDataList.size())){		
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Invalid tile index found (index="<<tileIndex<<", tilesize="<<tileDataList.size()<<"), check tile index calculation!");
+			#endif
 		}
 		else{//Add to tile data
-			INFO_LOG("Adding source (CAT"<<catalogIndex<<", name="<<sourceName<<", pos("<<contourCentroid.X()<<","<<contourCentroid.Y()<<") to list...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Adding source (CAT"<<catalogIndex<<", name="<<sourceName<<", pos("<<contourCentroid.X()<<","<<contourCentroid.Y()<<") to list...");
+			#endif
 			tileDataList[tileIndex]->AddSourcePars(sourcePars);
 		}
 
@@ -1469,7 +1627,9 @@ int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogInd
 			std::vector<Source*> nestedSources= aSource->GetNestedSources();
 			for(size_t j=0;j<nestedSources.size();j++){
 				if(FillSourcePars(pars,nestedSources[j],catalogIndex,sourceIndex,j,wcs,coordSystem)<0){
-					ERROR_LOG("Failed to get nested source pars for source "<<sourceName<<"!");
+					#ifdef LOGGING_ENABLED
+						ERROR_LOG("Failed to get nested source pars for source "<<sourceName<<"!");
+					#endif
 					return -1;
 				}
 			}//end loop sources
@@ -1485,7 +1645,9 @@ void Save()
 {
 	//Save TTree to file
 	if(outputFile && outputFile->IsOpen()){
-		INFO_LOG("Saving #"<<sourceCubes.size()<<" source cubes to file...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving #"<<sourceCubes.size()<<" source cubes to file...");
+		#endif
 		outputFile->cd();		
 		for(size_t i=0;i<sourceCubes.size();i++){
 			sourceCube= sourceCubes[i];

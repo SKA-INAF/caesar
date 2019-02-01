@@ -21,7 +21,9 @@
 #include <Contour.h>
 
 #include <ConfigParser.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <CodeUtils.h>
 #include <Consts.h>
 
@@ -222,41 +224,57 @@ int main(int argc, char *argv[])
 	//== Parse command line options
 	//================================
 	if(ParseOptions(argc,argv)<0){
-		ERROR_LOG("Failed to parse command line options!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to parse command line options!");
+		#endif
 		return -1;
 	}
 	
 	//=======================
 	//== Init
 	//=======================
-	INFO_LOG("Initializing data...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Initializing data...");
+	#endif
 	Init();
 
 	//=======================
 	//== Read source data
 	//=======================
-	INFO_LOG("Reading source data from given files...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Reading source data from given files...");	
+	#endif
 	if(ReadSourceData()<0){
-		ERROR_LOG("Reading of source data failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Reading of source data failed!");
+		#endif
 		return -1;
 	}
 
 	//=======================
 	//== Correlate catalogs
 	//=======================
-	INFO_LOG("Correlating source catalogs...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Correlating source catalogs...");
+	#endif
 	if(CorrelateSourceCatalogs()<0){
-		ERROR_LOG("Correlating source data failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Correlating source data failed!");
+		#endif
 		return -1;
 	}
 
 	//=======================
 	//== Save
 	//=======================
-	INFO_LOG("Saving data to file ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Saving data to file ...");
+	#endif
 	Save();
 
-	INFO_LOG("End source catalog correlator");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("End source catalog correlator");
+	#endif
 
 	return 0;
 
@@ -379,8 +397,10 @@ int ParseOptions(int argc, char *argv[])
 	//=======================
 	//## Set logging level
 	std::string sloglevel= GetStringLogLevel(verbosity);
-	LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
-	
+	#ifdef LOGGING_ENABLED
+		LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
+	#endif
+
 	return 0;
 
 }//close ParseOptions()
@@ -392,19 +412,25 @@ int CorrelateSourceCatalogs()
 {
 	//Check source catalogs (true & rec)
 	if(sources.empty() || sources_rec.empty()){
-		WARN_LOG("One or both source collections are empty, nothing to correlate...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("One or both source collections are empty, nothing to correlate...");
+		#endif
 		return 0;
 	}
 
 	//For each true source find best match in rec source catalogue
 	if(FindSourceMatches()<0){
-		ERROR_LOG("Failed to find source matches!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to find source matches!");
+		#endif
 		return -1;
 	}
 
 	//For each rec source store associated true sources
 	if(FindRealAndFakeSources()<0){
-		ERROR_LOG("Failed to store rec-true matches!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to store rec-true matches!");
+		#endif
 		return -1;
 	}
 
@@ -417,11 +443,15 @@ int FindSourceMatches()
 {
 	//Check source sizes
 	if(sources.empty() || sources_rec.empty()){
-		WARN_LOG("One or both source collections are empty, nothing to correlate...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("One or both source collections are empty, nothing to correlate...");
+		#endif
 		return -1;
 	}
 
-	INFO_LOG("Correlating ("<<sources.size()<<","<<sources_rec.size()<<") sources...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Correlating ("<<sources.size()<<","<<sources_rec.size()<<") sources...");
+	#endif
 	long int nFoundSources= 0;
 	long int nCompactSources= 0;
 	long int nCompactSources_found= 0;	
@@ -430,8 +460,9 @@ int FindSourceMatches()
 
 	//Loop over first catalogue (e.g. simulated/true sources)
 	for(size_t i=0;i<sources.size();i++){
-		
-		if(i%100==0) INFO_LOG("Finding cross-match for source no. "<<i<<"/"<<sources.size()<<"...");
+		#ifdef LOGGING_ENABLED
+			if(i%100==0) INFO_LOG("Finding cross-match for source no. "<<i<<"/"<<sources.size()<<"...");
+		#endif
 
 		//Find source match according to source type (e.g. compact/point-like vs extended)
 		int sourceType= sources[i]->Type;
@@ -448,8 +479,10 @@ int FindSourceMatches()
 
 	}//end loop collection
 
-	INFO_LOG("#"<<nCompactSources_found<<"/"<<nCompactSources<<" compact sources found (search enabled? "<<enableCompactSourceCorrelation<<") ...");
-	INFO_LOG("#"<<nExtendedSources_found<<"/"<<nExtendedSources<<" extended sources found (search enabled? "<<enableExtendedSourceCorrelation<<") ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<nCompactSources_found<<"/"<<nCompactSources<<" compact sources found (search enabled? "<<enableCompactSourceCorrelation<<") ...");
+		INFO_LOG("#"<<nExtendedSources_found<<"/"<<nExtendedSources<<" extended sources found (search enabled? "<<enableExtendedSourceCorrelation<<") ...");
+	#endif
 
   return 0;
 
@@ -608,9 +641,9 @@ bool FindPointSourceMatch(int source_true_index)
 			}
 		}//close if has component index match
 
-
-		INFO_LOG("True source "<<SourceName<<" (index="<<source_true_index<<", X0="<<X0<<", Y0="<<Y0<<", N="<<NPix<<") reconstructed by source "<<SourceName_rec<<" (index="<<match_source_index<<", X0="<<X0_rec<<", Y0="<<Y0_rec<<", N="<<NPix_rec<<"), NMatchingPixels="<<MatchFraction*NPix<<" f="<<MatchFraction<<" f_rec="<<MatchFraction_rec<<" (t="<<matchOverlapThr<<"), posDiff="<<posDiff<<" (posThr="<<matchPosThr<<")");
-
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("True source "<<SourceName<<" (index="<<source_true_index<<", X0="<<X0<<", Y0="<<Y0<<", N="<<NPix<<") reconstructed by source "<<SourceName_rec<<" (index="<<match_source_index<<", X0="<<X0_rec<<", Y0="<<Y0_rec<<", N="<<NPix_rec<<"), NMatchingPixels="<<MatchFraction*NPix<<" f="<<MatchFraction<<" f_rec="<<MatchFraction_rec<<" (t="<<matchOverlapThr<<"), posDiff="<<posDiff<<" (posThr="<<matchPosThr<<")");
+		#endif
 
 		//## Store rec-true association map
 		//## NB: Find if this rec source was already associated to other true sources	
@@ -624,7 +657,9 @@ bool FindPointSourceMatch(int source_true_index)
 
 			std::map<MatchingSourceInfo,std::vector<int>>::iterator it= RecSourceAssociationMap.find(info);
 			if(RecSourceAssociationMap.empty() || it==RecSourceAssociationMap.end()){//item not found
-				INFO_LOG("Match rec source (name="<<SourceName_rec<<", index="<<match_source_index<<", nestedIndex="<<nestedIndex<<", componentIndex="<<componentIndex<<") not found in map, adding it...");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Match rec source (name="<<SourceName_rec<<", index="<<match_source_index<<", nestedIndex="<<nestedIndex<<", componentIndex="<<componentIndex<<") not found in map, adding it...");
+				#endif
 				RecSourceAssociationMap[info].push_back(source_true_index);
 			}
 			else{
@@ -634,7 +669,9 @@ bool FindPointSourceMatch(int source_true_index)
 					!RecSourceAssociationMap[info].empty() && 
 					vIt!=RecSourceAssociationMap[info].end()
 				);
-				INFO_LOG("Match rec source (name="<<SourceName_rec<<", index="<<match_source_index<<", nestedIndex="<<nestedIndex<<", componentIndex="<<componentIndex<<") found in map, appending to it...");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Match rec source (name="<<SourceName_rec<<", index="<<match_source_index<<", nestedIndex="<<nestedIndex<<", componentIndex="<<componentIndex<<") found in map, appending to it...");
+				#endif
 				if(!itemAlreadyPresent){
 					RecSourceAssociationMap[info].push_back(source_true_index);
 				}
@@ -759,8 +796,9 @@ bool FindExtendedSourceMatch(int source_true_index)
 		AvgBkg= StatsUtils::GetMedianFast(bkgValues);
 		AvgRMS= StatsUtils::GetMedianFast(rmsValues);
 
-		INFO_LOG("True source "<<SourceName<<" (index="<<source_true_index<<", X0="<<X0<<", Y0="<<Y0<<", N="<<NPix<<") reconstructed by source "<<SourceName_rec<<" (index="<<match_source_index<<", X0="<<X0_rec<<", Y0="<<Y0_rec<<", N="<<NPix_rec<<"), NMatchingPixels="<<MatchFraction*NPix<<" f="<<MatchFraction<<" f_rec="<<MatchFraction_rec<<" (t="<<matchOverlapThr<<")");
-
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("True source "<<SourceName<<" (index="<<source_true_index<<", X0="<<X0<<", Y0="<<Y0<<", N="<<NPix<<") reconstructed by source "<<SourceName_rec<<" (index="<<match_source_index<<", X0="<<X0_rec<<", Y0="<<Y0_rec<<", N="<<NPix_rec<<"), NMatchingPixels="<<MatchFraction*NPix<<" f="<<MatchFraction<<" f_rec="<<MatchFraction_rec<<" (t="<<matchOverlapThr<<")");
+		#endif
 		
 		//## Store rec-true association map
 		//## NB: Find if this rec source was already associated to other true sources
@@ -810,36 +848,49 @@ int FindRealAndFakeSources()
 {
 	//Loop over rec sources and find associations to true
 	for(size_t i=0;i<sources_rec.size();i++){
-
-		if(i%100==0) INFO_LOG("Finding associations for rec source no. "<<i<<"/"<<sources_rec.size()<<"...");
+		#ifdef LOGGING_ENABLED
+			if(i%100==0) INFO_LOG("Finding associations for rec source no. "<<i<<"/"<<sources_rec.size()<<"...");
+		#endif
 
 		int sourceType= sources_rec[i]->Type;
 
 		//Store mother rec source associations to true sources
-		INFO_LOG("Store mother rec source no. "<<i+1<<" (name="<<sources_rec[i]->GetName()<<") associations to true sources");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Store mother rec source no. "<<i+1<<" (name="<<sources_rec[i]->GetName()<<") associations to true sources");
+		#endif
 		if(FindRecSourceMatch(sources_rec[i],i,-1)<0){
-			WARN_LOG("Failed to find true associations to rec source "<<i<<" (type="<<sourceType<<")!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to find true associations to rec source "<<i<<" (type="<<sourceType<<")!");
+			#endif
 		}
 
 		//Loop over nested sources
 		std::vector<Source*> nestedSources= sources_rec[i]->GetNestedSources();
 		for(size_t k=0;k<nestedSources.size();k++){
-			INFO_LOG("Store nested source no. "<<k+1<<" (name="<<nestedSources[k]->GetName()<<", nPix="<<nestedSources[k]->GetNPixels()<<") of mother rec source no. "<<i+1<<" (name="<<sources_rec[i]->GetName()<<", nPix="<<sources_rec[i]->GetNPixels()<<") associations to true sources");
-		
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Store nested source no. "<<k+1<<" (name="<<nestedSources[k]->GetName()<<", nPix="<<nestedSources[k]->GetNPixels()<<") of mother rec source no. "<<i+1<<" (name="<<sources_rec[i]->GetName()<<", nPix="<<sources_rec[i]->GetNPixels()<<") associations to true sources");
+			#endif
+
 			if(FindRecSourceMatch(nestedSources[k],i,k)<0){
-				WARN_LOG("Failed to find true associations to nested source no. "<<k+1<<" of rec source "<<i<<" (type="<<sourceType<<")!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to find true associations to nested source no. "<<k+1<<" of rec source "<<i<<" (type="<<sourceType<<")!");
+				#endif
 			}
 		}//end loop nested
 
 		/*
 		if(enableCompactSourceCorrelation && (sourceType==eCompact || sourceType==ePointLike) ){
 			if(FindPointSourceRealAndFakeSources(i)<0){
-				WARN_LOG("Failed to find true associations to rec source "<<i<<"!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to find true associations to rec source "<<i<<"!");
+				#endif
 			}
 		}
 		if(enableExtendedSourceCorrelation && (sourceType==eExtended || sourceType==eCompactPlusExtended) ){
 			if(FindExtendedRealAndFakeSources(i)<0){
-				WARN_LOG("Failed to find true associations to rec source "<<i<<"!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to find true associations to rec source "<<i<<"!");
+				#endif
 			}
 		}
 		*/
@@ -856,7 +907,9 @@ int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex)
 {
 	//Get rec source info
 	if(!source_rec){
-		WARN_LOG("Null ptr to source given!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null ptr to source given!");
+		#endif
 		return -1;
 	}
 	std::string sname= std::string(source_rec->GetName());
@@ -1295,13 +1348,17 @@ int ReadSourceData()
 	//Open files
 	TFile* f= new TFile(fileName.c_str(),"READ");
 	if(!f){
-		ERROR_LOG("Failed to open file "<<fileName<<"!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to open file "<<fileName<<"!");
+		#endif
 		return -1;
 	}
 	
 	TFile* f_rec= new TFile(fileName_rec.c_str(),"READ");
 	if(!f_rec){
-		ERROR_LOG("Failed to open file "<<fileName_rec<<"!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to open file "<<fileName_rec<<"!");
+		#endif
 		return -1;
 	}
 
@@ -1310,20 +1367,26 @@ int ReadSourceData()
 
 	TTree* sourceTree= (TTree*)f->Get("SourceInfo");
 	if(!sourceTree || sourceTree->IsZombie()){
-		ERROR_LOG("Failed to get access to source tree in file "<<fileName<<"!");	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get access to source tree in file "<<fileName<<"!");	
+		#endif
 		return -1;
 	}
 	sourceTree->SetBranchAddress("Source",&aSource);
 
 	TTree* sourceTree_rec= (TTree*)f_rec->Get("SourceInfo");
 	if(!sourceTree_rec || sourceTree_rec->IsZombie()){
-		ERROR_LOG("Failed to get access to source tree in file "<<fileName_rec<<"!");	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get access to source tree in file "<<fileName_rec<<"!");	
+		#endif
 		return -1;
 	}
 	sourceTree_rec->SetBranchAddress("Source",&aSource);
 
 	//Read sources
-	INFO_LOG("Reading #"<<sourceTree->GetEntries()<<" sources in file "<<fileName<<"...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Reading #"<<sourceTree->GetEntries()<<" sources in file "<<fileName<<"...");
+	#endif
 	for(int i=0;i<sourceTree->GetEntries();i++){
 		sourceTree->GetEntry(i);
 		int type= aSource->Type;
@@ -1331,12 +1394,16 @@ int ReadSourceData()
 
 		//Select source by type?
 		if( selectTrueSourceByType && type!=selectedTrueSourceType && type!=-1) {
-			DEBUG_LOG("Skip true source type "<<type<<" (selected type="<<selectedTrueSourceType<<")...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Skip true source type "<<type<<" (selected type="<<selectedTrueSourceType<<")...");
+			#endif
 			continue;
 		}
 		//Select source by sim type?
 		if( selectTrueSourceBySimType && simType!=selectedTrueSourceSimType && simType!=-1) {
-			DEBUG_LOG("Skip true source type "<<simType<<" (selected type="<<selectedTrueSourceSimType<<")...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Skip true source type "<<simType<<" (selected type="<<selectedTrueSourceSimType<<")...");
+			#endif
 			continue;
 		}
 
@@ -1345,9 +1412,14 @@ int ReadSourceData()
 		sources.push_back(source);
 	}//end loop sources
 
-	INFO_LOG("#"<<sources.size()<<" true sources to be cross-matched...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<sources.size()<<" true sources to be cross-matched...");
+	#endif
 
-	INFO_LOG("Reading #"<<sourceTree_rec->GetEntries()<<" sources in file "<<fileName_rec<<"...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Reading #"<<sourceTree_rec->GetEntries()<<" sources in file "<<fileName_rec<<"...");
+	#endif
+
 	for(int i=0;i<sourceTree_rec->GetEntries();i++){
 		sourceTree_rec->GetEntry(i);
 
@@ -1356,7 +1428,9 @@ int ReadSourceData()
 		sources_rec.push_back(source);
 	}//end loop sources
 
-	INFO_LOG("#"<<sources_rec.size()<<" rec sources selected in the match catalogue...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<sources_rec.size()<<" rec sources selected in the match catalogue...");
+	#endif
 
 	return 0;
 

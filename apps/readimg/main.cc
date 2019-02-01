@@ -18,7 +18,9 @@
 
 //Caesar headers
 #include <Image.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <SysUtils.h>
 #include <FITSReader.h>
 
@@ -129,14 +131,18 @@ int main(int argc, char *argv[]){
 
 	//## Parse command line options
 	if(ParseOptions(argc,argv)<0){
-		ERROR_LOG("Failed to parse command line options!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to parse command line options!");
+		#endif
 		Clear();
 		return -1;
 	}
 	
 	//## Open output file
 	if(saveToFile && OpenOutputFile()<0){
-		ERROR_LOG("Failed to open output file!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to open output file!");
+		#endif
 		Clear();
 		return -1;	
 	}
@@ -149,7 +155,9 @@ int main(int argc, char *argv[]){
 	//=======================
 	auto t0_read = chrono::steady_clock::now();
 	if(ReadImage()<0){
-		ERROR_LOG("Failed to read image from file!");		
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read image from file!");		
+		#endif
 		Clear();
 		return -1;
 	}
@@ -161,7 +169,9 @@ int main(int argc, char *argv[]){
 	//=======================
 	auto t0_stats = chrono::steady_clock::now();
 	if(ComputeStats()<0){
-		ERROR_LOG("Failed to read image from file!");		
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read image from file!");		
+		#endif
 		Clear();
 		return -1;
 	}
@@ -173,7 +183,9 @@ int main(int argc, char *argv[]){
 	//=======================
 	ProcMemInfo memInfo;
 	if(SysUtils::GetProcMemoryInfo(memInfo)<0){
-		ERROR_LOG("Failed to read process memory info!");		
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read process memory info!");		
+		#endif
 		Clear();
 		return -1;
 	}	
@@ -206,23 +218,40 @@ int main(int argc, char *argv[]){
 	//=======================
 	Clear();
 
-	INFO_LOG("===========================");
-	INFO_LOG("===   PERFORMANCE INFO  ===");
-	INFO_LOG("===========================");
-	INFO_LOG("dt(ms)= "<<dt);
-	INFO_LOG("dt_init(ms)= "<<dt_init<<" ["<<dt_init/dt*100.<<"%]");
-	INFO_LOG("dt_read(ms)= "<<dt_read<<" ["<<dt_read/dt*100.<<"%]");
-	INFO_LOG("dt_stats(ms)= "<<dt_stats<<" ["<<dt_stats/dt*100.<<"%]");
-	INFO_LOG("dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]");
-	INFO_LOG("real mem(kB)= "<<realMem);
-	INFO_LOG("real mem peak(kB)= "<<realPeakMem);
-	INFO_LOG("virt mem(kB)= "<<virtMem);
-	INFO_LOG("virt mem peak(kB)= "<<virtPeakMem);
-	INFO_LOG("===========================");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("===========================");
+		INFO_LOG("===   PERFORMANCE INFO  ===");
+		INFO_LOG("===========================");
+		INFO_LOG("dt(ms)= "<<dt);
+		INFO_LOG("dt_init(ms)= "<<dt_init<<" ["<<dt_init/dt*100.<<"%]");
+		INFO_LOG("dt_read(ms)= "<<dt_read<<" ["<<dt_read/dt*100.<<"%]");
+		INFO_LOG("dt_stats(ms)= "<<dt_stats<<" ["<<dt_stats/dt*100.<<"%]");
+		INFO_LOG("dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]");
+		INFO_LOG("real mem(kB)= "<<realMem);
+		INFO_LOG("real mem peak(kB)= "<<realPeakMem);
+		INFO_LOG("virt mem(kB)= "<<virtMem);
+		INFO_LOG("virt mem peak(kB)= "<<virtPeakMem);
+		INFO_LOG("===========================");
+	#else
+		cout<<"==========================="<<endl;
+		cout<<"===   PERFORMANCE INFO  ==="<<endl;
+		cout<<"==========================="<<endl;
+		cout<<"dt(ms)= "<<dt<<endl;
+		cout<<"dt_init(ms)= "<<dt_init<<" ["<<dt_init/dt*100.<<"%]"<<endl;
+		cout<<"dt_read(ms)= "<<dt_read<<" ["<<dt_read/dt*100.<<"%]"<<endl;
+		cout<<"dt_stats(ms)= "<<dt_stats<<" ["<<dt_stats/dt*100.<<"%]"<<endl;
+		cout<<"dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]"<<endl;
+		cout<<"real mem(kB)= "<<realMem<<endl;
+		cout<<"real mem peak(kB)= "<<realPeakMem<<endl;
+		cout<<"virt mem(kB)= "<<virtMem<<endl;
+		cout<<"virt mem peak(kB)= "<<virtPeakMem<<endl;
+		cout<<"==========================="<<endl;
+	#endif
 	
-	
-	INFO_LOG("End image read");
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("End image read");
+	#endif
+
 	return 0;
 
 }//close main
@@ -317,12 +346,16 @@ int ParseOptions(int argc, char *argv[])
 
 	//## Set logging level
 	std::string sloglevel= GetStringLogLevel(verbosity);
-	LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
-	
+	#ifdef LOGGING_ENABLED
+		LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
+	#endif
+
 	//## Check coords range in case 
 	if(!readFullImage) {
 		if(minx>=maxx || miny>=maxy){
-			ERROR_LOG("Invalid coord range selected (x["<<minx<<","<<maxx<<"] y["<<miny<<","<<maxy<<"])");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Invalid coord range selected (x["<<minx<<","<<maxx<<"] y["<<miny<<","<<maxy<<"])");
+			#endif
 			return -1;
 		}
 	}
@@ -332,15 +365,16 @@ int ParseOptions(int argc, char *argv[])
 	NThreads= SysUtils::GetOMPMaxThreads();
 
 	//## Print options
-	INFO_LOG("========= OPTIONS ============");
-	INFO_LOG("input file: "<<inputFileName);
-	if(!readFullImage) INFO_LOG("x["<<minx<<","<<maxx<<"] y["<<miny<<","<<maxy<<"]");
-	INFO_LOG("image name: "<<imageName);
-	INFO_LOG("nthreads: "<<nthreads<<" (NThreads="<<NThreads<<")");
-	INFO_LOG("useParallelAlgo? "<<useParallelVersion);
-	INFO_LOG("output file: "<<outputFileName);
-	INFO_LOG("===============================");
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("========= OPTIONS ============");
+		INFO_LOG("input file: "<<inputFileName);
+		if(!readFullImage) INFO_LOG("x["<<minx<<","<<maxx<<"] y["<<miny<<","<<maxy<<"]");
+		INFO_LOG("image name: "<<imageName);
+		INFO_LOG("nthreads: "<<nthreads<<" (NThreads="<<NThreads<<")");
+		INFO_LOG("useParallelAlgo? "<<useParallelVersion);
+		INFO_LOG("output file: "<<outputFileName);
+		INFO_LOG("===============================");
+	#endif
 
 	return 0;
 
@@ -368,27 +402,37 @@ int ReadImage(){
 	// Check given input file and get info
 	Caesar::FileInfo info;
 	if(!Caesar::SysUtils::CheckFile(inputFileName,info,false)){
-		ERROR_LOG("Invalid input file ("<<inputFileName<<") specified!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid input file ("<<inputFileName<<") specified!");
+		#endif
 		return -1;
 	}
 	std::string file_extension= info.extension;
 	if(file_extension!= ".fits" && file_extension!=".root") {
-		ERROR_LOG("Invalid file extension ("<<file_extension<<")...nothing to be done!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid file extension ("<<file_extension<<")...nothing to be done!");
+		#endif
 		return -1;
 	}
 
 	//--> ROOT reading
 	if(file_extension==".root"){// Read image from ROOT file
-		INFO_LOG("Reading ROOT input file "<<inputFileName<<"...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Reading ROOT input file "<<inputFileName<<"...");
+		#endif
 		TFile* inputFile = new TFile(inputFileName.c_str(),"READ");
 		if(!inputFile || inputFile->IsZombie()){
-			ERROR_LOG("Cannot open input file "<<inputFileName<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Cannot open input file "<<inputFileName<<"!");
+			#endif
 			return -1;
 		}
 			
 		Image* img=  (Caesar::Image*)inputFile->Get(imageName.c_str());
 		if(!img){
-			ERROR_LOG("Cannot get image from input file "<<inputFileName<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Cannot get image from input file "<<inputFileName<<"!");
+			#endif
 			return -1;
 		}
 
@@ -399,7 +443,9 @@ int ReadImage(){
 		else{
 			inputImg= img->GetTile(minx,maxx,miny,maxy);
 			if(!inputImg){
-				ERROR_LOG("Failed to read subimage!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to read subimage!");
+				#endif
 				delete img;
 				img= 0;
 				return -1;	
@@ -412,8 +458,9 @@ int ReadImage(){
 
 	//--> FITS reading
 	if(file_extension==".fits"){// Read image from FITS file
-		INFO_LOG("Reading FITS input file "<<inputFileName<<"...");
-		
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Reading FITS input file "<<inputFileName<<"...");
+		#endif
 		inputImg= new Caesar::Image;
 		inputImg->SetName(imageName);
 		
@@ -423,14 +470,18 @@ int ReadImage(){
 		else inputImg->ReadFITS(inputFileName,hdu_id,minx,maxx,miny,maxy);
 
 		if(status<0){
-			ERROR_LOG("Failed to read image from input file "<<inputFileName<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read image from input file "<<inputFileName<<"!");
+			#endif
 			return -1;
 		}
 
 	}//close else if
 
 	if(!inputImg){
-		ERROR_LOG("Failed to read image from input file "<<inputFileName<<"!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read image from input file "<<inputFileName<<"!");
+		#endif
 		return -1;
 	}
 
@@ -444,14 +495,18 @@ int ReadImage(){
 int ComputeStats(){
 
 	//## Compute stats
-	INFO_LOG("Computing input image stats...");	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing input image stats...");	
+	#endif
 	bool computeRobustStats= true;
 	bool useRange= false;
 	bool forceRecomputing= false;	
 	double minThr= -std::numeric_limits<double>::infinity();
 	double maxThr= std::numeric_limits<double>::infinity();
 	if(inputImg->ComputeStats(computeRobustStats,forceRecomputing,useRange,minThr,maxThr,useParallelVersion)<0){
-		ERROR_LOG("Stats computing failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Stats computing failed!");
+		#endif
 		return -1;
 	}
 	inputImg->PrintStats();	

@@ -20,7 +20,9 @@
 
 //## CAESAR HEADERS
 #include <ConfigParser.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <CodeUtils.h>
 
 //## MPI HEADERS
@@ -77,7 +79,9 @@ int main(int argc, char *argv[])
 	//== Parse command line options
 	//================================
 	if(ParseOptions(argc,argv)<0){
-		ERROR_LOG("Failed to parse command line options!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to parse command line options!");
+		#endif
 		return -1;
 	}
 
@@ -90,18 +94,26 @@ int main(int argc, char *argv[])
 	//Create finder 
 	SFinder* finder= new SFinder;
 
-	//Run finder
-	INFO_LOG("Starting source finding");
+	//Run finder	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Starting source finding");
+	#endif
 	if(finder->Run()<0){
-		ERROR_LOG("Source finding failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Source finding failed!");
+		#endif
 	}
 	else{
-		INFO_LOG("End source finding");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("End source finding");
+		#endif
 	}
 
 	//Clear finder
 	if(finder){
-		DEBUG_LOG("Clearing up sfinder object ...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Clearing up sfinder object ...");
+		#endif
 		delete finder;
 		finder= 0;
 	}
@@ -109,74 +121,20 @@ int main(int argc, char *argv[])
 	//End timer
 	auto t1 = chrono::steady_clock::now();	
 	double dt= chrono::duration <double, milli> (t1-t0).count();
-	INFO_LOG("Total time spent (s): "<<dt/1000.);
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Total time spent (s): "<<dt/1000.);
+	#endif
 
 	//Close MPI run if enabled
 	if(mpiRunEnabled){
-		INFO_LOG("Finalizing MPI run...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Finalizing MPI run...");
+		#endif
 		MPI_Finalize();
-		INFO_LOG("MPI comm finalized with success");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("MPI comm finalized with success");
+		#endif
 	}
-
-
-	/*
-	if(mpiRunEnabled){
-
-		//## INIT MPI
-		char processor_name[MPI_MAX_PROCESSOR_NAME];
-		int nproc;
-		int procid;
-
-		MPI_Init(&argc, &argv);
-		MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-		MPI_Comm_rank(MPI_COMM_WORLD, &procid);
-		int namelen;
-		MPI_Get_processor_name(processor_name,&namelen);
-		double startTime= MPI_Wtime();
-		INFO_LOG("[PROC "<<procid<<"] - Process "<<procid<<" running on host "<<processor_name);
-		
-		//## RUN FINDER
-		INFO_LOG("[PROC "<<procid<<"] - Starting source finding");
-		SFinder* finder= new SFinder;
-		if(finder->Run()<0){
-			ERROR_LOG("[PROC "<<procid<<"] - Source finding failed!");
-		}
-		else{
-			INFO_LOG("[PROC "<<procid<<"] - End source finding");
-		}
-
-		if(finder){
-			INFO_LOG("Clear finder");
-			delete finder;
-			finder= 0;
-		}
-
-		//## FINALIZE MPI
-		INFO_LOG("Finalizing MPI run...");
-		MPI_Finalize();
-		INFO_LOG("MPI comm finalized with success");
-
-	}//close if
-	else{
-	
-		//## RUN FINDER
-		INFO_LOG("Starting source finding");
-		SFinder* finder= new SFinder;
-		if(finder->Run()<0){
-			ERROR_LOG("Source finding failed!");
-		}
-		else{
-			INFO_LOG("End source finding");
-		}
-
-		if(finder){
-			INFO_LOG("Clear finder");
-			delete finder;
-			finder= 0;
-		}
-	}//close else
-	*/
 
 	return 0;
 
@@ -185,7 +143,6 @@ int main(int argc, char *argv[])
 
 int ParseOptions(int argc, char *argv[])
 {
-	
 	//## Check args
 	if(argc<2){
 		cerr<<"ERROR: Invalid number of arguments...see macro usage!"<<endl;
@@ -240,11 +197,15 @@ int ParseOptions(int argc, char *argv[])
 		//Print processor host
 		//int namelen;
 		//MPI_Get_processor_name(processor_name,&namelen);
-		//INFO_LOG("[PROC "<<procid<<"] - Process "<<procid<<" running on host "<<processor_name);
+		//#ifdef LOGGING_ENABLED
+		//	INFO_LOG("[PROC "<<procid<<"] - Process "<<procid<<" running on host "<<processor_name);
+		//#endif
 	}
 	//else{
 	//	std::string host= SysUtils::GetHost();
-	//	INFO_LOG("[PROC "<<procid<<"] - Process "<<procid<<" running on host "<<host);
+	//  #ifdef LOGGING_ENABLED
+	//		INFO_LOG("[PROC "<<procid<<"] - Process "<<procid<<" running on host "<<host);
+	//	#endif
 	//}
 
 	//## Read config options 
@@ -282,6 +243,7 @@ int ParseOptions(int argc, char *argv[])
 	}
 
 	//Init logger
+	#ifdef LOGGING_ENABLED
 	if(loggerTarget==eCONSOLE_TARGET){
 		std::string consoleTarget= "";
 		GET_OPTION_VALUE(consoleTarget,consoleTarget);
@@ -307,13 +269,16 @@ int ParseOptions(int argc, char *argv[])
 		cerr<<"ERROR: Failed to initialize logger!"<<endl;
 		return -1;
 	}
+	#endif
 
 	//=======================
 	//== Init thread numbers 
 	//=======================
 	int nThreads;
 	if(GET_OPTION_VALUE(nThreads,nThreads)<0){
-		ERROR_LOG("Failed to get nThreads option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get nThreads option!");
+		#endif
 		return -1;
 	}
 	if(nThreads>0) SysUtils::SetOMPThreads(nThreads);
