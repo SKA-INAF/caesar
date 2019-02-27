@@ -27,6 +27,7 @@ At present CAESAR is still being developed with major functionalities to be inte
 
 ### **Prerequisites**
 Install the project mandatory dependencies:  
+
 * ROOT [https://root.cern.ch/], to be built with FITSIO, PyROOT, RInterface options enabled. Make sure that the FindROOT.cmake is present in $ROOTSYS/etc/cmake directory after installation.
 * OpenCV [http://opencv.org/]
 * log4cxx [https://logging.apache.org/log4cxx/]
