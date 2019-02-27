@@ -86,6 +86,13 @@ struct MacroOptions {
 		applyFitQualityCut= true;
 		fitQualityCut= 3;
 
+		applySourceMatchPixOverlapCut= true;
+		sourceMatchPixOverlapMinCut= 0.1;
+		sourceMatchPixOverlapMaxCut= 0.6;
+		applySourceMatchFluxOverlapCut= true;
+		sourceMatchFluxOverlapMinCut= 0.7;
+		sourceMatchFluxOverlapMaxCut= 1.3;	
+		
 		//- Drawing options
 		drawErrorX= false;
 	
@@ -135,6 +142,14 @@ struct MacroOptions {
 	bool applyFitQualityCut;
 	int fitQualityCut;
 
+	//- Extended source selection cuts
+	bool applySourceMatchPixOverlapCut;
+	double sourceMatchPixOverlapMinCut;
+	double sourceMatchPixOverlapMaxCut;	
+	bool applySourceMatchFluxOverlapCut;
+	double sourceMatchFluxOverlapMinCut;
+	double sourceMatchFluxOverlapMaxCut;
+
 	//- Draw options
 	bool drawErrorX;
 
@@ -161,10 +176,29 @@ std::vector<double> Zbins= {0.1,0.5,1,2.5,5,7.5,10,25,50,75,100,250,500,750,1000
 std::vector<double> LgFluxBins= {
 	-4.5,-4,-3.5,-3.25,-3,-2.75,-2.5,-2.25,-2,-1.75,-1.5,-1.25,-1,-0.5,0,1,2
 };
-std::vector<double> LgFluxBins_ext= {
-	-4.5,-3.5,-3,-2.5,-2,-1.5,-1,-0.5,0,1,2
-};
 
+std::vector<double> LgFluxBins_ext= {
+	-4.5,-3.5,-3,-2.5,-2,-1.5,-1,-0.5,0,0.5,1,1.5,2
+};
+/*
+std::vector<double> LgFluxBins_ext= {
+	-4.5,-4,-3.5,-3.25,-3,-2.75,-2.5,-2.25,-2,-1.75,-1.5,-1.25,-1,-0.5,0,1,2
+};
+*/
+
+/*
+std::vector<double> SourceScaleBins_ext= {
+	0,0.25,0.5,0.75,1,1.25,1.5,1.75,2,2.25,2.5,2.75,3,3.25,3.5,3.75,4,4.25
+};
+*/
+std::vector<double> SourceScaleBins_ext= {
+	0,0.2,0.4,0.6,0.8,1,1.2,1.4,1.6,1.8,2,2.2,2.4,2.6,2.8,3.,3.2,3.4,3.6,3.8,4.
+};
+/*
+std::vector<double> SourceScaleBins_ext= {
+	0,0.5,1,1.5,2,2.5,3,3.5,4,4.5
+};
+*/
 //- Output file
 TFile* outputFile= 0;
 
@@ -206,7 +240,6 @@ TH1D* NRecSourceHisto_compact_fit= 0;
 TH1D* NRecSourceHisto_compact_fit_presel= 0;
 TH1D* NRecSourceHisto_compact_fit_cutsel= 0;
 TH1D* NRecSourceHisto_compact_fit_nnsel= 0;
-
 TH1D* NTrueSourceHisto_reliability_compact_fit= 0;
 TH1D* NRecSourceHisto_reliability_compact_fit= 0;
 TH1D* NTrueSourceHisto_reliability_compact_fit_presel= 0;
@@ -285,6 +318,12 @@ TH1D* NTrueSourceHisto_reliability_ext= 0;
 TH1D* NRecSourceHisto_reliability_ext= 0;
 TEfficiency* Efficiency_ext= 0;
 TEfficiency* Reliability_ext= 0;
+TH2D* NTrueSourceVSScaleHisto_ext= 0;
+TH2D* NRecSourceVSScaleHisto_ext= 0;
+TH2D* NTrueSourceVSScaleHisto_reliability_ext= 0;
+TH2D* NRecSourceVSScaleHisto_reliability_ext= 0;
+TEfficiency* EfficiencyVSScale_ext= 0;
+TEfficiency* ReliabilityVSScale_ext= 0;
 
 const int nSimTypes= 6;
 std::vector<std::string> SimTypeLabels {"ring","bubble","ellipse","disk","blob","composite"};
@@ -301,9 +340,13 @@ std::vector<TH1D*> NTrueSourceHisto_simtypes_ext;
 std::vector<TH1D*> NRecSourceHisto_simtypes_ext;
 std::vector<TEfficiency*> Efficiency_simtypes_ext;
 
+
 TGraphAsymmErrors* xPosAccuracyGraph_ext= 0;
 TGraphAsymmErrors* yPosAccuracyGraph_ext= 0;
+TGraphAsymmErrors* xPosResolutionGraph_ext= 0;
+TGraphAsymmErrors* yPosResolutionGraph_ext= 0;
 TGraphAsymmErrors* FluxDensityAccuracyGraph_ext= 0;
+TGraphAsymmErrors* FluxDensityResolutionGraph_ext= 0;
 
 std::vector< std::vector<double> > FluxList_ext;
 std::vector< std::vector<double> > xPosPullList_ext;
@@ -523,6 +566,7 @@ void Init()
 
 	int nBins= (int)(LgFluxBins.size()-1);
 	int nBins_ext= (int)(LgFluxBins_ext.size()-1);
+	int nBins_scale_ext= (int)(SourceScaleBins_ext.size()-1);
 	int nBins_Z= (int)(Zbins.size()-1);
 	
 	//## Init data vector
@@ -582,6 +626,14 @@ void Init()
 	histoName= "NRecSourceHisto_ext";
 	NRecSourceHisto_ext= new TH1D(histoName,"Rec extended source distribution",nBins_ext,LgFluxBins_ext.data());
 	NRecSourceHisto_ext->Sumw2();
+
+	histoName= "NTrueSourceVSScaleHisto_ext";
+	NTrueSourceVSScaleHisto_ext= new TH2D(histoName,"True extended source distribution",nBins_ext,LgFluxBins_ext.data(),nBins_scale_ext,SourceScaleBins_ext.data());
+	NTrueSourceVSScaleHisto_ext->Sumw2();
+
+	histoName= "NRecSourceVSScaleHisto_ext";
+	NRecSourceVSScaleHisto_ext= new TH2D(histoName,"Rec extended source distribution",nBins_ext,LgFluxBins_ext.data(),nBins_scale_ext,SourceScaleBins_ext.data());
+	NRecSourceVSScaleHisto_ext->Sumw2();
 		
 	TH1D* histo= 0;
 	for(int k=0;k<nSimTypes;k++){
@@ -637,6 +689,15 @@ void Init()
 	histoName= "NRecSourceHisto_reliability_ext";
 	NRecSourceHisto_reliability_ext= new TH1D(histoName,"Rec extended source distribution",nBins_ext,LgFluxBins_ext.data());
 	NRecSourceHisto_reliability_ext->Sumw2();
+
+
+	histoName= "NTrueSourceVSScaleHisto_reliability_ext";
+	NTrueSourceVSScaleHisto_reliability_ext= new TH2D(histoName,"True extended source distribution",nBins_ext,LgFluxBins_ext.data(),nBins_scale_ext,SourceScaleBins_ext.data());
+	NTrueSourceVSScaleHisto_reliability_ext->Sumw2();
+
+	histoName= "NRecSourceVSScaleHisto_reliability_ext";
+	NRecSourceVSScaleHisto_reliability_ext= new TH2D(histoName,"Rec extended source distribution",nBins_ext,LgFluxBins_ext.data(),nBins_scale_ext,SourceScaleBins_ext.data());
+	NRecSourceVSScaleHisto_reliability_ext->Sumw2();
 
 	//- Pos accuracy graphs
 	TString graphName= "";
@@ -715,6 +776,14 @@ void Init()
 	yPosAccuracyGraph_ext= new TGraphAsymmErrors;
 	yPosAccuracyGraph_ext->SetName(graphName);
 
+	graphName= "xPosResolutionGraph_ext";
+	xPosResolutionGraph_ext= new TGraphAsymmErrors;
+	xPosResolutionGraph_ext->SetName(graphName);
+	
+	graphName= "yPosResolutionGraph_ext";
+	yPosResolutionGraph_ext= new TGraphAsymmErrors;
+	yPosResolutionGraph_ext->SetName(graphName);
+
 	//- Flux accuracy graphs
 	graphName= "FluxDensityAccuracyGraph_compact_fit";
 	FluxDensityAccuracyGraph_compact_fit= new TGraphAsymmErrors;
@@ -731,7 +800,6 @@ void Init()
 	graphName= "FluxDensityAccuracyGraph_compact_fit_nnsel";
 	FluxDensityAccuracyGraph_compact_fit_nnsel= new TGraphAsymmErrors;
 	FluxDensityAccuracyGraph_compact_fit_nnsel->SetName(graphName);
-
 
 	graphName= "FluxDensityResolutionGraph_compact_fit";
 	FluxDensityResolutionGraph_compact_fit= new TGraphAsymmErrors;
@@ -758,7 +826,9 @@ void Init()
 	FluxDensityAccuracyGraph_ext= new TGraphAsymmErrors;
 	FluxDensityAccuracyGraph_ext->SetName(graphName);
 
-	
+	graphName= "FluxDensityResolutionGraph_ext";
+	FluxDensityResolutionGraph_ext= new TGraphAsymmErrors;
+	FluxDensityResolutionGraph_ext->SetName(graphName);
 	
 }//close Init()
 
@@ -788,6 +858,10 @@ void ComputeAnalysisHistos()
 	Efficiency_ext = new TEfficiency(*NRecSourceHisto_ext,*NTrueSourceHisto_ext); 
 	Efficiency_ext->SetStatisticOption(gEfficiencyErrModel);  // to set option for errors (see ref doc)
 	Efficiency_ext->SetConfidenceLevel(0.68);
+
+	EfficiencyVSScale_ext = new TEfficiency(*NRecSourceVSScaleHisto_ext,*NTrueSourceVSScaleHisto_ext); 
+	EfficiencyVSScale_ext->SetStatisticOption(gEfficiencyErrModel);  // to set option for errors (see ref doc)
+	EfficiencyVSScale_ext->SetConfidenceLevel(0.68);
 
 	INFO_LOG("#"<<NTrueSourceHisto_ext->GetEntries()<<" extended sources analyzed");
 	for(int i=0;i<NTrueSourceHisto_ext->GetNbinsX();i++){
@@ -833,6 +907,9 @@ void ComputeAnalysisHistos()
 	Reliability_ext->SetStatisticOption(gEfficiencyErrModel);  // to set option for errors (see ref doc)
 	Reliability_ext->SetConfidenceLevel(0.68);
 
+	ReliabilityVSScale_ext = new TEfficiency(*NTrueSourceVSScaleHisto_reliability_ext,*NRecSourceVSScaleHisto_reliability_ext); 
+	ReliabilityVSScale_ext->SetStatisticOption(gEfficiencyErrModel);  // to set option for errors (see ref doc)
+	ReliabilityVSScale_ext->SetConfidenceLevel(0.68);
 
 	//Compute data list stats
 	int nMinPointsToDraw= 2;
@@ -1338,6 +1415,7 @@ void ComputeAnalysisHistos()
 			FluxDensityResolutionGraph_compact_fit_presel->SetPointError(nPoints_FluxPull_fit_presel,xerr_low,xerr_up,yerr_low,yerr_up);
 			
 			//Histo
+			/*
 			TString histoName= Form("FluxDensityPullHisto%d__compact_fit_presel",i+1);
 			TH1D* h= new TH1D(histoName,histoName,500,fluxpull_min-10,fluxpull_max+10);
 			h->Sumw2();
@@ -1345,6 +1423,7 @@ void ComputeAnalysisHistos()
 				h->Fill(FluxDensityPullList_compact_fit_presel[i][k]);
 			}
 			FluxDensityPullHistos_compact_fit_presel.push_back(h);
+			*/
 
 			/*
 			std::vector<double> fluxpull_data= FluxDensityPullList_compact_fit_presel[i];
@@ -1453,19 +1532,14 @@ void ComputeAnalysisHistos()
 			
 			nPoints_FluxPull_fit_nnsel++;
 		}	
-		
-
-		
-
-		
+				
 	}//end loop bins
 
 	//Fill graph for ext
 	for(int i=0;i<nBins_ext;i++){
 		double x_avg= LgFluxBins_ext[i] + 0.5*(LgFluxBins_ext[i+1]-LgFluxBins_ext[i]);
 
-
-
+		/*
 		//Compute Flux accuracy for extended sources
 		if(FluxDensityPullList_ext[i].size()>=nMinPointsToDraw){
 			Caesar::BoxStats<double> stats= StatsUtils::ComputeBoxStats(FluxDensityPullList_ext[i]);
@@ -1484,9 +1558,62 @@ void ComputeAnalysisHistos()
 			FluxDensityAccuracyGraph_ext->SetPointError(nPoints_FluxPull_ext,xerr_low,xerr_up,yerr_low,yerr_up);
 			nPoints_FluxPull_ext++;
 		}	
-
+		*/
 		
+		//Compute Flux accuracy for extended sources
+		if(FluxDensityPullList_ext[i].size()>=nMinPointsToDraw){
+			int nEntries= (int)(FluxDensityPullList_ext[i].size());
+			Caesar::BoxStats<double> stats_fluxpull= StatsUtils::ComputeBoxStats(FluxDensityPullList_ext[i]);	
+			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_ext[i]);
 
+			std::map<std::string,double> statsBootstrapErr_fluxpull;			
+			int nBootstrapSamples= 1000;
+			Caesar::StatsUtils::ComputeStatsBootstrapError(statsBootstrapErr_fluxpull,FluxDensityPullList_ext[i],nBootstrapSamples);
+
+			double x= stats_x.median;
+			double xerr_low= x-stats_x.Q1;
+			double xerr_up= stats_x.Q3-x;
+			if(!opt.drawErrorX){
+				xerr_low= 0;
+				xerr_up= 0;
+			}
+		
+			double fluxpull_mean= 0;
+			double fluxpull_rms= 0;
+			Caesar::StatsUtils::ComputeMeanAndRMS(fluxpull_mean,fluxpull_rms,FluxDensityPullList_ext[i]);
+			double fluxpull_median= stats_fluxpull.median;
+			double fluxpull_median_err= 1.253*fluxpull_rms/sqrt(nEntries);
+			double fluxpull_median_robust_err= statsBootstrapErr_fluxpull["median"];
+			double fluxpull_iqr= stats_fluxpull.Q3-stats_fluxpull.Q1;
+			double fluxpull_iqr_err= 1.573*fluxpull_rms/sqrt(nEntries);
+			double fluxpull_iqr_robust_err= statsBootstrapErr_fluxpull["iqr"];
+			double fluxpull_iqr_half= fluxpull_iqr/2.;
+			double fluxpull_iqr_half_err= 0.5*fluxpull_iqr_err;
+			double fluxpull_iqr_half_robust_err= 0.5*fluxpull_iqr_robust_err;
+
+			//Bias graph
+			double y= fluxpull_median;
+			//double yerr_low= fluxpull_median_err;
+			//double yerr_up= fluxpull_median_err;
+			double yerr_low= fluxpull_median_robust_err;
+			double yerr_up= fluxpull_median_robust_err;
+			FluxDensityAccuracyGraph_ext->SetPoint(nPoints_FluxPull_ext,x,y);
+			FluxDensityAccuracyGraph_ext->SetPointError(nPoints_FluxPull_ext,xerr_low,xerr_up,yerr_low,yerr_up);
+
+			//Reso graph
+			y= fluxpull_iqr_half;
+			//yerr_low= fluxpull_iqr_half_err;
+			//yerr_up= fluxpull_iqr_half_err;
+			yerr_low= fluxpull_iqr_half_robust_err;
+			yerr_up= fluxpull_iqr_half_robust_err;
+			FluxDensityResolutionGraph_ext->SetPoint(nPoints_FluxPull_ext,x,y);
+			FluxDensityResolutionGraph_ext->SetPointError(nPoints_FluxPull_ext,xerr_low,xerr_up,yerr_low,yerr_up);
+			
+			nPoints_FluxPull_ext++;
+		}	
+
+
+		/*
 		//Compute xpos accuracy	extended sources	
 		if(xPosPullList_ext[i].size()>=nMinPointsToDraw){
 			Caesar::BoxStats<double> stats= StatsUtils::ComputeBoxStats(xPosPullList_ext[i]);
@@ -1505,7 +1632,61 @@ void ComputeAnalysisHistos()
 			xPosAccuracyGraph_ext->SetPointError(nPoints_xPull_ext,xerr_low,xerr_up,yerr_low,yerr_up);
 			nPoints_xPull_ext++;
 		}
+		*/
 
+		//Compute xpos accuracy	for extended sources		
+		if(xPosPullList_ext[i].size()>=nMinPointsToDraw){
+			int nEntries= (int)(xPosPullList_ext[i].size());
+			Caesar::BoxStats<double> stats_posx= StatsUtils::ComputeBoxStats(xPosPullList_ext[i]);
+			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_ext[i]);
+		
+			std::map<std::string,double> statsBootstrapErr_posx;			
+			int nBootstrapSamples= 1000;
+			Caesar::StatsUtils::ComputeStatsBootstrapError(statsBootstrapErr_posx,xPosPullList_ext[i],nBootstrapSamples);
+
+			double x= stats_x.median;
+			double xerr_low= x-stats_x.Q1;
+			double xerr_up= stats_x.Q3-x;
+			if(!opt.drawErrorX){
+				xerr_low= 0;
+				xerr_up= 0;
+			}
+           
+			double posx_mean= 0;
+			double posx_rms= 0;
+			Caesar::StatsUtils::ComputeMeanAndRMS(posx_mean,posx_rms,xPosPullList_ext[i]);
+			double posx_median= stats_posx.median;
+			double posx_median_err= 1.253*posx_rms/sqrt(nEntries);
+			double posx_median_robust_err= statsBootstrapErr_posx["median"];
+			double posx_iqr= stats_posx.Q3-stats_posx.Q1;
+			double posx_iqr_err= 1.573*posx_rms/sqrt(nEntries);
+			double posx_iqr_half= posx_iqr/2.;
+			double posx_iqr_half_err= 0.5*posx_iqr_err;
+			double posx_iqr_robust_err= statsBootstrapErr_posx["iqr"];
+			double posx_iqr_half_robust_err= 0.5*posx_iqr_robust_err;
+
+			//Bias graph
+			double y= posx_median; 
+			//double yerr_low= posx_median-stats_posx.Q1;
+			//double yerr_up= stats_posx.Q3-posx_median;
+			double yerr_low= posx_median_robust_err;
+			double yerr_up= posx_median_robust_err;
+			xPosAccuracyGraph_ext->SetPoint(nPoints_xPull_ext,x,y);
+			xPosAccuracyGraph_ext->SetPointError(nPoints_xPull_ext,xerr_low,xerr_up,yerr_low,yerr_up);
+
+			//Reso graph
+			y= posx_iqr_half;
+			//yerr_low= posx_iqr_half_err;
+			//yerr_up= posx_iqr_half_err;
+			yerr_low= posx_iqr_half_robust_err;
+			yerr_up= posx_iqr_half_robust_err;
+			xPosResolutionGraph_ext->SetPoint(nPoints_xPull_ext,x,y);
+			xPosResolutionGraph_ext->SetPointError(nPoints_xPull_ext,xerr_low,xerr_up,yerr_low,yerr_up);
+
+			nPoints_xPull_ext++;
+		}//close if
+
+		/*
 		//Compute ypos accuracy extended sources
 		if(yPosPullList_ext[i].size()>=nMinPointsToDraw){
 			Caesar::BoxStats<double> stats= StatsUtils::ComputeBoxStats(yPosPullList_ext[i]);
@@ -1522,6 +1703,62 @@ void ComputeAnalysisHistos()
 			double yerr_up= stats.Q3-y;
 			yPosAccuracyGraph_ext->SetPoint(nPoints_yPull_ext,x,y);
 			yPosAccuracyGraph_ext->SetPointError(nPoints_yPull_ext,xerr_low,xerr_up,yerr_low,yerr_up);
+			nPoints_yPull_ext++;
+		}	
+		*/
+
+
+		//Compute ypos accuracy fit
+		if(yPosPullList_ext[i].size()>=nMinPointsToDraw){
+			int nEntries= (int)(yPosPullList_ext[i].size());
+			Caesar::BoxStats<double> stats_posy= StatsUtils::ComputeBoxStats(yPosPullList_ext[i]);
+			Caesar::BoxStats<double> stats_x= StatsUtils::ComputeBoxStats(FluxList_ext[i]);
+
+			std::map<std::string,double> statsBootstrapErr_posy;			
+			int nBootstrapSamples= 1000;
+			Caesar::StatsUtils::ComputeStatsBootstrapError(statsBootstrapErr_posy,yPosPullList_ext[i],nBootstrapSamples);
+
+			double x= stats_x.median;
+			x+= pointOffsetX;
+			double xerr_low= x-stats_x.Q1;
+			double xerr_up= stats_x.Q3-x;
+			if(!opt.drawErrorX){
+				xerr_low= 0;
+				xerr_up= 0;
+			}
+
+			double posy_mean= 0;
+			double posy_rms= 0;
+			Caesar::StatsUtils::ComputeMeanAndRMS(posy_mean,posy_rms,yPosPullList_ext[i]);
+			double posy_median= stats_posy.median;
+			double posy_err= posy_rms/sqrt(nEntries);
+			double posy_median_err= 1.253*posy_rms/sqrt(nEntries);
+			double posy_median_robust_err= statsBootstrapErr_posy["median"];
+			double posy_iqr= stats_posy.Q3-stats_posy.Q1;
+			double posy_iqr_err= 1.573*posy_rms/sqrt(nEntries);
+			double posy_iqr_robust_err= statsBootstrapErr_posy["iqr"];
+			double posy_iqr_half= posy_iqr/2.;
+			double posy_iqr_half_err= 0.5*posy_iqr_err;
+			double posy_iqr_half_robust_err= 0.5*posy_iqr_robust_err;
+
+			//Bias graph
+			double y= posy_median;
+			//double yerr_low= posy_median_err;
+			//double yerr_up= posy_median_err;
+			double yerr_low= posy_median_robust_err;
+			double yerr_up= posy_median_robust_err;
+			yPosAccuracyGraph_ext->SetPoint(nPoints_yPull_ext,x,y);
+			yPosAccuracyGraph_ext->SetPointError(nPoints_yPull_ext,xerr_low,xerr_up,yerr_low,yerr_up);
+
+			//Reso graph
+			y= posy_iqr_half;
+			//yerr_low= posy_iqr_half_err;
+			//yerr_up= posy_iqr_half_err;
+			yerr_low= posy_iqr_half_robust_err;
+			yerr_up= posy_iqr_half_robust_err;
+			yPosResolutionGraph_ext->SetPoint(nPoints_yPull_ext,x,y);
+			yPosResolutionGraph_ext->SetPointError(nPoints_yPull_ext,xerr_low,xerr_up,yerr_low,yerr_up);
+
 			nPoints_yPull_ext++;
 		}	
 
@@ -1793,6 +2030,7 @@ int AnalyzeData(std::string filename){
 	std::string* Name_true= 0;
 	int Type_true;
 	int SimType_true;
+	double SimMaxScale_true;
 	long long NPix;
 	double X0_true;//true pos x
 	double Y0_true;//true pos y
@@ -1818,6 +2056,11 @@ int AnalyzeData(std::string filename){
 	double S_bkg;
 	double AvgBkg;
 	double AvgRMS;
+	double Sratio;
+	double Sratio_rec;
+	double MatchFraction;
+	double MatchFraction_rec;
+	double sourceMaxScale_rec;
 
 	int HasFitInfo;
 	double X0_fit;//fitted pos x
@@ -1916,6 +2159,7 @@ int AnalyzeData(std::string filename){
 	RecSourceInfo->SetBranchAddress("ndf_fit",&ndf_fit);
 	RecSourceInfo->SetBranchAddress("fitQuality",&fitQuality);
 	RecSourceInfo->SetBranchAddress("fitComponentFlag",&fitComponentFlag);
+	RecSourceInfo->SetBranchAddress("sourceMaxScale_rec",&sourceMaxScale_rec);
 
 	//Get extended source match tree
 	TTree* ExtSourceMatchInfo= (TTree*)inputFile->Get("ExtSourceMatchInfo");
@@ -1927,6 +2171,7 @@ int AnalyzeData(std::string filename){
 	ExtSourceMatchInfo->SetBranchAddress("name",&Name_true);
 	ExtSourceMatchInfo->SetBranchAddress("type",&Type_true);
 	ExtSourceMatchInfo->SetBranchAddress("simtype",&SimType_true);
+	ExtSourceMatchInfo->SetBranchAddress("simmaxscale",&SimMaxScale_true);
 	ExtSourceMatchInfo->SetBranchAddress("NPix",&NPix);
 	ExtSourceMatchInfo->SetBranchAddress("X0_true",&X0_true);
  	ExtSourceMatchInfo->SetBranchAddress("Y0_true",&Y0_true);
@@ -1950,6 +2195,11 @@ int AnalyzeData(std::string filename){
 	ExtSourceMatchInfo->SetBranchAddress("S_bkg",&S_bkg);
 	ExtSourceMatchInfo->SetBranchAddress("AvgBkg",&AvgBkg);
 	ExtSourceMatchInfo->SetBranchAddress("AvgRMS",&AvgRMS);
+
+	ExtSourceMatchInfo->SetBranchAddress("MatchFraction",&MatchFraction);
+	ExtSourceMatchInfo->SetBranchAddress("MatchFraction_rec",&MatchFraction_rec);
+	ExtSourceMatchInfo->SetBranchAddress("Sratio",&Sratio);
+	ExtSourceMatchInfo->SetBranchAddress("Sratio_rec",&Sratio_rec);
 
 	/*
 	//Get point/compact source reliability tree
@@ -2278,7 +2528,8 @@ int AnalyzeData(std::string filename){
 		double nBeams_true= (double)(NPix)/beamArea_true;
 		double Z_true= fluxDensity_true/(opt.noiseLevel_true*sqrt(nBeams_true));
 		//double Z_true= fluxDensity_true/(AvgRMS*sqrt(nBeams_true));
-		
+		double lgSourceScale_true= log10(SimMaxScale_true);	
+	
 		//Apply selection cuts to true source
 		//- Skip true source if overlapping with another true source
 		if(!trueExtSourceSelectionFlags[i]) {
@@ -2290,6 +2541,7 @@ int AnalyzeData(std::string filename){
 		int gBin= NTrueSourceHisto_ext->FindBin(lgFlux_true);
 		if(NTrueSourceHisto_ext->IsBinUnderflow(gBin) || NTrueSourceHisto_ext->IsBinOverflow(gBin)) continue;	
 		NTrueSourceHisto_ext->Fill(lgFlux_true,1);
+		NTrueSourceVSScaleHisto_ext->Fill(lgFlux_true,lgSourceScale_true,1);
 		
 		int simtype_index= SimTypeToIndexMap[SimType_true];
 		NTrueSourceHisto_simtypes_ext[simtype_index]->Fill(lgFlux_true,1);
@@ -2300,13 +2552,30 @@ int AnalyzeData(std::string filename){
 		//Skip if true source is not detected
 		if(found==0) continue;
 
+		//Apply overlap cuts?
+		//- Pixel overlap cut
+		bool pixOverlapCutPassed= (MatchFraction>opt.sourceMatchPixOverlapMaxCut && MatchFraction_rec>opt.sourceMatchPixOverlapMaxCut);
+		
+		//- Flux overlap cut
+		bool fluxOverlapCutPassed= (
+			(MatchFraction>opt.sourceMatchPixOverlapMinCut && Sratio>opt.sourceMatchFluxOverlapMinCut && Sratio<opt.sourceMatchFluxOverlapMaxCut) &&
+			(MatchFraction_rec>opt.sourceMatchPixOverlapMinCut && Sratio_rec>opt.sourceMatchFluxOverlapMinCut && Sratio_rec<opt.sourceMatchFluxOverlapMaxCut)				
+		);
+
+		if(!pixOverlapCutPassed && !fluxOverlapCutPassed) continue;
+
+		//if( (opt.applySourceMatchPixOverlapCut && !pixOverlapCutPassed) && (opt.applySourceMatchFluxOverlapCut && !!fluxOverlapCutPassed) ){
+		//	continue;
+		//}
+
+
 		//Fill rec info	
 		nRecSources_ext++;
 		nRecSources_simtypes_ext[simtype_index]++;
 		NRecSourceHisto_ext->Fill(lgFlux_true,1);
-		//NRecSourceVSSignificanceHisto_ext->Fill(Z_true,1);
 		NRecSourceHisto_simtypes_ext[simtype_index]->Fill(lgFlux_true,1);
-		
+		NRecSourceVSScaleHisto_ext->Fill(lgFlux_true,lgSourceScale_true,1);
+
 		//double xOffset= fabs(X0_rec-X0);
 		//double yOffset= fabs(Y0_rec-Y0);
 		//double xOffset= fabs(X0_sweighted_rec-X0_sweighted);
@@ -2346,6 +2615,19 @@ int AnalyzeData(std::string filename){
 		bool atEdge= (atEdgeX || atEdgeY);
 		if(opt.excludeSourceAtEdge && atEdge) continue;
 
+		//Apply overlap cuts?
+		//- Pixel overlap cut
+		bool pixOverlapCutPassed= (MatchFraction>opt.sourceMatchPixOverlapMaxCut && MatchFraction_rec>opt.sourceMatchPixOverlapMaxCut);
+		
+		//- Flux overlap cut
+		bool fluxOverlapCutPassed= (
+			(MatchFraction>opt.sourceMatchPixOverlapMinCut && Sratio>opt.sourceMatchFluxOverlapMinCut && Sratio<opt.sourceMatchFluxOverlapMaxCut) &&
+			(MatchFraction_rec>opt.sourceMatchPixOverlapMinCut && Sratio_rec>opt.sourceMatchFluxOverlapMinCut && Sratio_rec<opt.sourceMatchFluxOverlapMaxCut)				
+		);
+
+		if(!pixOverlapCutPassed && !fluxOverlapCutPassed) continue;
+
+
 		//- Skip if source has matches with excluded true sources
 		if(nTrueMatchedSources>0){
 			int nTrueSourceMatch_sel= 0;
@@ -2371,16 +2653,17 @@ int AnalyzeData(std::string filename){
 
 		//Fill rec info
 		double lgFlux_rec= log10(fluxDensity_rec/beamArea_rec);
+		double lgSourceScale_rec= log10(sourceMaxScale_rec);
 		//double nBeams_rec= (double)(NPix_rec)/beamArea_rec;
 		double nBeams_rec= 1;//ADD NPIXRec to ROOT TTRee
 		double Z_rec= (fluxDensity_rec/beamArea_rec)/(opt.noiseLevel_true*sqrt(nBeams_rec));
 		NRecSourceHisto_reliability_ext->Fill(lgFlux_rec,1);
-		//NRecSourceVSSignificanceHisto_reliability_ext->Fill(Z_rec,1);
-
+		NRecSourceVSScaleHisto_reliability_ext->Fill(lgFlux_rec,lgSourceScale_rec,1);
+		
 		//Fill true info
 		if(nTrueMatchedSources>0){
 			NTrueSourceHisto_reliability_ext->Fill(lgFlux_rec,1);
-			//NTrueSourceVSSignificanceHisto_reliability_ext->Fill(Z_rec,1);
+			NTrueSourceVSScaleHisto_reliability_ext->Fill(lgFlux_rec,lgSourceScale_rec,1);
 		}
 
 	}//end loop rec sources
@@ -2390,11 +2673,21 @@ int AnalyzeData(std::string filename){
 }//close AnalyzeData()
 
 
-void Draw(){
-
+void Draw()
+{
+	//Set style
 	gROOT->SetStyle("myStyle2");
+
+	//Set palette
+	//gStyle->SetPalette(kDarkBodyRadiator);
+	//gStyle->SetPalette(kTemperatureMap);
+	gStyle->SetPalette(kGreyScale);
+
+
+	gStyle->SetNumberContours(999);
 	//gStyle->SetOptLogx();
 	//gStyle->SetErrorX(0.0001);
+
 
 	//double xMin_draw= LgFluxBins[0];
 	//double xMax_draw= LgFluxBins[LgFluxBins.size()-1];
@@ -2568,7 +2861,22 @@ void Draw(){
 	EffPlotLegend_ext->AddEntry(Eff_sigmaDetectionArea_ext,"5#sigma detection limit","F");
 	EffPlotLegend_ext->Draw("same");
 
-	
+	//- Efficiency 2D (flux-source scale)
+	TCanvas* EffVSScalePlot_ext= new TCanvas("EffVSScalePlot_ext","EffVSScalePlot_ext");
+	EffVSScalePlot_ext->cd();
+
+	TH2D* EfficiencyVSScaleHisto_ext= (TH2D*)EfficiencyVSScale_ext->CreateHistogram();
+	EfficiencyVSScaleHisto_ext->SetMinimum(-0.0001);
+	EfficiencyVSScaleHisto_ext->SetMaximum(1.0001);
+	EfficiencyVSScaleHisto_ext->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+	EfficiencyVSScaleHisto_ext->GetXaxis()->SetTitleSize(0.06);
+	EfficiencyVSScaleHisto_ext->GetYaxis()->SetTitle("log_{10}(size/arcsec)");
+	EfficiencyVSScaleHisto_ext->GetYaxis()->SetTitleSize(0.06);
+	EfficiencyVSScaleHisto_ext->GetZaxis()->SetTitle("Completeness");
+	EfficiencyVSScaleHisto_ext->GetZaxis()->SetTitleSize(0.05);
+	EfficiencyVSScaleHisto_ext->Draw("COLZ");
+
+
 	//===============================================
 	//==          DRAW RELIABILITY
 	//===============================================
@@ -2778,7 +3086,22 @@ void Draw(){
 	
 	//detectionThrLine->Draw("l");
 
-	
+	//- Reliability 2D (flux-source scale)
+	TCanvas* ReliabilityVSScalePlot_ext= new TCanvas("ReliabilityVSScalePlot_ext","ReliabilityVSScalePlot_ext");
+	ReliabilityVSScalePlot_ext->cd();
+
+	ReliabilityVSScale_ext->Draw("COLZ");
+
+	TH2D* ReliabilityVSScaleHisto_ext= (TH2D*)ReliabilityVSScale_ext->CreateHistogram();
+	ReliabilityVSScaleHisto_ext->SetMinimum(-0.0001);
+	ReliabilityVSScaleHisto_ext->SetMaximum(1.0001);
+	ReliabilityVSScaleHisto_ext->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+	ReliabilityVSScaleHisto_ext->GetXaxis()->SetTitleSize(0.06);
+	ReliabilityVSScaleHisto_ext->GetYaxis()->SetTitle("log_{10}(size/arcsec)");
+	ReliabilityVSScaleHisto_ext->GetYaxis()->SetTitleSize(0.06);
+	ReliabilityVSScaleHisto_ext->GetZaxis()->SetTitle("Reliability");
+	ReliabilityVSScaleHisto_ext->GetZaxis()->SetTitleSize(0.05);
+	ReliabilityVSScaleHisto_ext->Draw("COLZ");
 
 	//===============================================
 	//==          DRAW POSITIONAL ACCURACY
@@ -2794,7 +3117,6 @@ void Draw(){
 	double PosResolution_detectionAreaX[]= {minPosAccuracyX_draw,log10(5*opt.noiseLevel_true)};
 	double PosResolution_detectionAreaY[]= {minPosResolution_draw,minPosResolution_draw};
 
-	
 	TCanvas* PosAccuracyPlot= new TCanvas("PosAccuracyPlot","PosAccuracyPlot",550,950);
 	PosAccuracyPlot->cd();
 
@@ -2979,26 +3301,90 @@ void Draw(){
 	PosAccuracyPlot->Update();
 
 	
-	//- Pos accuracy for extended sources
-	TCanvas* PosAccuracyPlot_ext= new TCanvas("PosAccuracyPlot_ext","PosAccuracyPlot_ext");
+	//## Pos accuracy for extended sources
+	double minPosAccuracy_ext_draw= -10;
+	double maxPosAccuracy_ext_draw= 10;
+	double minPosAccuracyX_ext_draw= -4;
+	double maxPosAccuracyX_ext_draw= 2;
+	double minPosResolution_ext_draw= 0;
+	double maxPosResolution_ext_draw= 10.;
+	
+	/*
+	TCanvas* PosAccuracyPlot_ext= new TCanvas("PosAccuracyPlot_ext","PosAccuracyPlot_ext",550,950);
 	PosAccuracyPlot_ext->cd();
 
-	TH2D* PosAccuracyPlotBkg_ext= new TH2D("PosAccuracyPlotBkg_ext","",100,xMin_draw,xMax_draw,100,-20,20);
-	PosAccuracyPlotBkg_ext->GetXaxis()->SetTitle("log_{10}(S_{true}/Jy)");
-	PosAccuracyPlotBkg_ext->GetYaxis()->SetTitle("<#deltaRA>, <#deltaDec> ('')");
+	TH2D* PosAccuracyPlotBkg_ext= new TH2D("PosAccuracyPlotBkg_ext","",100,minPosAccuracyX_ext_draw,maxPosAccuracyX_ext_draw,100,minPosAccuracy_ext_draw,maxPosAccuracy_ext_draw);
+	PosAccuracyPlotBkg_ext->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+	PosAccuracyPlotBkg_ext->GetXaxis()->SetTitleSize(0.08);
+	PosAccuracyPlotBkg_ext->GetXaxis()->SetTitleOffset(0.85);
+	PosAccuracyPlotBkg_ext->GetXaxis()->SetLabelSize(0.06);
+	PosAccuracyPlotBkg_ext->GetYaxis()->SetTitle("<RA>, <Dec> ('')");
+	PosAccuracyPlotBkg_ext->GetYaxis()->SetTitleSize(0.08);
+	PosAccuracyPlotBkg_ext->GetYaxis()->SetTitleOffset(0.8);
+	PosAccuracyPlotBkg_ext->GetYaxis()->SetLabelSize(0.06);	
 	PosAccuracyPlotBkg_ext->Draw();
 
 	xPosAccuracyGraph_ext->SetMarkerStyle(8);
+	xPosAccuracyGraph_ext->SetMarkerSize(1.3);
 	xPosAccuracyGraph_ext->SetMarkerColor(kBlack);
 	xPosAccuracyGraph_ext->SetLineColor(kBlack);
-	xPosAccuracyGraph_ext->Draw("ep same");
+	xPosAccuracyGraph_ext->Draw("EPZ same");
 	
 	yPosAccuracyGraph_ext->SetMarkerStyle(21);
+	yPosAccuracyGraph_ext->SetMarkerSize(1.3);	
 	yPosAccuracyGraph_ext->SetMarkerColor(kRed);
 	yPosAccuracyGraph_ext->SetLineColor(kRed);
-	yPosAccuracyGraph_ext->Draw("ep same");
+	yPosAccuracyGraph_ext->Draw("EPZ same");
 	
-	TLine* refLine_posAccuracy_ext= new TLine(xMin_draw,0,xMax_draw,0);
+	TLine* refLine_posAccuracy_ext= new TLine(minPosAccuracyX_ext_draw,0,maxPosAccuracyX_ext_draw,0);
+	refLine_posAccuracy_ext->SetLineColor(kBlack);
+	refLine_posAccuracy_ext->SetLineStyle(kDashed);
+	refLine_posAccuracy_ext->Draw("same");
+
+	TLegend* PosAccuracyPlotLegend_ext= new TLegend(0.6,0.7,0.7,0.8);
+	PosAccuracyPlotLegend_ext->SetFillColor(0);
+	PosAccuracyPlotLegend_ext->SetTextSize(0.045);
+	PosAccuracyPlotLegend_ext->SetTextFont(52);
+	PosAccuracyPlotLegend_ext->AddEntry(xPosAccuracyGraph_ext,"<#deltaRA>","PL");
+	PosAccuracyPlotLegend_ext->AddEntry(yPosAccuracyGraph_ext,"<#deltaDec>","PL");
+	PosAccuracyPlotLegend_ext->Draw("same");
+	*/
+
+	
+	//- Draw pos bias
+	TCanvas* PosAccuracyPlot_ext= new TCanvas("PosAccuracyPlot_ext","PosAccuracyPlot_ext",550,950);
+	PosAccuracyPlot_ext->cd();
+
+	TPad* PosAccuracyPlotPad1_ext= new TPad("PosAccuracyPlotPad1_ext","PosAccuracyPlotPad1_ext",0,0.5,1,1);
+	PosAccuracyPlotPad1_ext->SetBottomMargin(0);
+	PosAccuracyPlotPad1_ext->SetLeftMargin(0.15);
+  PosAccuracyPlotPad1_ext->SetRightMargin(0.05);
+	PosAccuracyPlotPad1_ext->cd();
+
+	TH2D* PosAccuracyPlotBkg_ext= new TH2D("PosAccuracyPlotBkg_ext","",100,minPosAccuracyX_ext_draw,maxPosAccuracyX_ext_draw,100,minPosAccuracy_ext_draw,maxPosAccuracy_ext_draw);
+	PosAccuracyPlotBkg_ext->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+	PosAccuracyPlotBkg_ext->GetXaxis()->SetTitleSize(0.08);
+	PosAccuracyPlotBkg_ext->GetXaxis()->SetTitleOffset(0.85);
+	PosAccuracyPlotBkg_ext->GetXaxis()->SetLabelSize(0.06);
+	PosAccuracyPlotBkg_ext->GetYaxis()->SetTitle("<RA>, <Dec> ('')");
+	PosAccuracyPlotBkg_ext->GetYaxis()->SetTitleSize(0.08);
+	PosAccuracyPlotBkg_ext->GetYaxis()->SetTitleOffset(0.8);
+	PosAccuracyPlotBkg_ext->GetYaxis()->SetLabelSize(0.06);	
+	PosAccuracyPlotBkg_ext->Draw();
+
+	xPosAccuracyGraph_ext->SetMarkerStyle(8);
+	xPosAccuracyGraph_ext->SetMarkerSize(1.3);
+	xPosAccuracyGraph_ext->SetMarkerColor(kBlack);
+	xPosAccuracyGraph_ext->SetLineColor(kBlack);
+	xPosAccuracyGraph_ext->Draw("EPZ same");
+	
+	yPosAccuracyGraph_ext->SetMarkerStyle(21);
+	yPosAccuracyGraph_ext->SetMarkerSize(1.3);
+	yPosAccuracyGraph_ext->SetMarkerColor(kRed);
+	yPosAccuracyGraph_ext->SetLineColor(kRed);
+	yPosAccuracyGraph_ext->Draw("EPZ same");
+	
+	TLine* refLine_posAccuracy_ext= new TLine(minPosAccuracyX_ext_draw,0,maxPosAccuracyX_ext_draw,0);
 	refLine_posAccuracy_ext->SetLineColor(kBlack);
 	refLine_posAccuracy_ext->SetLineStyle(kDashed);
 	refLine_posAccuracy_ext->Draw("same");
@@ -3012,6 +3398,57 @@ void Draw(){
 	PosAccuracyPlotLegend_ext->Draw("same");
 
 	
+
+	//- Draw position resolution
+	TPad* PosAccuracyPlotPad2_ext= new TPad("PosAccuracyPlotPad2_ext","PosAccuracyPlotPad2_ext",0,0.01,1,0.5);
+	PosAccuracyPlotPad2_ext->SetTopMargin(0);
+	PosAccuracyPlotPad2_ext->SetLeftMargin(0.15);
+	PosAccuracyPlotPad2_ext->SetBottomMargin(0.12);
+  PosAccuracyPlotPad2_ext->SetRightMargin(0.05);
+	PosAccuracyPlotPad2_ext->cd();
+
+	TH2D* PosAccuracyPlotBkg2_ext= new TH2D("PosAccuracyPlotBkg2_ext","",100,minPosAccuracyX_ext_draw,maxPosAccuracyX_ext_draw,100,minPosResolution_ext_draw,maxPosResolution_ext_draw);
+	PosAccuracyPlotBkg2_ext->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+	PosAccuracyPlotBkg2_ext->GetXaxis()->SetTitleSize(0.08);
+	PosAccuracyPlotBkg2_ext->GetXaxis()->SetTitleOffset(0.85);
+	PosAccuracyPlotBkg2_ext->GetXaxis()->SetLabelSize(0.06);
+	PosAccuracyPlotBkg2_ext->GetYaxis()->SetTitle("#sigma(RA), #sigma(Dec)  ('')");
+	PosAccuracyPlotBkg2_ext->GetYaxis()->SetTitleSize(0.08);
+	PosAccuracyPlotBkg2_ext->GetYaxis()->SetTitleOffset(0.8);
+	PosAccuracyPlotBkg2_ext->GetYaxis()->SetLabelSize(0.06);
+	PosAccuracyPlotBkg2_ext->Draw();
+	
+	xPosResolutionGraph_ext->SetMarkerStyle(8);
+	xPosResolutionGraph_ext->SetMarkerSize(1.3);
+	xPosResolutionGraph_ext->SetMarkerColor(kBlack);
+	xPosResolutionGraph_ext->SetLineColor(kBlack);
+	xPosResolutionGraph_ext->Draw("PZ same");
+
+	yPosResolutionGraph_ext->SetMarkerStyle(21);
+	yPosResolutionGraph_ext->SetMarkerSize(1.3);
+	yPosResolutionGraph_ext->SetMarkerColor(kRed);
+	yPosResolutionGraph_ext->SetLineColor(kRed);
+	yPosResolutionGraph_ext->Draw("PZ same");
+
+	
+	TLegend* PosAccuracyPlotLegend2_ext= new TLegend(0.5,0.5,0.7,0.7);
+	PosAccuracyPlotLegend2_ext->SetFillColor(0);
+	PosAccuracyPlotLegend2_ext->SetTextSize(0.05);
+	PosAccuracyPlotLegend2_ext->SetTextFont(52);
+	PosAccuracyPlotLegend2_ext->AddEntry(xPosResolutionGraph_ext,"#sigma_{RA}","PL");
+	PosAccuracyPlotLegend2_ext->AddEntry(yPosResolutionGraph_ext,"#sigma_{Dec}","PL");
+	PosAccuracyPlotLegend2_ext->Draw("same");
+
+	TPad* clearLabelPad_ext = new TPad("clearLabelPad_ext", "clearLabelPad_ext",0.05201342,0.479021,0.08557047,0.5314685);
+  clearLabelPad_ext->SetBorderMode(0);
+
+	PosAccuracyPlot_ext->cd();
+	PosAccuracyPlotPad1_ext->Draw();
+	PosAccuracyPlotPad2_ext->Draw();
+	clearLabelPad_ext->Draw();
+	PosAccuracyPlot_ext->Update();
+	
+
 	//===============================================
 	//==          DRAW FLUX ACCURACY
 	//===============================================
@@ -3023,7 +3460,6 @@ void Draw(){
 	double minFluxAccuracyX_draw= -4;
 	double maxFluxAccuracyX_draw= 0.5;
 	
-
 	double detectionAreaX[]= {minFluxAccuracyX_draw,log10(5*opt.noiseLevel_true)};
 	double detectionAreaY[]= {minFluxAccuracy_draw,minFluxAccuracy_draw};
 	double detectionAreaX_reso[]= {minFluxAccuracyX_draw,log10(5*opt.noiseLevel_true)};
@@ -3181,8 +3617,8 @@ void Draw(){
 	FluxAccuracyPlotLegend2->SetFillColor(0);
 	FluxAccuracyPlotLegend2->SetTextSize(0.045);
 	FluxAccuracyPlotLegend2->SetTextFont(52);
-	FluxAccuracyPlotLegend2->AddEntry(fluxDensityErrLine_1sigma_plus,"1#sigma","L");
-	FluxAccuracyPlotLegend2->AddEntry(fluxDensityErrLine_3sigma_plus,"3#sigma","L");
+	FluxAccuracyPlotLegend2->AddEntry(fluxDensityErrLine_1sigma_plus,"1#sigma_{rms}","L");
+	FluxAccuracyPlotLegend2->AddEntry(fluxDensityErrLine_3sigma_plus,"3#sigma_{rms}","L");
 	FluxAccuracyPlotLegend2->AddEntry(sigmaDetectionArea,"5#sigma detection limit","F");
 	FluxAccuracyPlotLegend2->Draw("same");
 
@@ -3196,6 +3632,7 @@ void Draw(){
 	FluxAccuracyPlot->Update();
 
 
+	/*
 	//Flux histos
 	TCanvas* FluxPullHistoPlot= 0;
 	
@@ -3206,35 +3643,113 @@ void Draw(){
 
 		FluxDensityPullHistos_compact_fit_presel[i]->Draw("hist");
 	}
+	*/
 
 
+	//#### FLux accuracy for extended sources 
+	double minFluxAccuracy_ext_draw= -0.5;
+	double maxFluxAccuracy_ext_draw= 1.;
+	double minFluxResolution_ext_draw= -0.2;
+	double maxFluxResolution_ext_draw= 1.;
+	double minFluxAccuracyX_ext_draw= -4;
+	double maxFluxAccuracyX_ext_draw= 2;
 
-	//- FLux accuracy for extended sources 
-	TCanvas* FluxAccuracyPlot_ext= new TCanvas("FluxAccuracyPlot_ext","FluxAccuracyPlot_ext");
+	/*
+	TCanvas* FluxAccuracyPlot_ext= new TCanvas("FluxAccuracyPlot_ext","FluxAccuracyPlot_ext",550,950);
 	FluxAccuracyPlot_ext->cd();
 
-	TH2D* FluxAccuracyPlotBkg_ext= new TH2D("FluxAccuracyPlotBkg_ext","",100,xMin_draw,xMax_draw,100,-5,5);
-	FluxAccuracyPlotBkg_ext->GetXaxis()->SetTitle("log_{10}(S_{true}/Jy)");
-	FluxAccuracyPlotBkg_ext->GetYaxis()->SetTitle("<S_{rec}/S_{true}-1>");
+	TH2D* FluxAccuracyPlotBkg_ext= new TH2D("FluxAccuracyPlotBkg_ext","",100,minFluxAccuracyX_ext_draw,maxFluxAccuracyX_ext_draw,100,minFluxAccuracy_ext_draw,maxFluxAccuracy_ext_draw);
+	FluxAccuracyPlotBkg_ext->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+	FluxAccuracyPlotBkg_ext->GetYaxis()->SetTitle("<#frac{S_{meas}-S_{gen}}{S_{gen}}>");
+	FluxAccuracyPlotBkg_ext->GetXaxis()->SetTitleSize(0.08);
+	FluxAccuracyPlotBkg_ext->GetXaxis()->SetTitleOffset(0.85);
+	FluxAccuracyPlotBkg_ext->GetXaxis()->SetLabelSize(0.06);
+	FluxAccuracyPlotBkg_ext->GetYaxis()->SetTitleSize(0.08);
+	FluxAccuracyPlotBkg_ext->GetYaxis()->SetTitleOffset(0.8);
+	FluxAccuracyPlotBkg_ext->GetYaxis()->SetLabelSize(0.06);
 	FluxAccuracyPlotBkg_ext->Draw();
 
 	FluxDensityAccuracyGraph_ext->SetMarkerStyle(8);
+	FluxDensityAccuracyGraph_ext->SetMarkerSize(1.3);
 	FluxDensityAccuracyGraph_ext->SetMarkerColor(kBlack);
 	FluxDensityAccuracyGraph_ext->SetLineColor(kBlack);
-	FluxDensityAccuracyGraph_ext->Draw("ep same");
+	FluxDensityAccuracyGraph_ext->Draw("EPZ same");
 
-	/*
-	TLine* refLine_fluxDensityAccuracy_ext= new TLine(xMin_draw,0,xMax_draw,0);
+	
+	TLine* refLine_fluxDensityAccuracy_ext= new TLine(minFluxAccuracyX_ext_draw,0,maxFluxAccuracyX_ext_draw,0);
+	refLine_fluxDensityAccuracy_ext->SetLineColor(kBlack);
+	refLine_fluxDensityAccuracy_ext->SetLineStyle(kDashed);
+	refLine_fluxDensityAccuracy_ext->Draw("same");
+	*/
+
+	
+	TCanvas* FluxAccuracyPlot_ext= new TCanvas("FluxAccuracyPlot_ext","FluxAccuracyPlot_ext",550,950);
+	FluxAccuracyPlot_ext->cd();
+
+	TPad* FluxAccuracyPlotPad1_ext= new TPad("FluxAccuracyPlotPad1_ext","FluxAccuracyPlotPad1_ext",0,0.5,1,1);
+	FluxAccuracyPlotPad1_ext->SetBottomMargin(0);
+	FluxAccuracyPlotPad1_ext->SetLeftMargin(0.15);
+  FluxAccuracyPlotPad1_ext->SetRightMargin(0.05);
+	FluxAccuracyPlotPad1_ext->cd();
+
+	TH2D* FluxAccuracyPlotBkg_ext= new TH2D("FluxAccuracyPlotBkg_ext","",100,minFluxAccuracyX_ext_draw,maxFluxAccuracyX_ext_draw,100,minFluxAccuracy_ext_draw,maxFluxAccuracy_ext_draw);
+	FluxAccuracyPlotBkg_ext->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+	FluxAccuracyPlotBkg_ext->GetYaxis()->SetTitle("<#frac{S_{meas}-S_{gen}}{S_{gen}}>");
+	FluxAccuracyPlotBkg_ext->GetXaxis()->SetTitleSize(0.08);
+	FluxAccuracyPlotBkg_ext->GetXaxis()->SetTitleOffset(0.85);
+	FluxAccuracyPlotBkg_ext->GetXaxis()->SetLabelSize(0.06);
+	FluxAccuracyPlotBkg_ext->GetYaxis()->SetTitleSize(0.08);
+	FluxAccuracyPlotBkg_ext->GetYaxis()->SetTitleOffset(0.8);
+	FluxAccuracyPlotBkg_ext->GetYaxis()->SetLabelSize(0.06);
+	FluxAccuracyPlotBkg_ext->Draw();
+
+	FluxDensityAccuracyGraph_ext->SetMarkerStyle(8);
+	FluxDensityAccuracyGraph_ext->SetMarkerSize(1.3);
+	FluxDensityAccuracyGraph_ext->SetMarkerColor(kBlack);
+	FluxDensityAccuracyGraph_ext->SetLineColor(kBlack);
+	FluxDensityAccuracyGraph_ext->Draw("EPZ same");
+
+	
+	TLine* refLine_fluxDensityAccuracy_ext= new TLine(minFluxAccuracyX_ext_draw,0,maxFluxAccuracyX_ext_draw,0);
 	refLine_fluxDensityAccuracy_ext->SetLineColor(kBlack);
 	refLine_fluxDensityAccuracy_ext->SetLineStyle(kDashed);
 	refLine_fluxDensityAccuracy_ext->Draw("same");
 
-	TLine* detectionThrLine_fluxDensityAccuracy_ext= new TLine(SNThr,-5,SNThr,5);
-	detectionThrLine_fluxDensityAccuracy_ext->SetLineColor(kBlack);
-	detectionThrLine_fluxDensityAccuracy_ext->SetLineStyle(kDashed);
-	detectionThrLine_fluxDensityAccuracy_ext->Draw("same");
-	*/
+	//- Flux resolution
+	TPad* FluxAccuracyPlotPad2_ext= new TPad("FluxAccuracyPlotPad2_ext","FluxAccuracyPlotPad2_ext",0,0.01,1,0.5);
+	FluxAccuracyPlotPad2_ext->SetTopMargin(0);
+	FluxAccuracyPlotPad2_ext->SetLeftMargin(0.15);
+	FluxAccuracyPlotPad2_ext->SetBottomMargin(0.12);
+  FluxAccuracyPlotPad2_ext->SetRightMargin(0.05);
+	FluxAccuracyPlotPad2_ext->cd();
 
+	TH2D* FluxAccuracyPlotBkg2_ext= new TH2D("FluxAccuracyPlotBkg2_ext","",100,minFluxAccuracyX_ext_draw,maxFluxAccuracyX_ext_draw,100,minFluxResolution_ext_draw,maxFluxResolution_ext_draw);
+	FluxAccuracyPlotBkg2_ext->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+	FluxAccuracyPlotBkg2_ext->GetYaxis()->SetTitle("#sigma(#frac{S_{meas}-S_{gen}}{S_{gen}})");
+	FluxAccuracyPlotBkg2_ext->GetXaxis()->SetTitleSize(0.08);
+	FluxAccuracyPlotBkg2_ext->GetXaxis()->SetTitleOffset(0.85);
+	FluxAccuracyPlotBkg2_ext->GetXaxis()->SetLabelSize(0.06);
+	FluxAccuracyPlotBkg2_ext->GetYaxis()->SetTitleSize(0.08);
+	FluxAccuracyPlotBkg2_ext->GetYaxis()->SetTitleOffset(0.8);
+	FluxAccuracyPlotBkg2_ext->GetYaxis()->SetLabelSize(0.06);
+	FluxAccuracyPlotBkg2_ext->Draw();
+
+	FluxDensityResolutionGraph_ext->SetMarkerStyle(8);
+	FluxDensityResolutionGraph_ext->SetMarkerSize(1.3);
+	FluxDensityResolutionGraph_ext->SetMarkerColor(kBlack);
+	FluxDensityResolutionGraph_ext->SetLineColor(kBlack);
+	FluxDensityResolutionGraph_ext->Draw("EPZ same");
+
+
+	TPad* clearLabelPad2_ext = new TPad("clearLabelPad2_ext", "clearLabelPad_ext",0.05201342,0.479021,0.08557047,0.5314685);
+  clearLabelPad2_ext->SetBorderMode(0);
+
+	FluxAccuracyPlot_ext->cd();
+	FluxAccuracyPlotPad1_ext->Draw();
+	FluxAccuracyPlotPad2_ext->Draw();
+	clearLabelPad2_ext->Draw();
+	FluxAccuracyPlot_ext->Update();
+	
 	
 }//close Draw()
 

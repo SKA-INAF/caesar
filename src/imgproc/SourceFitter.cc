@@ -641,7 +641,7 @@ ROOT::Math::Minimizer* SourceFitter::InitMinimizer(int nFitPars,SourceFitOptions
   fitter->SetTolerance(fitOptions.fitFcnTolerance);//default tolerance
 	fitter->SetPrecision(-1);//let minimizer choose the default
 	fitter->SetErrorDef(1);//set chi2 error definition (0.5 for likelihood fits)
-  fitter->SetPrintLevel(fitOptions.fitPrintLevel);//1=low
+  fitter->SetPrintLevel(fitOptions.fitPrintLevel);//1=low, 0=off
 	fitter->SetStrategy(fitOptions.fitStrategy);//2=better error calculation
 	fitter->SetValidError(fitOptions.fitDoFinalMinimizerStep);//run HESS for MINUIT if true
 
