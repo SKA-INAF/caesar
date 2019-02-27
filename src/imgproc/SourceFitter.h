@@ -35,6 +35,10 @@
 #include <WCSUtils.h>
 #include <Consts.h>
 
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
+
 #include <TObject.h>
 #include <TMatrixD.h>
 #include <TApplication.h>
@@ -298,7 +302,9 @@ class SourceComponentPars : public TObject {
  		*/
 		int SetParValueAndError(std::string parName,double parVal,double parErr){
 			if(!CodeUtils::HasMapKey(FitPars,parName)) {
-				WARN_LOG("Invalid par name ("<<parName<<" given, cannot find par to be set!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Invalid par name ("<<parName<<" given, cannot find par to be set!");
+				#endif
 				return -1;
 			}
 			FitPars[parName]= parVal;
@@ -348,7 +354,9 @@ class SourceComponentPars : public TObject {
 		{	
 			//Check if has fit pars
 			if(FitPars.empty()) {
-				WARN_LOG("No fitted pars stored, returning nullptr ellipse!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No fitted pars stored, returning nullptr ellipse!");
+				#endif
 				return nullptr;
 			}
 		
@@ -385,7 +393,9 @@ class SourceComponentPars : public TObject {
 		{
 			//Check if has fit pars
 			if(FitPars.empty() || FitParsErr.empty()) {
-				WARN_LOG("No fitted pars and/or errors stored!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No fitted pars and/or errors stored!");
+				#endif
 				return -1;
 			}
 
@@ -446,7 +456,9 @@ class SourceComponentPars : public TObject {
 				m_rotangle_vs_beam= dtheta;
 			}
 			else{
-				WARN_LOG("No beam information has been set, do not compute fit ellipse rot angle vs beam (set to 0 by default)!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No beam information has been set, do not compute fit ellipse rot angle vs beam (set to 0 by default)!");
+				#endif
 			}
 			
 
@@ -471,8 +483,10 @@ class SourceComponentPars : public TObject {
 			pa= 0;
 
 			//Check if has pars computed
-			if(!m_hasEllipsePars) {
-				WARN_LOG("Fitted ellipse pars not computed, return dummy values!");
+			if(!m_hasEllipsePars) {	
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Fitted ellipse pars not computed, return dummy values!");
+				#endif
 				return -1;
 			}
 
@@ -514,7 +528,9 @@ class SourceComponentPars : public TObject {
 
 			//Check if has pars computed
 			if(!m_hasEllipsePars) {
-				WARN_LOG("Fitted ellipse pars not computed, return dummy values!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Fitted ellipse pars not computed, return dummy values!");
+				#endif
 				return -1;
 			}
 
@@ -570,18 +586,21 @@ class SourceComponentPars : public TObject {
 		/**
 		* \brief Compute ellipse pars in WCS coordinates
 		*/
-		//int ComputeWCSEllipsePars(WorldCoor* wcs)
 		int ComputeWCSEllipsePars(WCS* wcs)
 		{
 			//Check given WCS	
 			if(!wcs){
-				WARN_LOG("Null ptr to WCS given!");	
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Null ptr to WCS given!");	
+				#endif
 				return -1;
 			}
 
 			//Check if has fit pars
 			if(FitPars.empty() || FitParsErr.empty()) {
-				WARN_LOG("No fitted pars stored!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No fitted pars stored!");
+				#endif
 				return -1;
 			}
 
@@ -736,7 +755,9 @@ class SourceComponentPars : public TObject {
 				m_rotangle_vs_beam= dtheta;
 			}
 			else{
-				WARN_LOG("No beam information has been set, do not compute fit ellipse rot angle vs beam (set to 0 by default)!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No beam information has been set, do not compute fit ellipse rot angle vs beam (set to 0 by default)!");
+				#endif
 			}
 			*/
 
@@ -767,7 +788,9 @@ class SourceComponentPars : public TObject {
 			
 			//Check if has fit pars
 			if(!m_hasWCSEllipsePars) {
-				WARN_LOG("No WCS ellipse pars was computed!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No WCS ellipse pars was computed!");
+				#endif
 				return -1;
 			}
 
@@ -809,7 +832,9 @@ class SourceComponentPars : public TObject {
 
 			//Check if has pars computed
 			if(!m_hasWCSEllipsePars) {
-				WARN_LOG("WCS ellipse pars not computed, return dummy values!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("WCS ellipse pars not computed, return dummy values!");
+				#endif
 				return -1;
 			}
 
@@ -883,7 +908,9 @@ class SourceComponentPars : public TObject {
 		{
 			//Check if has beam pars
 			if(!m_hasBeamPars){
-				WARN_LOG("No beam pars stored!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No beam pars stored!");
+				#endif
 				return -1;
 			}
 			bmaj= m_beam_bmaj;
@@ -919,17 +946,23 @@ class SourceComponentPars : public TObject {
 	
 			//Check if has fit pars
 			if(FitPars.empty() || FitParsErr.empty()) {
-				WARN_LOG("No fitted pars stored!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No fitted pars stored!");
+				#endif
 				return -1;
 			}
 			//Check if has WCS ellipse pars
 			if(!m_hasWCSEllipsePars) {
-				WARN_LOG("No WCS ellipse pars was computed!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No WCS ellipse pars was computed!");
+				#endif
 				return -1;
 			}
 			//Check if has ellipse beam pars
 			if(!m_hasBeamPars) {
-				WARN_LOG("No beam pars are available!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No beam pars are available!");
+				#endif
 				return -1;
 			}
 	
@@ -940,11 +973,15 @@ class SourceComponentPars : public TObject {
 			double diff2_beam= m_beam_bmaj*m_beam_bmaj - m_beam_bmin*m_beam_bmin;
 			double pa_rad= m_pa_wcs*TMath::DegToRad();//in rad
 			double pa_beam_rad= m_beam_pa*TMath::DegToRad();//in rad
-			INFO_LOG("ellipse pars("<<m_bmaj<<","<<m_bmin<<","<<m_pa<<"), wcs("<<m_bmaj_wcs<<","<<m_bmin_wcs<<","<<m_pa_wcs<<"), beam("<<m_beam_bmaj<<","<<m_beam_bmin<<","<<m_beam_pa<<")");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("ellipse pars("<<m_bmaj<<","<<m_bmin<<","<<m_pa<<"), wcs("<<m_bmaj_wcs<<","<<m_bmin_wcs<<","<<m_pa_wcs<<"), beam("<<m_beam_bmaj<<","<<m_beam_bmin<<","<<m_beam_pa<<")");
+			#endif
 
 			double beta2= pow(diff2,2) + pow(diff2_beam,2) - 2*diff2*diff2_beam*cos(2*(pa_rad-pa_beam_rad));
 			if(beta2<0) {
-				WARN_LOG("Numerical error (beta^2 is <0 in formula)!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Numerical error (beta^2 is <0 in formula)!");
+				#endif
 				return -1;
 			}
 			double beta= sqrt(beta2);
@@ -952,7 +989,9 @@ class SourceComponentPars : public TObject {
 			//Check if fit ellipse is smaller than beam.
 			//If so, do not attempt too deconvolve. Set deconv ellipse to fitted ellipse.
 			if(sum2<=sum2_beam){
-				WARN_LOG("Fitted ellipse beam is smaller than beam, do not deconvolve (set deconvolved ellipse to fitted ellipse)!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Fitted ellipse beam is smaller than beam, do not deconvolve (set deconvolved ellipse to fitted ellipse)!");
+				#endif
 				m_bmaj_deconv_wcs= m_bmaj_wcs;
 				m_bmin_deconv_wcs= m_bmin_wcs;
 				m_pa_deconv_wcs= m_pa_wcs;
@@ -964,7 +1003,9 @@ class SourceComponentPars : public TObject {
 			double bmaj2_deconv= 0.5*(sum2 - sum2_beam + beta);
 			double bmin2_deconv= 0.5*(sum2 - sum2_beam - beta);
 			if(bmaj2_deconv<0 || bmin2_deconv) {
-				WARN_LOG("Numerical error (bmaj^2/bmin^2 deconvolved are <0 in formula)!");	
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Numerical error (bmaj^2/bmin^2 deconvolved are <0 in formula)!");	
+				#endif
 				return -1;
 			}
 			m_bmaj_deconv_wcs= sqrt(bmaj2_deconv);
@@ -1003,7 +1044,9 @@ class SourceComponentPars : public TObject {
 			
 			//Check if has fit pars
 			if(!m_hasWCSDeconvolvedEllipsePars) {
-				WARN_LOG("No WCS beam-deconvolved ellipse pars was computed!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No WCS beam-deconvolved ellipse pars was computed!");
+				#endif
 				return -1;
 			}
 
@@ -1309,7 +1352,9 @@ class SourceFitPars : public TObject {
 		*/
 		int SetParValueAndError(int componentId,std::string parName,double parValue,double parError){
 			if(componentId<0 || componentId>=nComponents) {
-				WARN_LOG("Invalid component id ("<<componentId<<" given, cannot find par to be set!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Invalid component id ("<<componentId<<" given, cannot find par to be set!");
+				#endif
 				return -1;
 			}
 			return pars[componentId].SetParValueAndError(parName,parValue,parError);
@@ -1350,7 +1395,9 @@ class SourceFitPars : public TObject {
 		*/
 		double GetComponentFluxDensity(int componentId){
 			if(componentId<0 || componentId>=nComponents) {
-				WARN_LOG("Component "<<componentId<<" does not exist, returning zero flux!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist, returning zero flux!");
+				#endif
 				return 0;
 			}
 			return pars[componentId].GetFluxDensity();
@@ -1361,13 +1408,17 @@ class SourceFitPars : public TObject {
 		*/
 		double GetComponentFluxDensityErr(int componentId){
 			if(componentId<0 || componentId>=nComponents){
-				WARN_LOG("Component "<<componentId<<" does not exist, returning zero error flux!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist, returning zero error flux!");
+				#endif
 				return 0;
 			}
 			//Get component flux density deriv matrix
 			TMatrixD D;
 			if(GetComponentFluxDerivMatrix(D,componentId)<0){
-				WARN_LOG("Failed to compute component flux derivative matrix, returning zero error flux!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to compute component flux derivative matrix, returning zero error flux!");
+				#endif
 				return 0;
 			}
 
@@ -1375,7 +1426,9 @@ class SourceFitPars : public TObject {
 			TMatrixD VarMatrix= D*fitCovarianceMatrix*D_t;
 			double Var= VarMatrix(0,0);
 			if(Var<0){
-				WARN_LOG("Flux density variance for component "<<componentId<<" is negative (this should not occur, check for bugs or numerical roundoff errors!)");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Flux density variance for component "<<componentId<<" is negative (this should not occur, check for bugs or numerical roundoff errors!)");
+				#endif
 				return 0;
 			}
 			double Err= sqrt(Var);
@@ -1396,8 +1449,10 @@ class SourceFitPars : public TObject {
 			bmaj= 0;
 			bmin= 0;
 			pa= 0;
-			if(componentId<0 || componentId>=nComponents){
-				WARN_LOG("Component "<<componentId<<" does not exist!");
+			if(componentId<0 || componentId>=nComponents){	
+				#ifdef LOGGING_ENABLED	
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
 				return -1;
 			}
 
@@ -1411,7 +1466,9 @@ class SourceFitPars : public TObject {
 		double GetComponentBeamEllipseEccentricity(int componentId)
 		{
 			if(componentId<0 || componentId>=nComponents){
-				WARN_LOG("Component "<<componentId<<" does not exist, returning E=0!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist, returning E=0!");
+				#endif
 				return 0;
 			}
 			return pars[componentId].GetBeamEllipseEccentricity();
@@ -1423,7 +1480,9 @@ class SourceFitPars : public TObject {
 		double GetComponentBeamEllipseArea(int componentId)
 		{
 			if(componentId<0 || componentId>=nComponents){
-				WARN_LOG("Component "<<componentId<<" does not exist, returning A=0!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist, returning A=0!");
+				#endif
 				return 0;
 			}
 			return pars[componentId].GetBeamEllipseArea();
@@ -1434,8 +1493,10 @@ class SourceFitPars : public TObject {
 		*/
 		bool HasComponentBeamEllipsePars(int componentId)
 		{
-			if(componentId<0 || componentId>=nComponents){
-				WARN_LOG("Component "<<componentId<<" does not exist, returning false!");
+			if(componentId<0 || componentId>=nComponents){	
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist, returning false!");
+				#endif
 				return 0;
 			}
 			return pars[componentId].HasBeamEllipsePars();		
@@ -1453,7 +1514,9 @@ class SourceFitPars : public TObject {
 			bmin= 0;
 			pa= 0;
 			if(componentId<0 || componentId>=nComponents){
-				WARN_LOG("Component "<<componentId<<" does not exist!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
 				return -1;
 			}
 
@@ -1467,7 +1530,9 @@ class SourceFitPars : public TObject {
 		double GetComponentFitEllipseEccentricity(int componentId)
 		{
 			if(componentId<0 || componentId>=nComponents){
-				WARN_LOG("Component "<<componentId<<" does not exist, returning E=0!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist, returning E=0!");
+				#endif
 				return 0;
 			}
 			return pars[componentId].GetEllipseEccentricity();
@@ -1479,7 +1544,9 @@ class SourceFitPars : public TObject {
 		double GetComponentFitEllipseArea(int componentId)
 		{
 			if(componentId<0 || componentId>=nComponents){
-				WARN_LOG("Component "<<componentId<<" does not exist, returning A=0!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist, returning A=0!");
+				#endif
 				return 0;
 			}
 			return pars[componentId].GetEllipseArea();
@@ -1491,7 +1558,9 @@ class SourceFitPars : public TObject {
 		double GetComponentFitEllipseRotAngleVSBeam(int componentId)
 		{
 			if(componentId<0 || componentId>=nComponents){
-				WARN_LOG("Component "<<componentId<<" does not exist, returning A=0!");
+				#ifdef LOGGING_ENABLED				
+					WARN_LOG("Component "<<componentId<<" does not exist, returning A=0!");
+				#endif
 				return 0;
 			}
 			return pars[componentId].GetEllipseRotAngleVSBeam();
@@ -1509,7 +1578,9 @@ class SourceFitPars : public TObject {
 			bmin_err= 0;
 			pa_err= 0;
 			if(componentId<0 || componentId>=nComponents){
-				WARN_LOG("Component "<<componentId<<" does not exist!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
 				return -1;
 			}
 
@@ -1529,7 +1600,9 @@ class SourceFitPars : public TObject {
 			bmin_wcs= 0;
 			pa_wcs= 0;
 			if(componentId<0 || componentId>=nComponents){
-				WARN_LOG("Component "<<componentId<<" does not exist!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
 				return -1;
 			}
 
@@ -1548,8 +1621,10 @@ class SourceFitPars : public TObject {
 			bmaj_wcs_err= 0;
 			bmin_wcs_err= 0;
 			pa_wcs_err= 0;
-			if(componentId<0 || componentId>=nComponents){
-				WARN_LOG("Component "<<componentId<<" does not exist!");
+			if(componentId<0 || componentId>=nComponents){	
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
 				return -1;
 			}
 
@@ -1567,7 +1642,9 @@ class SourceFitPars : public TObject {
 			bmin_wcs= 0;
 			pa_wcs= 0;
 			if(componentId<0 || componentId>=nComponents){
-				WARN_LOG("Component "<<componentId<<" does not exist!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
 				return -1;
 			}
 
@@ -1734,8 +1811,10 @@ class SourceFitPars : public TObject {
 					}//end loop dim
 				}//end loop dim
 			}//close try block
-			catch(...){
-				ERROR_LOG("C++ exception occurred while filling fit covariance matrix (hint: array size and given dim are different?");
+			catch(...){	
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("C++ exception occurred while filling fit covariance matrix (hint: array size and given dim are different?");
+				#endif
 				fitCovarianceMatrix.ResizeTo(0,0);
 				return 0;
 			}
@@ -1773,7 +1852,9 @@ class SourceFitPars : public TObject {
 			//Check size
 			//if(npars_free<=0 || pars.empty()) {
 			if(npars<=0 || pars.empty()) {
-				WARN_LOG("Cannot compute derivative matrix as no fit pars are stored and/or number of free pars is not initialized!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Cannot compute derivative matrix as no fit pars are stored and/or number of free pars is not initialized!");
+				#endif
 				return -1;
 			}
 
@@ -1854,7 +1935,9 @@ class SourceFitPars : public TObject {
 			int nRows= fitCovarianceMatrix.GetNrows();
 			int nCols= fluxDensityDerivMatrix.GetNcols();
 			if(nCols<=0 || nRows<=0 || nRows!=nCols){
-				WARN_LOG("Fit covariance and/or deriv matrix were not computed or have invalid dimensions!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Fit covariance and/or deriv matrix were not computed or have invalid dimensions!");
+				#endif
 				return -1;
 			}
 	
@@ -1863,7 +1946,9 @@ class SourceFitPars : public TObject {
 			TMatrixD fluxDensityVarianceMatrix= fluxDensityDerivMatrix*fitCovarianceMatrix*fluxDensityDerivMatrix_t;
 			double fluxDensityVariance= fluxDensityVarianceMatrix(0,0);
 			if(fluxDensityVariance<0){
-				WARN_LOG("Flux density variance is negative (this should not occur, check for bugs or numerical roundoff errors!)");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Flux density variance is negative (this should not occur, check for bugs or numerical roundoff errors!)");
+				#endif
 				return -1;
 			}
 			fluxDensityErr= sqrt(fluxDensityVariance);
@@ -1883,7 +1968,9 @@ class SourceFitPars : public TObject {
 			int status= 0;
 			for(size_t i=0;i<pars.size();i++){
 				if(pars[i].ComputeEllipsePars()<0){
-					WARN_LOG("Failed to compute ellipse pars for fit component no. "<<i+1);
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Failed to compute ellipse pars for fit component no. "<<i+1);
+					#endif
 					status= -1;
 				}
 			}
@@ -1901,7 +1988,9 @@ class SourceFitPars : public TObject {
 			int status= 0;
 			for(size_t i=0;i<pars.size();i++){
 				if(pars[i].ComputeWCSEllipsePars(wcs)<0){
-					WARN_LOG("Failed to compute WCS ellipse pars for fit component no. "<<i+1);
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Failed to compute WCS ellipse pars for fit component no. "<<i+1);
+					#endif
 					status= -1;
 				}
 			}
@@ -1929,7 +2018,9 @@ class SourceFitPars : public TObject {
 			int status= 0;
 			for(size_t i=0;i<pars.size();i++){
 				if(pars[i].ComputeWCSDeconvolvedEllipsePars()<0){
-					WARN_LOG("Failed to compute WCS ellipse pars for fit component no. "<<i+1);
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Failed to compute WCS ellipse pars for fit component no. "<<i+1);
+					#endif
 					status= -1;
 				}
 			}
@@ -2005,7 +2096,9 @@ class SourceFitPars : public TObject {
 			int last_index= start_index + npars_component-1;
 			int nCols= fluxDensityDerivMatrix.GetNcols(); 
 			if(nCols<=last_index){
-				WARN_LOG("Trying to access to an not-existing element (index="<<last_index<<") of derivative matrix (dim="<<nCols<<") (hint: derivative matrix not initialized)!");	
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Trying to access to an not-existing element (index="<<last_index<<") of derivative matrix (dim="<<nCols<<") (hint: derivative matrix not initialized)!");	
+				#endif
 				return -1;
 			}
 			
@@ -2030,7 +2123,9 @@ class SourceFitPars : public TObject {
 		{		
 			//Check component id	
 			if(componentId<0 || componentId>=nComponents){
-				WARN_LOG("Component "<<componentId<<" does not exist!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
 				return 0;
 			}
 
@@ -2048,7 +2143,9 @@ class SourceFitPars : public TObject {
 			//Check component id
 			flag= -1;
 			if(componentId<0 || componentId>=nComponents){
-				WARN_LOG("Component "<<componentId<<" does not exist!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
 				return -1;
 			}
 	
@@ -2167,6 +2264,7 @@ class SourceFitter : public TObject {
 		/**
 		* \brief Fit status enum flag
 		*/
+		/*
 		enum FitStatusFlag {
 			eFitUnknownStatus= 0,
 			eFitAborted= 1,
@@ -2174,6 +2272,7 @@ class SourceFitter : public TObject {
 			eFitConverged= 3,
 			eFitConvergedWithWarns= 4
 		};
+		*/
 
 		/**
 		* \brief Source fit data

@@ -28,6 +28,9 @@
 #include <Image.h>
 #include <Source.h>
 #include <CodeUtils.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 #include <TObject.h>
 #include <TMath.h>
@@ -119,17 +122,21 @@ Image* LRACSegmenter::GetCircleLevelSet(Image* inputImg,double radius_to_image_r
 }//close GetCircleLevelSet()
 
 
-Image* LRACSegmenter::FindSegmentation(Image* inputImg,Image* inputSegmMap,int niters,double lambda,double radius,double eps){
-
+Image* LRACSegmenter::FindSegmentation(Image* inputImg,Image* inputSegmMap,int niters,double lambda,double radius,double eps)
+{
 	//Check inputs
 	if(!inputImg){
-		ERROR_LOG("Null ptr to input/mask images!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input/mask images!");
+		#endif
 		return nullptr;
 	}
 
 	//Check if image has data
 	if(!inputImg->HasPixelData()){
-		WARN_LOG("Input image has no pixel data, returning nullptr!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Input image has no pixel data, returning nullptr!");
+		#endif
 		return nullptr;
 	}
 	long int Nx= inputImg->GetNx();
@@ -138,14 +145,18 @@ Image* LRACSegmenter::FindSegmentation(Image* inputImg,Image* inputSegmMap,int n
 
 	//Check img & mask size	
 	if(inputSegmMap && !inputSegmMap->HasSameBinning(inputImg)){
-		ERROR_LOG("Initial segmentation map has different binning wrt to input image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Initial segmentation map has different binning wrt to input image!");
+		#endif
 		return nullptr;
 	}
 
 	//Normalize image in [0,255]
 	Image* inputImg_norm= inputImg->GetNormalizedImage("LINEAR",0,255);
 	if(!inputImg_norm){
-		ERROR_LOG("Failed to normalize input image in range [0,255]!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to normalize input image in range [0,255]!");
+		#endif
 		return nullptr;
 	}	
 
@@ -192,7 +203,6 @@ Image* LRACSegmenter::FindSegmentation(Image* inputImg,Image* inputSegmMap,int n
 				mask[index]= segm;
 				phi[index]= segm;
 				label[index]= segm; 
-				//INFO_LOG("img("<<index+1<<")="<<img[index]);
 				index++; 
 			}//end loop bins y
 		}//end loop bins x
@@ -205,8 +215,10 @@ Image* LRACSegmenter::FindSegmentation(Image* inputImg,Image* inputSegmMap,int n
 		double rowCenter= Nx/2.0;
 		double colCenter= Ny/2.0;
 		double initContourRadius= 0.5;//1
-		INFO_LOG("Initializing level set from dummy gaussian (center("<<rowCenter<<","<<colCenter<<", radius="<<initContourRadius<<")");
-	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Initializing level set from dummy gaussian (center("<<rowCenter<<","<<colCenter<<", radius="<<initContourRadius<<")");
+		#endif
+
 		for(long int i=0;i<Nx;i++){
 			long int ix= i;
 			for(long int j=0;j<Ny;j++){
@@ -223,7 +235,7 @@ Image* LRACSegmenter::FindSegmentation(Image* inputImg,Image* inputSegmMap,int n
 				mask[index]= segm;
 				phi[index]= segm;
 				label[index]= segm; 
-				//INFO_LOG("img("<<index+1<<")="<<img[index]);
+				
 				index++; 
 
 			}//end loop bins y
@@ -232,16 +244,22 @@ Image* LRACSegmenter::FindSegmentation(Image* inputImg,Image* inputSegmMap,int n
 	*/
 
   //Initialize lists, phi, and labels
-	INFO_LOG("Initialize lists, phi and labels...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Initialize lists, phi and labels...");
+	#endif
   ls_mask2phi3c(mask,phi,label,dims,Lz,Ln1,Ln2,Lp1,Lp2);
 	
 	//## Run segmentation
-	INFO_LOG("Run LRAC segmentation...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Run LRAC segmentation...");
+	#endif
 	//lrbac_chanvese( img,phi,label,dims,Lz,Ln1,Lp1,Ln2,Lp2,Lin2out,Lout2in,niters,radius,lambda,plhs,display);
 	lrbac_chanvese( img,phi,label,dims,Lz,Ln1,Lp1,Ln2,Lp2,Lin2out,Lout2in,niters,radius,lambda,eps);
 
 	//## Get segmentation map
-	INFO_LOG("Retrieve segmentation map...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Retrieve segmentation map...");
+	#endif
 	Image* segmMap= inputImg->GetCloned("",true,true);
 	segmMap->Reset();
 
@@ -263,7 +281,9 @@ Image* LRACSegmenter::FindSegmentation(Image* inputImg,Image* inputSegmMap,int n
 	
 
 	//Free data
-	DEBUG_LOG("Freeing algorithm data...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Freeing algorithm data...");
+	#endif
 	if(inputImg_norm){
 		delete inputImg_norm;
 		inputImg_norm;
@@ -313,7 +333,9 @@ void LRACSegmenter::lrbac_chanvese(
 	int niters_performed= 0;
 
   for(int i=0;i<iter;i++){
+		#ifdef LOGGING_ENABLED
 		if(i%100==0) INFO_LOG("Running LRAC algorithm [iter "<<i+1<<"/"<<iter<<", Q="<<Q<<", dQ="<<dQ<<"] ...");
+		#endif
 
     //compute force
     F = en_lrbac_compute(Lz,phi,img,dims, scale,lambda,rad);
@@ -331,7 +353,9 @@ void LRACSegmenter::lrbac_chanvese(
 
 		//Check convergence
 		if(dQ<eps){
-			INFO_LOG("Convergence reached (Q="<<Q<<", dQ="<<dQ<<"<"<<eps<<"), stopping algorithm and return segmentation...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Convergence reached (Q="<<Q<<", dQ="<<dQ<<"<"<<eps<<"), stopping algorithm and return segmentation...");
+			#endif
 			break;
 		}
 
@@ -339,7 +363,9 @@ void LRACSegmenter::lrbac_chanvese(
 
 	//Check if convergence has been reached
 	if(niters_performed>=iter){
-		WARN_LOG("Convergence was not reached, maximum number of iterations ("<<iter<<") reached...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Convergence was not reached, maximum number of iterations ("<<iter<<") reached...");
+		#endif
 	}
 
   //destroy old datastructures
@@ -413,7 +439,6 @@ double* LRACSegmenter::en_lrbac_compute(LL *Lz,double *phi, double *img, long *d
   }
 	double FsumChange= Fsum_update/Fsum-1;
 
-	//INFO_LOG("Fsum="<<Fsum_update<<" (previous="<<Fsum<<", change="<<FsumChange<<")");
 	Fsum= Fsum_update;
 	
 	//Free data

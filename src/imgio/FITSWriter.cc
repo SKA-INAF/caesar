@@ -71,17 +71,23 @@ int FITSWriter::Init(){
 		//## Import python modules
 		//== Numpy ==
 		if(!TPython::Exec("import numpy as np")){
-			ERROR_LOG("Failed to import numpy python module!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to import numpy python module!");
+			#endif
 			return -1;
 		}
 		//== pyfits ==
 		if(!TPython::Exec("import pyfits")){
-			ERROR_LOG("Failed to import pyfits python module!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to import pyfits python module!");
+			#endif
 			return -1;
 		}
 	}
 	catch(...){
-		ERROR_LOG("Failed to initialize python interface!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to initialize python interface!");
+		#endif
 		return -1;
 	}
 
@@ -96,11 +102,15 @@ int FITSWriter::WriteFITS(Image* img,std::string outfilename,bool recreate)
 {
 	//## Check image
 	if(!img){
-		ERROR_LOG("Null ptr to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given image!");
+		#endif
 		return -1;
 	}
 	if(outfilename==""){
-		ERROR_LOG("Empty output filename!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty output filename!");
+		#endif
 		return -1;
 	}
 	if(recreate){
@@ -112,47 +122,65 @@ int FITSWriter::WriteFITS(Image* img,std::string outfilename,bool recreate)
   int status = 0;
 
 	//## Open file with filter
-	INFO_LOG("Creating FITS file "<<outfilename<<" to be written ...");
+	#ifdef LOGGING_ENABLED	
+		DEBUG_LOG("Creating FITS file "<<outfilename<<" to be written ...");
+	#endif
   fits_create_file(&fp, outfilename.c_str(), &status);
   if (status) {
-		ERROR_LOG("Failed to create FITS file "<<outfilename<<" for writing image data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to create FITS file "<<outfilename<<" for writing image data!");
+		#endif
 		HandleError(status,fp);
 		return -1;
 	}
 
 	//## Create image
-	INFO_LOG("Making image in FITS file "<<outfilename<<" ot be written ...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Making image in FITS file "<<outfilename<<" ot be written ...");
+	#endif
 	long int Nx= img->GetNx();
 	long int Ny= img->GetNy();
 	long naxes[2]= {Nx,Ny};
 	fits_create_img(fp,FLOAT_IMG,2, naxes, &status);
 	if (status) {
-		ERROR_LOG("Failed to create image in FITS file "<<outfilename<<"!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to create image in FITS file "<<outfilename<<"!");
+		#endif
 		HandleError(status,fp);
 		return -1;
 	}
 	
 	//## Fill image data
-	INFO_LOG("Filling image data in FITS file "<<outfilename<<" ot be written ...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Filling image data in FITS file "<<outfilename<<" ot be written ...");
+	#endif
 	long fpixel[2]= {1,1};
 	long nelements= Nx*Ny;
 	float* imgdata= (float*)((img->GetPixels()).data());
 	fits_write_pix(fp, TFLOAT, fpixel, nelements, imgdata, &status);
 	if (status) {
-		ERROR_LOG("Failed to fill image data in FITS file "<<outfilename<<"!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to fill image data in FITS file "<<outfilename<<"!");
+		#endif
 		HandleError(status,fp);
 		return -1;
 	}
 
 	//## Writing additional keywords in header
-	INFO_LOG("Filling HDU keywords in FITS file "<<outfilename<<" ot be written ...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Filling HDU keywords in FITS file "<<outfilename<<" ot be written ...");
+	#endif
 	if(WriteFITSKeywords(img,fp)<0){
-		WARN_LOG("Failed to write keywords in FITS file!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to write keywords in FITS file!");
+		#endif
 	}
 
 	//## Close image
 	if (fp) {
-		INFO_LOG("Closing FITS file "<<outfilename<<"...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Closing FITS file "<<outfilename<<"...");
+		#endif
 		fits_close_file(fp, &status);
 	}
 
@@ -165,7 +193,9 @@ int FITSWriter::WriteFITSKeywords(Image* img,fitsfile* fp)
 {
 	//Check if image has metadata
 	if(!img->HasMetaData()){
-		DEBUG_LOG("Input image has no metadata, nothing to be written to FITS keywords...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Input image has no metadata, nothing to be written to FITS keywords...");
+		#endif
 		return 0;
 	}
 	
@@ -227,7 +257,9 @@ void FITSWriter::HandleError(int& status,fitsfile* fp)
 {
 	char errdescr[FLEN_STATUS+1];
 	fits_get_errstatus(status, errdescr);
-  ERROR_LOG("Error while processing FITS file (reason="<<errdescr<<")");
+	#ifdef LOGGING_ENABLED
+ 		ERROR_LOG("Error while processing FITS file (reason="<<errdescr<<")");
+	#endif
   status = 0;
   if (fp) fits_close_file(fp, &status);
 
@@ -238,17 +270,23 @@ int FITSWriter::WriteFITS(Image* img,std::string outfilename){
 
 	//## Check image
 	if(!img){
-		ERROR_LOG("Null ptr to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given image!");
+		#endif
 		return -1;
 	}
 	if(outfilename==""){
-		ERROR_LOG("Empty output filename!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty output filename!");
+		#endif
 		return -1;
 	}
 
 	//## Initialize and load needed python modules
 	if(Init()<0){
-		ERROR_LOG("Initialization failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Initialization failed!");
+		#endif
 		return -1;	
 	}
 
@@ -276,42 +314,60 @@ int FITSWriter::WriteFITS(Image* img,std::string outfilename){
 	
 	//## Print the imported data
 	if(!TPython::Exec("print 'outfile:',outfile")){
-		ERROR_LOG("Failed to import outfilename in python!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to import outfilename in python!");
+		#endif
 		return -1;
 	}
 	if(!TPython::Exec("print 'mat: ',mat")){
-		ERROR_LOG("Failed to import mat in python!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to import mat in python!");
+		#endif
 		return -1;
 	}
 	
   	
 	//## Bind ROOT img obj
-	INFO_LOG("Binding image to python...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Binding image to python...");
+	#endif
 	if(!TPython::Bind(img,"img")){
-		ERROR_LOG("Failed to bind image on the ROOT-Python interface!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to bind image on the ROOT-Python interface!");
+		#endif
 		return -1;	
 	}
 	bool hasMetaData= img->HasMetaData();
 	Caesar::ImgMetaData* metadata= 0;
 	if(hasMetaData){
-		INFO_LOG("Binding image meta-data to python...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Binding image meta-data to python...");
+		#endif
 		metadata= img->GetMetaData();
 		if(!TPython::Bind(metadata,"metadata")){
-			ERROR_LOG("Failed to bind image metadata on the ROOT-Python interface!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to bind image metadata on the ROOT-Python interface!");
+			#endif
 			hasMetaData= false;
 		}
 	}
 
 	
 	//## Create a HDU object 	
-	INFO_LOG("Creating a HDU from the input image...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Creating a HDU from the input image...");
+	#endif
 	if(!TPython::Exec("hdu = pyfits.PrimaryHDU(mat)")){
-		ERROR_LOG("Failed to create hdu from bin array!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to create hdu from bin array!");
+		#endif
 		return -1;
 	}
 
 	//## Fill header info	
-	INFO_LOG("Filling hdu header...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Filling hdu header...");
+	#endif
 	try {
 		TPython::Exec("hdu.header[\'NAXIS1\']= metadata.Nx"); 
 		TPython::Exec("hdu.header[\'NAXIS2\']= metadata.Ny"); 
@@ -332,14 +388,20 @@ int FITSWriter::WriteFITS(Image* img,std::string outfilename){
 		TPython::Exec("hdu.header[\'EPOCH\']= metadata.Epoch"); 
 	}//close try
 	catch(...){
-		ERROR_LOG("Failed to fill hdu header vars!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to fill hdu header vars!");
+		#endif
 		return -1;
 	}
 
 	//## Write to FITS file
-	INFO_LOG("Writing to fits...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Writing to fits...");
+	#endif
 	if(!TPython::Exec("hdu.writeto(str(outfile))")){
-		ERROR_LOG("Failed to write FITS file!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to write FITS file!");
+		#endif
 		return -1;
 	}
 

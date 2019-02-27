@@ -64,7 +64,9 @@ Image* KirschFilter::GetKirschFilter(Image* image)
 {
 	//## Check image
 	if(!image){
-		ERROR_LOG("Null prt to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null prt to given image!");
+		#endif
 		return 0;
 	}
 

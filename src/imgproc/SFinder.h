@@ -237,7 +237,7 @@ class SFinder : public TObject {
 		bool IsPointLikeSource(Source* aSource);
 
 		/**
-		* \brief Fit sources
+		* \brief Fit sources. If redoFit=true fit is repeated even if source was previously fitted
 		*/
 		int FitSources(std::vector<Source*>& sources);
 
@@ -279,11 +279,13 @@ class SFinder : public TObject {
 		* \brief Find sources at image edges (for MPI run)
 		*/
 		int FindSourcesAtEdge();
+		int FindTaskSourcesAtEdge(TaskData* taskData);
 
 		/**
 		* \brief Fit all task sources not found at tile edge (for MPI run)
 		*/
-		int FitTaskSources();
+		//int FitTaskSources();
+		int FitTaskSources(TaskData* taskData);
 
 		/**
 		* \brief Merge sources at edge (for MPI run)
@@ -381,6 +383,21 @@ class SFinder : public TObject {
 		double sourceFitTime_min;
 		double sourceFitTime_max;
 		double sourceFitTime_sum;
+
+		double edgeSourceFitTime;
+
+		double mergeTaskSourceTime;
+		double mergeTaskSourceTime_min;
+		double mergeTaskSourceTime_max;
+		double mergeTaskSourceTime_sum;
+		double workerDataCollectTime;
+		double workerDataReduceTime;
+		double workerDataSerializationTime;
+		double workerDataRecvTime;
+		double workerDataProbeTime;
+		double workerBarrier1;
+		double workerBarrier2;
+		double mergeEdgeSourceTime;
 		double saveTime;
 		double virtMemPeak;	
 		double virtMemPeak_min;

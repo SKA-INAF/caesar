@@ -32,7 +32,9 @@
 #include <Source.h>
 #include <Pixel.h>
 #include <BkgData.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <Graph.h>
 #include <Contour.h>
 
@@ -76,7 +78,9 @@ Image* MorphFilter::ComputeWatershedFilter(std::vector<Contour*>& contours,Image
 	//## Compute watershed filter map
 	Image* morphImg= ComputeWatershedFilter(img,markerImg);
 	if(!morphImg){
-		ERROR_LOG("Failed to compute Watershed filter map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute Watershed filter map!");
+		#endif
 		return nullptr;
 	}
 
@@ -131,12 +135,16 @@ Image* MorphFilter::ComputeWatershedFilter(std::vector<Contour*>& contours,Image
 		
 		//Compute contour parameters
 		if(aContour->ComputeParameters()<0){
-			WARN_LOG("One/more failures occurred while computing contour no. "<<i<<"!");
+			#ifdef LOGGING_ENABLED	
+				WARN_LOG("One/more failures occurred while computing contour no. "<<i<<"!");
+			#endif
 		}
 
 		//Compute fitted ellipse
 		if(aContour->ComputeFittedEllipse()<0){
-			WARN_LOG("Ellipse fitting to contour no. "<<i<<" failed!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Ellipse fitting to contour no. "<<i<<" failed!");
+			#endif
 		}
 		
 		//Add contour to the list
@@ -153,7 +161,9 @@ Image* MorphFilter::ComputeWatershedFilter(Image* img,Image* markerImg)
 {
 	//Check input images
 	if(!img || !markerImg){
-		ERROR_LOG("Null ptr given to image and/or marker image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr given to image and/or marker image!");
+		#endif
 		return nullptr;
 	}
 
@@ -163,7 +173,9 @@ Image* MorphFilter::ComputeWatershedFilter(Image* img,Image* markerImg)
 	long int Nx_marker= markerImg->GetNx();
 	long int Ny_marker= markerImg->GetNy();
 	if(Nx!=Nx_marker || Ny!=Ny_marker){
-		ERROR_LOG("Input image and given marker image have different dimensions!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Input image and given marker image have different dimensions!");
+		#endif
 		return nullptr;
 	}
 	double Xmin= img->GetXmin();
@@ -216,7 +228,9 @@ Image* MorphFilter::ComputeHDomeFilter(Image* img,double baseline,int kernSize)
 	//Compute image morph reconstruction
 	Image* morphRecoImg= ComputeMorphRecoFilter(img,baseline,kernSize);
 	if(!morphRecoImg){
-		ERROR_LOG("Failed to compute morph reco filter map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute morph reco filter map!");
+		#endif
 		return nullptr;
 	}
 	
@@ -236,7 +250,9 @@ Image* MorphFilter::ComputeHDomeFilter(Image* img,int kernSize)
 {
 	//Check image
 	if(!img){
-		ERROR_LOG("Null ptr to input image given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input image given!");
+		#endif
 		return nullptr;
 	}
 
@@ -267,7 +283,9 @@ Image* MorphFilter::ComputeHDomeFilter(Image* img,int kernSize)
 	bool skipBorders= true;
 	int peakKernelMultiplicityThr= 1;
 	if(FindPeaks(valleyPoints,searchMap,{kernSize},peakShiftTolerance,skipBorders,peakKernelMultiplicityThr)<0){
-		WARN_LOG("Failed to find valleys in input map!");	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to find valleys in input map!");	
+		#endif
 		CodeUtils::DeletePtr<Image>(searchMap);
 		return nullptr;
 	}
@@ -278,7 +296,9 @@ Image* MorphFilter::ComputeHDomeFilter(Image* img,int kernSize)
 	//Initialize baseline thr to 1D valley thr. If 2D valleys are found get the smaller one
 	double baseline= valleyThr1D;
 	if(valleyPoints.empty()){
-		WARN_LOG("No valley points found, setting baseline to 1D valley thr ("<<valleyThr1D<<") ...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No valley points found, setting baseline to 1D valley thr ("<<valleyThr1D<<") ...");
+		#endif
 	}
 	else{
 
@@ -289,7 +309,9 @@ Image* MorphFilter::ComputeHDomeFilter(Image* img,int kernSize)
 			double y= valleyPoints[i].Y();
 			long int gbin= img->FindBin(x,y);
 			if(gbin<0){
-				WARN_LOG("Failed to find gbin of valley point ("<<x<<","<<y<<"), this should not occur!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to find gbin of valley point ("<<x<<","<<y<<"), this should not occur!");
+				#endif
 				return nullptr;
 			}
 			double S= img->GetBinContent(gbin);
@@ -302,10 +324,14 @@ Image* MorphFilter::ComputeHDomeFilter(Image* img,int kernSize)
 			//Sort valley thr descending and set baseline thr to smaller value
 			std::sort(valleyThrList.begin(),valleyThrList.end());
 			baseline= valleyThrList[0];
-			INFO_LOG("Setting baseline to smaller valley point ("<<baseline<<") ...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Setting baseline to smaller valley point ("<<baseline<<") ...");
+			#endif
 		}
 		else{
-			WARN_LOG("No good valley points found, setting baseline to 1D valley thr ("<<valleyThr1D<<") ...");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("No good valley points found, setting baseline to 1D valley thr ("<<valleyThr1D<<") ...");
+			#endif
 		}
 
 	}//close else
@@ -313,7 +339,9 @@ Image* MorphFilter::ComputeHDomeFilter(Image* img,int kernSize)
 	//Compute image morph reconstruction
 	Image* morphRecoImg= ComputeMorphRecoFilter(img,baseline,kernSize);
 	if(!morphRecoImg){
-		ERROR_LOG("Failed to compute morph reco filter map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute morph reco filter map!");
+		#endif
 		return nullptr;
 	}
 	
@@ -333,7 +361,9 @@ Image* MorphFilter::ComputeMorphRecoFilter(Image* img,Image* markerImg,int kernS
 {
 	//Check input image
 	if(!img || !markerImg){
-		ERROR_LOG("Null ptr to input image given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input image given!");
+		#endif
 		return nullptr;
 	}
 
@@ -343,13 +373,17 @@ Image* MorphFilter::ComputeMorphRecoFilter(Image* img,Image* markerImg,int kernS
 	long int Nx_marker= markerImg->GetNx();
 	long int Ny_marker= markerImg->GetNy();
 	if(Nx!=Nx_marker || Ny!=Ny_marker){
-		ERROR_LOG("Input image and given marker image have different dimensions!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Input image and given marker image have different dimensions!");
+		#endif
 		return nullptr;
 	}
 	
 	//Check kern size
 	if(kernSize%2==0){
-		WARN_LOG("Given kern size is even, adding +1 to make it odd...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Given kern size is even, adding +1 to make it odd...");
+		#endif
 		kernSize++;
 	}
 
@@ -369,7 +403,6 @@ Image* MorphFilter::ComputeMorphRecoFilter(Image* img,Image* markerImg,int kernS
 	double eps= cv::sum(rec - rec_old)[0];
 	int iter_counter= 0;
 	int max_iters= 100;
-	DEBUG_LOG("Start eps="<<eps);
 
 	while(eps>tol){
 		//Retain output of previous iteration
@@ -398,7 +431,9 @@ Image* MorphFilter::ComputeMorphRecoFilter(Image* img,Image* markerImg,int kernS
 		if(iter_counter>=max_iters) break;
 	}//end while loop
 
-	DEBUG_LOG("Image reconstruction completed in #"<<iter_counter<<" iterations...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Image reconstruction completed in #"<<iter_counter<<" iterations...");
+	#endif
 
 	//## Convert back to image 
 	Image* morphImg= (Image*)img->GetCloned("",true,true);
@@ -423,7 +458,9 @@ Image* MorphFilter::ComputeMorphRecoFilter(Image* img,double baseline,int kernSi
 {
 	//Check input image
 	if(!img){
-		ERROR_LOG("Null ptr to input image given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input image given!");
+		#endif
 		return nullptr;
 	}
 	long int Nx= img->GetNx();
@@ -431,7 +468,9 @@ Image* MorphFilter::ComputeMorphRecoFilter(Image* img,double baseline,int kernSi
 
 	//Check baseline is positive
 	if(baseline<=0){
-		ERROR_LOG("Given baseline value is <=0 (hint: it must be >0)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Given baseline value is <=0 (hint: it must be >0)!");
+		#endif
 		return nullptr;
 	}
 	
@@ -456,13 +495,17 @@ Image* MorphFilter::ComputeMorphFilter(Image* img,int morphOp,int KernSize,int s
 {
 	//Check input image
 	if(!img){
-		ERROR_LOG("Null ptr to input image given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input image given!");
+		#endif
 		return nullptr;
 	}
 	
 	//Check kern size
 	if(KernSize%2==0){
-		WARN_LOG("Given kern size is even, adding +1 to make it odd...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Given kern size is even, adding +1 to make it odd...");
+		#endif
 		KernSize++;
 	}
 
@@ -495,7 +538,9 @@ Image* MorphFilter::ComputeMorphFilter(Image* img,int morphOp,int KernSize,int s
 	else if(morphOp==eMORPH_EROSION) cv::erode(mat,mat_morph,element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);
 	else if(morphOp==eMORPH_DILATION) cv::dilate(mat,mat_morph,element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);
 	else{
-		ERROR_LOG("Invalid morph operation given ("<<morphOp<<")!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid morph operation given ("<<morphOp<<")!");
+		#endif
 		return nullptr;
 	}
 
@@ -524,7 +569,9 @@ int MorphFilter::FindPeaks(std::vector<ImgPeak>& peakPoints,Image* img,std::vect
 {
 	//Check input image
 	if(!img){
-		ERROR_LOG("Null ptr to input image given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input image given!");
+		#endif
 		return -1;
 	}
 
@@ -534,11 +581,15 @@ int MorphFilter::FindPeaks(std::vector<ImgPeak>& peakPoints,Image* img,std::vect
 		peakKernelMultiplicityThr= nKernels;
 	}
 	if(peakKernelMultiplicityThr>nKernels){
-		WARN_LOG("Multiplicy thr ("<<peakKernelMultiplicityThr<<") larger than nkernels ("<<nKernels<<"), set it to "<<nKernels<<"...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Multiplicy thr ("<<peakKernelMultiplicityThr<<") larger than nkernels ("<<nKernels<<"), set it to "<<nKernels<<"...");
+		#endif
 		peakKernelMultiplicityThr= nKernels;
 	}
 	if(peakKernelMultiplicityThr==0 || (peakKernelMultiplicityThr<0 && peakKernelMultiplicityThr!=-1)){
-		ERROR_LOG("Invalid multiplicity thr ("<<peakKernelMultiplicityThr<<") given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid multiplicity thr ("<<peakKernelMultiplicityThr<<") given!");
+		#endif
 		return -1;
 	}
 
@@ -560,7 +611,9 @@ int MorphFilter::FindPeaks(std::vector<ImgPeak>& peakPoints,Image* img,std::vect
 		std::vector<long int> peakPixelIds;
 		Image* dilatedImg= MorphFilter::Dilate(peakPixelIds,img,kernelSizes[k],skipBorders);
 		if(!dilatedImg){
-			ERROR_LOG("Failed to compute dilated image for kernel no. "<<k<<" (size="<<kernelSizes[k]<<")!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute dilated image for kernel no. "<<k<<" (size="<<kernelSizes[k]<<")!");
+			#endif
 			return -1;
 		}
 		delete dilatedImg;
@@ -571,7 +624,9 @@ int MorphFilter::FindPeaks(std::vector<ImgPeak>& peakPoints,Image* img,std::vect
 			hasPeaks= false;
 			break;
 		}
-		DEBUG_LOG("#"<<peakPixelIds.size()<<" peak pixels found with kernel no. "<<k<<" (size="<<kernelSizes[k]<<")!");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("#"<<peakPixelIds.size()<<" peak pixels found with kernel no. "<<k<<" (size="<<kernelSizes[k]<<")!");
+		#endif
 
 		//Store peak points for current kernel
 		for(size_t j=0;j<peakPixelIds.size();j++){
@@ -586,7 +641,9 @@ int MorphFilter::FindPeaks(std::vector<ImgPeak>& peakPoints,Image* img,std::vect
 	}//end loop kernels
 
 	if(!hasPeaks) {
-		DEBUG_LOG("No peaks detected in one or all dilated kernel runs.");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("No peaks detected in one or all dilated kernel runs.");
+		#endif
 		return 0;
 	}
 
@@ -621,7 +678,9 @@ int MorphFilter::FindPeaks(std::vector<ImgPeak>& peakPoints,Image* img,std::vect
 		//Check multiplicity
 		int multiplicity= static_cast<int>(id_list.size());
 		if( multiplicity<peakKernelMultiplicityThr ) {
-			DEBUG_LOG("Skip peak group no. "<<i+1<<" as below multiplicity thr ("<<multiplicity<<"<"<<peakKernelMultiplicityThr<<")");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Skip peak group no. "<<i+1<<" as below multiplicity thr ("<<multiplicity<<"<"<<peakKernelMultiplicityThr<<")");
+			#endif
 			continue;
 		}
 
@@ -638,7 +697,9 @@ int MorphFilter::FindPeaks(std::vector<ImgPeak>& peakPoints,Image* img,std::vect
 		double y= peakMean.Y();
 		long int gBin= img->FindBin(x,y);	
 		if(gBin<0){
-			WARN_LOG("Cannot find image bin corresponding to peak("<<x<<","<<y<<")");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Cannot find image bin corresponding to peak("<<x<<","<<y<<")");
+			#endif
 			continue;
 		}
 		long int ix= img->GetBinX(gBin);
@@ -647,16 +708,22 @@ int MorphFilter::FindPeaks(std::vector<ImgPeak>& peakPoints,Image* img,std::vect
 		
 		
 		peakPoints.push_back(ImgPeak(x,y,S,ix,iy));
-		DEBUG_LOG("Peak no. "<<npeaks+1<<" C("<<peakMean.X()<<","<<peakMean.Y()<<")");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Peak no. "<<npeaks+1<<" C("<<peakMean.X()<<","<<peakMean.Y()<<")");
+		#endif
 		npeaks++;	
 
 	}//end loop clusters
 
 	if(npeaks<=0){
-		WARN_LOG("No matching peaks across the three dilate kernels detected!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No matching peaks across the three dilate kernels detected!");
+		#endif
 		return 0;
 	}
-	DEBUG_LOG("#"<<npeaks<<" peaks detected!");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<npeaks<<" peaks detected!");
+	#endif
 
 	return 0;
 
@@ -667,7 +734,9 @@ Image* MorphFilter::Dilate(std::vector<long int>& peakPixelIds,Image* img,int Ke
 {
 	//## Check input image		
 	if(!img){
-		ERROR_LOG("Null ptr to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given image!");
+		#endif
 		return nullptr;
 	}
 	long int Nx= img->GetNx();
@@ -711,7 +780,9 @@ Image* MorphFilter::Dilate(std::vector<long int>& peakPixelIds,Image* img,int Ke
 			bool peakFound= (mat_comparison==255 && borderCheck && std::isnormal(binContent));
 
 			if(peakFound){
-				DEBUG_LOG("Found local maximum pixel ("<<i<<","<<j<<"), check surrounding pixel to confirm...");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Found local maximum pixel ("<<i<<","<<j<<"), check surrounding pixel to confirm...");
+				#endif
 
 				//## Check surrounding pixels (do not tag as peak if the surrounding 3x3 is flat)
 				bool isFlatArea= true;
@@ -728,14 +799,14 @@ Image* MorphFilter::Dilate(std::vector<long int>& peakPixelIds,Image* img,int Ke
 				}//end loop kernel x
 
 				if(!isFlatArea){
-					DEBUG_LOG("Peaks #"<<npeaks<<" detected @ ("<<i<<","<<j<<")");
+					#ifdef LOGGING_ENABLED
+						DEBUG_LOG("Peaks #"<<npeaks<<" detected @ ("<<i<<","<<j<<")");
+					#endif
 					long int gBin= img->GetBin(i,j);
 					peakPixelIds.push_back(gBin);
 					npeaks++;			
 				}
-				//else{
-				//	INFO_LOG("Local maximum pixel found ("<<i<<","<<j<<") not confirmed (flat surrounding)...");
-				//}
+				
 			}//close if check local maximum
 		}//end loop x
 	}//end loop y
@@ -750,7 +821,9 @@ Image* MorphFilter::GetFiltered(std::vector<long int>& peakPixelIds,Image* img,i
 {
 	//## Check input image		
 	if(!img){
-		ERROR_LOG("Null ptr to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given image!");
+		#endif
 		return nullptr;
 	}
 	long int Nx= img->GetNx();
@@ -783,7 +856,9 @@ Image* MorphFilter::GetFiltered(std::vector<long int>& peakPixelIds,Image* img,i
 	else if(morphOp==eMORPH_EROSION) cv::erode(mat,mat_morph,element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);
 	else if(morphOp==eMORPH_DILATION) cv::dilate(mat,mat_morph,element,cv::Point(-1,-1),niters,cv::BORDER_CONSTANT);
 	else{
-		ERROR_LOG("Invalid morph operation given ("<<morphOp<<")!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid morph operation given ("<<morphOp<<")!");
+		#endif
 		return nullptr;
 	}
 
@@ -812,7 +887,9 @@ Image* MorphFilter::GetFiltered(std::vector<long int>& peakPixelIds,Image* img,i
 			bool borderCheck= (!skipBorders || (skipBorders && i>0 && j>0 && i<Nx-1 && j<Ny-1) );
 
 			if( mat_comparison==255 && borderCheck && std::isnormal(binContent) ){
-				INFO_LOG("Found local maximum pixel ("<<i<<","<<j<<"), check surrounding pixel to confirm...");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Found local maximum pixel ("<<i<<","<<j<<"), check surrounding pixel to confirm...");
+				#endif
 
 				//## Check surrounding pixels (do not tag as peak if the surrounding 3x3 is flat)
 				bool isFlatArea= true;
@@ -829,13 +906,17 @@ Image* MorphFilter::GetFiltered(std::vector<long int>& peakPixelIds,Image* img,i
 				}//end loop kernel x
 
 				if(!isFlatArea){
-					INFO_LOG("Peaks #"<<npeaks<<" detected @ ("<<i<<","<<j<<")");
+					#ifdef LOGGING_ENABLED
+						DEBUG_LOG("Peaks #"<<npeaks<<" detected @ ("<<i<<","<<j<<")");
+					#endif
 					long int gBin= img->GetBin(i,j);
 					peakPixelIds.push_back(gBin);
 					npeaks++;			
 				}
 				else{
-					INFO_LOG("Local maximum pixel found ("<<i<<","<<j<<") not confirmed (flat surrounding)...");
+					#ifdef LOGGING_ENABLED
+						DEBUG_LOG("Local maximum pixel found ("<<i<<","<<j<<") not confirmed (flat surrounding)...");
+					#endif
 				}
 			}//close if check local maximum
 		}//end loop x
@@ -850,13 +931,17 @@ int MorphFilter::FindDilatedSourcePixels(Image* img,Source* source,int KernSize,
 
 	//## Check input source
 	if(!source) {
-		ERROR_LOG("Null ptr to input source given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input source given!");
+		#endif
 		return -1;
 	}
 	
 	//## Init dilation kernel
 	if(KernSize%2==0){
-		ERROR_LOG("KernSize argument should be an odd number!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("KernSize argument should be an odd number!");
+		#endif
 		return -1;
 	}
 	int dilateSize= KernSize/2;
@@ -901,8 +986,10 @@ int MorphFilter::FindDilatedSourcePixels(Image* img,Source* source,int KernSize,
 	}//end loop pixels		
 	
 	//## Replace selected pixels
-	DEBUG_LOG("#"<<nDilatedPixels<<" pixels to be dilated...");
-		
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<nDilatedPixels<<" pixels to be dilated...");
+	#endif
+
 	return 0;
 
 }//close FindDilatedSourcePixels()
@@ -912,14 +999,18 @@ int MorphFilter::FindDilatedSourcePixels(std::vector<long int>& pixelsToBeDilate
 {
 	//## Check input source
 	if(!source) {
-		ERROR_LOG("Null ptr to input source given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input source given!");
+		#endif
 		return -1;
 	}
 	
 	//## Init dilation kernel
 	if(kernSize%2==0){
 		kernSize++;
-		WARN_LOG("kern size argument given was converted to an odd number ("<<kernSize<<") ...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("kern size argument given was converted to an odd number ("<<kernSize<<") ...");
+		#endif
 	}
 	int dilateSize= kernSize/2;
 	cv::Mat element= cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(kernSize,kernSize));
@@ -937,7 +1028,9 @@ int MorphFilter::FindDilatedSourcePixels(std::vector<long int>& pixelsToBeDilate
 	//## Get source contours
 	std::vector<Contour*> contours= source->GetContours();
 	if(contours.empty()){
-		WARN_LOG("No contours available for source "<<source->GetName()<<" (hint: check if contours were computed)!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No contours available for source "<<source->GetName()<<" (hint: check if contours were computed)!");
+		#endif
 	}
 
 	for(size_t k=0;k<contours.size();k++){
@@ -971,8 +1064,10 @@ int MorphFilter::FindDilatedSourcePixels(std::vector<long int>& pixelsToBeDilate
 
 	//Add additional pixel to list
 	std::copy(dilatedPixelIds.begin(), dilatedPixelIds.end(), std::back_inserter(pixelsToBeDilated));
-	DEBUG_LOG("#"<<pixelsToBeDilated.size()<<" pixels to be dilated...");
-	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<pixelsToBeDilated.size()<<" pixels to be dilated...");
+	#endif
+
 	return 0;
 
 }//close FindDilatedSourcePixels()
@@ -982,21 +1077,28 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 {
 	//## Check input source
 	if(!source) {
-		ERROR_LOG("Null ptr to input source given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input source given!");
+		#endif
 		return -1;
 	}
 
 	//## Check if source has stats computed, if not compute
 	bool hasStats= source->HasStats();
 	if(!hasStats){
-		WARN_LOG("No stats computed for input source...computing!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No stats computed for input source...computing!");
+		#endif
 		source->ComputeStats(true,true);
 	}
 	double sourceMedian= source->Median;
 	double sourceMedianRMS= source->MedianRMS;
 	
 	//## Initialize GSL random init
-	DEBUG_LOG("Initialize GSL random engine...");
+	#ifdef LOGGING_ENABLED	
+		DEBUG_LOG("Initialize GSL random engine...");
+	#endif
+
   gsl_rng_env_setup();                          // Read variable environnement
   const gsl_rng_type* type = gsl_rng_default;   // Default algorithm 'twister'
   gsl_rng* rand_generator = gsl_rng_alloc (type); 
@@ -1101,13 +1203,17 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 {
 	//## Check input source
 	if(!source) {
-		ERROR_LOG("Null ptr to input source given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input source given!");
+		#endif
 		return -1;
 	}
 	bool hasNestedSources= source->HasNestedSources();
 	bool hasStats= source->HasStats();
 	if(!hasStats){
-		WARN_LOG("No stats computed for input source...computing!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No stats computed for input source...computing!");
+		#endif
 		source->ComputeStats(true,true);
 	}
 	int sourceType= source->Type;
@@ -1118,7 +1224,9 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 	//Get pixel seeds
 	bool isBrightSource= false;
 	std::vector<int> seedPixelIndexes= source->GetSeedPixelIndexes();
-	DEBUG_LOG("#"<<seedPixelIndexes.size()<<" seed pixels...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<seedPixelIndexes.size()<<" seed pixels...");
+	#endif
 
 	double Zmax= -1.e+99;
 
@@ -1139,7 +1247,9 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 	}
 
 	if(Zmax<zThr){
-		DEBUG_LOG("Source is below significance threshold for dilation (Z="<<Zmax<<"<"<<zThr<<"), skip it!");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Source is below significance threshold for dilation (Z="<<Zmax<<"<"<<zThr<<"), skip it!");
+		#endif
 		return 0;	
 	}
 	isBrightSource= (Zmax>=zBrightThr);
@@ -1148,7 +1258,10 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 	double sigmaTrunc= 1;//trunc random gaussian to +-sigmaTrunc	
 
 	/*
-	DEBUG_LOG("Retrieve RInterface instance...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Retrieve RInterface instance...");
+	#endif
+
 	ROOT::R::TRInterface& fR= ROOT::R::TRInterface::Instance();
 	std::string randomGenCmd= std::string("rtruncnorm(1, a=-sigmaTrunc, b=sigmaTrunc, mean = 0, sd = 1)");
 	try{
@@ -1156,17 +1269,23 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 		fR["sigmaTrunc"]= sigmaTrunc;
 	}
 	catch( std::exception &ex ) {
-		ERROR_LOG("C++ exception catched while loading R library truncnorm (err=" << ex.what() <<")");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("C++ exception catched while loading R library truncnorm (err=" << ex.what() <<")");
+		#endif
 		return -1;
   } 
 	catch(...) { 
-		ERROR_LOG("Unknown exception catched while loading R library truncnorm!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Unknown exception catched while loading R library truncnorm!");
+		#endif
 		return -1;
   }	
 	*/
 
 	//## Initialize GSL random init
-	DEBUG_LOG("Initialize GSL random engine...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Initialize GSL random engine...");
+	#endif
   gsl_rng_env_setup();                          // Read variable environnement
   const gsl_rng_type* type = gsl_rng_default;   // Default algorithm 'twister'
   gsl_rng* rand_generator = gsl_rng_alloc (type); 
@@ -1178,12 +1297,16 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 
 	std::vector<long int> pixelsToBeDilated;
 	if(isBrightSource){//MOTHER SOURCE
-		DEBUG_LOG("Selecting entire mother source for dilation (bright source) ...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Selecting entire mother source for dilation (bright source) ...");
+		#endif
 		FindDilatedSourcePixels(img,source,KernSize,pixelsToBeDilated);
 	}
 	else{
 		if(hasNestedSources && skipToNested){//NESTED SOURCES
-			DEBUG_LOG("Dilating nested sources...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Dilating nested sources...");
+			#endif
 			std::vector<Source*> nestedSources= source->GetNestedSources();
 			for(size_t k=0;k<nestedSources.size();k++){
 				int nestedSourceType= nestedSources[k]->Type;
@@ -1194,7 +1317,9 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 		}//close if
 		else{//MOTHER SOURCE
 			if(dilateSourceType==-1 || sourceType==dilateSourceType){
-				DEBUG_LOG("Dilating entire mother source (no nested sources present + match source type) ...");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Dilating entire mother source (no nested sources present + match source type) ...");
+				#endif
 				FindDilatedSourcePixels(img,source,KernSize,pixelsToBeDilated);
 			}
 		}
@@ -1206,13 +1331,17 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 	//== MOTHER SOURCE
 	std::vector<long int> pixelsToBeDilated;
 	if(!hasNestedSources && (dilateSourceType==-1 || sourceType==dilateSourceType) ){
-		DEBUG_LOG("Dilating mother sources...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Dilating mother sources...");
+		#endif
 		FindDilatedSourcePixels(img,source,KernSize,pixelsToBeDilated);	
 	}
 
 	//== NESTED SOURCES
 	if(skipToNested && hasNestedSources){
-		DEBUG_LOG("Dilating nested sources...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Dilating nested sources...");
+		#endif
 		std::vector<Source*> nestedSources= source->GetNestedSources();
 		for(unsigned int k=0;k<nestedSources.size();k++){
 			int nestedSourceType= nestedSources[k]->Type;
@@ -1323,7 +1452,9 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 	else status= img->ComputeMoments(useRange);
 		
 	if(status<0){
-		WARN_LOG("Failed to recompute moments/stats after source dilation!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to recompute moments/stats after source dilation!");
+		#endif
 		return -1;
 	}
 
@@ -1332,29 +1463,37 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 }//close DilateAroundSource()
 
 
-int MorphFilter::DilateAroundSources(Image* img,std::vector<Source*>const& sources,int KernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr){
-	
+int MorphFilter::DilateAroundSources(Image* img,std::vector<Source*>const& sources,int KernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr)
+{	
 	//## Check input image
 	if(!img){
-		ERROR_LOG("Null ptr to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given image!");
+		#endif
 		return -1;
 	}
 	
 	//## Check bkg data
 	if(dilateModel==eDilateWithBkg){
 	 	if(!bkgData){
-			ERROR_LOG("Selected to use bkg dilation but null ptr to bkg data!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Selected to use bkg dilation but null ptr to bkg data!");
+			#endif
 			return -1;
 		}
 		if(useLocalBkg && !bkgData->HasLocalBkg()){
-			ERROR_LOG("Selected to use local bkg but no local bkg data are available!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Selected to use local bkg but no local bkg data are available!");
+			#endif
 			return -1;
 		}
 	}//close if
 
 	//## Check source list
 	if(sources.size()<=0){
-		WARN_LOG("Source list empty, nothing to be dilated!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Source list empty, nothing to be dilated!");
+		#endif
 		return 0;
 	}
 
@@ -1362,7 +1501,9 @@ int MorphFilter::DilateAroundSources(Image* img,std::vector<Source*>const& sourc
 	for(size_t k=0;k<sources.size();k++){	
 		int status= DilateAroundSource(img,sources[k],KernSize,dilateModel,dilateSourceType,skipToNested,bkgData,useLocalBkg,randomize,zThr,zBrightThr);
 		if(status<0){
-			WARN_LOG("Source dilation failed for source no. "<<k<<" ...");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Source dilation failed for source no. "<<k<<" ...");
+			#endif
 		}
 	}//end loop sources
 

@@ -28,7 +28,9 @@
 
 #include <WCSUtils.h>
 #include <Consts.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <ImgMetaData.h>
 
 #include <TObject.h>
@@ -77,7 +79,9 @@ WCS* WCSUtils::ComputeWCSFromImgMetaData(ImgMetaData* metadata,int coordSystem)
 {
 	//Check metadata
 	if(!metadata){
-		ERROR_LOG("Null ptr to input image metadata given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input image metadata given!");
+		#endif
 		return nullptr;
 	}
 
@@ -108,7 +112,9 @@ WCS* WCSUtils::ComputeWCSFromImgMetaData(ImgMetaData* metadata,int coordSystem)
 	else if(coordSystem==-1 && wcsType_default!="")					
 		flag = (char*)(wcsType_default.c_str());
 	else{
-		ERROR_LOG("Invalid coord system type ("<<coordSystem<<") specified, will not build WCS!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid coord system type ("<<coordSystem<<") specified, will not build WCS!");
+		#endif
 		return nullptr;
 	}
 
@@ -125,7 +131,9 @@ int WCSUtils::PixelToWCSCoords(double& xpos, double& ypos,WCS* wcs,double ix,dou
 {
 	//Check WCS
 	if(!wcs){
-		ERROR_LOG("Null ptr to given WCS!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given WCS!");
+		#endif
 		return -1;
 	}
 
@@ -144,12 +152,16 @@ int WCSUtils::PixelToWCSStrCoords(std::string& wcs_str,WCS* wcs,double ix,double
 
 	//Check WCS
 	if(!wcs){
-		ERROR_LOG("Null ptr to given WCS!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given WCS!");
+		#endif
 		return -1;
 	}
 	
 	if(max_str_length<=0){
-		ERROR_LOG("Invalid max wcs string size given (must be >0)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid max wcs string size given (must be >0)!");
+		#endif
 		return -1;
 	}
 
@@ -157,7 +169,9 @@ int WCSUtils::PixelToWCSStrCoords(std::string& wcs_str,WCS* wcs,double ix,double
 	char data[max_str_length];
 	int status= pix2wcst (wcs,ix,iy,data,max_str_length);
 	if(status==0){
-		WARN_LOG("Failed to convert pixel coords ("<<ix<<","<<iy<<") to WCS string!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to convert pixel coords ("<<ix<<","<<iy<<") to WCS string!");
+		#endif
 		return -1;
 	}	
 	wcs_str= std::string(data);

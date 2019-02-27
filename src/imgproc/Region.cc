@@ -29,6 +29,9 @@
 #include <Pixel.h>
 #include <Blob.h>
 #include <StatsUtils.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 #include <TObject.h>
 #include <TMatrixD.h>
@@ -90,7 +93,9 @@ Region::Region(const Region& region)
 	//: Blob()
 {
 	// Copy constructor
-	DEBUG_LOG("Copy constuctor called...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copy constuctor called...");
+	#endif
   ((Region&)region).Copy(*this);
 
 }//close copy constructor
@@ -98,13 +103,19 @@ Region::Region(const Region& region)
 
 void Region::Copy(TObject& obj) const
 {
-	DEBUG_LOG("Copying parent Blob...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copying parent Blob...");
+	#endif
 	Blob::Copy((Region&)obj);
 
-	DEBUG_LOG("Copying main vars...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copying main vars...");
+	#endif
 	((Region&)obj).Tag= Tag;
 	
-	DEBUG_LOG("Copying sub-region id collection...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copying sub-region id collection...");
+	#endif
 	((Region&)obj).m_SubRegionIds= m_SubRegionIds;
 		
 }//close Copy()
@@ -115,10 +126,12 @@ Region& Region::operator=(const Region& region) {
   return *this;
 }
 
-Region::RegionPars* Region::GetParams(bool includeCurvPar){
-
+Region::RegionPars* Region::GetParams(bool includeCurvPar)
+{
 	if(!m_HasStats){
-		ERROR_LOG("No stats computed for this region!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No stats computed for this region!");
+		#endif
 		return 0;
 	}
 
@@ -160,10 +173,12 @@ Region::RegionPars* Region::GetParams(bool includeCurvPar){
 }//close GetParams()
 
 
-int Region::AddRegion(Region* aRegion,bool addPixels,bool copyPixels){
-
+int Region::AddRegion(Region* aRegion,bool addPixels,bool copyPixels)
+{
 	if(!aRegion) {
-		ERROR_LOG("Null prt to given region, nothing will be added!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null prt to given region, nothing will be added!");
+		#endif
 		return -1;
 	}
 	
@@ -328,6 +343,23 @@ int Region::AddRegion(Region* aRegion,bool addPixels,bool copyPixels){
 
 }//close Region::AddRegion()
 
+int Region::AddSubRegionId(long int id)
+{
+	//Search if a sub region with same id was already added
+	int pos= -1;
+	if(Caesar::CodeUtils::FindItem(m_SubRegionIds,id,pos)){	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Sub-region id "<<id<<" was already added as sub-region for region id="<<Id<<" (CHECK!!!)");
+		#endif
+		return -1;
+	}
+	m_SubRegionIds.push_back(id);
+	
+	return 0;
+		
+}//close AddSubRegionId()
+
+
 double Region::GetColorCurvDistanceSqr(Region* aRegion){
 
 	//Get pars
@@ -392,11 +424,13 @@ double Region::GetSpatialDistanceSqr(Region* aRegion){
 }//close GetSpatialDistanceSqr()
 
 
-int Region::GetDistance(DistPars& distPars,Region* aRegion,bool useRobustParams){
-
+int Region::GetDistance(DistPars& distPars,Region* aRegion,bool useRobustParams)
+{
 	//Check given region
 	if(!aRegion){
-		ERROR_LOG("Null ptr to given region...returning inf dists!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given region...returning inf dists!");
+		#endif
 		return -1;
 	}
 
@@ -419,7 +453,9 @@ int Region::GetDistance(double& dist_color,double& dist_space,Region* aRegion,bo
 	dist_color= 1.e+99;
 	dist_space= 1.e+99;
 	if(!aRegion){
-		ERROR_LOG("Null ptr to given region...returning inf dists!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given region...returning inf dists!");
+		#endif
 		return -1;
 	}
 
@@ -556,11 +592,13 @@ int Region::GetDistance(double& dist_color,double& dist_space,Region* aRegion,bo
 //================================================
 */
 
-int Region::GetAsymmDistance(DistPars& distPars,DistPars& distPars_neighbor,Region* aRegion,bool useRobustParams){
-
+int Region::GetAsymmDistance(DistPars& distPars,DistPars& distPars_neighbor,Region* aRegion,bool useRobustParams)
+{
 	//Check region
 	if(!aRegion){
-		ERROR_LOG("Null ptr to given region...returning inf dists!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given region...returning inf dists!");
+		#endif
 		return -1;
 	}
 
@@ -575,13 +613,17 @@ int Region::GetAsymmDistance(DistPars& distPars,DistPars& distPars_neighbor,Regi
 		
 		//Find distance between this region and merged region
 		if(this->GetDistance(distPars,&mergedRegion,useRobustParams)<0){
-			ERROR_LOG("Failed to compute symm region distance between this and merged region!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute symm region distance between this and merged region!");
+			#endif
 			return -1;
 		}
 		
 		//Find distance between neighbor region and merged region
 		if(aRegion->GetDistance(distPars_neighbor,&mergedRegion,useRobustParams)<0){
-			ERROR_LOG("Failed to compute symm neighbor region distance betweeen the given region and the merged region!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute symm neighbor region distance betweeen the given region and the merged region!");
+			#endif
 			return -1;
 		}
 
@@ -686,7 +728,9 @@ int Region::GetAsymmDistance(double& dist,double& dist_neighbor,Region* aRegion,
 	dist= 1.e+99;
 	dist_neighbor= 1.e+99;
 	if(!aRegion){
-		ERROR_LOG("Null ptr to given region...returning inf dists!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given region...returning inf dists!");	
+		#endif
 		return -1;
 	}
 	
@@ -700,7 +744,9 @@ int Region::GetAsymmDistance(double& dist,double& dist_neighbor,Region* aRegion,
 		double dist_color, dist_space;
 		int status= this->GetDistance(dist_color,dist_space,&mergedRegion,useRobustParams,normalizeParams,addCurvDist);
 		if(status<0){
-			ERROR_LOG("Failed to compute symm region distance!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute symm region distance!");
+			#endif
 			return -1;
 		}
 		dist= dist_color;
@@ -708,7 +754,9 @@ int Region::GetAsymmDistance(double& dist,double& dist_neighbor,Region* aRegion,
 		//Find distance between neighbor region and merged region
 		status= aRegion->GetDistance(dist_color, dist_space,&mergedRegion,useRobustParams,normalizeParams,addCurvDist);
 		if(status<0){
-			ERROR_LOG("Failed to compute symm neighbor region distance!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute symm neighbor region distance!");
+			#endif
 			return -1;
 		}
 		dist_neighbor= dist_color;

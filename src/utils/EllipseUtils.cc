@@ -302,14 +302,12 @@ double EllipseUtils::ellipse_ellipse_overlap (double PHI_1, double A1, double B1
   //-- The quartic sometimes degenerates into a polynomial of lesser 
   //-- degree, so handle all possible cases.
 
-	//for(i=0; i<5; i++) DEBUG_LOG("cy["<<i<<"]="<<cy[i]);
 	
   if (fabs (cy[4]) > EPS){
   	//== QUARTIC COEFFICIENT NONZERO, USE QUARTIC FORMULA ===============
     for (i = 0; i <= 3; i++) py[4-i] = cy[i]/cy[4];
     py[0] = 1.0;
             
-		//for(i=0; i<5; i++) DEBUG_LOG("py["<<i<<"]="<<py[i]);
 		
 		double z[10]; //ret = s GSL_SUCCESS if all the roots are found and GSL_EFAILED if the QR reduction does not converge.
     gsl_complex  zz[4];

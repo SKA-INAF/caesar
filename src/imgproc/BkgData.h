@@ -30,7 +30,9 @@
 
 #include <Image.h>
 #include <CodeUtils.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 #include <TObject.h>
 #include <cstdlib>
@@ -86,7 +88,9 @@ class BkgSampleData : public TObject{
 		* \brief Log info
 		*/
 		void Log(std::string level="INFO"){
-			LOG(level,GetPrintable());
+			#ifdef LOGGING_ENABLED
+				LOG(level,GetPrintable());
+			#endif
 		}
 
 		/**

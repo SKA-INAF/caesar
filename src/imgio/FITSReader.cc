@@ -28,7 +28,9 @@
 #include <FITSReader.h>
 #include <Image.h>
 #include <SysUtils.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <CodeUtils.h>
 
 
@@ -77,7 +79,9 @@ void FITSReader::HandleError(int& status,fitsfile* fp)
 {
 	char errdescr[FLEN_STATUS+1];
 	fits_get_errstatus(status, errdescr);
-  ERROR_LOG("Error while processing FITS file (reason="<<errdescr<<")");
+	#ifdef LOGGING_ENABLED
+ 		ERROR_LOG("Error while processing FITS file (reason="<<errdescr<<")");
+	#endif
   status = 0;
   if (fp) fits_close_file(fp, &status);
 
@@ -86,10 +90,11 @@ void FITSReader::HandleError(int& status,fitsfile* fp)
 
 int FITSReader::Read(Caesar::Image& img,Caesar::FITSFileInfo& fits_info,std::string filename,int hdu_id,int ix_min,int ix_max,int iy_min,int iy_max,bool checkFile)
 {
-
 	//## Check file
 	if(checkFile && !SysUtils::CheckFile(filename,fits_info.info,true,".fits")){
-		ERROR_LOG("Failed to read file "<<filename<<"!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read file "<<filename<<"!");
+		#endif
 		return -1;
 	}
 
@@ -103,7 +108,10 @@ int FITSReader::Read(Caesar::Image& img,Caesar::FITSFileInfo& fits_info,std::str
 		ss<<filename<<"["<<ix_min+1<<":"<<ix_max+1<<","<<iy_min+1<<":"<<iy_max+1<<"]";
 		filename_wfilter= ss.str();
 	}
-	DEBUG_LOG("Reading image "<<filename_wfilter<<"...");
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Reading image "<<filename_wfilter<<"...");
+	#endif
 
 	//## Init vars
 	fitsfile* fp= 0;
@@ -112,7 +120,9 @@ int FITSReader::Read(Caesar::Image& img,Caesar::FITSFileInfo& fits_info,std::str
 	//## Open file with filter
   fits_open_file(&fp, filename_wfilter.c_str(), READONLY, &status);
   if (status) {
-		ERROR_LOG("Failed to open FITS file "<<filename_wfilter<<"!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to open FITS file "<<filename_wfilter<<"!");
+		#endif
 		HandleError(status,fp);
 		return -1;
 	}
@@ -122,10 +132,14 @@ int FITSReader::Read(Caesar::Image& img,Caesar::FITSFileInfo& fits_info,std::str
   fits_get_hdu_num(fp, &hdu_number);
 	
 	//## Move to the desired HDU in input file
-	DEBUG_LOG("Reading hdu no. "<<hdu_id<<"/"<<hdu_number<<" in FITS file "<<filename<<"...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Reading hdu no. "<<hdu_id<<"/"<<hdu_number<<" in FITS file "<<filename<<"...");
+	#endif
 	int hdutype;
   if ( fits_movabs_hdu(fp, hdu_id, &hdutype, &status) ){
-		ERROR_LOG("Failed to access HDU "<<filename<<" (hint: check if HDU exists)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to access HDU "<<filename<<" (hint: check if HDU exists)!");
+		#endif
 		HandleError(status,fp);
 		return -1;
 	}
@@ -135,40 +149,54 @@ int FITSReader::Read(Caesar::Image& img,Caesar::FITSFileInfo& fits_info,std::str
   int hdu_type;
   fits_get_hdu_type(fp, &hdu_type, &status);
   if (status) {
-		ERROR_LOG("Failed to get HDU type!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get HDU type!");
+		#endif
    	HandleError(status,fp);
 		return -1;
 	}
 
 	if(hdu_type!=IMAGE_HDU){
-   	WARN_LOG("HDU not supported (hduType="<<hdu_type<<"), only IMAGE_HDU supported.");
+		#ifdef LOGGING_ENABLED
+  	 	WARN_LOG("HDU not supported (hduType="<<hdu_type<<"), only IMAGE_HDU supported.");
+		#endif
    	if (fp) fits_close_file(fp, &status);
 		return -1;
 	}
 
   //## Read HDU header records
-	DEBUG_LOG("Reading HDU header ...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Reading HDU header ...");
+	#endif
   if(ReadHeader(fits_info,fp)<0){
-		ERROR_LOG("Failed to read header of FITS file "<<filename<<"!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read header of FITS file "<<filename<<"!");
+		#endif
 		if (fp) fits_close_file(fp, &status);
 		return -1;
 	}
 
 	
   //## Read HDU's image data
-	DEBUG_LOG("Reading HDU image data ...");
-		
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Reading HDU image data ...");
+	#endif
+
 	#ifdef OPENMP_ENABLED
 		//Multi-thread reading
 		if(ReadImageMT(img,fits_info,fp,filename,ix_min,ix_max,iy_min,iy_max)<0){
-			ERROR_LOG("Failed to read image data of FITS file "<<filename<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read image data of FITS file "<<filename<<"!");
+			#endif
 			if (fp) fits_close_file(fp, &status);
 			return -1;
 		}
 	#else
 		//Single-thread reading
 		if(ReadImage(img,fits_info,fp,filename,ix_min,ix_max,iy_min,iy_max)<0){
-			ERROR_LOG("Failed to read image data of FITS file "<<filename<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read image data of FITS file "<<filename<<"!");
+			#endif
 			if (fp) fits_close_file(fp, &status);
 			return -1;
 		}
@@ -193,7 +221,9 @@ int FITSReader::ReadImage(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile* f
 
 	//## Check if ptr is null
 	if(!fp) {
-		ERROR_LOG("Null ptr to FITS file given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to FITS file given!");
+		#endif
 		return -1;
 	}
 
@@ -217,11 +247,16 @@ int FITSReader::ReadImage(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile* f
 		ss<<filename<<"["<<ix_min+1<<":"<<ix_max+1<<","<<iy_min+1<<":"<<iy_max+1<<"]";
 		filename_wfilter= ss.str();
 	}
-	DEBUG_LOG("Reading image data (Nx x Ny)=("<<ImgSizeX<<","<<ImgSizeY<<")");
-	
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Reading image data (Nx x Ny)=("<<ImgSizeX<<","<<ImgSizeY<<")");
+	#endif
+
 	//Set image size (Allocate memory for image pixels)	
 	if(img.SetSize(ImgSizeX,ImgSizeY,xlow,ylow)<0){
-		ERROR_LOG("Failed to set image size to ("<<ImgSizeX<<","<<ImgSizeY<<") (hint: check if enough memory is available)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to set image size to ("<<ImgSizeX<<","<<ImgSizeY<<") (hint: check if enough memory is available)!");
+		#endif
 		return -1;
 	}
 
@@ -237,21 +272,26 @@ int FITSReader::ReadImage(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile* f
 	int errflag= 0;	
 	int readdata_errflag= 0;
 
-	DEBUG_LOG("Starting serial-version image data reading ...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Starting serial-version image data reading ...");
+	#endif
 
 	//For serial single thread use the already opened file ptr
 	fp_safe= fp;
 
-	//if(ReadAndFillImageData(img,ImgSizeX,ImgSizeY,fp_safe,readdata_errflag)<0){
 	if(ReadAndFillImageDataFast(img,ImgSizeX,ImgSizeY,fp_safe,readdata_errflag)<0){
-		ERROR_LOG("Failed to read and fill the image data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read and fill the image data!");
+		#endif
 		errflag++;
 	}
 	
 	//Check for errors
 	int close_file_status= 0;
 	if(errflag>0){
-		ERROR_LOG("One/more errors occurred while reading and filling the image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("One/more errors occurred while reading and filling the image!");
+		#endif
 		if (fp) fits_close_file(fp, &close_file_status);		
 		return -1;
 	}	
@@ -259,8 +299,11 @@ int FITSReader::ReadImage(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile* f
 	//Stop timer
 	auto end = chrono::steady_clock::now();
 	double dt= chrono::duration <double, milli> (end-start).count();
-	DEBUG_LOG("Image read in "<<dt<<" ms");
 	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Image read in "<<dt<<" ms");
+	#endif
+
 	return 0;
 
 }//close ReadImage()
@@ -269,10 +312,11 @@ int FITSReader::ReadImage(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile* f
 #ifdef OPENMP_ENABLED
 int FITSReader::ReadImageMT(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile* fp,std::string filename,int ix_min,int ix_max,int iy_min,int iy_max)
 {
-
 	//## Check if ptr is null
 	if(!fp) {
-		ERROR_LOG("Null ptr to FITS file given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to FITS file given!");
+		#endif
 		return -1;
 	}
 
@@ -296,11 +340,16 @@ int FITSReader::ReadImageMT(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile*
 		ss<<filename<<"["<<ix_min+1<<":"<<ix_max+1<<","<<iy_min+1<<":"<<iy_max+1<<"]";
 		filename_wfilter= ss.str();
 	}
-	DEBUG_LOG("Reading image data (Nx x Ny)=("<<ImgSizeX<<","<<ImgSizeY<<")");
-	
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Reading image data (Nx x Ny)=("<<ImgSizeX<<","<<ImgSizeY<<")");
+	#endif
+
 	//Set image size (Allocate memory for image pixels)	
 	if(img.SetSize(ImgSizeX,ImgSizeY,xlow,ylow)<0){
-		ERROR_LOG("Failed to set image size to ("<<ImgSizeX<<","<<ImgSizeY<<") (hint: check if enough memory is available)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to set image size to ("<<ImgSizeX<<","<<ImgSizeY<<") (hint: check if enough memory is available)!");
+		#endif
 		return -1;
 	}
 
@@ -332,17 +381,24 @@ int FITSReader::ReadImageMT(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile*
 	{
 		int thread_id= omp_get_thread_num();
 		int nthreads= SysUtils::GetOMPThreads();
-		DEBUG_LOG("Starting multithread image data reading (thread_id="<<thread_id<<", nthreads="<<nthreads<<")");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Starting multithread image data reading (thread_id="<<thread_id<<", nthreads="<<nthreads<<")");
+		#endif
 
 		//Open file (each thread should open its own)
-		DEBUG_LOG("Opening FITS file ptr (thread_id="<<thread_id<<", nthreads="<<nthreads<<")");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Opening FITS file ptr (thread_id="<<thread_id<<", nthreads="<<nthreads<<")");
+		#endif
+
 		int status= 0;
 		#pragma omp critical 
 		{
 			fits_open_file(&fp_safe, filename_wfilter.c_str(), READONLY, &status);
 		}			
   	if (status) {
-			ERROR_LOG("Failed to open FITS file "<<filename_wfilter<<" in thread "<<omp_get_thread_num()<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to open FITS file "<<filename_wfilter<<" in thread "<<omp_get_thread_num()<<"!");
+			#endif
 			errflag++;
 		}
 
@@ -354,18 +410,26 @@ int FITSReader::ReadImageMT(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile*
 		*/
 
 		//Read image data in parallel (each thread with its own file pointer)
-		DEBUG_LOG("Reading image data (thread_id="<<thread_id<<", nthreads="<<nthreads<<")");
-		//if(ReadAndFillImageDataMT(img,ImgSizeX,ImgSizeY,fp_safe,readdata_errflag,parallel_moments)<0){
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Reading image data (thread_id="<<thread_id<<", nthreads="<<nthreads<<")");
+		#endif
+
 		if(ReadAndFillImageDataFastMT(img,ImgSizeX,ImgSizeY,fp_safe,readdata_errflag)<0){
-			ERROR_LOG("Failed to read and fill the image data!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read and fill the image data!");
+			#endif
 			errflag++;
 		}
 
 		//Close open file (executed by each thread)
 		if(fp_safe) {
-			DEBUG_LOG("Closing FITS file (thread_id="<<thread_id<<", nthreads="<<nthreads<<")");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Closing FITS file (thread_id="<<thread_id<<", nthreads="<<nthreads<<")");
+			#endif
 			fits_close_file(fp_safe, &status);
-			DEBUG_LOG("Closed FITS file (thread_id="<<thread_id<<", nthreads="<<nthreads<<")");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Closed FITS file (thread_id="<<thread_id<<", nthreads="<<nthreads<<")");
+			#endif
 		}
 
 	}//close parallel section		
@@ -373,7 +437,9 @@ int FITSReader::ReadImageMT(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile*
 	//Check for errors
 	int close_file_status= 0;
 	if(errflag>0){
-		ERROR_LOG("One/more errors occurred while reading and filling the image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("One/more errors occurred while reading and filling the image!");
+		#endif
 		if (fp) {
 			fits_close_file(fp, &close_file_status);		
 			fp= 0;
@@ -381,22 +447,15 @@ int FITSReader::ReadImageMT(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile*
 		return -1;
 	}	
 
-	/*
-	//Update the stat moments
-	Caesar::StatMoments<double> moments;
-	if(Caesar::StatsUtils::ComputeMomentsFromParallel(moments,parallel_moments)==0){
-		img.SetMoments(moments);
-	}
-	else{
-		ERROR_LOG("Failed to compute cumulative moments from parallel estimates (NB: image will have wrong moments!)");
-	}
-	*/
-
 	//Compute moments	
-	DEBUG_LOG("Computing image moments after pixel read...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Computing image moments after pixel read...");
+	#endif
 	bool skipNegativePixels= false;
 	if(img.ComputeMoments()<0){
-		ERROR_LOG("Failed to compute image moments!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute image moments!");
+		#endif
 		return -1;
 	}
 
@@ -406,13 +465,15 @@ int FITSReader::ReadImageMT(Image& img,Caesar::FITSFileInfo& fits_info,fitsfile*
 #endif
 
 
-int FITSReader::ReadAndFillImageDataFast(Image& img,long int Nx,long int Ny,fitsfile* fp,int& err_flag){
-
+int FITSReader::ReadAndFillImageDataFast(Image& img,long int Nx,long int Ny,fitsfile* fp,int& err_flag)
+{
 	auto start = chrono::steady_clock::now();
 
 	//Check pointer
 	if(!fp) {
-		ERROR_LOG("Null ptr to  FITS file given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to  FITS file given!");
+		#endif
 		return -1;
 	}
 
@@ -421,7 +482,9 @@ int FITSReader::ReadAndFillImageDataFast(Image& img,long int Nx,long int Ny,fits
 	int naxis= 0;
 	fits_get_img_dim(fp, &naxis, &status);
 	if(status){
-		ERROR_LOG("Failed to get FITS image size!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get FITS image size!");
+		#endif
 		return -1;
 	}
 
@@ -439,15 +502,19 @@ int FITSReader::ReadAndFillImageDataFast(Image& img,long int Nx,long int Ny,fits
 		long int bufsize= Nx;
 		long int gBin= 0 + j*Nx;
 		
-		//Read all columns
-		DEBUG_LOG("Reading row "<<j<<" (nelements="<<bufsize<<")...");
-			
+		//Read all columns	
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Reading row "<<j<<" (nelements="<<bufsize<<")...");
+		#endif
+
 		float nullval= 0; //don't check for null values in the image
 		int anynull;
 		int read_status= 0;
 		fits_read_pix(fp,TFLOAT,fpixel,bufsize,(void*)&nullval,(void*)( (img.m_pixels).data()+gBin ),&anynull, &read_status);
 		if(read_status){
-			ERROR_LOG("Failed to read FITS image data row "<<j<<" (bufsize="<<bufsize<<"), skip...");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read FITS image data row "<<j<<" (bufsize="<<bufsize<<"), skip...");
+			#endif
 			HandleError(read_status,fp);
 			err_flag++;
 			continue;
@@ -456,32 +523,42 @@ int FITSReader::ReadAndFillImageDataFast(Image& img,long int Nx,long int Ny,fits
 	}//end loop row
 
 	if(err_flag>0) {
-		ERROR_LOG("Failed to read fits and fill image pixels!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read fits and fill image pixels!");
+		#endif
 		return -1;
 	}
 
 	//Compute moments	
-	INFO_LOG("Computing image moments after pixel read...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Computing image moments after pixel read...");
+	#endif
 	bool skipNegativePixels= false;
 	if(img.ComputeMoments()<0){
-		ERROR_LOG("Failed to compute image moments!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute image moments!");
+		#endif
 		return -1;
 	}
 
 	auto end = chrono::steady_clock::now();
 	double dt= chrono::duration <double, milli> (end-start).count();
-	INFO_LOG("Image data read in "<<dt<<" ms");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Image data read in "<<dt<<" ms");
+	#endif
 
 	return 0;
 
 }//close ReadAndFillImageDataFast()
 
 
-int FITSReader::ReadAndFillImageData(Image& img,long int Nx,long int Ny,fitsfile* fp,int& err_flag){
-
+int FITSReader::ReadAndFillImageData(Image& img,long int Nx,long int Ny,fitsfile* fp,int& err_flag)
+{
 	//Check pointer
 	if(!fp) {
-		ERROR_LOG("Null ptr to  FITS file given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to  FITS file given!");
+		#endif
 		return -1;
 	}
 
@@ -490,7 +567,9 @@ int FITSReader::ReadAndFillImageData(Image& img,long int Nx,long int Ny,fitsfile
 	int naxis= 0;
 	fits_get_img_dim(fp, &naxis, &status);
 	if(status){
-		ERROR_LOG("Failed to get FITS image size!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get FITS image size!");
+		#endif
 		return -1;
 	}
 
@@ -509,14 +588,18 @@ int FITSReader::ReadAndFillImageData(Image& img,long int Nx,long int Ny,fitsfile
 		float* buffer= new float[bufsize];
 		
 		//Read all columns
-		DEBUG_LOG("Reading row "<<j<<" (nelements="<<bufsize<<")...");
-			
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Reading row "<<j<<" (nelements="<<bufsize<<")...");
+		#endif
+
 		float nullval= 0; //don't check for null values in the image
 		int anynull;
 		int read_status= 0;
 		fits_read_pix(fp,TFLOAT,fpixel,bufsize,(void*)&nullval,(void*)buffer,&anynull, &read_status);
 		if(read_status){
-			ERROR_LOG("Failed to read FITS image data row "<<j<<" (bufsize="<<bufsize<<"), skip...");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read FITS image data row "<<j<<" (bufsize="<<bufsize<<"), skip...");
+			#endif
 			HandleError(read_status,fp);
 			err_flag++;
 			continue;
@@ -525,7 +608,6 @@ int FITSReader::ReadAndFillImageData(Image& img,long int Nx,long int Ny,fitsfile
 		//Loop over buffer and fill image
 		for(long int i=0;i<bufsize;i++){
 			double w= buffer[i];
-			//if(fabs(w)>1.e+10) DEBUG_LOG("Anomalous filled pixel ("<<i<<","<<j<<"), w="<<w);
 			if(img.FillPixel(i,j,w)<0) continue;
 		}//end loop columns (bufsize)
 		
@@ -540,11 +622,13 @@ int FITSReader::ReadAndFillImageData(Image& img,long int Nx,long int Ny,fitsfile
 }//close ReadAndFillImageData()
 
 #ifdef OPENMP_ENABLED
-int FITSReader::ReadAndFillImageDataMT(Image& img,long int Nx,long int Ny,fitsfile* fp,int& err_flag,std::vector<Caesar::StatMoments<double>>& parallel_moments){
-
+int FITSReader::ReadAndFillImageDataMT(Image& img,long int Nx,long int Ny,fitsfile* fp,int& err_flag,std::vector<Caesar::StatMoments<double>>& parallel_moments)
+{
 	//Check pointer
 	if(!fp) {
-		ERROR_LOG("Null ptr to FITS file given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to FITS file given!");
+		#endif	
 		return -1;
 	}
 	
@@ -553,7 +637,9 @@ int FITSReader::ReadAndFillImageDataMT(Image& img,long int Nx,long int Ny,fitsfi
 	int naxis= 0;
 	fits_get_img_dim(fp, &naxis, &status);
 	if(status){
-		ERROR_LOG("Failed to get FITS image size!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get FITS image size!");
+		#endif
 		return -1;
 	}
 
@@ -578,14 +664,19 @@ int FITSReader::ReadAndFillImageDataMT(Image& img,long int Nx,long int Ny,fitsfi
 		float* buffer= new float[bufsize];
 			
 		//Read all columns
-		DEBUG_LOG("Reading row "<<j<<" (nelements="<<bufsize<<")...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Reading row "<<j<<" (nelements="<<bufsize<<")...");
+		#endif
 			
 		float nullval= 0; //don't check for null values in the image
 		int anynull;
 		int read_status= 0;
 		fits_read_pix(fp,TFLOAT,fpixel,bufsize,(void*)&nullval,(void*)buffer,&anynull, &read_status);
 		if(read_status){
-			ERROR_LOG("Failed to read FITS image data row "<<j<<", skip...");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read FITS image data row "<<j<<", skip...");
+			#endif
+	
 			#pragma omp critical
 			{
 				err_flag++;
@@ -615,11 +706,13 @@ int FITSReader::ReadAndFillImageDataMT(Image& img,long int Nx,long int Ny,fitsfi
 
 
 #ifdef OPENMP_ENABLED
-int FITSReader::ReadAndFillImageDataFastMT(Image& img,long int Nx,long int Ny,fitsfile* fp,int& err_flag){
-
+int FITSReader::ReadAndFillImageDataFastMT(Image& img,long int Nx,long int Ny,fitsfile* fp,int& err_flag)
+{
 	//Check pointer
 	if(!fp) {
-		ERROR_LOG("Null ptr to FITS file given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to FITS file given!");
+		#endif
 		return -1;
 	}
 
@@ -628,7 +721,9 @@ int FITSReader::ReadAndFillImageDataFastMT(Image& img,long int Nx,long int Ny,fi
 	int naxis= 0;
 	fits_get_img_dim(fp, &naxis, &status);
 	if(status){
-		ERROR_LOG("Failed to get FITS image size!");
+		#ifdef LOGGING_ENABLED	
+			ERROR_LOG("Failed to get FITS image size!");
+		#endif
 		return -1;
 	}
 
@@ -652,51 +747,35 @@ int FITSReader::ReadAndFillImageDataFastMT(Image& img,long int Nx,long int Ny,fi
 		long int gBin= 0 + j*Nx;
 		
 		//Read all columns
-		DEBUG_LOG("Reading row "<<j<<" (nelements="<<bufsize<<")...");
-			
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Reading row "<<j<<" (nelements="<<bufsize<<")...");
+		#endif
+
 		float nullval= 0; //don't check for null values in the image
 		int anynull;
 		int read_status= 0;
 		fits_read_pix(fp,TFLOAT,fpixel,bufsize,(void*)&nullval,(void*)( (img.m_pixels).data()+gBin ),&anynull, &read_status);
 		if(read_status){
-			ERROR_LOG("Failed to read FITS image data row "<<j<<", skip...");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read FITS image data row "<<j<<", skip...");
+			#endif
+
 			#pragma omp critical
 			{
 				err_flag++;
 			}
 			continue;
 		}
-		
-		/*
-		//Loop over buffer and fill image
-		for(long int i=0;i<bufsize;i++){
-			double w= buffer[i];
-			if(img.FillPixelMT(moments_t,i,j,w)<0) continue;
-		}//end loop columns (bufsize)
-
-		//Fill moment list 
-		parallel_moments[thread_id]= moments_t;
-
-		//Clear allocated buffer
-		if(buffer) delete [] buffer;
-		*/
 
 	}//end loop row
 
 	if(err_flag>0) {
-		ERROR_LOG("Failed to read fits and fill image pixels!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read fits and fill image pixels!");
+		#endif
 		return -1;
 	}	
 
-	/*
-	//Compute moments	
-	INFO_LOG("Computing image moments after pixel read...");
-	bool skipNegativePixels= false;
-	if(img.ComputeMoments()<0){
-		ERROR_LOG("Failed to compute image moments!");
-		return -1;
-	}
-	*/
 
 	return 0;
 
@@ -704,11 +783,13 @@ int FITSReader::ReadAndFillImageDataFastMT(Image& img,long int Nx,long int Ny,fi
 #endif
 
 
-int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
-
+int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp)
+{
 	//Check input FITS file ptr
 	if(!fp) {
-		ERROR_LOG("Null ptr to given FITS file!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given FITS file!");
+		#endif
 		return -1;
 	}
 
@@ -718,7 +799,9 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
   
   fits_get_hdrspace(fp, &nkeys, &morekeys, &status);
   if (status) {
-		ERROR_LOG("Failed to get the number of existing keywords in FITS file!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get the number of existing keywords in FITS file!");
+		#endif
 		HandleError(status,fp);
 		return -1;
 	}
@@ -732,7 +815,9 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
   for (int i=1;i<=nkeys;i++) {
   	fits_read_keyn(fp, i, keyname, keyvalue, comment, &status);
     if (status) {
-			ERROR_LOG("Failed read FITS header keyword no. "<<i<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed read FITS header keyword no. "<<i<<"!");
+			#endif
 			HandleError(status,fp);
 			return -1;
 		}
@@ -740,7 +825,9 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
  	}//end loop keywords
 
 	if(records.empty()){
-		ERROR_LOG("FITS header keywords list is empty!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("FITS header keywords list is empty!");
+		#endif
 		return -1;
 	}
 
@@ -749,13 +836,17 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	// Get number of axis
 	int Nchannels= 0;
 	if ( records.find("NAXIS") == records.end() ) {
-		WARN_LOG("Invalid header detected (no NAXIS keyword)!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Invalid header detected (no NAXIS keyword)!");
+		#endif
 		return -1;
 	}
 	Nchannels= std::stoi(records["NAXIS"]);
 		
 	if(Nchannels<2){
-		ERROR_LOG("Invalid number of channels ("<<Nchannels<<"), at least 2 channels must be present!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid number of channels ("<<Nchannels<<"), at least 2 channels must be present!");
+		#endif
 		return -1;	
 	}
 
@@ -764,7 +855,9 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	long int Nx= 0;
 	long int Ny= 0;
 	if( records.find("NAXIS1") == records.end() || records.find("NAXIS2") == records.end() ) {
-		ERROR_LOG("Invalid header detected (no NAXIS1/NAXIS2 keywords found!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid header detected (no NAXIS1/NAXIS2 keywords found!");
+		#endif
 		return -1;
 	}
 	Nx= std::stol(records["NAXIS1"]);//image size X
@@ -776,12 +869,16 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 			std::stringstream ss;
 			ss<<"NAXIS"<<i;
 			if( records.find(ss.str().c_str()) == records.end() ){
-				ERROR_LOG("Cannot find keyword "<<ss.str()<<"!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Cannot find keyword "<<ss.str()<<"!");
+				#endif
 				return -1;
 			}
 			long int NpixDegAxis= std::stol(records[ss.str().c_str()]);//pixels in current degenerate axis
 			if(NpixDegAxis>1 || NpixDegAxis<=0){
-				ERROR_LOG("Axis "<<ss.str()<<" is invalid or not degenerate (N="<<NpixDegAxis<<"), cube or hypercube are not supported!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Axis "<<ss.str()<<" is invalid or not degenerate (N="<<NpixDegAxis<<"), cube or hypercube are not supported!");
+				#endif
 				return -1;
 			}
 		}//end loop axis
@@ -791,7 +888,9 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	// Get pixel content unit
 	std::string BUnit= "";
 	if(records.find("BUNIT") == records.end()) {
-		WARN_LOG("BUNIT keyword not found in header!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("BUNIT keyword not found in header!");
+		#endif
 	}
 	else{
 		BUnit= records["BUNIT"];	
@@ -803,7 +902,9 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	std::string CoordTypeX= "";
 	std::string CoordTypeY= "";
 	if(records.find("CTYPE1") == records.end() || records.find("CTYPE2") == records.end()) {
-		WARN_LOG("CTYPE keyword not found in header!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("CTYPE keyword not found in header!");
+		#endif
 	}
 	else{
 		CoordTypeX= records["CTYPE1"];
@@ -819,7 +920,9 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	double CenterPixIdX= 0;
 	double CenterPixIdY= 0;
 	if(records.find("CRPIX1") == records.end() || records.find("CRPIX2") == records.end()){
-		WARN_LOG("CRPIX keyword(s) not found in header!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("CRPIX keyword(s) not found in header!");
+		#endif
 	}
 	else{
 		CenterPixIdX= std::stod(records["CRPIX1"]);
@@ -830,7 +933,9 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	double CenterPixX= 0;
 	double CenterPixY= 0;
 	if(records.find("CRVAL1") == records.end() || records.find("CRVAL2") == records.end()){
-		WARN_LOG("CRVAL keyword(s) not found in header!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("CRVAL keyword(s) not found in header!");
+		#endif
 	}
 	else{
 		CenterPixX= std::stod(records["CRVAL1"]);
@@ -840,7 +945,9 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	double PixStepX= 0;
 	double PixStepY= 0;
 	if(records.find("CDELT1") == records.end() || records.find("CDELT2") == records.end()){
-		WARN_LOG("CDELT keyword(s) not found in header!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("CDELT keyword(s) not found in header!");
+		#endif
 	}
 	else{
 		PixStepX= std::stod(records["CDELT1"]);
@@ -852,7 +959,9 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	double Bmin= 0;
 	double Bpa= 0;
 	if(records.find("BMAJ") == records.end() || records.find("BMIN") == records.end()){
-		WARN_LOG("BMAJ/BMIN keywords not found in header, beam info not available...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("BMAJ/BMIN keywords not found in header, beam info not available...");
+		#endif
 	}
 	else{
 		Bmaj= std::stod(records["BMAJ"]); 
@@ -860,7 +969,9 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	}
 
 	if(records.find("BPA") == records.end()){
-		WARN_LOG("BPA keyword not found in header, setting it to zero!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("BPA keyword not found in header, setting it to zero!");
+		#endif
 		Bpa= 0;
 	}
 	else{
@@ -873,7 +984,9 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	double RotX= 0;
 	double RotY= 0;
 	if(records.find("CROTA1") == records.end() || records.find("CROTA2") == records.end()){
-		DEBUG_LOG("CROTA keyword(s) not found in header, setting rotation to 0!");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("CROTA keyword(s) not found in header, setting rotation to 0!");
+		#endif
 	}
 	else{
 		RotX= std::stod(records["CROTA1"]);
@@ -884,7 +997,9 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	double ObsRA= -999;
 	double ObsDEC= -999;
 	if(records.find("OBSRA") == records.end() || records.find("OBSDEC") == records.end()){
-		DEBUG_LOG("OBSRA/OBSDEC keywords not found in header, setting them to fake values!");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("OBSRA/OBSDEC keywords not found in header, setting them to fake values!");
+		#endif
 	}
 	else{
 		ObsRA= std::stod(records["OBSRA"]);
@@ -894,7 +1009,9 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 	// Get epoch information
 	double Epoch= 2000;
 	if(records.find("EPOCH") == records.end()){
-		DEBUG_LOG("EPOCH keyword not found in header, setting it to 2000!");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("EPOCH keyword not found in header, setting it to 2000!");
+		#endif
 	}
 	else{
 		Epoch= std::stod(records["EPOCH"]);
@@ -911,7 +1028,9 @@ int FITSReader::ReadHeader(FITSFileInfo& fits_info,fitsfile* fp){
 			records.find("CRPIX3") == records.end()
 	)
 	{
-		WARN_LOG("CRVAL3/CDELT3/CRPIX3 keywords not found in header (frequency info not available)...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("CRVAL3/CDELT3/CRPIX3 keywords not found in header (frequency info not available)...");
+		#endif
 	}
 	else{	
 		FreqUnit= records["CUNIT3"];	

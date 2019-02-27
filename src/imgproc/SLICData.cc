@@ -30,8 +30,9 @@
 #include <SLIC.h>
 #include <Image.h>
 #include <CodeUtils.h>
-#include <Logger.h>
-
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 #include <TObject.h>
 #include <TMatrixD.h>
@@ -80,7 +81,9 @@ SLICData::~SLICData()
 SLICData::SLICData(const SLICData& data)
 {
 	// Copy constructor
-	DEBUG_LOG("Copy constuctor called...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copy constuctor called...");
+	#endif
   ((SLICData&)data).Copy(*this);
 
 }//close copy constructor
@@ -89,10 +92,11 @@ SLICData::SLICData(const SLICData& data)
 
 void SLICData::Copy(TObject& obj) const
 {
-	
 	//## Copying images
-	DEBUG_LOG("Copying images...");
-	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copying images...");
+	#endif
+
 	//Delete existing images
 	if( ((SLICData&)obj).inputImg ){
 		delete ((SLICData&)obj).inputImg;
@@ -122,8 +126,10 @@ void SLICData::Copy(TObject& obj) const
 	}
 
 	//## Copy region collection
-	DEBUG_LOG("Copying region collection...");
-	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copying region collection...");
+	#endif
+
 	//Delete first any existing collection
 	for(unsigned int i=0;i<(((SLICData&)obj).regions).size();i++){
 		if( (((SLICData&)obj).regions)[i] ){
@@ -142,7 +148,10 @@ void SLICData::Copy(TObject& obj) const
 	}
 
 	//## Copy labels
-	DEBUG_LOG("Copying pixel labels...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copying pixel labels...");
+	#endif
+
 	((SLICData&)obj).pixel_labels= pixel_labels;
 	
 }//close Copy()
@@ -189,21 +198,27 @@ void SLICData::ClearRegions(){
 }//close ClearRegions()
 
 
-int SLICData::Init(Image* img,bool useLogScaleMapping,Image* edgeImage){
-
+int SLICData::Init(Image* img,bool useLogScaleMapping,Image* edgeImage)
+{
 	//## Clear existing data
-	DEBUG_LOG("Clearing SLIC data...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Clearing SLIC data...");
+	#endif
 	Clear();
 	
 	//## Compute image stats (needed to normalize it)
 	if(!img->HasStats()){
-		INFO_LOG("Input image has no stats computed, computing them...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Input image has no stats computed, computing them...");
+		#endif
 		bool computeRobustStats= true;
 		bool useRange= false;
 		bool forceRecomputing= true;
 		//if(img->ComputeStats(true,false,true)<0) {
 		if(img->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0) {
-			ERROR_LOG("Failed to compute input image stats!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute input image stats!");
+			#endif
 			return -1;
 		}
 	}
@@ -211,7 +226,9 @@ int SLICData::Init(Image* img,bool useLogScaleMapping,Image* edgeImage){
 	//## Compute and set input image for SLIC generation (normalized to range [1-256])
 	double normmin= 1;
 	double normmax= 256;
-	INFO_LOG("Normalize input image in range ["<<normmin<<","<<normmax<<"] ...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Normalize input image in range ["<<normmin<<","<<normmax<<"] ...");
+	#endif
 	if(useLogScaleMapping) {
 		inputImg= img->GetNormalizedImage("LOG",normmin,normmax,true);
 	}
@@ -219,39 +236,53 @@ int SLICData::Init(Image* img,bool useLogScaleMapping,Image* edgeImage){
 		inputImg= img->GetNormalizedImage("LINEAR",normmin,normmax,true);
 	}
 	if(!inputImg){
-		ERROR_LOG("Failed to compute input norm image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute input norm image!");
+		#endif
 		return -1;
 	}
 
 	if( !inputImg->HasStats() ){	
-		INFO_LOG("Computing norm image stats...");	
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Computing norm image stats...");	
+		#endif
 		bool computeRobustStats= true;
 		bool useRange= false;
 		bool forceRecomputing= false;
 		//if(inputImg->ComputeStats(true,false,false)<0) {
 		if(inputImg->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0) {
-			ERROR_LOG("Failed to compute norm image stats!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute norm image stats!");
+			#endif
 			return -1;
 		}
 	}//close if hasStats
 	
 
 	//## Compute and set laplacian image
-	INFO_LOG("Computing laplacian image...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Computing laplacian image...");
+	#endif
 	laplImg= img->GetLaplacianImage(true);
 	
 	if(!laplImg){
-		ERROR_LOG("Failed to compute lapl image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute lapl image!");
+		#endif
 		return -1;
 	}
 	if(!laplImg->HasStats()){
-		INFO_LOG("Laplacian image has no stats computed, computing them...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Laplacian image has no stats computed, computing them...");
+		#endif
 		bool computeRobustStats= true;
 		bool useRange= false;
 		bool forceRecomputing= false;
 		//if(laplImg->ComputeStats(true,false,false)<0) {
 		if(laplImg->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0) {
-			ERROR_LOG("Failed to compute lapl image stats!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute lapl image stats!");
+			#endif
 			return -1;
 		}
 	}
@@ -259,13 +290,17 @@ int SLICData::Init(Image* img,bool useLogScaleMapping,Image* edgeImage){
 	//## Set edge image (if given in input)
 	if(edgeImage){
 		if(!edgeImage->HasStats()){
-			INFO_LOG("Edge image has no stats computed, computing them...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Edge image has no stats computed, computing them...");
+			#endif
 			bool computeRobustStats= true;
 			bool useRange= false;
 			bool forceRecomputing= false;
 			//if(edgeImage->ComputeStats(true,false,false)<0) {
 			if(edgeImage->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0) {
-				ERROR_LOG("Failed to compute edge image stats!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to compute edge image stats!");
+				#endif
 				return -1;
 			}
 		}
@@ -280,27 +315,35 @@ int SLICData::Init(Image* img,bool useLogScaleMapping,Image* edgeImage){
 
 }//close Init()
 
-int SLICData::SetData(Image* img,Image* lapl_img,Image* edge_img){
-
+int SLICData::SetData(Image* img,Image* lapl_img,Image* edge_img)
+{
 	//Check given pointers			
 	if(!img || !lapl_img) {
-		ERROR_LOG("Null ptr to given images, will not initialize data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given images, will not initialize data!");
+		#endif
 		return -1;
 	}
 	
 	//Check image sizes
 	if(!img->HasPixelData()){
-		ERROR_LOG("Given input image has no data stored, will not initialize data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Given input image has no data stored, will not initialize data!");
+		#endif
 		return -1;
 	}
 
 	if(!lapl_img->HasSameBinning(img,true)){
-		ERROR_LOG("Given laplacian image has a different binning wrt input image, will not initialize data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Given laplacian image has a different binning wrt input image, will not initialize data!");
+		#endif
 		return -1;
 	}
 				
 	if(edge_img && !edge_img->HasSameBinning(img,true)){
-		ERROR_LOG("Given edge image has a different binning wrt input image, will not initialize data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Given edge image has a different binning wrt input image, will not initialize data!");
+		#endif
 		return -1;
 	}
 
@@ -318,29 +361,52 @@ int SLICData::SetData(Image* img,Image* lapl_img,Image* edge_img){
 }//close SetData()
 
 
-int SLICData::SPGenerator(Image* img,int regionSize,double regParam, int minRegionSize, bool useLogScaleMapping, Image* edgeImage){
+double SLICData::GetSedge(long int ix,long int iy)
+{
+	if(!edgeImg) {
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Trying to access to edge map, which is not allocated, returning zero!");
+		#endif
+		return 0;
+	}
+			
+	return edgeImg->GetPixelValue(ix,iy);
+		
+}//close GetSedge()
 
+int SLICData::SPGenerator(Image* img,int regionSize,double regParam, int minRegionSize, bool useLogScaleMapping, Image* edgeImage)
+{
 	//## Check inputs
 	if(!img){
-		ERROR_LOG("Null ptr to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given image!");
+		#endif
 		return -1;
 	}
 	long long Nx= img->GetNx();
 	long long Ny= img->GetNy();
 	if(Nx<=0 || Ny<=0 || regionSize<=0 || regParam<0){
-		ERROR_LOG("Invalid image size ("<<Nx<<"x"<<Ny<<") or input options (regionSize="<<regionSize<<", regParam="<<regParam<<")");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid image size ("<<Nx<<"x"<<Ny<<") or input options (regionSize="<<regionSize<<", regParam="<<regParam<<")");
+		#endif
 		return -1;
 	}
 
 	//## Initialize SLIC storage data
-	INFO_LOG("Initialize SLIC storage data...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Initialize SLIC storage data...");
+	#endif
 	if(Init(img,useLogScaleMapping,edgeImage)<0){
-		ERROR_LOG("Initialization failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Initialization failed!");
+		#endif
 		return -1;
 	}
 
 	//## Init SLIC algo data
-	INFO_LOG("Allocating SLIC algo data...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Allocating SLIC algo data...");
+	#endif
 	Image* normImg= inputImg;
 	const unsigned long long maxNumIterations = 100;
 	const long long numRegionsX = (unsigned long long) ceil( (double)Nx/regionSize) ;
@@ -354,8 +420,10 @@ int SLICData::SPGenerator(Image* img,int regionSize,double regParam, int minRegi
 	centers= (float*)malloc(sizeof(float)*3*numRegions);
 	unsigned int* masses = 0;
 	masses= (unsigned int*)malloc(sizeof(unsigned int) * numPixels);
-	if(!edgeMap || !centers || !masses){
-		ERROR_LOG("Failed to allocate memory for the algorithm!");
+	if(!edgeMap || !centers || !masses){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to allocate memory for the algorithm!");
+		#endif
 		if(masses) free(masses);
   	if(centers) free(centers);
   	if(edgeMap) free(edgeMap);
@@ -363,7 +431,10 @@ int SLICData::SPGenerator(Image* img,int regionSize,double regParam, int minRegi
 	}
 
 	//## Compute edge map (gradient strength)
-	INFO_LOG("Compute edge map (gradient strength)...");	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Compute edge map (gradient strength)...");	
+	#endif
+
 	#ifdef OPENMP_ENABLED
 	#pragma omp parallel for collapse(2)
 	#endif
@@ -382,7 +453,9 @@ int SLICData::SPGenerator(Image* img,int regionSize,double regParam, int minRegi
   }//end loop y
   
 	//## Initialize K-means centers	
-	INFO_LOG("Initializing K-means centers...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Initializing K-means centers...");
+	#endif
 
  	#ifdef OPENMP_ENABLED
 	#pragma omp parallel for
@@ -417,13 +490,15 @@ int SLICData::SPGenerator(Image* img,int regionSize,double regParam, int minRegi
 		centers[array_index] = (float) centerx ;
     centers[array_index+1] = (float) centery ;
     centers[array_index+2] = normImg->GetPixelValue(centerx,centery);
-		//DEBUG_LOG("(u,v)("<<u<<","<<v<<") (x,y)=("<<x<<","<<y<<"), array_index="<<array_index);
 	}
 	
 	
 
 	//## Run k-means iterations
-	INFO_LOG("Running "<<maxNumIterations<<" iterations...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Running "<<maxNumIterations<<" iterations...");
+	#endif
+
  	double previousEnergy = std::numeric_limits<double>::infinity();
   double startingEnergy= 0;
 
@@ -501,13 +576,19 @@ int SLICData::SPGenerator(Image* img,int regionSize,double regParam, int minRegi
 
 
 	//Free stuff
-	DEBUG_LOG("Freeing allocated memory for cluster centers & edge map...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Freeing allocated memory for cluster centers & edge map...");
+	#endif
+
   if(masses) free(masses);
   if(centers) free(centers);
   if(edgeMap) free(edgeMap);
 
 	//## Eliminate small regions
-  INFO_LOG("Eliminating small regions...");
+	#ifdef LOGGING_ENABLED
+ 		DEBUG_LOG("Eliminating small regions...");
+	#endif
+
   unsigned int* cleaned = (unsigned int*)calloc(numPixels, sizeof(unsigned int));
   unsigned long long* segment = (unsigned long long*)malloc(sizeof(unsigned long long) * numPixels);
 	if(!cleaned || !segment){	
@@ -580,13 +661,18 @@ int SLICData::SPGenerator(Image* img,int regionSize,double regParam, int minRegi
 	}
 
 	//## Delete data
-	DEBUG_LOG("Freeing allocated memory for cleaned and segment...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Freeing allocated memory for cleaned and segment...");
+	#endif
 	if(cleaned) free(cleaned);
   if(segment) free(segment);
 
 	
 	//## Allocate regions
-	INFO_LOG("Allocating "<<numRegions<<" regions in list...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Allocating "<<numRegions<<" regions in list...");
+	#endif
+
 	Region* aRegion= 0;
 	for(long long k=0;k<numRegions;k++) {		
 		aRegion= new Region();
@@ -594,7 +680,10 @@ int SLICData::SPGenerator(Image* img,int regionSize,double regParam, int minRegi
 	}
 
 	//## Fill regions
-	INFO_LOG("Filling regions...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Filling regions...");
+	#endif
+
 	Pixel* aPixel= 0;
 
 	for (long int ix=0; ix<Nx; ix++) {
@@ -613,7 +702,9 @@ int SLICData::SPGenerator(Image* img,int regionSize,double regParam, int minRegi
 			//labels[ix][iy]= label;
 			
 			if(label<0 || label>=(signed)numRegions){
-				WARN_LOG("Skip label "<<label<<" for pixel ("<<ix<<","<<iy<<")...");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Skip label "<<label<<" for pixel ("<<ix<<","<<iy<<")...");
+				#endif
 				continue;
 			}
 				
@@ -635,29 +726,43 @@ int SLICData::SPGenerator(Image* img,int regionSize,double regParam, int minRegi
 
 	
 	//## Remove regions without pixels (important in case of empty image zones)
-	INFO_LOG("Removing regions without pixels...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Removing regions without pixels...");
+	#endif
 	RemoveEmptyRegions();
-	INFO_LOG("#"<<regions.size()<<" regions present after cleanup...");
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<regions.size()<<" regions present after cleanup...");
+	#endif
 
 	//## Compute region parameters
-	INFO_LOG("Computing region parameters...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Computing region parameters...");
+	#endif
+
 	if(ComputeRegionParameters()<0){
-		WARN_LOG("One/more errors occurred while computing region parameters!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("One/more errors occurred while computing region parameters!");
+		#endif
 		return -1;
 	}
 
-	INFO_LOG("End superpixel generation...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("End superpixel generation...");
+	#endif
 
 	return 0;
 
 }//close SPGenerator()
 
 
-Image* SLICData::GetSegmentedImage(Image* image,int selectedTag,bool normalize,bool binarize){
-
+Image* SLICData::GetSegmentedImage(Image* image,int selectedTag,bool normalize,bool binarize)
+{
 	//## Check if there are regions
 	if(regions.empty()){
-		WARN_LOG("No regions available (did you generate the superpixel partition?), returning nullptr!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No regions available (did you generate the superpixel partition?), returning nullptr!");
+		#endif
 		return nullptr;
 	}
 
@@ -679,8 +784,10 @@ int SLICData::ComputeRegionParameters(){
 	#endif
 	for(size_t k=0;k<regions.size();k++) {	
 		long int nPix= regions[k]->NPix;
-		if(nPix>0 && regions[k]->ComputeStats(computeRobustStats,forceRecomputing)<0){
-			WARN_LOG("Failed to compute pars for region no. "<<k);
+		if(nPix>0 && regions[k]->ComputeStats(computeRobustStats,forceRecomputing)<0){	
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to compute pars for region no. "<<k);
+			#endif
 			status= -1;
 		}
 	}//end loop regions
@@ -711,7 +818,9 @@ void SLICData::RemoveEmptyRegions(){
 
 	//Check if there are regions to be deleted
 	if(regionsToBeDeleted.empty()){
-		INFO_LOG("No empty region (without pixels) to be deleted.");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("No empty region (without pixels) to be deleted.");
+		#endif
 		return;
 	}
 
@@ -758,7 +867,9 @@ int SLICData::SetPixelLabel(long int gBin,long int label,bool check)
 	/*
 	//Check inputs
 	if( check && (gBin<0 || gBin>=pixel_labels.size()) ){
-		ERROR_LOG("Invalid pixel ("<<gBin<<") required to be set!");
+		#ifdef LOGGING_ENABLED		
+			ERROR_LOG("Invalid pixel ("<<gBin<<") required to be set!");
+		#endif
 		return -1;
 	}
 	*/
@@ -780,7 +891,9 @@ int SLICData::SetPixelLabel(long int ix,long int iy,long int label,bool check)
 				ix<0 || ix>=inputImg->GetNx() || iy<0 || iy>=inputImg->GetNy()
 			) 
 	){
-		ERROR_LOG("Image/pixel labels mismatch or invalid pixel ("<<ix<<","<<iy<<") required to be set!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Image/pixel labels mismatch or invalid pixel ("<<ix<<","<<iy<<") required to be set!");
+		#endif
 		return -1;
 	}
 	*/
@@ -795,6 +908,27 @@ int SLICData::SetPixelLabel(long int ix,long int iy,long int label,bool check)
 
 }//close SetPixelLabel()
 
+
+//====================================
+//==  SLICNeighborCollection class
+//====================================
+int SLICNeighborCollection::SetDtot(int index,double Dtot,double Dtot_n)
+{			
+	//Check index
+	if(index<0 || index>=GetN()) {
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid neighbor index ("<<index<<") requested, valid values are [0,"<<m_neighbors.size()-1<<"]!");
+		#endif
+		return -1;
+	}
+
+	//Set Dtot
+	m_neighbors[index].Dtot= Dtot;
+	m_neighbors[index].Dtot_n= Dtot_n;
+
+	return 0;
+		
+}//close SetDtot()
 
 
 }//close namespace

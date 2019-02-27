@@ -63,9 +63,12 @@ ImgBkgData::~ImgBkgData()
 }//close destructor
 
 
-ImgBkgData::ImgBkgData(const ImgBkgData& data) {
+ImgBkgData::ImgBkgData(const ImgBkgData& data) 
+{
   // Copy constructor
-	DEBUG_LOG("Copy constuctor called...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copy constuctor called...");
+	#endif
   Init();
   ((ImgBkgData&)data).Copy(*this);
 }
@@ -94,9 +97,10 @@ void ImgBkgData::Copy(TObject &obj) const
 		(((ImgBkgData&)obj).BkgSamplings).push_back(BkgSamplings[i]);
 	}
 
-	
 	//Delete existing maps first
-	DEBUG_LOG("Deleting existing bkg & noise maps...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Deleting existing bkg & noise maps...");
+	#endif
 	if( ((ImgBkgData&)obj).BkgMap ){
 		delete ((ImgBkgData&)obj).BkgMap;
 		((ImgBkgData&)obj).BkgMap= 0;
@@ -107,7 +111,9 @@ void ImgBkgData::Copy(TObject &obj) const
 	}
 
 	//Copy maps
-	DEBUG_LOG("Copying bkg & noise maps...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copying bkg & noise maps...");
+	#endif
 	if(BkgMap){
 		((ImgBkgData&)obj).BkgMap= new Image;
 		*((ImgBkgData&)obj).BkgMap = *BkgMap;

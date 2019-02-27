@@ -30,7 +30,11 @@
 #include <CodeUtils.h>
 #include <EllipseUtils.h>
 #include <Contour.h>
-#include <Logger.h>
+
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
+
 #include <Consts.h>
 
 //ROOT headers
@@ -77,25 +81,33 @@ MathUtils::~MathUtils(){
 
 }
 
-int MathUtils::Compute2DGrid(std::vector<long int>& ix_min,std::vector<long int>& ix_max,std::vector<long int>& iy_min,std::vector<long int>& iy_max,long int Nx,long int Ny,long int boxSizeX,long int boxSizeY,float gridStepSizeX,float gridStepSizeY){
-
+int MathUtils::Compute2DGrid(std::vector<long int>& ix_min,std::vector<long int>& ix_max,std::vector<long int>& iy_min,std::vector<long int>& iy_max,long int Nx,long int Ny,long int boxSizeX,long int boxSizeY,float gridStepSizeX,float gridStepSizeY)
+{
 	//## Check given arguments
 	if(Nx<=0 || Ny<=0){
-		ERROR_LOG("Invalid Nx/Ny given (negative or zero)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid Nx/Ny given (negative or zero)!");
+		#endif
 		return -1;
 	}
 	if(boxSizeX<=0 || boxSizeY<=0) {
-		ERROR_LOG("Invalid box size given!");
+		#ifdef LOGGING_ENABLED	
+			ERROR_LOG("Invalid box size given!");
+		#endif
 		return -1;
 	}
 	if(gridStepSizeX<=0 || gridStepSizeY<=0 || gridStepSizeX>1 || gridStepSizeY>1){
-		ERROR_LOG("Invalid grid step size given (null or negative)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid grid step size given (null or negative)!");
+		#endif
 		return -1;
 	}
 
 	//## Check if image size is smaller than required box
 	if(boxSizeX>Nx || boxSizeY>Ny) {
-		WARN_LOG("Invalid box size given (too small or larger than image size)!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Invalid box size given (too small or larger than image size)!");		
+		#endif
 		return -1;
 	}
 
@@ -205,12 +217,16 @@ int MathUtils::BiLinearInterpolation(std::vector<double>const& sampled_gridX, st
 	long int nSamplesY= (long int)sampled_gridY.size();
 	long int nSamplesZ= (long int)sampledZ.size();
 	if(nSamplesX<=0 || nSamplesY<=0){
-		ERROR_LOG("Invalid sample grid size given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid sample grid size given!");
+		#endif
 		return -1;
 	}
 	long int num_elements = nSamplesX*nSamplesY;
 	if(nSamplesZ!=num_elements){
-		ERROR_LOG("Invalid sample Z given (it must be equal to Nx x Ny and indexed as ix*Ny+iy)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid sample Z given (it must be equal to Nx x Ny and indexed as ix*Ny+iy)!");
+		#endif
 		return -1;
 	}
 
@@ -218,7 +234,9 @@ int MathUtils::BiLinearInterpolation(std::vector<double>const& sampled_gridX, st
 	long int nInterpY= (long int)interp_gridY.size();
   long int num_interp_elements = nInterpX*nInterpY;
 	if(nInterpX<=0 || nInterpY<=0){
-		ERROR_LOG("Invalid interpolation grid given (size must be >0 in both directions)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid interpolation grid given (size must be >0 in both directions)!");
+		#endif
 		return -1;
 	}
 	interpZ.clear();
@@ -227,7 +245,9 @@ int MathUtils::BiLinearInterpolation(std::vector<double>const& sampled_gridX, st
 	try {		
 	
 		// Construct the grid in each dimension (note that we will pass in a sequence of iterators pointing to the beginning of each grid)
-		DEBUG_LOG("Build 2D grid for interpolation (nSamplesX="<<nSamplesX<<", nSamplesY="<<nSamplesY<<")...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Build 2D grid for interpolation (nSamplesX="<<nSamplesX<<", nSamplesY="<<nSamplesY<<")...");
+		#endif
 
   	std::vector< std::vector<double>::const_iterator > grid_iter_list;
   	grid_iter_list.push_back(sampled_gridX.begin());
@@ -239,14 +259,18 @@ int MathUtils::BiLinearInterpolation(std::vector<double>const& sampled_gridX, st
   	grid_sizes[1] = nSamplesY;
   
   	// construct the interpolator. the last two arguments are pointers to the underlying data
-		DEBUG_LOG("Build the bkg interpolator...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Build the bkg interpolator...");
+		#endif
   	InterpMultilinear<2, double> interpolator_ML(grid_iter_list.begin(), grid_sizes.begin(), sampledZ.data(), sampledZ.data() + num_elements);
 		
 		
 		//Construct interpolated grid
 		// interpolate multiple values: create sequences for each coordinate
-		DEBUG_LOG("Build the interpolated grid ("<<nInterpX<<","<<nInterpY<<") x("<<interp_gridX[0]<<","<<interp_gridX[nInterpX-1]<<") y("<<interp_gridY[0]<<","<<interp_gridY[nInterpY-1]<<")...");
-  	
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Build the interpolated grid ("<<nInterpX<<","<<nInterpY<<") x("<<interp_gridX[0]<<","<<interp_gridX[nInterpX-1]<<") y("<<interp_gridY[0]<<","<<interp_gridY[nInterpY-1]<<")...");
+  	#endif
+
   	//std::vector<double> interp_gridX = CodeUtils::linspace(xlim[0],xlim[1], Nx);
 		//std::vector<double> interp_gridY = CodeUtils::linspace(ylim[0],ylim[1], Ny);
 		
@@ -267,16 +291,22 @@ int MathUtils::BiLinearInterpolation(std::vector<double>const& sampled_gridX, st
   	interp_list.push_back(interp_y.begin());
   
 		//Interpolate sequence
-		DEBUG_LOG("Run the interpolation on grid...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Run the interpolation on grid...");
+		#endif
 		interpolator_ML.interp_vec(num_interp_elements, interp_list.begin(), interp_list.end(), interpZ.begin());
   	
 	}//close try block
 	catch( std::exception &ex ) {
-		ERROR_LOG("Exception detected in interpolation (err=" << ex.what()<<")");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Exception detected in interpolation (err=" << ex.what()<<")");
+		#endif
 		return -1;
   } 
 	catch(...) { 
-		ERROR_LOG("Unknown exception caught in interpolation!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Unknown exception caught in interpolation!");
+		#endif
 		return -1;
   }		
 	
@@ -390,7 +420,9 @@ int MathUtils::GetMirrorIndex(int index,int N){
 		mirror_index= 2*(N-1)-index;
 	}
 	else{
-		WARN_LOG("Invalid index of matrix size passed...exit!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Invalid index of matrix size passed...exit!");
+		#endif
 		return -1;
 	}	
 	return mirror_index;
@@ -552,7 +584,9 @@ int MathUtils::ComputeEllipseOverlapArea(double& overlapArea,double& err,int& rt
 
 	//Check inputs
 	if(!ellipse1 || !ellipse2) {
-		ERROR_LOG("Null ptr to input ellipses given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input ellipses given!");
+		#endif
 		return -1;
 	}
 	
@@ -581,18 +615,24 @@ int MathUtils::ComputeEllipseOverlapArea(double& overlapArea,double& err,int& rt
 			x,y,&nroots, &rtn, method
 	);
 	if(overlapArea<0){
-		WARN_LOG("Ellipse overlap computation failed with status "<<rtn<<"!");	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Ellipse overlap computation failed with status "<<rtn<<"!");	
+		#endif
 		return -1;
 	}
 
 	//Convert ellipse in polygons and find polygon overlapping areas
 	polygon_2d poly, poly2;
 	if(Ellipse2Polygon(poly,Cx_1, Cy_1,R1_1,R2_1,Theta_1)<0){
-		ERROR_LOG("Failed to convert first ellipse to polygon!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to convert first ellipse to polygon!");
+		#endif
 		return -1;
 	}
-	if(Ellipse2Polygon(poly2,Cx_2,Cy_2,R1_2,R2_2,Theta_2)<0){
-		ERROR_LOG("Failed to convert second ellipse to polygon!");
+	if(Ellipse2Polygon(poly2,Cx_2,Cy_2,R1_2,R2_2,Theta_2)<0){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to convert second ellipse to polygon!");
+		#endif
 		return -1;
 	}
 
@@ -600,7 +640,9 @@ int MathUtils::ComputeEllipseOverlapArea(double& overlapArea,double& err,int& rt
 	double overlapArea_poly = 0;
 	polygon_2d overlap_poly;
 	if(ComputePolygonOverlapArea(overlapArea_poly,overlap_poly,poly,poly2)<0){
-		ERROR_LOG("Failed to compute overlapping area between the two polygonized ellipses!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute overlapping area between the two polygonized ellipses!");
+		#endif
 		return -1;
 	}
 
@@ -648,14 +690,18 @@ int MathUtils::ComputeContourArea(double& area,Contour* contour)
 
 	//Check contour
 	if(!contour){
-		ERROR_LOG("Null ptr to contour given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to contour given!");
+		#endif
 		return -1;
 	}
 	
 	//Transform contour in polygon
 	polygon_2d poly2d;
 	if(Contour2Polygon(poly2d,contour)<0){
-		WARN_LOG("Failed to convert contour to polygon!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to convert contour to polygon!");
+		#endif
 		return -1;
 	}
 
@@ -676,18 +722,24 @@ int MathUtils::ComputeContourOverlapArea(double& overlapArea,int& overlapFlag,Co
 	//Convert contours to polygons
 	polygon_2d poly, poly2;
 	if(Contour2Polygon(poly,contour)<0){
-		ERROR_LOG("Failed to convert first contour to polygon!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to convert first contour to polygon!");
+		#endif
 		return -1;
 	}
 	if(Contour2Polygon(poly2,contour2)<0){
-		ERROR_LOG("Failed to convert second contour to polygon!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to convert second contour to polygon!");
+		#endif
 		return -1;
 	}
 
 	//Compute overlap area between polygons
 	polygon_2d overlap_poly;
 	if(ComputePolygonOverlapArea(overlapArea,overlap_poly,poly,poly2)<0){
-		ERROR_LOG("Failed to compute polygon overlap area!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute polygon overlap area!");
+		#endif
 		overlapFlag= eCONT_OVERLAP_FAILED;
 		return -1;
 	}
@@ -707,7 +759,9 @@ int MathUtils::ComputeContourOverlapArea(double& overlapArea,int& overlapFlag,Co
 			isSecondInsideFirst= boost::geometry::within(poly2, poly);
 			if(isSecondInsideFirst) overlapFlag= eCONT2_INSIDE_CONT1;
 		}
-		DEBUG_LOG("Contour 1 inside 2? "<<isFirstInsideSecond<<", Contour 2 inside 1? "<<isSecondInsideFirst);
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Contour 1 inside 2? "<<isFirstInsideSecond<<", Contour 2 inside 1? "<<isSecondInsideFirst);
+		#endif
 	}
 	else{
 		//Set non-overlapping contours
@@ -734,7 +788,9 @@ int MathUtils::ComputeContourOverlapArea(double& overlapArea,int& overlapFlag,Co
 		//Compute contour pars (need centroid)
 		int status= overlapContour->ComputeParameters();
 		if(status<0){
-			WARN_LOG("Failed to compute overlap contour pars");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to compute overlap contour pars");
+			#endif
 		}	
 		else{
 			//Sort contour points counter-clockwise
@@ -756,7 +812,9 @@ int MathUtils::ComputePolygonOverlapArea(double& overlapArea,polygon_2d& overlap
   std::deque<polygon_2d> output;
   bool ret = boost::geometry::intersection(poly, poly2, output);
   if(!ret) {
-  	WARN_LOG("Polygons not intersecting or could not calculate the overlap, returning -1");
+		#ifdef LOGGING_ENABLED
+  		WARN_LOG("Polygons not intersecting or could not calculate the overlap, returning -1");
+		#endif
 		overlapArea= -1;
     return -1;
   }
@@ -764,16 +822,22 @@ int MathUtils::ComputePolygonOverlapArea(double& overlapArea,polygon_2d& overlap
 	//Compute overlap area
 	BOOST_FOREACH(overlap_poly, output) {
  		overlapArea = boost::geometry::area(overlap_poly);
-		DEBUG_LOG("Polygon intersection: "<<boost::geometry::wkt(overlap_poly));
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Polygon intersection: "<<boost::geometry::wkt(overlap_poly));
+		#endif
   }
 
 	//Check number of points
 	size_t npoints= boost::geometry::num_points(overlap_poly);
-	DEBUG_LOG("#"<<npoints<<" in polygon intersection");
-  
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<npoints<<" in polygon intersection");
+  #endif
+
 	//Correct overlap polygon
   boost::geometry::correct(overlap_poly);
-  DEBUG_LOG("Polygon intersection: "<<boost::geometry::wkt(overlap_poly));
+	#ifdef LOGGING_ENABLED
+ 		DEBUG_LOG("Polygon intersection: "<<boost::geometry::wkt(overlap_poly));
+	#endif
 
 	return 0;
 
@@ -783,7 +847,9 @@ int MathUtils::Contour2Polygon(polygon_2d& poly,Contour* contour)
 {
 	//Check given contour
 	if(!contour){
-		WARN_LOG("Null ptr to contour given!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null ptr to contour given!");
+		#endif
 		return -1;	
 	}
 	
@@ -799,7 +865,9 @@ int MathUtils::Contour2Polygon(polygon_2d& poly,Contour* contour)
 
 	//Correct polygon
   boost::geometry::correct(poly);
-	DEBUG_LOG("Polygon: "<<boost::geometry::wkt(poly));
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Polygon: "<<boost::geometry::wkt(poly));
+	#endif
 
 	return 0;
 
@@ -809,7 +877,9 @@ int MathUtils::Ellipse2Polygon(polygon_2d& poly,double xc, double yc, double a, 
 {
   //Check n
 	if(!n) {
- 		ERROR_LOG("n should be >0");
+		#ifdef LOGGING_ENABLED
+ 			ERROR_LOG("n should be >0");
+		#endif
     return -1;
   }
 
@@ -853,7 +923,9 @@ int MathUtils::Ellipse2Polygon(polygon_2d& poly,TEllipse* ellipse, int n)
 {
 	//Check ellipse
 	if(!ellipse) {
- 		ERROR_LOG("Null ptr to ellipse given!");
+		#ifdef LOGGING_ENABLED
+ 			ERROR_LOG("Null ptr to ellipse given!");
+		#endif
     return -1;
   }
 
@@ -872,7 +944,9 @@ double MathUtils::ComputeEllipseEccentricity(TEllipse* ellipse)
 {
 	//Check ellipse
 	if(!ellipse) {
-		ERROR_LOG("Null ptr to given ellipse!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given ellipse!");
+		#endif
 		return -1;
 	}
 

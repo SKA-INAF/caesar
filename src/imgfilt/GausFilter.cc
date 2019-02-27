@@ -58,18 +58,22 @@ GausFilter::~GausFilter(){
 
 
 
-Image* GausFilter::GetGausFilter(Image* image,double bmaj,double bmin,double bpa,int nSigmas,double scale){
-	
+Image* GausFilter::GetGausFilter(Image* image,double bmaj,double bmin,double bpa,int nSigmas,double scale)
+{	
 	//## Check image
 	if(!image){
-		ERROR_LOG("Null prt to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null prt to given image!");
+		#endif
 		return nullptr;
 	}
 
 	//## Check if image has metadata and get 
 	ImgMetaData* metadata= image->GetMetaData();
 	if(!metadata){
-		ERROR_LOG("Input image has no metadata (needed to convert given bmaj/bmin/bpa into pixels)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Input image has no metadata (needed to convert given bmaj/bmin/bpa into pixels)!");
+		#endif
 		return nullptr;
 	}
 	double dX= fabs(metadata->dX*3600);//convert to arcsec
@@ -77,7 +81,9 @@ Image* GausFilter::GetGausFilter(Image* image,double bmaj,double bmin,double bpa
 
 	//## Check bmaj/bmin
 	if(bmin>bmaj){
-		ERROR_LOG("Invalid bmaj/bmin given (hint: bmaj shall be larger or equal to bmin)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid bmaj/bmin given (hint: bmaj shall be larger or equal to bmin)!");
+		#endif
 		return nullptr;
 	}
 	
@@ -98,7 +104,10 @@ Image* GausFilter::GetGausFilter(Image* image,double bmaj,double bmin,double bpa
 	int kernSizeY= (static_cast<int>(nSigmas*sigmaY + 0.5) + 1) * 2;
 	int kernSize= max(kernSizeX,kernSizeY);
 	if (kernSize%2==0) kernSize++;
-	DEBUG_LOG("kernSize="<<kernSize<<" pixSize="<<pixSize<<", sigmaX="<<sigmaX<<", sigmaY="<<sigmaY);
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("kernSize="<<kernSize<<" pixSize="<<pixSize<<", sigmaX="<<sigmaX<<", sigmaY="<<sigmaY);
+	#endif
 
 	//## Init kernels
 	cv::Mat kernel= BuildKernel(kernSize,sigmaX,sigmaY,theta_rad,scale);

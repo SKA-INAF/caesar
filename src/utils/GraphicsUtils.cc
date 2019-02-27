@@ -98,15 +98,19 @@ void GraphicsUtils::SetPalette(int paletteStyle,int ncolors)
 
 
 
-int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::vector<TPolyLine>& gridy,int coordSystem){
-	
+int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::vector<TPolyLine>& gridy,int coordSystem)
+{	
 	if(!img) {
-		ERROR_LOG("Null ptr to image given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to image given!");
+		#endif
 		return -1;
 	}
 	
 	if(!gPad){
-		ERROR_LOG("No pad available!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No pad available!");
+		#endif
 		return -1;
 	}
 
@@ -118,7 +122,9 @@ int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::
 
 	//Get image WCS
 	if(!img->HasMetaData()){
-		WARN_LOG("No meta-data present!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No meta-data present!");
+		#endif
 		return -1;
 	}
 	ImgMetaData* metadata= img->GetMetaData();
@@ -126,7 +132,9 @@ int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::
 	WCS* wcs= metadata->GetWCS(coordSystem);
 	
 	if(!wcs){
-		WARN_LOG("Cannot get WCS from image!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Cannot get WCS from image!");
+		#endif
 		return -1;
 	}		
 
@@ -147,7 +155,10 @@ int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::
 	xmax_wcs= max(max(xBR_wcs,xBL_wcs),max(xTR_wcs,xTL_wcs));
 	ymin_wcs= min(min(yBR_wcs,yBL_wcs),min(yTR_wcs,yTL_wcs));
 	ymax_wcs= max(max(yBR_wcs,yBL_wcs),max(yTR_wcs,yTL_wcs));
-	DEBUG_LOG("xmin="<<xmin<<" xmax="<<xmax<<" xmin_wcs="<<xmin_wcs<<" xmax_wcs="<<xmax_wcs<<" ymin="<<ymin<<" ymax="<<ymax<<" ymin_wcs="<<ymin_wcs<<" ymax_wcs="<<ymax_wcs);
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("xmin="<<xmin<<" xmax="<<xmax<<" xmin_wcs="<<xmin_wcs<<" xmax_wcs="<<xmax_wcs<<" ymin="<<ymin<<" ymax="<<ymax<<" ymin_wcs="<<ymin_wcs<<" ymax_wcs="<<ymax_wcs);
+	#endif
 
 	std::vector<double> x_list;
 	std::vector<double> y_list;
@@ -195,7 +206,10 @@ int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::
 	//## Generate grid
 	double stepx_wcs= 0.05*fabs(xmax_wcs-xmin_wcs);
 	double stepy_wcs= 0.05*fabs(ymax_wcs-ymin_wcs);
-	DEBUG_LOG("stepx_wcs="<<stepx_wcs<<" stepy_wcs="<<stepy_wcs);
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("stepx_wcs="<<stepx_wcs<<" stepy_wcs="<<stepy_wcs);
+	#endif
 
 	for(unsigned int i=0;i<x_list.size();i++){
 		double xstart= x_list[i];
@@ -204,8 +218,10 @@ int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::
 		
 		//pix2wcs (wcs,xstart,ystart,&xstart_wcs,&ystart_wcs);
 		WCSUtils::pix2wcs (wcs,xstart,ystart,&xstart_wcs,&ystart_wcs); 
-		DEBUG_LOG("Grid no. "<<i<<" (xstart,ystart)=("<<xstart<<","<<ystart<<") ==> ("<<xstart_wcs<<","<<ystart_wcs<<")");
-	
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Grid no. "<<i<<" (xstart,ystart)=("<<xstart<<","<<ystart<<") ==> ("<<xstart_wcs<<","<<ystart_wcs<<")");
+		#endif
+
 		//Move along wcs proj
 		int nPts= 0;
 		double x= xstart;
@@ -216,7 +232,9 @@ int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::
 		TPolyLine thisPolyLine;
 
 		while(img->HasBin(x,y)){	
-			DEBUG_LOG("wcs("<<x_wcs<<","<<y_wcs<<") ==> ("<<x<<","<<y<<") offset="<<offset);
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("wcs("<<x_wcs<<","<<y_wcs<<") ==> ("<<x<<","<<y<<") offset="<<offset);
+			#endif
 			thisPolyLine.SetPoint(nPts,x,y);	
 			nPts++;
 			
@@ -237,8 +255,10 @@ int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::
 		
 		//pix2wcs (wcs,xstart,ystart,&xstart_wcs,&ystart_wcs);
 		WCSUtils::pix2wcs (wcs,xstart,ystart,&xstart_wcs,&ystart_wcs); 
-		DEBUG_LOG("Grid no. "<<i<<" (xstart,ystart)=("<<xstart<<","<<ystart<<") ==> ("<<xstart_wcs<<","<<ystart_wcs<<")");
-	
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Grid no. "<<i<<" (xstart,ystart)=("<<xstart<<","<<ystart<<") ==> ("<<xstart_wcs<<","<<ystart_wcs<<")");
+		#endif
+
 		//Move along wcs proj
 		int nPts= 0;
 		double x= xstart;
@@ -249,7 +269,9 @@ int GraphicsUtils::SetWCSProjGrid(Image* img,std::vector<TPolyLine>& gridx,std::
 		TPolyLine thisPolyLine;
 
 		while(img->HasBin(x,y)){	
-			DEBUG_LOG("wcs("<<x_wcs<<","<<y_wcs<<") ==> ("<<x<<","<<y<<") offset="<<offset);
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("wcs("<<x_wcs<<","<<y_wcs<<") ==> ("<<x<<","<<y<<") offset="<<offset);
+			#endif
 			thisPolyLine.SetPoint(nPts,x,y);	
 			nPts++;
 			
@@ -272,7 +294,9 @@ int GraphicsUtils::SetWCSAxis(Image* img,TGaxis& xaxis_wcs,TGaxis& yaxis_wcs,int
 {
 	//Check input image
 	if(!img) {
-		ERROR_LOG("Null ptr to image given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to image given!");
+		#endif
 		return -1;
 	}
 	
@@ -281,24 +305,34 @@ int GraphicsUtils::SetWCSAxis(Image* img,TGaxis& xaxis_wcs,TGaxis& yaxis_wcs,int
 	double xmax= gPad->GetUxmax();
 	double ymin= gPad->GetUymin();
 	double ymax= gPad->GetUymax();
-	INFO_LOG("xmin/xmax="<<xmin<<"/"<<xmax<<" ymin/ymax="<<ymin<<"/"<<ymax);
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("xmin/xmax="<<xmin<<"/"<<xmax<<" ymin/ymax="<<ymin<<"/"<<ymax);
+	#endif
 
 	//Get image WCS
 	if(!img->HasMetaData()){
-		ERROR_LOG("No meta-data present!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No meta-data present!");
+		#endif
 		return -1;
 	}
 	ImgMetaData* metadata= img->GetMetaData();
 	//WorldCoor* wcs= metadata->GetWorldCoord(coordSystem);
 	WCS* wcs= metadata->GetWCS(coordSystem);
 	if(!wcs){
-		ERROR_LOG("Cannot get WCS from image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Cannot get WCS from image!");
+		#endif
 		return -1;
 	}	
 	std::string wcsType= metadata->GetWCSType();
 
 	//Get range coord in WCS
-	DEBUG_LOG("Set pixel2wcs coords...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Set pixel2wcs coords...");
+	#endif
+
 	double xmin_wcs, xmax_wcs, ymin_wcs, ymax_wcs;	
 	AstroUtils::PixelToWCSCoords(img,wcs,xmin,ymin,xmin_wcs,ymin_wcs,useImageCoords); 
 	AstroUtils::PixelToWCSCoords(img,wcs,xmax,ymin,xmax_wcs,ymin_wcs,useImageCoords);
@@ -389,11 +423,13 @@ int GraphicsUtils::SetWCSAxis(Image* img,TGaxis& xaxis_wcs,TGaxis& yaxis_wcs,int
 
 }//close GetWCSAxis()
 
-int GraphicsUtils::PadUpdater(){
-
+int GraphicsUtils::PadUpdater()
+{
 	//## Check pad	
 	if(!gPad){
-		ERROR_LOG("No pad available!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No pad available!");
+		#endif
 		return -1;
 	}
 
@@ -407,25 +443,31 @@ int GraphicsUtils::PadUpdater(){
 
 	//## Update gaxis if any
 	if(UpdateGAxis()<0){
-		WARN_LOG("Failed to update gAxis for current pad!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to update gAxis for current pad!");
+		#endif
 	}
 
 	return 0;
 
 }//close PadUpdater()
 
-int GraphicsUtils::PadUpdater_PhysCoords(){
-
+int GraphicsUtils::PadUpdater_PhysCoords()
+{
 	//## Check pad	
 	if(!gPad){
-		ERROR_LOG("No pad available!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No pad available!");
+		#endif
 		return -1;
 	}
 
 	//## Update gaxis if any
 	bool useImageCoords= false;
 	if(UpdateGAxis(useImageCoords)<0){
-		WARN_LOG("Failed to update gAxis for current pad!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to update gAxis for current pad!");
+		#endif
 	}
 
 	return 0;
@@ -438,7 +480,9 @@ Image* GraphicsUtils::FindImageFromPad()
 	//## Find image from pad primitives
 	TList* primitiveList= gPad->GetListOfPrimitives();
 	if(!primitiveList){
-		WARN_LOG("Cannot retrieve the list of primitives!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Cannot retrieve the list of primitives!");
+		#endif
 		return 0;
 	}
 
@@ -464,27 +508,35 @@ int GraphicsUtils::UpdateGAxis(bool useImageCoords)
 	TGaxis* xaxis_wcs= (TGaxis*)gPad->FindObject("xaxis_wcs");
 	TGaxis* yaxis_wcs= (TGaxis*)gPad->FindObject("yaxis_wcs");
 	if(!xaxis_wcs || !yaxis_wcs) {
-		ERROR_LOG("Cannot get current gaxis!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Cannot get current gaxis!");
+		#endif
 		return 0;
 	}
 
 	//## Find image from pad
 	Image* img= FindImageFromPad();
 	if(!img){
-		ERROR_LOG("Cannot retrieve image from current pad!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Cannot retrieve image from current pad!");
+		#endif
 		return -1;
 	}
 	
 	//## Get image WCS
 	if(!img->HasMetaData()){
-		ERROR_LOG("No meta-data present!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No meta-data present!");
+		#endif
 		return -1;
 	}
 	ImgMetaData* metadata= img->GetMetaData();
 	//WorldCoor* wcs= metadata->GetWorldCoord();
 	WCS* wcs= metadata->GetWCS();
 	if(!wcs){
-		ERROR_LOG("Cannot get WCS from image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Cannot get WCS from image!");
+		#endif
 		return -1;
 	}	
 
@@ -493,10 +545,16 @@ int GraphicsUtils::UpdateGAxis(bool useImageCoords)
 	double xmax= gPad->GetUxmax();
 	double ymin= gPad->GetUymin();
 	double ymax= gPad->GetUymax();
-	DEBUG_LOG("xmin/xmax="<<xmin<<"/"<<xmax<<" ymin/ymax="<<ymin<<"/"<<ymax);
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("xmin/xmax="<<xmin<<"/"<<xmax<<" ymin/ymax="<<ymin<<"/"<<ymax);
+	#endif
 
 	//Get range coord in WCS
-	DEBUG_LOG("Find pixel2wcs coords corresponding to new range...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Find pixel2wcs coords corresponding to new range...");
+	#endif
+
 	double xmin_wcs, xmax_wcs, ymin_wcs, ymax_wcs;	
 	AstroUtils::PixelToWCSCoords(img,wcs,xmin,ymin,xmin_wcs,ymin_wcs,useImageCoords); 
 	AstroUtils::PixelToWCSCoords(img,wcs,xmax,ymin,xmax_wcs,ymin_wcs,useImageCoords);

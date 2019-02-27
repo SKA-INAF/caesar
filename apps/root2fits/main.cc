@@ -18,7 +18,9 @@
 #include <FITSWriter.h>
 #include <SysUtils.h>
 #include <Image.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 #include <TPython.h>
 #include <TFITS.h>
@@ -139,7 +141,9 @@ int main(int argc, char **argv){
 	//================================
 	auto t0_parse = chrono::steady_clock::now();
 	if(ParseOptions(argc,argv)<0){
-		ERROR_LOG("Failed to parse command line options!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to parse command line options!");
+		#endif
 		Clear();
 		return -1;
 	}
@@ -152,7 +156,9 @@ int main(int argc, char **argv){
 	//=======================
 	auto t0_read = chrono::steady_clock::now();
 	if(ReadImage()<0){
-		ERROR_LOG("Failed to read image from file!");		
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read image from file!");		
+		#endif
 		Clear();
 		return -1;
 	}
@@ -164,7 +170,9 @@ int main(int argc, char **argv){
 	//=======================
 	auto t0_save = chrono::steady_clock::now();	
 	if(Save()<0){
-		ERROR_LOG("Failed to save image to file!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to save image to file!");
+		#endif
 		Clear();
 		return -1;
 	}
@@ -182,27 +190,41 @@ int main(int argc, char **argv){
 	auto t1 = chrono::steady_clock::now();
 	double dt= chrono::duration <double, milli> (t1-t0).count();
 
-	INFO_LOG("===========================");
-	INFO_LOG("===   PERFORMANCE INFO  ===");
-	INFO_LOG("===========================");
-	INFO_LOG("dt(ms)= "<<dt);
-	INFO_LOG("dt_parse(ms)= "<<dt_parse<<" ["<<dt_parse/dt*100.<<"%]");
-	INFO_LOG("dt_read(ms)= "<<dt_read<<" ["<<dt_read/dt*100.<<"%]");
-	INFO_LOG("dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]");
-	INFO_LOG("===========================");
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("===========================");
+		INFO_LOG("===   PERFORMANCE INFO  ===");
+		INFO_LOG("===========================");
+		INFO_LOG("dt(ms)= "<<dt);
+		INFO_LOG("dt_parse(ms)= "<<dt_parse<<" ["<<dt_parse/dt*100.<<"%]");
+		INFO_LOG("dt_read(ms)= "<<dt_read<<" ["<<dt_read/dt*100.<<"%]");
+		INFO_LOG("dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]");
+		INFO_LOG("===========================");
+	#else
+		cout<<"==========================="<<endl;
+		cout<<"===   PERFORMANCE INFO  ==="<<endl;
+		cout<<"==========================="<<endl;
+		cout<<"dt(ms)= "<<dt<<endl;
+		cout<<"dt_parse(ms)= "<<dt_parse<<" ["<<dt_parse/dt*100.<<"%]"<<endl;
+		cout<<"dt_read(ms)= "<<dt_read<<" ["<<dt_read/dt*100.<<"%]"<<endl;
+		cout<<"dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]"<<endl;
+		cout<<"==========================="<<endl;
+	#endif
 
-	INFO_LOG("End ROOT2FITS application");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("End ROOT2FITS application");
+	#endif
 
 	return 0; 
 
 }//close macro
 
-int Save(){
-
+int Save()
+{
 	// Writing to FITS file
 	if(inputImg->WriteFITS(outputFileName)<0){
-		ERROR_LOG("Failed to write image to FITS!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to write image to FITS!");
+		#endif
 		return -1;
 	}
 
@@ -215,15 +237,21 @@ int ReadImage()
 	//Open ROOT input file
 	TFile* inputFile= new TFile(inputFileName.c_str(),"READ");	
 	if(!inputFile || inputFile->IsZombie()){
-		ERROR_LOG("Cannot open input file "<<inputFileName<<"!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Cannot open input file "<<inputFileName<<"!");
+		#endif
 		return -1;
 	}
 
 	// Read image from file
-	INFO_LOG("Reading image "<<imageName<<" from file "<<inputFileName<<" ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Reading image "<<imageName<<" from file "<<inputFileName<<" ...");
+	#endif
 	Image* img= (Caesar::Image*)inputFile->Get(imageName.c_str()); 
 	if(!img){
-		ERROR_LOG("Failed to read image "<<imageName<<" from input file "<<inputFileName<<"!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read image "<<imageName<<" from input file "<<inputFileName<<"!");
+		#endif
 		return -1;
 	}
 		
@@ -231,7 +259,9 @@ int ReadImage()
 		
 	long int nX= img->GetNx();
 	long int nY= img->GetNy();
-	INFO_LOG("Image size: nX="<<nX<<" nY="<<nY);
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Image size: nX="<<nX<<" nY="<<nY);
+	#endif
 
 	// Get sub-image?
 	if(readFullImage){
@@ -240,7 +270,9 @@ int ReadImage()
 	else{
 		inputImg= img->GetTile(minx,maxx,miny,maxy);
 		if(!inputImg){
-			ERROR_LOG("Failed to read subimage!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read subimage!");
+			#endif
 			delete img;
 			img= 0;
 			return -1;	
@@ -336,20 +368,28 @@ int ParseOptions(int argc, char *argv[])
 
 	//## Set logging level
 	std::string sloglevel= GetStringLogLevel(verbosity);
-	LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
+	#ifdef LOGGING_ENABLED
+		LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
+	#endif
 
 	//## Check coords range in case 
 	if(!readFullImage) {
-		if(minx>=maxx || miny>=maxy){
-			ERROR_LOG("Invalid coord range selected (x["<<minx<<","<<maxx<<"] y["<<miny<<","<<maxy<<"])");
+		if(minx>=maxx || miny>=maxy){		
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Invalid coord range selected (x["<<minx<<","<<maxx<<"] y["<<miny<<","<<maxy<<"])");
+			#endif
 			return -1;
 		}
 	}
 
 	//## Check given input file and get info
-	INFO_LOG("Check input file name "<<inputFileName<<" ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Check input file name "<<inputFileName<<" ...");
+	#endif
 	if(!Caesar::SysUtils::CheckFile(inputFileName,info,true,".root")){
-		ERROR_LOG("Invalid input file ("<<inputFileName<<") specified!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid input file ("<<inputFileName<<") specified!");
+		#endif
 		return -1;
 	}
 
@@ -360,13 +400,14 @@ int ParseOptions(int argc, char *argv[])
 
 
 	//## Print options
-	INFO_LOG("========= OPTIONS ============");
-	INFO_LOG("input file: "<<inputFileName);
-	if(!readFullImage) INFO_LOG("x["<<minx<<","<<maxx<<"] y["<<miny<<","<<maxy<<"]");
-	INFO_LOG("image name: "<<imageName);
-	INFO_LOG("output file: "<<outputFileName);
-	INFO_LOG("===============================");
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("========= OPTIONS ============");
+		INFO_LOG("input file: "<<inputFileName);
+		if(!readFullImage) INFO_LOG("x["<<minx<<","<<maxx<<"] y["<<miny<<","<<maxy<<"]");
+		INFO_LOG("image name: "<<imageName);
+		INFO_LOG("output file: "<<outputFileName);
+		INFO_LOG("===============================");
+	#endif
 
 	return 0;
 	

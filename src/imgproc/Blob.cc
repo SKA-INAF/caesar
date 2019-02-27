@@ -31,7 +31,9 @@
 #include <Pixel.h>
 #include <Contour.h>
 #include <StatsUtils.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <ZernikeMoments.h>
 #include <WCSUtils.h>
 
@@ -90,7 +92,9 @@ Blob::Blob(std::vector<Pixel*>const& pixels,std::string name)
 	bool makeCopy= false;
 	for(size_t i=0;i<pixels.size();i++){
 		if(pixels[i] && AddPixel(pixels[i],makeCopy)<0){
-			ERROR_LOG("Failed to add pixel no. "<<i<<" to blob, skip to next!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to add pixel no. "<<i<<" to blob, skip to next!");
+			#endif
 			continue;
 		}
 	}
@@ -100,31 +104,43 @@ Blob::Blob(std::vector<Pixel*>const& pixels,std::string name)
 Blob::~Blob()
 {
 	//Clear pixels
-	DEBUG_LOG("Clearing pixels...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Clearing pixels...");
+	#endif
 	ClearPixels();
-	DEBUG_LOG("Clearing contours...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Clearing contours...");
+	#endif
 	ClearContours();	
 
 	//Clear metadata
-	DEBUG_LOG("Clearing metadata...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Clearing metadata...");
+	#endif
 	CodeUtils::DeletePtr<ImgMetaData>(m_imgMetaData);
-	DEBUG_LOG("Blob destroyes...");
-
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Blob destroyes...");
+	#endif
 }//close destructor
 
 
-Blob::Blob(const Blob& blob) {
+Blob::Blob(const Blob& blob) 
+{
   // Contour copy constructor
-	DEBUG_LOG("Copy constuctor called...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copy constuctor called...");
+	#endif
   Init();
   ((Blob&)blob).Copy(*this);
 }
 
 
-void Blob::Copy(TObject &obj) const {
-
+void Blob::Copy(TObject &obj) const 
+{
 	//Copy TNamed object
-	DEBUG_LOG("Copying parent TNamed...");
+	#ifdef LOGGING_ENABLED	
+		DEBUG_LOG("Copying parent TNamed...");
+	#endif
 	TNamed::Copy((Blob&)obj);
 
 	// Copy this blob to blob
@@ -414,11 +430,13 @@ void Blob::UpdateMoments(Pixel* pixel){
 
 }//close UpdateMoments()
 
-int Blob::AddPixel(Pixel* aPixel,bool makeCopy){
-
+int Blob::AddPixel(Pixel* aPixel,bool makeCopy)
+{
 	//Check pixel
 	if(!aPixel){
-		ERROR_LOG("Null ptr to given pixel, nothing will be added!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given pixel, nothing will be added!");
+		#endif
 		return -1;
 	}
 
@@ -446,14 +464,6 @@ int Blob::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool usePar
 	//## Compute region stats & shape parameters
 	if(NPix<=0) return -1;
 
-	//## If stats was already computed before return (unless forced)
-	//## NB: Without this is stats are computed again the X0, Y0 etc are scaled again by Npix ==> WRONG!!!!
-	//##     This was a bug in old version
-	//if(m_HasStats && !forceRecomputing) {
-	//	ERROR_LOG("Blob has already stats computed (you need to force recomputation)!");
-	//	return -1;
-	//}
-
 	//## Recomputing moments?
 	if(forceRecomputing){
 		ResetMoments();//reset moments
@@ -464,7 +474,9 @@ int Blob::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool usePar
 	//##     This was a bug in older version affecting saliency calculation (the spatial component in region distance) and eventually the extended source extraction!!!
 	//##     Need to introduce a rescaling of spatial vs color distance (a factor 100 more or less?) 
 	if((signed)(m_Pixels.size())!=NPix){
-		ERROR_LOG("Mismatch between number of pixels present in collection ("<<m_Pixels.size()<<") and NPix="<<NPix<<" (fix bug!!!)");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Mismatch between number of pixels present in collection ("<<m_Pixels.size()<<") and NPix="<<NPix<<" (fix bug!!!)");
+		#endif
 		return -1;
 	}
 
@@ -515,14 +527,18 @@ int Blob::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool usePar
 
 }//close ComputeStats()
 
-int Blob::ComputeMorphologyParams(){
-
-	DEBUG_LOG("Computing blob morphology parameters...");
+int Blob::ComputeMorphologyParams()
+{
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Computing blob morphology parameters...");
+	#endif
 	if(NPix<=0 || m_Pixels.size()<=0) return -1;
 
 	//## Reset existing pars
 	m_HasParameters= false;
-	DEBUG_LOG("Clear & reset existing contours (if any)...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Clear & reset existing contours (if any)...");
+	#endif
 	for(size_t i=0;i<m_Contours.size();i++){
 		if(m_Contours[i]){
 			delete m_Contours[i];
@@ -563,10 +579,12 @@ int Blob::ComputeMorphologyParams(){
 	long int nBoxIX= boundingBoxIX[1]-boundingBoxIX[0]+1;
 	long int nBoxIY= boundingBoxIY[1]-boundingBoxIY[0]+1;
 
-	DEBUG_LOG("xRange("<<xRange[0]<<","<<xRange[1]<<"), yRange("<<yRange[0]<<","<<yRange[1]<<")");
-	DEBUG_LOG("ixRange("<<ixRange[0]<<","<<ixRange[1]<<"), iyRange("<<yRange[0]<<","<<iyRange[1]<<")");
-	DEBUG_LOG("boundingBoxX("<<boundingBoxX[0]<<","<<boundingBoxX[1]<<"), boundingBoxY("<<boundingBoxY[0]<<","<<boundingBoxY[1]<<")"<<"  nBoxX="<<nBoxX<<", nBoxY="<<nBoxY);
-	DEBUG_LOG("boundingBoxIX("<<boundingBoxIX[0]<<","<<boundingBoxIX[1]<<"), boundingBoxIY("<<boundingBoxIY[0]<<","<<boundingBoxIY[1]<<")"<<"  nBoxIX="<<nBoxIX<<", nBoxIY="<<nBoxIY);
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("xRange("<<xRange[0]<<","<<xRange[1]<<"), yRange("<<yRange[0]<<","<<yRange[1]<<")");
+		DEBUG_LOG("ixRange("<<ixRange[0]<<","<<ixRange[1]<<"), iyRange("<<yRange[0]<<","<<iyRange[1]<<")");
+		DEBUG_LOG("boundingBoxX("<<boundingBoxX[0]<<","<<boundingBoxX[1]<<"), boundingBoxY("<<boundingBoxY[0]<<","<<boundingBoxY[1]<<")"<<"  nBoxX="<<nBoxX<<", nBoxY="<<nBoxY);
+		DEBUG_LOG("boundingBoxIX("<<boundingBoxIX[0]<<","<<boundingBoxIX[1]<<"), boundingBoxIY("<<boundingBoxIY[0]<<","<<boundingBoxIY[1]<<")"<<"  nBoxIX="<<nBoxIX<<", nBoxIY="<<nBoxIY);
+	#endif
 
 	//## Fill image and binarized image
 	//cv::Mat binarizedImg = cv::Mat::zeros(nBoxIY, nBoxIX, CV_8UC1);
@@ -637,12 +655,15 @@ int Blob::ComputeMorphologyParams(){
 			sstream<<"("<<contx_transf<<","<<conty_transf<<"), ";
 		}//end loop points in contour
 		sstream<<")";
-		DEBUG_LOG(sstream.str());
-		
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG(sstream.str());
+		#endif
 
 		//Compute contour parameters
-		if(aContour->ComputeParameters()<0){
-			WARN_LOG("One/more failures occurred while computing contour no. "<<i<<" parameters for blob id "<<Id<<"!");
+		if(aContour->ComputeParameters()<0){	
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("One/more failures occurred while computing contour no. "<<i<<" parameters for blob id "<<Id<<"!");
+			#endif
 		}
 		
 		//Add contour to the list
@@ -701,14 +722,18 @@ TH2D* Blob::GetWCSHisto(ImgType mode,int pixMargin,int coordSyst)
 	//WorldCoor* wcs= GetWCS(coordSyst);
 	WCS* wcs= GetWCS(coordSyst);
 	if(!wcs){
-		WARN_LOG("Failed to build the WCS from this source!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to build the WCS from this source!");
+		#endif
 		return nullptr;
 	}
 	
 	//Get image
 	Image* blobImg= GetImage(mode,pixMargin);
 	if(!blobImg){
-		WARN_LOG("Failed to get source image!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to get source image!");
+		#endif
 		return nullptr;
 	}
 	
@@ -718,7 +743,9 @@ TH2D* Blob::GetWCSHisto(ImgType mode,int pixMargin,int coordSyst)
 	bool useImageCoords= false;
 	TH2D* blobHisto= blobImg->GetWCSHisto2D(std::string(histoName),wcs,useImageCoords);
 	if(!blobHisto){
-		ERROR_LOG("Failed to get WCS histo from image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get WCS histo from image!");
+		#endif
 		CodeUtils::DeletePtr<Image>(blobImg);
 		return nullptr;
 	}
@@ -818,8 +845,10 @@ int Blob::ComputeZernikeMoments(int order){
 Contour* Blob::GetWCSContour(int index,WorldCoor* wcs,int coordSystem,int pixOffset,bool computePars) 
 {
 	//## Check requested contour index
-	if(index<0 || index>=(int)m_Contours.size() ) {
-		WARN_LOG("Requested contour index exceed contour size (N="<<m_Contours.size()<<"), returning nullptr!");
+	if(index<0 || index>=(int)m_Contours.size() ) {	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Requested contour index exceed contour size (N="<<m_Contours.size()<<"), returning nullptr!");
+		#endif
 		return nullptr;
 	}
 	
@@ -828,12 +857,16 @@ Contour* Blob::GetWCSContour(int index,WorldCoor* wcs,int coordSystem,int pixOff
 	bool deleteWCS= false;
 	if(!wcs){
 		if(!m_imgMetaData){
-			WARN_LOG("Requested to convert contour to WCS but no wcs was provided and no metadata are available to built it, returning null ptr!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Requested to convert contour to WCS but no wcs was provided and no metadata are available to built it, returning null ptr!");
+			#endif
 			return nullptr;
 		}
 		wcs= m_imgMetaData->GetWorldCoord(coordSystem);
 		if(!wcs){
-			ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			#endif
 			return nullptr;
 		}
 		deleteWCS= true;
@@ -842,14 +875,18 @@ Contour* Blob::GetWCSContour(int index,WorldCoor* wcs,int coordSystem,int pixOff
 	//Convert contour to WCS
 	Contour* contour_wcs= AstroUtils::PixelToWCSContour(m_Contours[index],wcs,pixOffset);
 	if(!contour_wcs){
-		ERROR_LOG("Failed to compute WCS contour!");
+		#ifdef LOGGING_ENABLED	
+			ERROR_LOG("Failed to compute WCS contour!");
+		#endif
 		if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
 		return nullptr;	
 	}
 	
 	//Compute contour parameters?
 	if(computePars && contour_wcs->ComputeParameters()<0){
-		WARN_LOG("Failed to compute WCS contour parameters!");		
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to compute WCS contour parameters!");		
+		#endif
 	}
 
 	//Delete WCS
@@ -865,7 +902,9 @@ Contour* Blob::GetWCSContour(int index,WCS* wcs,int coordSystem,int pixOffset,bo
 {
 	//## Check requested contour index
 	if(index<0 || index>=(int)m_Contours.size() ) {
-		WARN_LOG("Requested contour index exceed contour size (N="<<m_Contours.size()<<"), returning nullptr!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Requested contour index exceed contour size (N="<<m_Contours.size()<<"), returning nullptr!");
+		#endif
 		return nullptr;
 	}
 	
@@ -874,12 +913,16 @@ Contour* Blob::GetWCSContour(int index,WCS* wcs,int coordSystem,int pixOffset,bo
 	bool deleteWCS= false;
 	if(!wcs){
 		if(!m_imgMetaData){
-			WARN_LOG("Requested to convert contour to WCS but no wcs was provided and no metadata are available to built it, returning null ptr!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Requested to convert contour to WCS but no wcs was provided and no metadata are available to built it, returning null ptr!");
+			#endif
 			return nullptr;
 		}
 		wcs= m_imgMetaData->GetWCS(coordSystem);
 		if(!wcs){
-			ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			#ifdef LOGGING_ENABLED			
+				ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			#endif
 			return nullptr;
 		}
 		deleteWCS= true;
@@ -888,14 +931,18 @@ Contour* Blob::GetWCSContour(int index,WCS* wcs,int coordSystem,int pixOffset,bo
 	//Convert contour to WCS
 	Contour* contour_wcs= AstroUtils::PixelToWCSContour(m_Contours[index],wcs,pixOffset);
 	if(!contour_wcs){
-		ERROR_LOG("Failed to compute WCS contour!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute WCS contour!");
+		#endif
 		if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 		return nullptr;	
 	}
 	
 	//Compute contour parameters?
 	if(computePars && contour_wcs->ComputeParameters()<0){
-		WARN_LOG("Failed to compute WCS contour parameters!");		
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to compute WCS contour parameters!");		
+		#endif
 	}
 
 	//Delete WCS
@@ -915,12 +962,16 @@ std::vector<Contour*> Blob::GetWCSContours(WorldCoor* wcs,int coordSystem,int pi
 
 	if(!wcs){
 		if(!m_imgMetaData){
-			WARN_LOG("Requested to convert contour to WCS but no wcs was provided and no metadata are available to built it, returning null ptr!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Requested to convert contour to WCS but no wcs was provided and no metadata are available to built it, returning null ptr!");
+			#endif
 			return contours_wcs;
 		}
 		wcs= m_imgMetaData->GetWorldCoord(coordSystem);
-		if(!wcs){
-			ERROR_LOG("Failed to get WorldCoord system from metadata!");
+		if(!wcs){		
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			#endif
 			return contours_wcs;
 		}
 		deleteWCS= true;
@@ -929,7 +980,9 @@ std::vector<Contour*> Blob::GetWCSContours(WorldCoor* wcs,int coordSystem,int pi
 	//Loop over contours and convert to WCS
 	//NB: If conversion fails vector and memory is cleared inside PixelToWCSContours method
 	if(AstroUtils::PixelToWCSContours(contours_wcs,m_Contours,wcs,pixOffset)<0){
-		ERROR_LOG("Failed to convert contours to WCS!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to convert contours to WCS!");
+		#endif
 		if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
 		return contours_wcs;
 	}
@@ -938,7 +991,9 @@ std::vector<Contour*> Blob::GetWCSContours(WorldCoor* wcs,int coordSystem,int pi
 	if(computePars){
 		for(size_t i=0;i<contours_wcs.size();i++){
 			if(contours_wcs[i]->ComputeParameters()<0){
-				WARN_LOG("Failed to compute WCS contour parameters!");		
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to compute WCS contour parameters!");		
+				#endif
 				continue;
 			}
 		}//end loop contours
@@ -962,12 +1017,16 @@ std::vector<Contour*> Blob::GetWCSContours(WCS* wcs,int coordSystem,int pixOffse
 
 	if(!wcs){
 		if(!m_imgMetaData){
-			WARN_LOG("Requested to convert contour to WCS but no wcs was provided and no metadata are available to built it, returning null ptr!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Requested to convert contour to WCS but no wcs was provided and no metadata are available to built it, returning null ptr!");
+			#endif
 			return contours_wcs;
 		}
 		wcs= m_imgMetaData->GetWCS(coordSystem);
 		if(!wcs){
-			ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			#endif
 			return contours_wcs;
 		}
 		deleteWCS= true;
@@ -976,7 +1035,9 @@ std::vector<Contour*> Blob::GetWCSContours(WCS* wcs,int coordSystem,int pixOffse
 	//Loop over contours and convert to WCS
 	//NB: If conversion fails vector and memory is cleared inside PixelToWCSContours method
 	if(AstroUtils::PixelToWCSContours(contours_wcs,m_Contours,wcs,pixOffset)<0){
-		ERROR_LOG("Failed to convert contours to WCS!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to convert contours to WCS!");
+		#endif
 		if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 		return contours_wcs;
 	}
@@ -985,7 +1046,9 @@ std::vector<Contour*> Blob::GetWCSContours(WCS* wcs,int coordSystem,int pixOffse
 	if(computePars){
 		for(size_t i=0;i<contours_wcs.size();i++){
 			if(contours_wcs[i]->ComputeParameters()<0){
-				WARN_LOG("Failed to compute WCS contour parameters!");		
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to compute WCS contour parameters!");		
+				#endif
 				continue;
 			}
 		}//end loop contours
@@ -1043,7 +1106,9 @@ int Blob::GetSampleStdDev(double& sigmaX,double& sigmaY,double& covXY)
 	}//end loop pixels
 
 	if(wsum==0 || w2sum==0){
-		WARN_LOG("Failed to compute blob standard deviations as sum of weights is zero!");	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to compute blob standard deviations as sum of weights is zero!");	
+		#endif
 		return -1;
 	}
 		
@@ -1051,7 +1116,10 @@ int Blob::GetSampleStdDev(double& sigmaX,double& sigmaY,double& covXY)
 	sigmaX= sqrt(varX/normFactor);
 	sigmaY= sqrt(varY/normFactor);
 	covXY= varXY/normFactor;
-	DEBUG_LOG("Source "<<this->GetName()<<" sample std dev (sigmaX,sigmaY,covXY)=("<<sigmaX<<","<<sigmaY<<","<<covXY<<"), normFactor="<<normFactor);
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Source "<<this->GetName()<<" sample std dev (sigmaX,sigmaY,covXY)=("<<sigmaX<<","<<sigmaY<<","<<covXY<<"), normFactor="<<normFactor);
+	#endif
 
 	return 0;
 	

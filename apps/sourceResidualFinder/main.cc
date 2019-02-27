@@ -23,7 +23,9 @@
 #include <ConfigParser.h>
 #include <Contour.h>
 #include <Source.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <Consts.h>
 
 
@@ -126,7 +128,9 @@ int main(int argc, char *argv[]){
 	//================================
 	auto t0_parse = chrono::steady_clock::now();
 	if(ParseOptions(argc,argv)<0){
-		ERROR_LOG("Failed to parse command line options!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to parse command line options!");
+		#endif
 		Clear();
 		return -1;
 	}
@@ -138,7 +142,9 @@ int main(int argc, char *argv[]){
 	//=======================
 	auto t0_outfile = chrono::steady_clock::now();
 	if(OpenOutputFile()<0){
-		ERROR_LOG("Failed to open output file!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to open output file!");
+		#endif
 		Clear();
 		return -1;	
 	}
@@ -151,7 +157,9 @@ int main(int argc, char *argv[]){
 	//=======================
 	auto t0_read = chrono::steady_clock::now();
 	if(ReadImage()<0){
-		ERROR_LOG("Failed to read image from file!");		
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read image from file!");		
+		#endif
 		Clear();
 		return -1;
 	}
@@ -163,7 +171,9 @@ int main(int argc, char *argv[]){
 	//=======================
 	auto t0_stats = chrono::steady_clock::now();
 	if(ComputeStats()<0){
-		ERROR_LOG("Failed to read image from file!");		
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read image from file!");		
+		#endif
 		Clear();
 		return -1;
 	}
@@ -175,7 +185,9 @@ int main(int argc, char *argv[]){
 	//=======================
 	auto t0_bkg = chrono::steady_clock::now();	
 	if(ComputeBkg()<0){
-		ERROR_LOG("Failed to compute stats & bkg!");		
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute stats & bkg!");
+		#endif
 		Clear();
 		return -1;
 	}
@@ -188,7 +200,9 @@ int main(int argc, char *argv[]){
 	//=======================
 	auto t0_sfinder = chrono::steady_clock::now();	
 	if(FindSources()<0){
-		ERROR_LOG("Failed to find sources!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to find sources!");
+		#endif
 		Clear();
 		return -1;
 	}		
@@ -200,7 +214,9 @@ int main(int argc, char *argv[]){
 	//=======================
 	auto t0_ssel = chrono::steady_clock::now();	
 	if(SelectSources()<0){
-		ERROR_LOG("Failed to select sources!");	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to select sources!");	
+		#endif
 		Clear();
 		return -1;
 	}
@@ -212,7 +228,9 @@ int main(int argc, char *argv[]){
 	//=======================		
 	auto t0_res = chrono::steady_clock::now();
 	if(ComputeSourceResidual()<0){
-		ERROR_LOG("Failed to compute source residual map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute source residual map!");
+		#endif
 		Clear();
 		return -1;
 	}
@@ -238,22 +256,38 @@ int main(int argc, char *argv[]){
 	auto t1 = chrono::steady_clock::now();
 	double dt= chrono::duration <double, milli> (t1-t0).count();
 
-	INFO_LOG("===========================");
-	INFO_LOG("===   PERFORMANCE INFO  ===");
-	INFO_LOG("===========================");
-	INFO_LOG("dt(ms)= "<<dt);
-	INFO_LOG("dt_read(ms)= "<<dt_read<<" ["<<dt_read/dt*100.<<"%]");
-	INFO_LOG("dt_stats(ms)= "<<dt_stats<<" ["<<dt_stats/dt*100.<<"%]");
-	INFO_LOG("dt_bkg(ms)= "<<dt_bkg<<" ["<<dt_bkg/dt*100.<<"%]");
-	INFO_LOG("dt_sfinder(ms)= "<<dt_sfinder<<" ["<<dt_sfinder/dt*100.<<"%]");
-	INFO_LOG("dt_ssel(ms)= "<<dt_ssel<<" ["<<dt_ssel/dt*100.<<"%]");
-	INFO_LOG("dt_res(ms)= "<<dt_res<<" ["<<dt_res/dt*100.<<"%]");
-	INFO_LOG("dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]");
-	INFO_LOG("===========================");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("===========================");
+		INFO_LOG("===   PERFORMANCE INFO  ===");
+		INFO_LOG("===========================");
+		INFO_LOG("dt(ms)= "<<dt);
+		INFO_LOG("dt_read(ms)= "<<dt_read<<" ["<<dt_read/dt*100.<<"%]");
+		INFO_LOG("dt_stats(ms)= "<<dt_stats<<" ["<<dt_stats/dt*100.<<"%]");
+		INFO_LOG("dt_bkg(ms)= "<<dt_bkg<<" ["<<dt_bkg/dt*100.<<"%]");
+		INFO_LOG("dt_sfinder(ms)= "<<dt_sfinder<<" ["<<dt_sfinder/dt*100.<<"%]");
+		INFO_LOG("dt_ssel(ms)= "<<dt_ssel<<" ["<<dt_ssel/dt*100.<<"%]");
+		INFO_LOG("dt_res(ms)= "<<dt_res<<" ["<<dt_res/dt*100.<<"%]");
+		INFO_LOG("dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]");
+		INFO_LOG("===========================");
+	#else
+		cout<<"==========================="<<endl;
+		cout<<"===   PERFORMANCE INFO  ==="<<endl;
+		cout<<"==========================="<<endl;
+		cout<<"dt(ms)= "<<dt<<endl;
+		cout<<"dt_read(ms)= "<<dt_read<<" ["<<dt_read/dt*100.<<"%]"<<endl;
+		cout<<"dt_stats(ms)= "<<dt_stats<<" ["<<dt_stats/dt*100.<<"%]"<<endl;
+		cout<<"dt_bkg(ms)= "<<dt_bkg<<" ["<<dt_bkg/dt*100.<<"%]"<<endl;
+		cout<<"dt_sfinder(ms)= "<<dt_sfinder<<" ["<<dt_sfinder/dt*100.<<"%]"<<endl;
+		cout<<"dt_ssel(ms)= "<<dt_ssel<<" ["<<dt_ssel/dt*100.<<"%]"<<endl;
+		cout<<"dt_res(ms)= "<<dt_res<<" ["<<dt_res/dt*100.<<"%]"<<endl;
+		cout<<"dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]"<<endl;
+		cout<<"==========================="<<endl;
+	#endif
 	
-	
-	cout<<"INFO: End compact source finder"<<endl;
-	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("End residual computation");
+	#endif
+
 	return 0;
 
 }//close main
@@ -327,6 +361,7 @@ int ParseOptions(int argc, char *argv[])
 	}
 
 	//Init logger
+	#ifdef LOGGING_ENABLED
 	if(loggerTarget==eCONSOLE_TARGET){
 		std::string consoleTarget= "";
 		GET_OPTION_VALUE(consoleTarget,consoleTarget);
@@ -352,13 +387,16 @@ int ParseOptions(int argc, char *argv[])
 		cerr<<"ERROR: Failed to initialize logger!"<<endl;
 		return -1;
 	}
+	#endif
 
 	//=======================
 	//== Init thread numbers 
 	//=======================
 	int nThreads;
 	if(GET_OPTION_VALUE(nThreads,nThreads)<0){
-		ERROR_LOG("Failed to get nThreads option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get nThreads option!");
+		#endif
 		return -1;
 	}
 	if(nThreads>0) SysUtils::SetOMPThreads(nThreads);
@@ -381,45 +419,63 @@ int ComputeSourceResidual()
 	int psSubtractionMethod;
 
 	if(GET_OPTION_VALUE(removeNestedSources,removeNestedSources)<0){
-		ERROR_LOG("Failed to get removeNestedSources option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get removeNestedSources option!");
+		#endif
 		return -1;
 	}	
-	if(GET_OPTION_VALUE(dilateKernelSize,dilateKernelSize)<0){
-		ERROR_LOG("Failed to get dilateKernelSize option!");
+	if(GET_OPTION_VALUE(dilateKernelSize,dilateKernelSize)<0){		
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get dilateKernelSize option!");
+		#endif
 		return -1;
 	}	
 	
 	if(GET_OPTION_VALUE(removedSourceType,removedSourceType)<0){
-		ERROR_LOG("Failed to get removedSourceType option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get removedSourceType option!");
+		#endif
 		return -1;
 	}
 	
 	if(GET_OPTION_VALUE(residualModel,residualModel)<0){
-		ERROR_LOG("Failed to get residualModel option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get residualModel option!");
+		#endif
 		return -1;
 	}
 	
 	if(GET_OPTION_VALUE(residualModelRandomize,residualModelRandomize)<0){
-		ERROR_LOG("Failed to get residualModelRandomize option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get residualModelRandomize option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(residualZThr,residualZThr)<0){
-		ERROR_LOG("Failed to get residualZThr option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get residualZThr option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(residualZHighThr,residualZHighThr)<0){
-		ERROR_LOG("Failed to get residualZHighThr option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get residualZHighThr option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(psSubtractionMethod,psSubtractionMethod)<0){
-		ERROR_LOG("Failed to get psSubtractionMethod option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get psSubtractionMethod option!");
+		#endif
 		return -1;
 	}	
 
 	//Compute residual
 	residualImg= inputImg->GetSourceResidual(sources,dilateKernelSize,residualModel,removedSourceType,removeNestedSources,bkgData,useLocalBkg,residualModelRandomize,residualZThr,residualZHighThr,psSubtractionMethod);
 	if(!residualImg){
-		ERROR_LOG("Failed to compute residual map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute residual map!");
+		#endif
 		return -1;
 	}
 
@@ -439,31 +495,45 @@ int FindSources(){
 	double nestedBlobThrFactor;
 
 	if(GET_OPTION_VALUE(seedThr,seedThr)<0){
-		ERROR_LOG("Failed to get seedThr option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get seedThr option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(mergeThr,mergeThr)<0){
-		ERROR_LOG("Failed to get mergeThr option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get mergeThr option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(minNPix,minNPix)<0){
-		ERROR_LOG("Failed to get minNPix option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get minNPix option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(searchNegativeExcess,searchNegativeExcess)<0){
-		ERROR_LOG("Failed to get searchNegativeExcess option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get searchNegativeExcess option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(mergeBelowSeed,mergeBelowSeed)<0){
-		ERROR_LOG("Failed to get mergeBelowSeed option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get mergeBelowSeed option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(searchNestedSources,searchNestedSources)<0){
-		ERROR_LOG("Failed to get searchNestedSources option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get searchNestedSources option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(nestedBlobThrFactor,nestedBlobThrFactor)<0){
-		ERROR_LOG("Failed to get nestedBlobThrFactor option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get nestedBlobThrFactor option!");
+		#endif
 		return -1;
 	}
 
@@ -484,7 +554,9 @@ int FindSources(){
 		searchNestedSources
 	);
 	if(status<0){
-		ERROR_LOG("Source search failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Source search failed!");
+		#endif
 		return -1;
 	}
 
@@ -496,36 +568,52 @@ int SelectSources(){
 
 	//## Get options	
 	if(GET_OPTION_VALUE(applySourceSelection,applySourceSelection)<0){
-		ERROR_LOG("Failed to get applySourceSelection option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get applySourceSelection option!");
+		#endif
 		return -1;
 	}
 	if(!applySourceSelection){
-		INFO_LOG("No source selection requested!");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("No source selection requested!");
+		#endif
 		return 0;
 	}
 	
 	if(GET_OPTION_VALUE(sourceMinBoundingBox,sourceMinBoundingBox)<0){
-		ERROR_LOG("Failed to get sourceMinBoundingBox option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get sourceMinBoundingBox option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(psCircRatioThr,psCircRatioThr)<0){
-		ERROR_LOG("Failed to get psCircRatioThr option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get psCircRatioThr option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(psElongThr,psElongThr)<0){
-		ERROR_LOG("Failed to get psElongThr option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get psElongThr option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(psEllipseAreaRatioMinThr,psEllipseAreaRatioMinThr)<0){
-		ERROR_LOG("Failed to get psEllipseAreaRatioMinThr option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get psEllipseAreaRatioMinThr option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(psEllipseAreaRatioMaxThr,psEllipseAreaRatioMaxThr)<0){
-		ERROR_LOG("Failed to get psEllipseAreaRatioMaxThr option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get psEllipseAreaRatioMaxThr option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(psMaxNPix,psMaxNPix)<0){
-		ERROR_LOG("Failed to get psMaxNPix option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get psMaxNPix option!");
+		#endif
 		return -1;
 	}
 	
@@ -546,14 +634,18 @@ int SelectSources(){
 
 		//Is bad source (i.e. line-like blob, etc...)?
 		if(!IsGoodSource(sources[i])) {
-			INFO_LOG("Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as bad source, skipped!");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as bad source, skipped!");
+			#endif
 			sources[i]->SetGoodSourceFlag(false);
 			continue;
 		}
 			
 		//Is point-like source?
 		if( IsPointLikeSource(sources[i]) ){
-			INFO_LOG("Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as a point-like source ...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as a point-like source ...");
+			#endif
 			sources[i]->SetType(ePointLike);
 		}
 
@@ -567,11 +659,15 @@ int SelectSources(){
 			double nestedY0= nestedSources[j]->Y0;
 
 			if(!IsGoodSource(nestedSources[j])) {
-				INFO_LOG("Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as bad source, skipped!");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as bad source, skipped!");
+				#endif
 				nestedSources[j]->SetGoodSourceFlag(false);
 			}
 			if( IsPointLikeSource(nestedSources[j]) ){
-				INFO_LOG("Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as a point-like source ...");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as a point-like source ...");
+				#endif
 				nestedSources[j]->SetType(ePointLike);
 			}
 		}//end loop nested sources
@@ -581,8 +677,9 @@ int SelectSources(){
 		nSelSources++;
 	}//end loop sources
 
-	
-	INFO_LOG("Adding #"<<nSelSources<<" bright sources to the selected source list...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Adding #"<<nSelSources<<" bright sources to the selected source list...");
+	#endif
 
 	//Clear initial vector (DO NOT CLEAR MEMORY!) and fill with selection (then reset selection)
 	sources.clear();
@@ -597,22 +694,27 @@ bool IsGoodSource(Source* aSource){
 	
 	if(!aSource) return false;
 
-
 	//## Check for pixels 	
 	if(aSource->NPix<=0 || (aSource->GetPixels()).size()<=0) {
-		WARN_LOG("No pixels present in this source, cannot perform check!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No pixels present in this source, cannot perform check!");
+		#endif
 		return false;
 	}
 
 	//## Check for line-like source
 	if( (aSource->GetContours()).size()<=0) {
-		WARN_LOG("No contour stored for this source, cannot perform check!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No contour stored for this source, cannot perform check!");
+		#endif
 		return true;
 	}
 
 	double BoundingBoxMin= ((aSource->GetContours())[0])->BoundingBoxMin;
 	if(BoundingBoxMin<sourceMinBoundingBox) {
-		INFO_LOG("BoundingBox cut not passed (BoundingBoxMin="<<BoundingBoxMin<<"<"<<sourceMinBoundingBox<<")");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("BoundingBox cut not passed (BoundingBoxMin="<<BoundingBoxMin<<"<"<<sourceMinBoundingBox<<")");
+		#endif
 		return false;
 	}
 
@@ -624,11 +726,13 @@ bool IsGoodSource(Source* aSource){
 
 }//close IsGoodSource()
 
-bool IsPointLikeSource(Source* aSource){
-
+bool IsPointLikeSource(Source* aSource)
+{
 	if(!aSource) return false;
 	if(!aSource->HasParameters()) {
-		WARN_LOG("No parameters are available for this source (did you compute them?)...test cannot be performed!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No parameters are available for this source (did you compute them?)...test cannot be performed!");
+		#endif
 		return true;
 	}
 
@@ -653,14 +757,18 @@ bool IsPointLikeSource(Source* aSource){
 
 		//Test elongation (how symmetrical is the shape): 0=circle,square
 		if(thisContour->Elongation>psElongThr) {
-			DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass Elongation cut (ELONG="<<thisContour->CircularityRatio<<">"<<psElongThr<<")");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass Elongation cut (ELONG="<<thisContour->CircularityRatio<<">"<<psElongThr<<")");
+			#endif
 			isPointLike= false;
 			break;	
 		}
 
 		//Test ellipse fit
 		if(thisContour->EllipseAreaRatio<psEllipseAreaRatioMinThr || thisContour->EllipseAreaRatio>psEllipseAreaRatioMaxThr) {
-			DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass EllipseAreaRatio cut (EAR="<<thisContour->EllipseAreaRatio<<" outside range ["<<psEllipseAreaRatioMinThr<<","<<psEllipseAreaRatioMaxThr<<"])");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass EllipseAreaRatio cut (EAR="<<thisContour->EllipseAreaRatio<<" outside range ["<<psEllipseAreaRatioMinThr<<","<<psEllipseAreaRatioMaxThr<<"])");
+			#endif
 			isPointLike= false;
 			break;	
 		}
@@ -668,9 +776,13 @@ bool IsPointLikeSource(Source* aSource){
 	}//end contour loop
 	
 	//Check number of pixels
-	DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") (NPix="<<aSource->NPix<<">"<<psMaxNPix<<")");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") (NPix="<<aSource->NPix<<">"<<psMaxNPix<<")");
+	#endif
 	if(aSource->NPix>psMaxNPix){
-		DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass nMaxPix cut (NPix="<<aSource->NPix<<">"<<psMaxNPix<<")");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass nMaxPix cut (NPix="<<aSource->NPix<<">"<<psMaxNPix<<")");
+		#endif
 		isPointLike= false;
 	}
 
@@ -683,12 +795,16 @@ bool IsPointLikeSource(Source* aSource){
 int ComputeStats(){
 
 	//## Compute stats
-	INFO_LOG("Computing input image stats...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing input image stats...");
+	#endif
 	bool computeRobustStats= true;
 	bool useRange= false;
 	bool forceRecomputing= false;	
 	if(inputImg->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0){
-		ERROR_LOG("Stats computing failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Stats computing failed!");
+		#endif
 		return -1;
 	}
 	inputImg->PrintStats();	
@@ -703,7 +819,9 @@ int ComputeBkg(){
 	//Beam info
 	bool useBeamInfoInBkg;
 	if(GET_OPTION_VALUE(useBeamInfoInBkg,useBeamInfoInBkg)<0){
-		ERROR_LOG("Failed to get useBeamInfoInBkg option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get useBeamInfoInBkg option!");
+		#endif
 		return -1;
 	}
 	int nPixelsInBeam= 0;
@@ -713,19 +831,25 @@ int ComputeBkg(){
 		
 	//Box size
 	if(GET_OPTION_VALUE(boxSizeX,boxSizeX)<0 || GET_OPTION_VALUE(boxSizeY,boxSizeY)<0){
-		ERROR_LOG("Failed to get boxSize option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get boxSize option!");
+		#endif
 		return -1;
 	}
 
 	//Grid size
 	if(GET_OPTION_VALUE(gridSizeX,gridSizeX)<0 || GET_OPTION_VALUE(gridSizeY,gridSizeY)<0){
-		ERROR_LOG("Failed to get gridSize option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get gridSize option!");
+		#endif
 		return -1;
 	}
 	
 	//Bkg estimator
 	if(GET_OPTION_VALUE(bkgEstimator,bkgEstimator)<0){
-		ERROR_LOG("Failed to get bkgEstimator option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get bkgEstimator option!");
+		#endif
 		return -1;
 	}
 
@@ -738,35 +862,43 @@ int ComputeBkg(){
 	double mergeThr;
 
 	if(GET_OPTION_VALUE(useLocalBkg,useLocalBkg)<0){
-		ERROR_LOG("Failed to get useLocalBkg option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get useLocalBkg option!");
+		#endif
 		return -1;
 	}
 
 	if(GET_OPTION_VALUE(use2ndPassInLocalBkg,use2ndPassInLocalBkg)<0){
-		ERROR_LOG("Failed to get use2ndPassInLocalBkg option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get use2ndPassInLocalBkg option!");
+		#endif
 		return -1;
 	}
 	
 	if(GET_OPTION_VALUE(skipOutliersInLocalBkg,skipOutliersInLocalBkg)<0){
-		ERROR_LOG("Failed to get skipOutliersInLocalBkg option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get skipOutliersInLocalBkg option!");
+		#endif
 		return -1;
 	}
 	
 	if(GET_OPTION_VALUE(minNPix,minNPix)<0){
-		ERROR_LOG("Failed to get minNPix option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get minNPix option!");
+		#endif
 		return -1;
 	}
 	
-	//if(GET_OPTION_VALUE(seedBrightThr,seedBrightThr)<0){
-	//	ERROR_LOG("Failed to get seedBrightThr option!");
-	//	return -1;
-	//}
 	if(GET_OPTION_VALUE(seedThr,seedThr)<0){
-		ERROR_LOG("Failed to get seedThr option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get seedThr option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(mergeThr,mergeThr)<0){
-		ERROR_LOG("Failed to get mergeThr option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get mergeThr option!");
+		#endif
 		return -1;
 	}
 
@@ -777,25 +909,34 @@ int ComputeBkg(){
 	double Nx= static_cast<double>(inputImg->GetNx());
 	double Ny= static_cast<double>(inputImg->GetNy());
 	if(useBeamInfoInBkg && nPixelsInBeam>0){
-		INFO_LOG("Setting bkg boxes as ("<<boxSizeX<<","<<boxSizeY<<") x beam (beam="<<nPixelsInBeam<<" pixels) ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Setting bkg boxes as ("<<boxSizeX<<","<<boxSizeY<<") x beam (beam="<<nPixelsInBeam<<" pixels) ...");
+		#endif
 		boxSizeX*= nPixelsInBeam;
 		boxSizeY*= nPixelsInBeam;
 	}
 	else{
-		WARN_LOG("Beam information is not available or its usage has been turned off, using image fractions...");
-		
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Beam information is not available or its usage has been turned off, using image fractions...");
+		#endif
 		boxSizeX*= Nx;
 		boxSizeY*= Ny;
 	}
-	INFO_LOG("Setting bkg boxes to ("<<boxSizeX<<","<<boxSizeY<<") pixels ...");	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Setting bkg boxes to ("<<boxSizeX<<","<<boxSizeY<<") pixels ...");	
+	#endif
 
 	gridSizeX*= boxSizeX;
 	gridSizeY*= boxSizeY;
-	INFO_LOG("Setting grid size to ("<<gridSizeX<<","<<gridSizeY<<") pixels ...");
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Setting grid size to ("<<gridSizeX<<","<<gridSizeY<<") pixels ...");
+	#endif
+
 	//## Check grid & box size
 	if(boxSizeX>=Nx || boxSizeY>=Ny || gridSizeX>=Nx || gridSizeY>=Ny){
-		ERROR_LOG("Box/grid size are too large compared to image size ("<<Nx<<","<<Ny<<")");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Box/grid size are too large compared to image size ("<<Nx<<","<<Ny<<")");
+		#endif
 		return -1;
 	}
 
@@ -807,14 +948,18 @@ int ComputeBkg(){
 		skipOutliersInLocalBkg,seedThr,mergeThr,minNPix
 	);
 	if(!bkgData){
-		ERROR_LOG("Failed to compute bkg data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute bkg data!");
+		#endif
 		return -1;
 	}
 
 	//Compute significance
 	significanceMap= inputImg->GetSignificanceMap(bkgData,useLocalBkg);
 	if(!significanceMap){
-		ERROR_LOG("Failed to compute significance map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute significance map!");
+		#endif
 		return -1;
 	}
 
@@ -823,61 +968,79 @@ int ComputeBkg(){
 }//close ComputeBkg()
 
 
-int ReadImage(){
-
+int ReadImage()
+{
 	//## Get options
 	if(GET_OPTION_VALUE(inputFile,inputFileName)<0){
-		ERROR_LOG("Failed to get inputFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get inputFile option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(inputImage,imageName)<0){
-		ERROR_LOG("Failed to get inputImage option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get inputImage option!");
+		#endif
 		return -1;
 	}
 	
 	//## Check given input file and get info
 	Caesar::FileInfo info;
 	if(!Caesar::SysUtils::CheckFile(inputFileName,info,false)){
-		ERROR_LOG("Invalid input file ("<<inputFileName<<") specified!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid input file ("<<inputFileName<<") specified!");
+		#endif
 		return -1;
 	}
 	std::string file_extension= info.extension;
 	if(file_extension!= ".fits" && file_extension!=".root") {
-		ERROR_LOG("Invalid file extension ("<<file_extension<<")...nothing to be done!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid file extension ("<<file_extension<<")...nothing to be done!");
+		#endif
 		return -1;
 	}
 
 	//## Read image
 	//===== ROOT reading =====
 	if(file_extension==".root"){// Read image from ROOT file
-		INFO_LOG("Reading ROOT input file "<<inputFileName<<"...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Reading ROOT input file "<<inputFileName<<"...");
+		#endif
 		inputFile = new TFile(inputFileName.c_str(),"READ");
 		if(!inputFile || inputFile->IsZombie()){
-			ERROR_LOG("Cannot open input file "<<inputFileName<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Cannot open input file "<<inputFileName<<"!");
+			#endif
 			return -1;
 		}
-		//inputImg=  (Img*)inputFile->Get(imageName.c_str());	
 		inputImg=  (Image*)inputFile->Get(imageName.c_str());
 		if(!inputImg){
-			ERROR_LOG("Cannot get image from input file "<<inputFileName<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Cannot get image from input file "<<inputFileName<<"!");
+			#endif
 			return -1;
 		}
 	}//close if
 
 	//===== FITS reading =====
 	if(file_extension==".fits"){// Read image from FITS file
-		INFO_LOG("Reading FITS input file "<<inputFileName<<"...");
-		//inputImg= new Caesar::Img; 
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Reading FITS input file "<<inputFileName<<"...");
+		#endif
 		inputImg= new Caesar::Image; 	
 		inputImg->SetNameTitle(imageName.c_str(),imageName.c_str());
 		if(inputImg->ReadFITS(inputFileName)<0){
-			ERROR_LOG("Failed to read image from input file "<<inputFileName<<"!");	
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read image from input file "<<inputFileName<<"!");	
+			#endif
 			return -1;
 		}
 	}//close else if
 
 	if(!inputImg){
-		ERROR_LOG("Failed to read image from input file "<<inputFileName<<"!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read image from input file "<<inputFileName<<"!");
+		#endif
 		return -1;
 	}
 
@@ -885,83 +1048,119 @@ int ReadImage(){
 
 }//close ReadImage()
 
-int OpenOutputFile(){
-
+int OpenOutputFile()
+{
 	//Get options
 	if(GET_OPTION_VALUE(outputFile,outputFileName)<0){
-		ERROR_LOG("Failed to get outputFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get outputFile option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(saveToFile,saveToFile)<0){
-		ERROR_LOG("Failed to get saveToFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveToFile option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(saveConfig,saveConfig)<0){
-		ERROR_LOG("Failed to get saveConfig option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveConfig option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(saveResidualMap,saveResidualMap)<0){
-		ERROR_LOG("Failed to get saveResidualMap option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveResidualMap option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(saveBkgMap,saveBkgMap)<0){
-		ERROR_LOG("Failed to get saveBkgMap option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveBkgMap option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(saveNoiseMap,saveNoiseMap)<0){
-		ERROR_LOG("Failed to get saveNoiseMap option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveNoiseMap option!");
+		#endif
 		return -1;
 	}		
 	if(GET_OPTION_VALUE(saveSignificanceMap,saveSignificanceMap)<0){
-		ERROR_LOG("Failed to get saveSignificanceMap option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveSignificanceMap option!");
+		#endif
 		return -1;
 	}	
 	if(GET_OPTION_VALUE(saveInputMap,saveInputMap)<0){
-		ERROR_LOG("Failed to get saveInputMap option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveInputMap option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(saveSaliencyMap,saveSaliencyMap)<0){
-		ERROR_LOG("Failed to get saveSaliencyMap option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveSaliencyMap option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(saveSources,saveSources)<0){
-		ERROR_LOG("Failed to get saveSources option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveSources option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(saveToFITSFile,saveToFITSFile)<0){
-		ERROR_LOG("Failed to get saveToFITSFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saveToFITSFile option!");
+		#endif
 		return -1;
 	}
 
 	if(GET_OPTION_VALUE(residualMapFITSFile,residualMapFITSFile)<0){
-		ERROR_LOG("Failed to get residualMapFITSFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get residualMapFITSFile option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(inputMapFITSFile,inputMapFITSFile)<0){
-		ERROR_LOG("OpenOutputFile(): ERROR: Failed to get inputMapFITSFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("OpenOutputFile(): ERROR: Failed to get inputMapFITSFile option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(saliencyMapFITSFile,saliencyMapFITSFile)<0){
-		ERROR_LOG("Failed to get saliencyMapFITSFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get saliencyMapFITSFile option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(bkgMapFITSFile,bkgMapFITSFile)<0){
-		ERROR_LOG("Failed to get bkgMapFITSFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get bkgMapFITSFile option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(noiseMapFITSFile,noiseMapFITSFile)<0){
-		ERROR_LOG("Failed to get noiseMapFITSFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get noiseMapFITSFile option!");
+		#endif
 		return -1;
 	}
 	if(GET_OPTION_VALUE(significanceMapFITSFile,significanceMapFITSFile)<0){
-		ERROR_LOG("Failed to get significanceMapFITSFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get significanceMapFITSFile option!");
+		#endif
 		return -1;
 	}
 
 	if(saveToFile){
 		outputFile= new TFile(outputFileName.c_str(),"RECREATE");
 		if(!outputFile || !outputFile->IsOpen()){
-			ERROR_LOG("Failed to open output file!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to open output file!");
+			#endif
 			return -1;
 		}
 	}

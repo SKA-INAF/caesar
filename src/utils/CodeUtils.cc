@@ -27,7 +27,9 @@
 
 
 #include <CodeUtils.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 #include <TObject.h>
 

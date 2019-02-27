@@ -31,7 +31,9 @@
 #include <BkgData.h>
 #include <Blob.h>
 #include <Source.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <Graph.h>
 #include <GausFilter.h>
 #include <Contour.h>
@@ -78,7 +80,9 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 
 	//## Check input img
 	if(!inputImg){
-		ERROR_LOG("Null ptr to given input image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given input image!");
+		#endif
 		return -1;
 	}
 
@@ -93,7 +97,10 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 	float Ymin= inputImg->GetYmin();
 	float Xmax= inputImg->GetXmax();
 	float Ymax= inputImg->GetYmax();
-	DEBUG_LOG("Image size ("<<Nx<<","<<Ny<<"), Image range(x["<<Xmin<<","<<Xmax<<") y["<<Ymin<<","<<Ymax<<"])");
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Image size ("<<Nx<<","<<Ny<<"), Image range(x["<<Xmin<<","<<Xmax<<") y["<<Ymin<<","<<Ymax<<"])");
+	#endif
 
 	//## Check if the flood map is provided otherwise set to the input map
 	//## NB: In source search it should be the significance map
@@ -111,7 +118,9 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 
 	//## Check curvature data 
 	if(curvMap && !curvMap->HasSameBinning(inputImg)){
-		ERROR_LOG("Given curvature map has different bnnning wrt input map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Given curvature map has different bnnning wrt input map!");
+		#endif
 		return -1;
 	}
 
@@ -127,8 +136,10 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 		floodMinThr_inv= seedThr;
 	}
 
-	DEBUG_LOG("Flood thr("<<floodMinThr<<","<<floodMaxThr<<") Flood inv thr("<<floodMinThr_inv<<","<<floodMaxThr_inv<<")");
-	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Flood thr("<<floodMinThr<<","<<floodMaxThr<<") Flood inv thr("<<floodMinThr_inv<<","<<floodMaxThr_inv<<")");
+	#endif
+
 	//## Start blob search (a tile per thread)
 	std::vector<T*> blobs_t;	
 	std::vector< std::vector<T*> > blobs_per_tile;
@@ -158,10 +169,12 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 				tileIy_max.push_back(iy_max);
 			}//end loop threads
 
-			DEBUG_LOG("thread_id="<<thread_id<<", nthreads="<<nthreads<<", tileSize="<<tileSize);
-			for(size_t i=0;i<tileIy_min.size();i++){
-				DEBUG_LOG("tile no. "<<i+1<<", iy=["<<tileIy_min[i]<<","<<tileIy_max[i]<<"]");
-			}
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("thread_id="<<thread_id<<", nthreads="<<nthreads<<", tileSize="<<tileSize);
+				for(size_t i=0;i<tileIy_min.size();i++){
+					DEBUG_LOG("tile no. "<<i+1<<", iy=["<<tileIy_min[i]<<","<<tileIy_max[i]<<"]");
+				}
+			#endif
    	}//close single section
 
 	
@@ -171,7 +184,10 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 		T* aBlob_t= 0;
 		Pixel* aPixel_t= 0;
 		long int nBlobs_t= 0;
-		DEBUG_LOG("Searching blobs in thread id "<<thread_id<<" iy=["<<tileIy_min[thread_id]<<","<<tileIy_max[thread_id]<<"]");
+
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Searching blobs in thread id "<<thread_id<<" iy=["<<tileIy_min[thread_id]<<","<<tileIy_max[thread_id]<<"]");
+		#endif
 
 		//#pragma omp task	
 		//{
@@ -187,13 +203,17 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 				
 				//Check if this seed bin has been already assigned to a cluster	
 				if(isAddedInCluster_t[seedPixelId]) {
-					DEBUG_LOG("Skip pixel seed "<<seedPixelId<<" as was already assigned to a previous blob...");		
+					#ifdef LOGGING_ENABLED
+						DEBUG_LOG("Skip pixel seed "<<seedPixelId<<" as was already assigned to a previous blob...");		
+					#endif
 					continue;
 				}
 		
 				//Skip negative excess seed if not requested
-				if(!findNegativeExcess && isNegativeExcessSeed) {
-					DEBUG_LOG("Skip negative excess pixel seed "<<seedPixelId<<"...");
+				if(!findNegativeExcess && isNegativeExcessSeed) {	
+					#ifdef LOGGING_ENABLED
+						DEBUG_LOG("Skip negative excess pixel seed "<<seedPixelId<<"...");
+					#endif
 					continue;
 				}
 
@@ -201,7 +221,9 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 				pixelSeeds.push_back(seedPixelId);
 	
 				//Compute flooded pixels
-				DEBUG_LOG("Computing flood-fill around seed pixel "<<seedPixelId<<"...");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Computing flood-fill around seed pixel "<<seedPixelId<<"...");
+				#endif
 				std::vector<long int> clusterPixelIds;
 				int status= 0;
 				if(isNegativeExcessSeed){
@@ -211,7 +233,9 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 					status= FloodFill(floodImg,clusterPixelIds,seedPixelId,floodMinThr,floodMaxThr);
 				}
 				if(status<0) {
-					WARN_LOG("Flood fill failed, skip seed!");
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Flood fill failed, skip seed!");
+					#endif
 					continue;
 				}
 
@@ -240,7 +264,9 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 						isBlobAtTileEdge= true;
 					}
 					
-					DEBUG_LOG("Adding pixel id="<<clusterPixelId<<", (x,y)=("<<x<<","<<y<<"), (ix,iy)=("<<ix<<","<<iy<<")");
+					#ifdef LOGGING_ENABLED
+						DEBUG_LOG("Adding pixel id="<<clusterPixelId<<", (x,y)=("<<x<<","<<y<<"), (ix,iy)=("<<ix<<","<<iy<<")");
+					#endif
 			
 					aPixel_t= new Pixel;
 					aPixel_t->S= S;
@@ -292,11 +318,15 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 				}
 
 				//## Compute stats
-				DEBUG_LOG("Computing blob stats...");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Computing blob stats...");
+				#endif
 				aBlob_t->ComputeStats();
 		
 				//## Compute morphology parameters
-				DEBUG_LOG("Computing blob morphology params...");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Computing blob morphology params...");
+				#endif
 				aBlob_t->ComputeMorphologyParams();
 
 				//## Adding image metadata to image (needed for WCS)
@@ -314,7 +344,10 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
     	blobs_per_tile[thread_id].insert(blobs_per_tile[thread_id].end(), blobs_t.begin(), blobs_t.end());
 		}
 
-		DEBUG_LOG("thread_id="<<thread_id<<": #"<<pixelSeeds.size()<<" seeds found (#"<<pixelSeeds_edge[thread_id].size()<<" at edge), #"<<blobs_t.size()<<" blobs found ...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("thread_id="<<thread_id<<": #"<<pixelSeeds.size()<<" seeds found (#"<<pixelSeeds_edge[thread_id].size()<<" at edge), #"<<blobs_t.size()<<" blobs found ...");
+		#endif
+
 		//}//close task
 	
 	}//close parallel section
@@ -336,18 +369,24 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 				
 			//Check if this seed bin has been already assigned to a cluster	
 			if(isAddedInCluster[seedPixelId]) {
-				DEBUG_LOG("Skip pixel seed "<<seedPixelId<<" as was already assigned to a previous blob...");		
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Skip pixel seed "<<seedPixelId<<" as was already assigned to a previous blob...");		
+				#endif
 				continue;
 			}
 		
 			//Skip negative excess seed if not requested
 			if(!findNegativeExcess && isNegativeExcessSeed) {
-				DEBUG_LOG("Skip negative excess pixel seed "<<seedPixelId<<"...");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Skip negative excess pixel seed "<<seedPixelId<<"...");
+				#endif
 				continue;
 			}
 
 			//Compute flooded pixels
-			DEBUG_LOG("Computing flood-fill around seed pixel "<<seedPixelId<<"...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Computing flood-fill around seed pixel "<<seedPixelId<<"...");
+			#endif
 			std::vector<long int> clusterPixelIds;
 			int status= 0;
 			if(isNegativeExcessSeed){
@@ -357,7 +396,9 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 				status= FloodFill(floodImg,clusterPixelIds,seedPixelId,floodMinThr,floodMaxThr);
 			}
 			if(status<0) {
-				WARN_LOG("Flood fill failed, skip seed!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Flood fill failed, skip seed!");
+				#endif
 				continue;
 			}
 
@@ -381,8 +422,10 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 				double Z= floodImg->GetPixelValue(clusterPixelId);
 				double x= inputImg->GetX(ix);
 				double y= inputImg->GetY(iy);	
-				DEBUG_LOG("Adding pixel id="<<clusterPixelId<<", (x,y)=("<<x<<","<<y<<"), (ix,iy)=("<<ix<<","<<iy<<")");
-			
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Adding pixel id="<<clusterPixelId<<", (x,y)=("<<x<<","<<y<<"), (ix,iy)=("<<ix<<","<<iy<<")");
+				#endif
+
 				aPixel= new Pixel;
 				aPixel->S= S;
 				if(fabs(Z)>=seedThr) aPixel->type= Pixel::eSeed;
@@ -425,11 +468,15 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 			}
 
 			//## Compute stats
-			DEBUG_LOG("Computing blob stats...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Computing blob stats...");
+			#endif
 			aBlob->ComputeStats();
 		
 			//## Compute morphology parameters
-			DEBUG_LOG("Computing blob morphology params...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Computing blob morphology params...");
+			#endif
 			aBlob->ComputeMorphologyParams();
 
 			//## Adding image metadata to image (needed for WCS)
@@ -453,12 +500,16 @@ int BlobFinder::FindBlobsMT(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 		}//end loop blobs per tile
 	}//end loop tiles
 
-	DEBUG_LOG("#"<<blobs.size()<<" blobs found!");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<blobs.size()<<" blobs found!");
+	#endif
 
 	//Stop timer and print
 	auto end = chrono::steady_clock::now();
 	double dt= chrono::duration <double, milli> (end-start).count();
-	DEBUG_LOG("FindBlobsMT completed in "<<dt<<" ms");	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("FindBlobsMT completed in "<<dt<<" ms");	
+	#endif
 
 	return 0;
 
@@ -485,7 +536,9 @@ int BlobFinder::FindBlobsST(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 
 	//## Check input img
 	if(!inputImg){
-		ERROR_LOG("Null ptr to given input image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given input image!");
+		#endif
 		return -1;
 	}
 
@@ -500,7 +553,9 @@ int BlobFinder::FindBlobsST(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 	float Ymin= inputImg->GetYmin();
 	float Xmax= inputImg->GetXmax();
 	float Ymax= inputImg->GetYmax();
-	DEBUG_LOG("Image size ("<<Nx<<","<<Ny<<"), Image range(x["<<Xmin<<","<<Xmax<<") y["<<Ymin<<","<<Ymax<<"])");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Image size ("<<Nx<<","<<Ny<<"), Image range(x["<<Xmin<<","<<Xmax<<") y["<<Ymin<<","<<Ymax<<"])");
+	#endif
 
 	//## Check if the flood map is provided otherwise set to the input map
 	//## NB: In source search it should be the significance map
@@ -518,7 +573,9 @@ int BlobFinder::FindBlobsST(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 
 	//## Check curvature data 
 	if(curvMap && !curvMap->HasSameBinning(inputImg)){
-		ERROR_LOG("Given curvature map has different bnnning wrt input map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Given curvature map has different bnnning wrt input map!");
+		#endif
 		return -1;
 	}
 
@@ -534,8 +591,10 @@ int BlobFinder::FindBlobsST(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 		floodMinThr_inv= seedThr;
 	}
 
-	DEBUG_LOG("Flood thr("<<floodMinThr<<","<<floodMaxThr<<") Flood inv thr("<<floodMinThr_inv<<","<<floodMaxThr_inv<<")");
-	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Flood thr("<<floodMinThr<<","<<floodMaxThr<<") Flood inv thr("<<floodMinThr_inv<<","<<floodMaxThr_inv<<")");
+	#endif
+
 	//## Find seed pixels (above seed threshold)	
 	std::vector<long int> pixelSeeds;	
 	std::vector<bool> isNegativeExcessSeed;
@@ -554,7 +613,9 @@ int BlobFinder::FindBlobsST(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 		}//end loop y
 	}//end loop x
 	
-	DEBUG_LOG("#"<<pixelSeeds.size()<<" seeds found ...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<pixelSeeds.size()<<" seeds found ...");
+	#endif
 
 	//## Perform cluster finding starting from detected seeds
 	int nBlobs= 0;
@@ -569,18 +630,24 @@ int BlobFinder::FindBlobsST(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 		
 		//Check if this seed bin has been already assigned to a cluster
 		if(isAddedInCluster[seedPixelId]) {
-			DEBUG_LOG("Skip pixel seed "<<seedPixelId<<" as was already assigned to a previous blob...");		
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Skip pixel seed "<<seedPixelId<<" as was already assigned to a previous blob...");		
+			#endif
 			continue;
 		}
 		
 		//Skip negative excess seed if not requested
 		if(!findNegativeExcess && isNegativeExcessSeed[k]) {
-			DEBUG_LOG("Skip negative excess pixel seed "<<seedPixelId<<"...");
+			#ifdef LOGGING_ENABLED	
+				DEBUG_LOG("Skip negative excess pixel seed "<<seedPixelId<<"...");
+			#endif
 			continue;
 		}
 		
 		//Compute flooded pixels
-		DEBUG_LOG("Computing flood-fill around seed pixel "<<seedPixelId<<"...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Computing flood-fill around seed pixel "<<seedPixelId<<"...");
+		#endif
 		std::vector<long int> clusterPixelIds;
 		int status= 0;
 		if(isNegativeExcessSeed[k]){
@@ -590,21 +657,29 @@ int BlobFinder::FindBlobsST(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 			status= FloodFill(floodImg,clusterPixelIds,seedPixelId,floodMinThr,floodMaxThr);
 		}
 		if(status<0) {
-			WARN_LOG("Flood fill failed, skip seed!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Flood fill failed, skip seed!");
+			#endif
 			continue;
 		}
 
 		//Append cluster pixels to a blob object
 		size_t nClusterPixels= clusterPixelIds.size();
 		if(nClusterPixels==0 || (int)nClusterPixels<minPixels) {//skip small blobs
-			DEBUG_LOG("Blob pixels found @ (x,y)=("<<binX<<","<<binY<<") (N="<<nClusterPixels<<") below npix threshold (thr="<<minPixels<<"), skip blob!");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Blob pixels found @ (x,y)=("<<binX<<","<<binY<<") (N="<<nClusterPixels<<") below npix threshold (thr="<<minPixels<<"), skip blob!");
+			#endif
 			continue;
 		}
-		DEBUG_LOG("Blob found @ (x,y)=("<<binX<<","<<binY<<") (N="<<nClusterPixels<<")");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Blob found @ (x,y)=("<<binX<<","<<binY<<") (N="<<nClusterPixels<<")");
+		#endif
 		
 		nBlobs++;	
 		
-		DEBUG_LOG("Adding new blob (# "<<nBlobs<<") to list...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Adding new blob (# "<<nBlobs<<") to list...");
+		#endif
 		TString blobName= Form("S%d",nBlobs);
 		aBlob= new T();
 		aBlob->SetId(nBlobs);	
@@ -625,8 +700,10 @@ int BlobFinder::FindBlobsST(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 			long int ix= clusterPixelIdX;
 			long int iy= clusterPixelIdY;
 
-			DEBUG_LOG("Adding pixel id="<<clusterPixelId<<", (x,y)=("<<x<<","<<y<<"), (ix,iy)=("<<ix<<","<<iy<<")");
-			
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Adding pixel id="<<clusterPixelId<<", (x,y)=("<<x<<","<<y<<"), (ix,iy)=("<<ix<<","<<iy<<")");
+			#endif
+
 			aPixel= new Pixel;
 			aPixel->S= S;
 			if(fabs(Z)>=seedThr) aPixel->type= Pixel::eSeed;
@@ -668,11 +745,15 @@ int BlobFinder::FindBlobsST(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 		}
 
 		//## Compute stats
-		DEBUG_LOG("Computing blob stats...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Computing blob stats...");
+		#endif
 		aBlob->ComputeStats();
 		
 		//## Compute morphology parameters
-		DEBUG_LOG("Computing blob morphology params...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Computing blob morphology params...");
+		#endif
 		aBlob->ComputeMorphologyParams();
 
 		//## Adding image metadata to image (needed for WCS)
@@ -683,12 +764,16 @@ int BlobFinder::FindBlobsST(Image* inputImg,std::vector<T*>& blobs,Image* floodI
 		
 	}//end loop seeds
 
-	DEBUG_LOG("#"<<blobs.size()<<" blobs found!");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<blobs.size()<<" blobs found!");
+	#endif
 
 	//Stop timer and print
 	auto end = chrono::steady_clock::now();
 	double dt= chrono::duration <double, milli> (end-start).count();
-	DEBUG_LOG("FindBlobs completed in "<<dt<<" ms");	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("FindBlobs completed in "<<dt<<" ms");	
+	#endif
 
 	return 0;
 
@@ -717,30 +802,38 @@ template int BlobFinder::FindBlobs<Blob>(Image* img,std::vector<Blob*>& blobs,Im
 template int BlobFinder::FindBlobs<Source>(Image* img,std::vector<Source*>& blobs,Image*,ImgBkgData*,double seedThr,double mergeThr,int minPixels,bool findNegativeExcess,bool mergeBelowSeed,Image*);
 
 
-int BlobFinder::FloodFill(Image* img,std::vector<long int>& clusterPixelIds,long int seedPixelId,double floodMinThr,double floodMaxThr){
-	
+int BlobFinder::FloodFill(Image* img,std::vector<long int>& clusterPixelIds,long int seedPixelId,double floodMinThr,double floodMaxThr)
+{	
 	//Init
 	clusterPixelIds.clear();
 
 	//Check image and given seed id
 	if(!img){
-		ERROR_LOG("Null ptr to image given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to image given!");
+		#endif
 		return -1;
 	}
 	if(!img->HasBin(seedPixelId)){//check if given seed actually exists
-		ERROR_LOG("Given seed id is outside image range!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Given seed id is outside image range!");
+		#endif
 		return -1;
 	}
 
 	//Check given flood range
 	double seedSignal= img->GetPixelValue(seedPixelId);
 	if(seedSignal<floodMinThr || seedSignal>floodMaxThr){
-		WARN_LOG("Given flood threshold range does not contain seed, no blobs detected!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Given flood threshold range does not contain seed, no blobs detected!");
+		#endif
 		return -1;
 	}
 	
 	//Add seed to queue and loop over queue
-	DEBUG_LOG("Starting flood-fill from seed pixel "<<seedPixelId<<" (floodMinThr="<<floodMinThr<<", floodMaxThr="<<floodMaxThr<<")");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Starting flood-fill from seed pixel "<<seedPixelId<<" (floodMinThr="<<floodMinThr<<", floodMaxThr="<<floodMaxThr<<")");	
+	#endif
 	std::queue<long int> pixelQueue;
 	pixelQueue.push(seedPixelId);
 	
@@ -753,13 +846,17 @@ int BlobFinder::FloodFill(Image* img,std::vector<long int>& clusterPixelIds,long
 		//Take first pixel in queue, process it and then remove from the queue
 		long int gBinId= pixelQueue.front();
 		if(!img->HasBin(gBinId)) {
-			WARN_LOG("Invalid bin ("<<gBinId<<") put to queue (this should not occur, check!)");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Invalid bin ("<<gBinId<<") put to queue (this should not occur, check!)");
+			#endif
 			pixelQueue.pop();
 			continue;
 		}
 		long int binIdX= img->GetBinX(gBinId);
 		long int binIdY= img->GetBinY(gBinId);
-		DEBUG_LOG("Processing top item in queue (id="<<gBinId<<", (ix,iy)=("<<binIdX<<","<<binIdY<<")");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Processing top item in queue (id="<<gBinId<<", (ix,iy)=("<<binIdX<<","<<binIdY<<")");
+		#endif
 		pixelQueue.pop();
 		
 
@@ -771,12 +868,16 @@ int BlobFinder::FloodFill(Image* img,std::vector<long int>& clusterPixelIds,long
 		bool spanUp = false;
     bool spanDown = false;
 
-		DEBUG_LOG("Start flood-fill spanning from (ix,iy)=("<<binIdX<<","<<binIdY<<")");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Start flood-fill spanning from (ix,iy)=("<<binIdX<<","<<binIdY<<")");
+		#endif
 		 
 		while (img->IsBinContentInRange(binIdX,binIdY,floodMinThr,floodMaxThr)) {
    		long int gBinId_cluster= img->GetBin(binIdX,binIdY);
 			if(img->HasBin(binIdX,binIdY) && !isAddedInCluster[gBinId_cluster]) {
-				DEBUG_LOG("Adding pixel to blob (id="<<gBinId_cluster<<", (ix,iy)=("<<binIdX<<","<<binIdY<<")");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Adding pixel to blob (id="<<gBinId_cluster<<", (ix,iy)=("<<binIdX<<","<<binIdY<<")");
+				#endif
 				clusterPixelIds.push_back(gBinId_cluster);
 				isAddedInCluster[gBinId_cluster]= true;
 			}
@@ -813,8 +914,10 @@ int BlobFinder::FloodFill(Image* img,std::vector<long int>& clusterPixelIds,long
 	}//end queue loop
 	
 	//Append cluster pixels to a source object
-	DEBUG_LOG("#"<<clusterPixelIds.size()<<" cluster pixels found around given seed "<<seedPixelId);
-	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<clusterPixelIds.size()<<" cluster pixels found around given seed "<<seedPixelId);
+	#endif
+
 	return 0;
 
 }//close BlobFinder::FloodFill()
@@ -825,7 +928,9 @@ Image* BlobFinder::ComputeMultiScaleBlobMap(Image* img,double sigmaMin,double si
 {
 	//## Check image
 	if(!img){
-		ERROR_LOG("Null ptr to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given image!");
+		#endif
 		return 0;
 	}
 
@@ -839,7 +944,9 @@ Image* BlobFinder::ComputeMultiScaleBlobMap(Image* img,double sigmaMin,double si
 		double sigma= sigmaMin + i*sigmaStep;
 		int kernelSize= kernelFactor*sigma;	
 		if(kernelSize%2==0) kernelSize++;
-		INFO_LOG("Computing LoG map @ scale "<<sigma<<" (step="<<sigmaStep<<", kernsize="<<kernelSize<<")");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Computing LoG map @ scale "<<sigma<<" (step="<<sigmaStep<<", kernsize="<<kernelSize<<")");
+		#endif
 
 		//Compute LoG filter
 		bool invert= true;
@@ -909,25 +1016,35 @@ Image* BlobFinder::ComputeBlobMask(Image* img,double Bmaj,double Bmin,double Bpa
 {
 	//## Check image
 	if(!img){
-		ERROR_LOG("Null ptr to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given image!");
+		#endif
 		return nullptr;
 	}
 
 	//## Smooth image with elliptical kernel
-	INFO_LOG("Computing smoothed map with elliptical gaussian kernel (bmaj/bmin/bpa="<<Bmaj<<","<<Bmin<<","<<Bpa<<" pixels) ...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Computing smoothed map with elliptical gaussian kernel (bmaj/bmin/bpa="<<Bmaj<<","<<Bmin<<","<<Bpa<<" pixels) ...");
+	#endif
 	double kernelScaleFactor= 1;
 	Image* filtMap= img->GetBeamConvolvedImage(Bmaj,Bmin,Bpa,kernNSigmaSize,kernelScaleFactor);
 	if(!filtMap){
-		ERROR_LOG("Failed to compute smoothed map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute smoothed map!");
+		#endif
 		return nullptr;
 	}
 
 	//## Compute curvature map to be thresholded
-	INFO_LOG("Computing curvature map ...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Computing curvature map ...");
+	#endif
 	bool invert= true;
 	Image* curvMap= filtMap->GetLaplacianImage(invert);
 	if(!curvMap){
-		ERROR_LOG("Failed to compute curvature filtered map...");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute curvature filtered map...");
+		#endif
 		CodeUtils::DeletePtr<Image>(filtMap);
 		return nullptr;
 	}
@@ -950,11 +1067,15 @@ Image* BlobFinder::ComputeBlobMask(Image* img,double Bmaj,double Bmin,double Bpa
 	double thrLevel= medianThr;
 	
 	//Zero-threshold filtered map
-	INFO_LOG("Thresholding curvature map ...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Thresholding curvature map ...");
+	#endif
 	curvMap->ApplyThreshold(thrLevel);
 
 	//Compute bkg map
-	INFO_LOG("Computing bkg/rms of curvature map...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Computing bkg/rms of curvature map...");
+	#endif
 	bool useLocalBkg= true;
 	bool use2ndPass= true;
 	bool skipOutliers= false;
@@ -966,17 +1087,23 @@ Image* BlobFinder::ComputeBlobMask(Image* img,double Bmaj,double Bmin,double Bpa
 		skipOutliers,peakZThr,peakZMergeThr,minBlobSize,
 		useRangeInBkg,thrLevel
 	);
-	if(!bkgData){
-		ERROR_LOG("Failed to compute bkg map of curvature image!");
+	if(!bkgData){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute bkg map of curvature image!");
+		#endif
 		CodeUtils::DeletePtr<Image>(curvMap);	
 		return nullptr;
 	}
 
 	//Compute significance map
-	INFO_LOG("Computing curvature significance map ...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Computing curvature significance map ...");
+	#endif
 	Image* significanceMap= curvMap->GetSignificanceMap(bkgData,useLocalBkg);
 	if(!significanceMap){
-		ERROR_LOG("Failed to compute curvature significance map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute curvature significance map!");
+		#endif
 		CodeUtils::DeletePtr<Image>(curvMap);
 		return nullptr;
 	}
@@ -986,7 +1113,9 @@ Image* BlobFinder::ComputeBlobMask(Image* img,double Bmaj,double Bmin,double Bpa
 	CodeUtils::DeletePtr<ImgBkgData>(bkgData);	
 
 	//Find peaks in curvature map
-	INFO_LOG("Finding peaks in curvature significance map ...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Finding peaks in curvature significance map ...");
+	#endif
 	//std::vector<TVector2> peakPoints;
 	std::vector<ImgPeak> peakPoints;
 	bool skipBorders= true;
@@ -994,12 +1123,17 @@ Image* BlobFinder::ComputeBlobMask(Image* img,double Bmaj,double Bmin,double Bpa
 	int peakShiftTolerance= 2;
 	std::vector<int> kernels {3};
 	if(significanceMap->FindPeaks(peakPoints,kernels,peakShiftTolerance,skipBorders,peakKernelMultiplicityThr)<0){
-		ERROR_LOG("Failed to find peaks in curvature map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to find peaks in curvature map!");
+		#endif
 		CodeUtils::DeletePtr<Image>(significanceMap);
 		return nullptr;		
 	}
-	INFO_LOG("#"<<peakPoints.size()<<" peaks found in curvature map ...");
-		
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<peakPoints.size()<<" peaks found in curvature map ...");
+	#endif
+
 	//## Select peaks (skip peaks at boundary or faint peaks)
 	Image* blobMask= img->GetCloned("",true,true);
 	blobMask->Reset();
@@ -1015,7 +1149,9 @@ Image* BlobFinder::ComputeBlobMask(Image* img,double Bmaj,double Bmin,double Bpa
 		double y= peakPoints[k].y;
 		long int seedPixelId= significanceMap->FindBin(x,y);
 		if(seedPixelId<0){
-			ERROR_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
+			#endif
 			CodeUtils::DeletePtr<Image>(blobMask);	
 			CodeUtils::DeletePtr<Image>(significanceMap);
 			return nullptr;			
@@ -1026,25 +1162,34 @@ Image* BlobFinder::ComputeBlobMask(Image* img,double Bmaj,double Bmin,double Bpa
 		//Skip peaks below threshold
 		double Zpeak= significanceMap->GetBinContent(seedPixelId);
 		if(Zpeak<peakZThr) {
-			DEBUG_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak="<<Zpeak<<"<"<<peakZThr<<")");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak="<<Zpeak<<"<"<<peakZThr<<")");
+			#endif
 			continue;
 		}
 			
 		//Find blobs given current seed peak
 		std::vector<long int> clusterPixelIds;
 		if(FloodFill(significanceMap,clusterPixelIds,seedPixelId,floodMinThr,floodMaxThr)<0){
-			WARN_LOG("Failed to find blobs in curvature map (seed pix="<<seedPixelId<<"), skip to next...");
+			#ifdef LOGGING_ENABLED	
+				WARN_LOG("Failed to find blobs in curvature map (seed pix="<<seedPixelId<<"), skip to next...");
+			#endif
 			continue;
 		}
 			
 		//Check blob size agaist min size required
 		long int nPixInBlob= (long int)(clusterPixelIds.size());
 		if(nPixInBlob<(long int)(minBlobSize)){
-			INFO_LOG("Skip blob (id="<<seedPixelId<<") as below min size threshold (npix="<<nPixInBlob<<"<"<<minBlobSize<<")");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Skip blob (id="<<seedPixelId<<") as below min size threshold (npix="<<nPixInBlob<<"<"<<minBlobSize<<")");
+			#endif
 			continue;
 		}
 		nBlobs++;
-		DEBUG_LOG("Blob found @ (x,y)=("<<ix<<","<<iy<<") (N="<<nPixInBlob<<")");
+
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Blob found @ (x,y)=("<<ix<<","<<iy<<") (N="<<nPixInBlob<<")");
+		#endif
 			
 		//Mask blob pixels
 		for(size_t k=0;k<clusterPixelIds.size();k++){
@@ -1054,8 +1199,10 @@ Image* BlobFinder::ComputeBlobMask(Image* img,double Bmaj,double Bmin,double Bpa
 	
 	}//end loop peaks
 		
-	INFO_LOG("#"<<nBlobs<<" blobs found  ...");
-		
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<nBlobs<<" blobs found  ...");
+	#endif
+
 	//Clear data
 	CodeUtils::DeletePtr<Image>(significanceMap);
 
@@ -1069,7 +1216,9 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 {
 	//## Check image
 	if(!img){
-		ERROR_LOG("Null ptr to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given image!");
+		#endif
 		return nullptr;
 	}
 
@@ -1098,7 +1247,9 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 		if(kernelSize%2==0) kernelSize++;
 		
 		//Compute LoG filter
-		INFO_LOG("Computing LoG map @ scale "<<sigma<<" (step="<<sigmaStep<<", kernsize="<<kernelSize<<") ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Computing LoG map @ scale "<<sigma<<" (step="<<sigmaStep<<", kernsize="<<kernelSize<<") ...");
+		#endif
 		bool invert= true;
 		Image* filterMap= img->GetNormLoGImage(kernelSize,sigma,invert);
 		filterMaps.push_back(filterMap);
@@ -1119,11 +1270,15 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 		thresholdLevels.push_back(thrLevel);
 
 		//Zero-threshold filtered map
-		INFO_LOG("Zero-thresholding LoG map @ scale "<<sigma<<" ...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Zero-thresholding LoG map @ scale "<<sigma<<" ...");
+		#endif
 		filterMap->ApplyThreshold(thrLevel);
 
 		//Compute bkg map
-		INFO_LOG("Computing bkg map of LoG map @ scale "<<sigma<<"...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Computing bkg map of LoG map @ scale "<<sigma<<"...");
+		#endif
 		bool use2ndPass= true;
 		bool skipOutliers= false;
 		bool useRangeInBkg= true;
@@ -1135,17 +1290,23 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 			useRangeInBkg,thrLevel
 		);
 		if(!bkgData){
-			ERROR_LOG("Failed to compute bkg map @ scale "<<sigma<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute bkg map @ scale "<<sigma<<"!");
+			#endif
 			CodeUtils::DeletePtrCollection<Image>(filterMaps);	
 			CodeUtils::DeletePtrCollection<Image>(filterSignificanceMaps);
 			return nullptr;
 		}
 
 		//Compute significance map
-		DEBUG_LOG("Computing significance map of LoG map @ scale "<<sigma<<"...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Computing significance map of LoG map @ scale "<<sigma<<"...");
+		#endif
 		Image* filterSignificanceMap= filterMap->GetSignificanceMap(bkgData,useLocalBkg);
 		if(!filterSignificanceMap){
-			ERROR_LOG("Failed to compute significance map @ scale "<<sigma<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute significance map @ scale "<<sigma<<"!");
+			#endif
 			CodeUtils::DeletePtrCollection<Image>(filterMaps);	
 			CodeUtils::DeletePtrCollection<Image>(filterSignificanceMaps);
 			return nullptr;
@@ -1155,18 +1316,25 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 		bkgData= 0;
 
 		//Find peaks in filter map
-		INFO_LOG("Finding peaks in significance map of LoG map @ scale "<<sigma<<" ...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Finding peaks in significance map of LoG map @ scale "<<sigma<<" ...");
+		#endif
 		std::vector<ImgPeak> peakPoints;
 		bool skipBorders= true;
 		double peakKernelMultiplicityThr= 1;
 		std::vector<int> kernels {3};
 		if(filterSignificanceMap->FindPeaks(peakPoints,kernels,peakShiftTolerance,skipBorders,peakKernelMultiplicityThr)<0){
-			ERROR_LOG("Failed to find peaks @ scale "<<sigma<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to find peaks @ scale "<<sigma<<"!");
+			#endif
 			CodeUtils::DeletePtrCollection<Image>(filterMaps);	
 			CodeUtils::DeletePtrCollection<Image>(filterSignificanceMaps);
 			return nullptr;		
 		}
-		INFO_LOG("#"<<peakPoints.size()<<" peaks found @ scale "<<sigma<<" ...");
+
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("#"<<peakPoints.size()<<" peaks found @ scale "<<sigma<<" ...");
+		#endif
 		
 		//## Select peaks (skip peaks at boundary or faint peaks)
 		std::vector<PeakInfo> peaks_scale;
@@ -1175,7 +1343,9 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 			double y= peakPoints[k].y;
 			long int gbin= filterSignificanceMap->FindBin(x,y);
 			if(gbin<0){
-				ERROR_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
+				#endif
 				CodeUtils::DeletePtrCollection<Image>(filterMaps);	
 				CodeUtils::DeletePtrCollection<Image>(filterSignificanceMaps);
 				return nullptr;			
@@ -1186,7 +1356,9 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 			//Skip peaks below threshold
 			double Zpeak= filterSignificanceMap->GetBinContent(gbin);
 			if(Zpeak<peakZThr) {
-				DEBUG_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak="<<Zpeak<<"<"<<peakZThr<<")");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak="<<Zpeak<<"<"<<peakZThr<<")");
+				#endif
 				continue;
 			}
 			double Speak= filterMap->GetBinContent(gbin);
@@ -1197,7 +1369,10 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 			peaks_scale.push_back(peakInfo);
 		}//end loop peaks
 		peaks.insert(peaks.end(),peaks_scale.begin(),peaks_scale.end());		
-		INFO_LOG("#"<<peaks_scale.size()<<" peaks selected @ scale "<<sigma<<" ...");
+
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("#"<<peaks_scale.size()<<" peaks selected @ scale "<<sigma<<" ...");
+		#endif
 		
 	}//end loop scales
 
@@ -1260,8 +1435,9 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 		}
 	}//close else
 
-	INFO_LOG("#"<<peaks_best.size()<<" best peaks selected across scales ...");
-
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<peaks_best.size()<<" best peaks selected across scales ...");
+	#endif
 	
 	//Find blobs across scales
 	Image* blobMask= img->GetCloned("",true,true);
@@ -1270,7 +1446,9 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 	int nBlobs= 0;
 
 	for(size_t i=0;i<filterMaps.size();i++){
-		INFO_LOG("Finding blobs across scale no. "<<i+1<<" (#"<<peakIds[i].size()<<" peaks present) ...");		
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Finding blobs across scale no. "<<i+1<<" (#"<<peakIds[i].size()<<" peaks present) ...");		
+		#endif
 		double floodMinThr= std::max(0.,peakZMergeThr);
 		double floodMaxThr= std::numeric_limits<double>::infinity();
 		
@@ -1280,20 +1458,26 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 			long int seedPixelId= peakIds[i][j];	
 			std::vector<long int> clusterPixelIds;
 			if(FloodFill(filterSignificanceMaps[i],clusterPixelIds,seedPixelId,floodMinThr,floodMaxThr)<0){
-				WARN_LOG("Failed to find blobs by flood-fill @ scale "<<i+1<<" (seed pix="<<seedPixelId<<"), skip to next...");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to find blobs by flood-fill @ scale "<<i+1<<" (seed pix="<<seedPixelId<<"), skip to next...");
+				#endif
 				continue;
 			}
 			
 			//Check blob size against min size required
 			int nPixInBlob= (int)(clusterPixelIds.size());
 			if(nPixInBlob<minBlobSize){
-				DEBUG_LOG("Skip blob @ scale "<<i+1<<" (id="<<seedPixelId<<") as below min size threshold (npix="<<nPixInBlob<<"<"<<minBlobSize<<")");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Skip blob @ scale "<<i+1<<" (id="<<seedPixelId<<") as below min size threshold (npix="<<nPixInBlob<<"<"<<minBlobSize<<")");
+				#endif
 				continue;
 			}
 			long int ix= filterSignificanceMaps[i]->GetBinX(seedPixelId);
 			long int iy= filterSignificanceMaps[i]->GetBinY(seedPixelId);	
-			nBlobs++;
-			DEBUG_LOG("Blob found @ (x,y)=("<<ix<<","<<iy<<") (N="<<nPixInBlob<<")");
+			nBlobs++;		
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Blob found @ (x,y)=("<<ix<<","<<iy<<") (N="<<nPixInBlob<<")");
+			#endif
 			
 			//Mask blob pixels
 			for(size_t k=0;k<clusterPixelIds.size();k++){
@@ -1304,7 +1488,9 @@ Image* BlobFinder::ComputeMultiScaleBlobMask(Image* img,double sigmaMin,double s
 		}//end loop blobs per scale
 	}//end loop scales
 
-	INFO_LOG("#"<<nBlobs<<" blobs found in mask");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<nBlobs<<" blobs found in mask");
+	#endif
 
 	//## Clear memory 
 	CodeUtils::DeletePtrCollection<Image>(filterSignificanceMaps);
@@ -1324,7 +1510,9 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 
 	//## Check image
 	if(!img){
-		ERROR_LOG("Null ptr to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given image!");
+		#endif
 		return -1;
 	}
 
@@ -1358,7 +1546,9 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 		}
 		
 		//Compute LoG filter
-		INFO_LOG("Computing LoG map @ scale "<<sigma<<" (step="<<sigmaStep<<", kernsize="<<kernelSize<<")");
+		#ifdef LOGGING_ENABLED	
+			DEBUG_LOG("Computing LoG map @ scale "<<sigma<<" (step="<<sigmaStep<<", kernsize="<<kernelSize<<")");
+		#endif
 		bool invert= true;
 		Image* filterMap= img->GetNormLoGImage(kernelSize,sigma,invert);
 		filterMaps.push_back(filterMap);
@@ -1379,21 +1569,29 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 		thresholdLevels.push_back(thrLevel);
 
 		//Zero-threshold filtered map
-		DEBUG_LOG("Zero-thresholding LoG map @ scale "<<sigma<<" (thr="<<thrLevel<<") ...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Zero-thresholding LoG map @ scale "<<sigma<<" (thr="<<thrLevel<<") ...");
+		#endif
 		filterMap->ApplyThreshold(thrLevel);
 
 		//Find peaks in filter map
-		INFO_LOG("Finding peaks in LoG map @ scale "<<sigma<<" ...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Finding peaks in LoG map @ scale "<<sigma<<" ...");
+		#endif
 		std::vector<ImgPeak> peakPoints;
 		bool skipBorders= true;
 		double peakKernelMultiplicityThr= 1;
 		std::vector<int> kernels {3};
 		if(filterMap->FindPeaks(peakPoints,kernels,peakShiftTolerance,skipBorders,peakKernelMultiplicityThr)<0){
-			ERROR_LOG("Failed to find peaks @ scale "<<sigma<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to find peaks @ scale "<<sigma<<"!");
+			#endif
 			CodeUtils::DeletePtrCollection<Image>(filterMaps);	
 			return -1;		
 		}
-		INFO_LOG("#"<<peakPoints.size()<<" peaks found @ scale "<<sigma<<" ...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("#"<<peakPoints.size()<<" peaks found @ scale "<<sigma<<" ...");
+		#endif
 	
 		//Skip to next scale if no peaks found at this scale
 		if(peakPoints.empty()){
@@ -1408,7 +1606,9 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 			long int gbin= filterMap->FindBin(x,y);
 			
 			if(gbin<0){
-				ERROR_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to find gbin of peak("<<x<<","<<y<<"), this should not occur!");
+				#endif
 				CodeUtils::DeletePtrCollection<Image>(filterMaps);	
 				return -1;			
 			}
@@ -1416,7 +1616,9 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 			long int iy= filterMap->GetBinY(gbin);
 			double Speak= filterMap->GetBinContent(gbin);
 			double Speak_img= img->GetBinContent(gbin);
-			DEBUG_LOG("Scale no. "<<i+1<<" (scale="<<sigma<<", peak no. "<<k+1<<", S="<<Speak<<", pos("<<x<<","<<y<<"), pixel pos("<<ix<<","<<iy<<")");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Scale no. "<<i+1<<" (scale="<<sigma<<", peak no. "<<k+1<<", S="<<Speak<<", pos("<<x<<","<<y<<"), pixel pos("<<ix<<","<<iy<<")");
+			#endif
 
 			//Add peak to selected peak
 			PeakInfo peakInfo(gbin,ix,iy,Speak,(int)(i));
@@ -1426,13 +1628,18 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 			peaks_scale.push_back(peakInfo);
 		}//end loop peaks
 		peaks.insert(peaks.end(),peaks_scale.begin(),peaks_scale.end());		
-		INFO_LOG("#"<<peaks_scale.size()<<" peaks selected @ scale "<<sigma<<" ...");
+	
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("#"<<peaks_scale.size()<<" peaks selected @ scale "<<sigma<<" ...");
+		#endif
 		
 	}//end loop scales
 
 	//## Return if no peaks found
 	if(peaks.empty()){	
-		WARN_LOG("No peaks found at all searched scales (NB: this is strange, better check)!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No peaks found at all searched scales (NB: this is strange, better check)!");
+		#endif
 		CodeUtils::DeletePtrCollection<Image>(filterMaps);	
 		return 0;
 	}
@@ -1460,7 +1667,9 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 
 		//Find best scale according to max peak across scales
 		for(size_t i=0;i<connected_indexes.size();i++){
-			DEBUG_LOG("Peak no. "<<i+1<<" detected in "<<connected_indexes[i].size()<<" scales...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Peak no. "<<i+1<<" detected in "<<connected_indexes[i].size()<<" scales...");
+			#endif
 
 			double Speak_max= -1.e+99;
 			//int bestScaleIndex= 0;
@@ -1477,13 +1686,17 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 					//bestScaleIndex= index;
 					index_best= index;
 				}
-				DEBUG_LOG("Peak no. "<<i+1<<", scale="<<j<<": pos("<<ix<<","<<iy<<")");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Peak no. "<<i+1<<", scale="<<j<<": pos("<<ix<<","<<iy<<")");
+				#endif
 			}//end loop items in cluster
 		
 			int scale_best= peaks[index_best].scale;
 			long int ix_best= peaks[index_best].ix;
 			long int iy_best= peaks[index_best].iy;
-			DEBUG_LOG("Peak no. "<<i+1<<", best scale="<<scale_best<<": pos("<<ix_best<<","<<iy_best<<")");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Peak no. "<<i+1<<", best scale="<<scale_best<<": pos("<<ix_best<<","<<iy_best<<")");
+			#endif
 			peaks_best.push_back(peaks[index_best]);
 		}//end loop clusters	
 
@@ -1494,7 +1707,9 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 		}
 	}//close else
 
-	INFO_LOG("#"<<peaks_best.size()<<" best peaks selected across scales ...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<peaks_best.size()<<" best peaks selected across scales ...");
+	#endif
 
 	//Find blended blobs corresponding to best peaks
 	std::vector<PeakInfo> peaks_final;
@@ -1529,7 +1744,9 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 		//Extract blob mask by watershed transform
 		Image* blobMask= MorphFilter::ComputeWatershedFilter(filterMaps[peakScale],markerImg);
 		if(!blobMask){
-			ERROR_LOG("Failed to extract blob mask for peak component no. "<<k+1<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to extract blob mask for peak component no. "<<k+1<<"!");
+			#endif
 			CodeUtils::DeletePtrCollection<Image>(filterMaps);	
 			CodeUtils::DeletePtr<Image>(markerImg);
 			CodeUtils::DeletePtrCollection<Source>(blendedBlobs);
@@ -1542,7 +1759,9 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 		//Create flood image with mask + peak
 		double peakMaskBinContent= blobMask->GetPixelValue(peakIx,peakIy);
 		if(peakMaskBinContent<=0){
-			WARN_LOG("No blobs extracted around peak "<<k+1<<", skip peak ...");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("No blobs extracted around peak "<<k+1<<", skip peak ...");
+			#endif
 			CodeUtils::DeletePtr<Image>(blobMask);
 			continue;
 		}
@@ -1553,7 +1772,9 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 		double seedThr= 2;
 		double mergeThr= 1;
 		if(FindBlobs(img,blobs,blobMask,nullptr,seedThr,mergeThr,minBlobSize)<0){
-			ERROR_LOG("Failed to find blended blobs from mask!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to find blended blobs from mask!");
+			#endif
 			CodeUtils::DeletePtr<Image>(blobMask);
 			CodeUtils::DeletePtrCollection<Source>(blendedBlobs);
 			return -1;
@@ -1565,11 +1786,15 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 		//Check if more than one blob is found
 		//NB: Ideally only 1 blob around desired peak should be found
 		if(blobs.empty()){
-			WARN_LOG("No blended blob found for peak no. "<<k+1<<" (hint: current method was not able to extract blended blob or blob was below npix thr="<<minBlobSize<<"), go to next peak...");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("No blended blob found for peak no. "<<k+1<<" (hint: current method was not able to extract blended blob or blob was below npix thr="<<minBlobSize<<"), go to next peak...");
+			#endif
 			continue;
 		}	
 		else if(blobs.size()>1){
-			WARN_LOG("More than one blended blob found for peak no. "<<k+1<<", this should not occur, so skip the peak...");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("More than one blended blob found for peak no. "<<k+1<<", this should not occur, so skip the peak...");
+			#endif
 			continue;
 		}
 		else{//Add blob to blended blob collection
@@ -1579,7 +1804,9 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 		
 	}//end loop best peaks
 
-	INFO_LOG("#"<<blendedBlobs.size()<<" blended blobs found from #"<<peaks_best.size()<<" peaks...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<blendedBlobs.size()<<" blended blobs found from #"<<peaks_best.size()<<" peaks...");
+	#endif
 
 	for(size_t i=0;i<peaks_final.size();i++){	
 		double x= peaks_final[i].x;
@@ -1602,7 +1829,9 @@ Image* BlobFinder::GetMultiScaleBlobMask(Image* img,int kernelFactor,double sigm
 
 	//## Check image
 	if(!img){
-		ERROR_LOG("Null ptr to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given image!");
+		#endif
 		return 0;
 	}
 
@@ -1621,7 +1850,9 @@ Image* BlobFinder::GetMultiScaleBlobMask(Image* img,int kernelFactor,double sigm
 		double sigma= sigmaMin + i*sigmaStep;
 		int kernelSize= kernelFactor*sigma;	
 		if(kernelSize%2==0) kernelSize++;
-		INFO_LOG("Computing LoG map @ scale "<<sigma<<" (step="<<sigmaStep<<", kernsize="<<kernelSize<<")");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Computing LoG map @ scale "<<sigma<<" (step="<<sigmaStep<<", kernsize="<<kernelSize<<")");
+		#endif
 
 		//Compute LoG filter
 		bool invert= true;

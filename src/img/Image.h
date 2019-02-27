@@ -40,7 +40,10 @@
 #include <MorphFilter.h>
 #include <GraphicsUtils.h>
 #include <CodeUtils.h>
-#include <Logger.h>
+
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 //WCSTOOLS (TO BE DEPRECATED)
 //#include <wcs.h>
@@ -229,8 +232,10 @@ class ImgRange : public TObject {
 		{
 			if(nx<=0 || ny<=0 || smin>=smax){
 				std::stringstream ss;
-				ss<<"Invalid image size (<=0) or signal range (given!";
-				ERROR_LOG(ss.str());
+				ss<<"Invalid image size (<=0) or signal range given!";
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG(ss.str());
+				#endif
 				throw std::out_of_range(ss.str().c_str());
 			}
 		}
@@ -244,7 +249,9 @@ class ImgRange : public TObject {
 			if(nx<=0 || ny<=0){
 				std::stringstream ss;
 				ss<<"Invalid image size (<=0) or signal range given!";
-				ERROR_LOG(ss.str());
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG(ss.str());
+				#endif
 				throw std::out_of_range(ss.str().c_str());
 			}
 			xlow= 0;
@@ -262,7 +269,9 @@ class ImgRange : public TObject {
 			if(nx<=0 || ny<=0 || xlow>=_xup || ylow>=_yup || smin>=smax){
 				std::stringstream ss;
 				ss<<"Invalid image size (<=0) or range given!";
-				ERROR_LOG(ss.str());
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG(ss.str());
+				#endif
 				throw std::out_of_range(ss.str().c_str());
 			}
 		}
@@ -464,7 +473,9 @@ class Image : public TNamed {
 		*/
 		long int GetBin(long int binx,long int biny){
 			if(!HasBin(binx,biny)) {
-				DEBUG_LOG("Invalid bin requested ("<<binx<<","<<biny<<")!");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Invalid bin requested ("<<binx<<","<<biny<<")!");
+				#endif
 				return -1;
 			}
 			return binx + biny*m_Nx;
@@ -473,7 +484,11 @@ class Image : public TNamed {
 		* \brief Get bin x corresponding to global bin
 		*/
 		long int GetBinX(long int gbin){
-			if(gbin<0 || gbin>=(long int)(m_pixels.size())) WARN_LOG("Invalid bin given (id="<<gbin<<")");
+			if(gbin<0 || gbin>=(long int)(m_pixels.size())) {
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Invalid bin given (id="<<gbin<<")");
+				#endif
+			}
 			return gbin % m_Nx;
 		}
 		/**
@@ -500,7 +515,9 @@ class Image : public TNamed {
 		*/
 		float GetPixelValue(long int gbin){
 			if(gbin<0 || gbin>=(long int)(m_pixels.size())) {
-				WARN_LOG("Invalid pixel bin ("<<gbin<<") requested to be accessed (hint: check if image size is not initialized or given bin exceed size), returning nan");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Invalid pixel bin ("<<gbin<<") requested to be accessed (hint: check if image size is not initialized or given bin exceed size), returning nan");
+				#endif
 				return std::numeric_limits<float>::quiet_NaN();
 			}
 			return m_pixels[gbin];
@@ -519,7 +536,9 @@ class Image : public TNamed {
 		*/
 		int SetPixelValue(long int gbin,double w){
 			if(gbin<0 || gbin>=(long int)(m_pixels.size())) {
-				WARN_LOG("Invalid pixel bin ("<<gbin<<") requested to be accessed (hint: check if image size is not initialized or given bin exceed size), will not set value!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Invalid pixel bin ("<<gbin<<") requested to be accessed (hint: check if image size is not initialized or given bin exceed size), will not set value!");
+				#endif
 				return -1;
 			}
 			m_pixels[gbin]= w;
@@ -674,7 +693,9 @@ class Image : public TNamed {
 			double ymin= GetYmin();
 			double ymax= GetYmax();
 			if(x<xmin || x>xmax || y<ymin || y>ymax){
-				DEBUG_LOG("Cannot find bin (x,y)=("<<x<<","<<y<<") (hint: overflow/underflow bins)!");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Cannot find bin (x,y)=("<<x<<","<<y<<") (hint: overflow/underflow bins)!");
+				#endif
 				return -1;
 			}
 			long int binx= static_cast<long int>( (m_Nx-1)*(x-xmin)/(xmax-xmin) );
@@ -795,7 +816,9 @@ class Image : public TNamed {
 		}
 		int SetMetaData(ImgMetaData* data) {
 			if(!data){
-				ERROR_LOG("Null ptr to given metadata!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Null ptr to given metadata!");
+				#endif
 				return -1;
 			}
 			m_MetaData= data;

@@ -71,7 +71,9 @@ int AstroUtils::GetIAUCoords(std::string& iau,const std::string& s)
 	//Split string on whitespaces
 	std::vector<std::string> fields= CodeUtils::SplitStringOnWhitespaces(s);
 	if(fields.size()!=3){
-		WARN_LOG("Invalid number of parsed fields (n="<<fields.size()<<") when 3 expected!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Invalid number of parsed fields (n="<<fields.size()<<") when 3 expected!");
+		#endif
 		return -1;
 	}
 
@@ -85,20 +87,26 @@ int AstroUtils::GetIAUCoords(std::string& iau,const std::string& s)
 	else if(cs_field=="FK4" || cs_field=="fk4") cs= "B";
 	else if(cs_field=="galactic") cs= "G";
 	else {
-		WARN_LOG("");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Invalid coord system flag given!");
+		#endif
 		return -1;
 	}
 
 	//Split ra & dec fields on :
 	std::vector<std::string> ra_parsed_fields= CodeUtils::SplitStringOnPattern(ra_field,':');
 	if(ra_parsed_fields.size()!=3){
-		WARN_LOG("Invalid number of RA parsed fields (n="<<ra_parsed_fields.size()<<") when 3 expected!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Invalid number of RA parsed fields (n="<<ra_parsed_fields.size()<<") when 3 expected!");
+		#endif
 		return -1;
 	}
 
 	std::vector<std::string> dec_parsed_fields= CodeUtils::SplitStringOnPattern(dec_field,':');
 	if(dec_parsed_fields.size()!=3){
-		WARN_LOG("Invalid number of DEC parsed fields (n="<<dec_parsed_fields.size()<<") when 3 expected!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Invalid number of DEC parsed fields (n="<<dec_parsed_fields.size()<<") when 3 expected!");
+		#endif
 		return -1;
 	}
 
@@ -132,7 +140,9 @@ std::string AstroUtils::GetDS9WCSTypeHeader(int coordSys)
 	else if(coordSys==eB1950) ds9CoordSys= "fk4";
 	else if(coordSys==eGALACTIC) ds9CoordSys= "galactic";
 	else{
-		WARN_LOG("Unknown coord sys given ("<<coordSys<<"), setting to 'image'");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Unknown coord sys given ("<<coordSys<<"), setting to 'image'");
+		#endif
 		ds9CoordSys= "image";
 	}
 
@@ -140,28 +150,14 @@ std::string AstroUtils::GetDS9WCSTypeHeader(int coordSys)
 
 }//close GetDS9WCSTypeHeader()
 
-/*
-int AstroUtils::PixelToWCSCoords(double& xpos, double& ypos,WorldCoor* wcs,double ix,double iy) 
-{
-	//Check WCS
-	if(!wcs){
-		ERROR_LOG("Null ptr to given WCS!");
-		return -1;
-	}
-
-	//Convert coords
-	pix2wcs (wcs,ix,iy,&xpos, &ypos);
-	
-	return 0;
-
-}//close PixelToWCSCoords()
-*/
 
 int AstroUtils::PixelToWCSCoords(double& xpos, double& ypos,WCS* wcs,double ix,double iy) 
 {
 	//Check WCS
 	if(!wcs){
-		ERROR_LOG("Null ptr to given WCS!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given WCS!");
+		#endif
 		return -1;
 	}
 
@@ -172,36 +168,6 @@ int AstroUtils::PixelToWCSCoords(double& xpos, double& ypos,WCS* wcs,double ix,d
 
 }//close PixelToWCSCoords()
 
-/*
-int AstroUtils::PixelToWCSStrCoords(std::string& wcs_str,WorldCoor* wcs,double ix,double iy,int max_str_length) 
-{
-	//Init str
-	wcs_str= "";
-
-	//Check WCS
-	if(!wcs){
-		ERROR_LOG("Null ptr to given WCS!");
-		return -1;
-	}
-	
-	if(max_str_length<=0){
-		ERROR_LOG("Invalid max wcs string size given (must be >0)!");
-		return -1;
-	}
-
-	//Convert coords
-	char data[max_str_length];
-	int status= pix2wcst (wcs,ix,iy,data,max_str_length);
-	if(status==0){
-		WARN_LOG("Failed to convert pixel coords ("<<ix<<","<<iy<<") to WCS string!");
-		return -1;
-	}	
-	wcs_str= std::string(data);
-
-	return 0;
-
-}//close PixelToWCSStrCoords()
-*/
 
 int AstroUtils::PixelToWCSStrCoords(std::string& wcs_str,WCS* wcs,double ix,double iy,int max_str_length) 
 {
@@ -210,12 +176,16 @@ int AstroUtils::PixelToWCSStrCoords(std::string& wcs_str,WCS* wcs,double ix,doub
 
 	//Check WCS
 	if(!wcs){
-		ERROR_LOG("Null ptr to given WCS!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given WCS!");
+		#endif
 		return -1;
 	}
 	
 	if(max_str_length<=0){
-		ERROR_LOG("Invalid max wcs string size given (must be >0)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid max wcs string size given (must be >0)!");
+		#endif
 		return -1;
 	}
 
@@ -223,7 +193,9 @@ int AstroUtils::PixelToWCSStrCoords(std::string& wcs_str,WCS* wcs,double ix,doub
 	char data[max_str_length];
 	int status= WCSUtils::pix2wcst (wcs,ix,iy,data,max_str_length);
 	if(status==0){
-		WARN_LOG("Failed to convert pixel coords ("<<ix<<","<<iy<<") to WCS string!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to convert pixel coords ("<<ix<<","<<iy<<") to WCS string!");
+		#endif
 		return -1;
 	}	
 	wcs_str= std::string(data);
@@ -232,14 +204,17 @@ int AstroUtils::PixelToWCSStrCoords(std::string& wcs_str,WCS* wcs,double ix,doub
 
 }//close PixelToWCSStrCoords()
 
-/*
-int AstroUtils::PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,double& xpos, double& ypos,bool useImageCoords) {
 
+
+int AstroUtils::PixelToWCSCoords(Caesar::Image* image,WCS* wcs,double ix,double iy,double& xpos, double& ypos,bool useImageCoords) 
+{
 	//## NB: ix & iy shall be the pixel coordinates (image matrix coordinates).
 	//## When a tile is read in FITS the header keywords (crpix) are modified accordingly so you need to pass the new matrix coordinates (not the (x,y) corresponding to full image) 
 	//Check pixel values in input
 	if(!image){
-		ERROR_LOG("Null image ptr given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null image ptr given!");
+		#endif
 		return -1;	
 	}
 
@@ -250,50 +225,17 @@ int AstroUtils::PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,d
 	double ymax= image->GetYmax();
 	
 	if(useImageCoords && (ix<xmin || iy<ymin || ix>xmax || iy>ymax) ){
-		ERROR_LOG("Invalid pix range selected (ix="<<ix<<", iy="<<iy<<")");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid pix range selected (ix="<<ix<<", iy="<<iy<<")");
+		#endif
 		return -1;	
 	}
 
 	//Check WCS
 	if(!wcs){
-		ERROR_LOG("Null ptr to given WCS!");
-		return -1;
-	}
-
-	//Convert coords
-	pix2wcs (wcs,ix,iy,&xpos, &ypos);
-	
-	return 0;
-
-}//close PixelToWCSCoords()
-*/
-
-
-
-int AstroUtils::PixelToWCSCoords(Caesar::Image* image,WCS* wcs,double ix,double iy,double& xpos, double& ypos,bool useImageCoords) {
-
-	//## NB: ix & iy shall be the pixel coordinates (image matrix coordinates).
-	//## When a tile is read in FITS the header keywords (crpix) are modified accordingly so you need to pass the new matrix coordinates (not the (x,y) corresponding to full image) 
-	//Check pixel values in input
-	if(!image){
-		ERROR_LOG("Null image ptr given!");
-		return -1;	
-	}
-
-	//Get image range
-	double xmin= image->GetXmin();
-	double ymin= image->GetYmin();
-	double xmax= image->GetXmax();
-	double ymax= image->GetYmax();
-	
-	if(useImageCoords && (ix<xmin || iy<ymin || ix>xmax || iy>ymax) ){
-		ERROR_LOG("Invalid pix range selected (ix="<<ix<<", iy="<<iy<<")");
-		return -1;	
-	}
-
-	//Check WCS
-	if(!wcs){
-		ERROR_LOG("Null ptr to given WCS!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given WCS!");
+		#endif
 		return -1;
 	}
 
@@ -303,56 +245,6 @@ int AstroUtils::PixelToWCSCoords(Caesar::Image* image,WCS* wcs,double ix,double 
 	return 0;
 
 }//close PixelToWCSCoords()
-
-/*
-int AstroUtils::PixelToWCSStrCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,std::string& wcs_str,bool useImageCoords,int max_str_length) 
-{
-	//Init str
-	wcs_str= "";
-
-	//## NB: ix & iy shall be the pixel coordinates (image matrix coordinates).
-	//## When a tile is read in FITS the header keywords (crpix) are modified accordingly so you need to pass the new matrix coordinates (not the (x,y) corresponding to full image) 
-	//Check pixel values in input
-	if(!image){
-		ERROR_LOG("Null image ptr given!");
-		return -1;	
-	}
-
-	if(max_str_length<=0){
-		ERROR_LOG("Invalid max wcs string size given (must be >0)!");
-		return -1;
-	}
-
-	//Get image range
-	double xmin= image->GetXmin();
-	double ymin= image->GetYmin();
-	double xmax= image->GetXmax();
-	double ymax= image->GetYmax();
-	
-	if(useImageCoords && (ix<xmin || iy<ymin || ix>xmax || iy>ymax) ){
-		ERROR_LOG("Invalid pix range selected (ix="<<ix<<", iy="<<iy<<")");
-		return -1;	
-	}
-
-	//Check WCS
-	if(!wcs){
-		ERROR_LOG("Null ptr to given WCS!");
-		return -1;
-	}
-
-	//Convert coords
-	char data[max_str_length];
-	int status= pix2wcst(wcs,ix,iy,data,max_str_length);
-	if(status==0){
-		WARN_LOG("Failed to convert pixel coords ("<<ix<<","<<iy<<") to WCS string!");
-		return -1;
-	}	
-	wcs_str= std::string(data);
-
-	return 0;
-
-}//close PixelToWCSStrCoords()
-*/
 
 
 int AstroUtils::PixelToWCSStrCoords(Caesar::Image* image,WCS* wcs,double ix,double iy,std::string& wcs_str,bool useImageCoords,int max_str_length) 
@@ -364,12 +256,16 @@ int AstroUtils::PixelToWCSStrCoords(Caesar::Image* image,WCS* wcs,double ix,doub
 	//## When a tile is read in FITS the header keywords (crpix) are modified accordingly so you need to pass the new matrix coordinates (not the (x,y) corresponding to full image) 
 	//Check pixel values in input
 	if(!image){
-		ERROR_LOG("Null image ptr given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null image ptr given!");
+		#endif
 		return -1;	
 	}
 
 	if(max_str_length<=0){
-		ERROR_LOG("Invalid max wcs string size given (must be >0)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid max wcs string size given (must be >0)!");
+		#endif
 		return -1;
 	}
 
@@ -380,13 +276,17 @@ int AstroUtils::PixelToWCSStrCoords(Caesar::Image* image,WCS* wcs,double ix,doub
 	double ymax= image->GetYmax();
 	
 	if(useImageCoords && (ix<xmin || iy<ymin || ix>xmax || iy>ymax) ){
-		ERROR_LOG("Invalid pix range selected (ix="<<ix<<", iy="<<iy<<")");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid pix range selected (ix="<<ix<<", iy="<<iy<<")");
+		#endif
 		return -1;	
 	}
 
 	//Check WCS
 	if(!wcs){
-		ERROR_LOG("Null ptr to given WCS!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given WCS!");
+		#endif
 		return -1;
 	}
 
@@ -394,7 +294,9 @@ int AstroUtils::PixelToWCSStrCoords(Caesar::Image* image,WCS* wcs,double ix,doub
 	char data[max_str_length];
 	int status= WCSUtils::pix2wcst(wcs,ix,iy,data,max_str_length);
 	if(status==0){
-		WARN_LOG("Failed to convert pixel coords ("<<ix<<","<<iy<<") to WCS string!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to convert pixel coords ("<<ix<<","<<iy<<") to WCS string!");
+		#endif
 		return -1;
 	}	
 	wcs_str= std::string(data);
@@ -408,7 +310,9 @@ int AstroUtils::PixelToWCSCoords(Caesar::Image* image,double ix,double iy,double
 {
 	//Check pixel values in input
 	if(!image){
-		ERROR_LOG("Null image ptr given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null image ptr given!");
+		#endif
 		return -1;	
 	}
 
@@ -419,13 +323,17 @@ int AstroUtils::PixelToWCSCoords(Caesar::Image* image,double ix,double iy,double
 	double ymax= image->GetYmax();
 
 	if(useImageCoords && (ix<xmin || iy<ymin || ix>xmax || iy>ymax) ){
-		ERROR_LOG("Invalid pix range selected (ix="<<ix<<", iy="<<iy<<")");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid pix range selected (ix="<<ix<<", iy="<<iy<<")");
+		#endif
 		return -1;	
 	}
 
 	//Check image meta-data
 	if(!image->HasMetaData() ){
-    ERROR_LOG("No metadata available in image!");
+		#ifdef LOGGING_ENABLED
+  	  ERROR_LOG("No metadata available in image!");
+		#endif
 		return -1;
 	}
 	Caesar::ImgMetaData* metadata= image->GetMetaData();	
@@ -434,7 +342,9 @@ int AstroUtils::PixelToWCSCoords(Caesar::Image* image,double ix,double iy,double
 	//WorldCoor* wcs= metadata->GetWorldCoord(coordSystem);
 	WCS* wcs= metadata->GetWCS(coordSystem);
 	if(!wcs){
-		ERROR_LOG("Failed to get WorldCoord system from metadata!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get WorldCoord system from metadata!");
+		#endif
 		return -1;
 	}
 
@@ -458,11 +368,15 @@ int AstroUtils::PixelToWCSStrCoords(Caesar::Image* image,double ix,double iy,std
 
 	//Check pixel values in input
 	if(!image){
-		ERROR_LOG("Null image ptr given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null image ptr given!");
+		#endif
 		return -1;	
 	}
 	if(max_str_length<=0){
-		ERROR_LOG("Invalid max wcs string size given (must be >0)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid max wcs string size given (must be >0)!");
+		#endif
 		return -1;
 	}
 
@@ -473,13 +387,17 @@ int AstroUtils::PixelToWCSStrCoords(Caesar::Image* image,double ix,double iy,std
 	double ymax= image->GetYmax();
 
 	if(useImageCoords && (ix<xmin || iy<ymin || ix>xmax || iy>ymax) ){
-		ERROR_LOG("Invalid pix range selected (ix="<<ix<<", iy="<<iy<<")");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid pix range selected (ix="<<ix<<", iy="<<iy<<")");
+		#endif
 		return -1;	
 	}
 
 	//Check image meta-data
 	if(!image->HasMetaData() ){
-    ERROR_LOG("No metadata available in image!");
+		#ifdef LOGGING_ENABLED
+  	  ERROR_LOG("No metadata available in image!");
+		#endif
 		return -1;
 	}
 	Caesar::ImgMetaData* metadata= image->GetMetaData();	
@@ -488,7 +406,9 @@ int AstroUtils::PixelToWCSStrCoords(Caesar::Image* image,double ix,double iy,std
 	//WorldCoor* wcs= metadata->GetWorldCoord(coordSystem);
 	WCS* wcs= metadata->GetWCS(coordSystem);
 	if(!wcs){
-		ERROR_LOG("Failed to get WorldCoord system from metadata!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get WorldCoord system from metadata!");
+		#endif
 		return -1;
 	}
 
@@ -497,7 +417,9 @@ int AstroUtils::PixelToWCSStrCoords(Caesar::Image* image,double ix,double iy,std
 	//int status= pix2wcst(wcs,ix,iy,data,max_str_length);	
 	int status= WCSUtils::pix2wcst(wcs,ix,iy,data,max_str_length);	
 	if(status==0){
-		WARN_LOG("Failed to convert pixel coords ("<<ix<<","<<iy<<") to WCS string!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to convert pixel coords ("<<ix<<","<<iy<<") to WCS string!");
+		#endif
 		return -1;
 	}	
 	wcs_str= std::string(data);
@@ -510,53 +432,20 @@ int AstroUtils::PixelToWCSStrCoords(Caesar::Image* image,double ix,double iy,std
 		
 }//close PixelToWCSStrCoords()
 
-/*
-Contour* AstroUtils::PixelToWCSContour(Contour* contour,WorldCoor* wcs,int pixOffset)
-{
-	//Check input data
-	if(!contour){
-		WARN_LOG("Null ptr to input contour given, returning nullptr!");
-		return nullptr;
-	}
-	if(!wcs){
-		WARN_LOG("Null ptr to input coord system given, nothing can be done!");
-		return nullptr;
-	}
-
-	//Loop over contour points and convert in sky coords
-	double x_wcs= 0;
-	double y_wcs= 0;
-	Contour* contour_wcs= new Contour;
-	
-	for(int i=0;i<contour->GetN();i++){
-		//Get pix contour point
-		TVector2* contPnt= contour->GetPoint(i);
-		if(!contPnt) {
-			WARN_LOG("Null ptr point retrieved from contour, skip it!");
-			continue;
-		}
-		double x= contPnt->X() + pixOffset; 
-		double y= contPnt->Y() + pixOffset;
-		pix2wcs (wcs,x,y,&x_wcs, &y_wcs);
-
-		//Fill new contour with sky coords
-		contour_wcs->AddPoint(TVector2(x_wcs,y_wcs));
-	}//end loop points
-
-	return contour_wcs;
-
-}//close PixelToWCSContour()
-*/
 
 Contour* AstroUtils::PixelToWCSContour(Contour* contour,WCS* wcs,int pixOffset)
 {
 	//Check input data
 	if(!contour){
-		WARN_LOG("Null ptr to input contour given, returning nullptr!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null ptr to input contour given, returning nullptr!");
+		#endif
 		return nullptr;
 	}
 	if(!wcs){
-		WARN_LOG("Null ptr to input coord system given, nothing can be done!");
+		#ifdef LOGGING_ENABLED		
+			WARN_LOG("Null ptr to input coord system given, nothing can be done!");
+		#endif
 		return nullptr;
 	}
 
@@ -569,7 +458,9 @@ Contour* AstroUtils::PixelToWCSContour(Contour* contour,WCS* wcs,int pixOffset)
 		//Get pix contour point
 		TVector2* contPnt= contour->GetPoint(i);
 		if(!contPnt) {
-			WARN_LOG("Null ptr point retrieved from contour, skip it!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Null ptr point retrieved from contour, skip it!");
+			#endif
 			continue;
 		}
 		double x= contPnt->X() + pixOffset; 
@@ -584,47 +475,20 @@ Contour* AstroUtils::PixelToWCSContour(Contour* contour,WCS* wcs,int pixOffset)
 
 }//close PixelToWCSContour()
 
-/*
-int AstroUtils::PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vector<Contour*>const& contours,WorldCoor* wcs,int pixOffset)
-{
-	//Check input data
-	if(!wcs){
-		WARN_LOG("Null ptr to input coord system given, nothing can be done!");
-		return -1;
-	}
-	if(contours.empty()){
-		WARN_LOG("Empty contour list, nothing to be done!");
-		return -1;
-	}
-
-	//Clear existing collection
-	contours_wcs.clear();
-
-	//Loop over contours and convert them
-	for(size_t i=0;i<contours.size();i++){
-		Contour* contour_wcs= PixelToWCSContour(contours[i],wcs,pixOffset);
-		if(!contour_wcs){
-			ERROR_LOG("Failed to convert contour no. "<<i+1<<"!");
-			CodeUtils::DeletePtrCollection<Contour>(contours_wcs);
-			return -1;
-		}
-		contours_wcs.push_back(contour_wcs);
-	}//end loop contours
-
-	return 0;
-
-}//close PixelToWCSContours()
-*/
 
 int AstroUtils::PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vector<Contour*>const& contours,WCS* wcs,int pixOffset)
 {
 	//Check input data
 	if(!wcs){
-		WARN_LOG("Null ptr to input coord system given, nothing can be done!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null ptr to input coord system given, nothing can be done!");
+		#endif
 		return -1;
 	}
 	if(contours.empty()){
-		WARN_LOG("Empty contour list, nothing to be done!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Empty contour list, nothing to be done!");
+		#endif
 		return -1;
 	}
 
@@ -635,7 +499,9 @@ int AstroUtils::PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vect
 	for(size_t i=0;i<contours.size();i++){
 		Contour* contour_wcs= PixelToWCSContour(contours[i],wcs,pixOffset);
 		if(!contour_wcs){
-			ERROR_LOG("Failed to convert contour no. "<<i+1<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to convert contour no. "<<i+1<<"!");
+			#endif
 			CodeUtils::DeletePtrCollection<Contour>(contours_wcs);
 			return -1;
 		}
@@ -646,77 +512,6 @@ int AstroUtils::PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vect
 
 }//close PixelToWCSContours()
 
-/*
-TEllipse* AstroUtils::PixelToWCSEllipse(TEllipse* ellipse,WorldCoor* wcs,int pixOffset)
-{
-	//NB: See Aegean source finder wcs_helpers.py method
-	//Check input data
-	if(!ellipse){
-		WARN_LOG("Null ptr to input contour given, returning nullptr!");
-		return nullptr;
-	}
-	if(!wcs){
-		WARN_LOG("Null ptr to input coord system given, nothing can be done!");
-		return nullptr;
-	}
-
-	//Get ellipse pars
-	double x= ellipse->GetX1();//ellipse centroid x
-	double y= ellipse->GetY1();//ellipse centroid y
-	x+= pixOffset;
-	y+= pixOffset;
-	double sx= ellipse->GetR1();//ellipse semi-major axis
-	double sy= ellipse->GetR2();//ellipse semi-minor axis
-	double theta= ellipse->GetTheta();//rotation angle (wrt x axis)
-	double theta_rad= theta*TMath::DegToRad();
-
-	//Compute ellipse axis coordinates
-	double x1= x + sx * cos(theta_rad);
-	double y1= y + sx * sin(theta_rad);
-	double x2= x + sy * cos(theta_rad - TMath::Pi()/2.);
-	double y2= y + sy * sin(theta_rad - TMath::Pi()/2.);
-
-	//Convert ellipse centroid in sky coords
-	double x_wcs= 0;
-	double y_wcs= 0;
-	pix2wcs (wcs,x,y,&x_wcs, &y_wcs);
-
-	//Convert ellipse axis coord in sky coords
-	double x1_wcs= 0;
-	double y1_wcs= 0;
-	double x2_wcs= 0;
-	double y2_wcs= 0;
-	pix2wcs (wcs,x1,y1,&x1_wcs, &y1_wcs);
-	pix2wcs (wcs,x2,y2,&x2_wcs, &y2_wcs);
-
-	//Compute ellipse axis points
-	//double semimajor_wcs= GetWCSPointDist_Vincenty(x_wcs,y_wcs,x1_wcs,y1_wcs);
-	//double semiminor_wcs= GetWCSPointDist_Vincenty(x_wcs,y_wcs,x2_wcs,y2_wcs);
-	double semimajor_wcs= GetWCSPointDist_Haversine(x_wcs,y_wcs,x1_wcs,y1_wcs);
-	double semiminor_wcs= GetWCSPointDist_Haversine(x_wcs,y_wcs,x2_wcs,y2_wcs);
-
-	//Compute ellipse rot angle
-	//NB: Bearing is returned from North to East (0 deg is north) but we want theta measured from x-axis so sum 90 deg
-	double theta_wcs = GetWCSPointBearing(x_wcs,y_wcs,x1_wcs,y1_wcs);
-	double theta2_wcs = GetWCSPointBearing(x_wcs,y_wcs,x2_wcs,y2_wcs) - 90;
-	theta_wcs+= 90.;
-	theta2_wcs+= 90.;
-	double dtheta_wcs= theta_wcs-theta2_wcs; 
-
-	//Correct ellipse minor axis
-	semiminor_wcs*= fabs(cos(dtheta_wcs*TMath::DegToRad()));
-
-	DEBUG_LOG("(x,y,sx,sy,theta)=("<<std::setprecision(8)<<x<<","<<y<<","<<sx<<","<<sy<<","<<theta<<"), (x1,y1)=("<<x1<<","<<y1<<"), (x2,y2)=("<<x2<<","<<y2<<"), (x1_wcs,y1_wcs)=("<<x1_wcs<<","<<y1_wcs<<"), (x2_wcs,y2_wcs)=("<<x2_wcs<<","<<y2_wcs<<"), (x_wcs,y_wcs,a,b,theta)=("<<x_wcs<<","<<y_wcs<<","<<semimajor_wcs<<","<<semiminor_wcs<<","<<theta_wcs<<"), theta2_wcs="<<theta2_wcs<<", dtheta_wcs="<<dtheta_wcs);
-
-	TEllipse* ellipse_wcs= new TEllipse(x_wcs,y_wcs,semimajor_wcs,semiminor_wcs,0.,360.,theta_wcs);
-	ellipse_wcs->SetLineWidth(2);
-	ellipse_wcs->SetFillColor(0);
-	ellipse_wcs->SetFillStyle(0);
-
-	return ellipse_wcs;
-
-}//close PixelToWCSEllipse()
-*/
 
 
 TEllipse* AstroUtils::PixelToWCSEllipse(TEllipse* ellipse,WCS* wcs,int pixOffset)
@@ -724,11 +519,15 @@ TEllipse* AstroUtils::PixelToWCSEllipse(TEllipse* ellipse,WCS* wcs,int pixOffset
 	//NB: See Aegean source finder wcs_helpers.py method
 	//Check input data
 	if(!ellipse){
-		WARN_LOG("Null ptr to input contour given, returning nullptr!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null ptr to input contour given, returning nullptr!");
+		#endif
 		return nullptr;
 	}
 	if(!wcs){
-		WARN_LOG("Null ptr to input coord system given, nothing can be done!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null ptr to input coord system given, nothing can be done!");
+		#endif
 		return nullptr;
 	}
 
@@ -778,7 +577,9 @@ TEllipse* AstroUtils::PixelToWCSEllipse(TEllipse* ellipse,WCS* wcs,int pixOffset
 	//Correct ellipse minor axis
 	semiminor_wcs*= fabs(cos(dtheta_wcs*TMath::DegToRad()));
 
-	DEBUG_LOG("(x,y,sx,sy,theta)=("<<std::setprecision(8)<<x<<","<<y<<","<<sx<<","<<sy<<","<<theta<<"), (x1,y1)=("<<x1<<","<<y1<<"), (x2,y2)=("<<x2<<","<<y2<<"), (x1_wcs,y1_wcs)=("<<x1_wcs<<","<<y1_wcs<<"), (x2_wcs,y2_wcs)=("<<x2_wcs<<","<<y2_wcs<<"), (x_wcs,y_wcs,a,b,theta)=("<<x_wcs<<","<<y_wcs<<","<<semimajor_wcs<<","<<semiminor_wcs<<","<<theta_wcs<<"), theta2_wcs="<<theta2_wcs<<", dtheta_wcs="<<dtheta_wcs);
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("(x,y,sx,sy,theta)=("<<std::setprecision(8)<<x<<","<<y<<","<<sx<<","<<sy<<","<<theta<<"), (x1,y1)=("<<x1<<","<<y1<<"), (x2,y2)=("<<x2<<","<<y2<<"), (x1_wcs,y1_wcs)=("<<x1_wcs<<","<<y1_wcs<<"), (x2_wcs,y2_wcs)=("<<x2_wcs<<","<<y2_wcs<<"), (x_wcs,y_wcs,a,b,theta)=("<<x_wcs<<","<<y_wcs<<","<<semimajor_wcs<<","<<semiminor_wcs<<","<<theta_wcs<<"), theta2_wcs="<<theta2_wcs<<", dtheta_wcs="<<dtheta_wcs);
+	#endif
 
 	TEllipse* ellipse_wcs= new TEllipse(x_wcs,y_wcs,semimajor_wcs,semiminor_wcs,0.,360.,theta_wcs);
 	ellipse_wcs->SetLineWidth(2);
@@ -810,7 +611,9 @@ int AstroUtils::GetBeamDeconvolvedEllipsePars (
 
 	double beta2= pow(diff2,2) + pow(diff2_beam,2) - 2*diff2*diff2_beam*cos(2*(bpa_rad-bpa_beam_rad));
 	if(beta2<0) {
-		WARN_LOG("Numerical error (beta^2 is <0 in formula)!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Numerical error (beta^2 is <0 in formula)!");
+		#endif
 		status= -1;
 	}
 	double beta= sqrt(beta2);
@@ -818,7 +621,9 @@ int AstroUtils::GetBeamDeconvolvedEllipsePars (
 	double bmaj2_deconv= 0.5*(sum2 - sum2_beam + beta);
 	double bmin2_deconv= 0.5*(sum2 - sum2_beam - beta);
 	if(bmaj2_deconv<0 || bmin2_deconv) {
-		WARN_LOG("Numerical error (bmaj^2/bmin^2 deconvolved are <0 in formula)!");	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Numerical error (bmaj^2/bmin^2 deconvolved are <0 in formula)!");	
+		#endif
 		status= -1;
 	}
 	bmaj_deconv= sqrt(bmaj2_deconv);
@@ -836,7 +641,9 @@ TEllipse* AstroUtils::GetBeamDeconvolvedEllipse(TEllipse* ellipse,TEllipse* beam
 {
 	//Check input data
 	if(!ellipse || !beam){
-		WARN_LOG("Null ptr to input ellipses given, returning nullptr!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null ptr to input ellipses given, returning nullptr!");
+		#endif
 		return nullptr;
 	}
 
@@ -870,7 +677,9 @@ TEllipse* AstroUtils::GetBeamDeconvolvedEllipse(TEllipse* ellipse,TEllipse* beam
 	);
 
 	if(status<0){
-		WARN_LOG("Failed to compute deconvolved ellipse pars (check given ellipse/beam pars)!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to compute deconvolved ellipse pars (check given ellipse/beam pars)!");
+		#endif
 		return nullptr;
 	}
 
@@ -940,7 +749,9 @@ double AstroUtils::GetWCSPointBearing(double ra1,double dec1,double ra2,double d
   //The bearing is East of North and is in [0, 360), whereas position angle is also East of North but (-180,180]
 	//Convert in radians
 
-	DEBUG_LOG("(ra1,dec1)=("<<std::setprecision(9)<<ra1<<","<<dec1<<"), (ra2,dec2)=("<<ra2<<","<<dec2<<")");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("(ra1,dec1)=("<<std::setprecision(9)<<ra1<<","<<dec1<<"), (ra2,dec2)=("<<ra2<<","<<dec2<<")");
+	#endif
 
 	ra1*= TMath::DegToRad();
 	ra2*= TMath::DegToRad();
@@ -952,7 +763,10 @@ double AstroUtils::GetWCSPointBearing(double ra1,double dec1,double ra2,double d
 	double x= cos(dec1)*sin(dec2) - sin(dec1)*cos(dec2)*cos(dlon);
 	
 	double bear= atan2(y,x);
-	DEBUG_LOG("Bear dlon="<<std::setprecision(9)<<dlon<<", (y,x)=("<<y<<","<<x<<"), bear(rad)="<<bear<<", bear(deg)="<<bear*TMath::RadToDeg());
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Bear dlon="<<std::setprecision(9)<<dlon<<", (y,x)=("<<y<<","<<x<<"), bear(rad)="<<bear<<", bear(deg)="<<bear*TMath::RadToDeg());
+	#endif
 
 	bear*= TMath::RadToDeg();//Convert to degrees
 	
@@ -964,7 +778,9 @@ std::string AstroUtils::EllipseToDS9Region(TEllipse* ellipse,std::string text,st
 {
 	//Check input data
 	if(!ellipse){
-		ERROR_LOG("Null ptr to input ellipse given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input ellipse given!");
+		#endif
 		return std::string("");
 	}
 	
@@ -999,7 +815,9 @@ std::string AstroUtils::ContourToDS9Region(Contour* contour,std::string text,std
 {
 	//Check input data
 	if(!contour){
-		ERROR_LOG("Null ptr to input contour given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input contour given!");
+		#endif
 		return std::string("");
 	}
 
@@ -1007,7 +825,9 @@ std::string AstroUtils::ContourToDS9Region(Contour* contour,std::string text,std
 	//NB: DS9 crashes miserably when given a polygon region with one point 
 	int nPoints= contour->GetN();
 	if(nPoints<=1){
-		WARN_LOG("Too few points (<=1) present in contour, will return empty string!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Too few points (<=1) present in contour, will return empty string!");
+		#endif
 		return std::string("");
 	}
 	
@@ -1017,7 +837,9 @@ std::string AstroUtils::ContourToDS9Region(Contour* contour,std::string text,std
 	for(int j=0;j<nPoints;j++){
 		TVector2* contPnt= contour->GetPoint(j);
 		if(!contPnt) {
-			WARN_LOG("Null ptr to contour point, skip to next!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Null ptr to contour point, skip to next!");
+			#endif
 			continue;
 		}
 		if(useImageCoords){

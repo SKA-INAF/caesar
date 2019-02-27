@@ -28,7 +28,9 @@
 #include <CasaReader.h>
 #include <Image.h>
 #include <SysUtils.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <CodeUtils.h>
 
 #include <TObject.h>
@@ -67,7 +69,9 @@ int CasaReader::Read(Caesar::Image& img,std::string filename,int ix_min,int ix_m
 {
 	//## Check dir
 	if(checkFile && !SysUtils::CheckDir(filename)){
-		ERROR_LOG("File path "<<filename<<" not found on filesystem!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("File path "<<filename<<" not found on filesystem!");
+		#endif
 		return -1;
 	}
 
@@ -77,7 +81,9 @@ int CasaReader::Read(Caesar::Image& img,std::string filename,int ix_min,int ix_m
 		casa_img= new casa::PagedImage<casa::Float>(filename.c_str());
 	}
 	catch(...){
-		ERROR_LOG("Failed to import file "<<filename<<" as CASA PagedImage!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to import file "<<filename<<" as CASA PagedImage!");
+		#endif
 		return -1;
 	}
 
@@ -87,7 +93,9 @@ int CasaReader::Read(Caesar::Image& img,std::string filename,int ix_min,int ix_m
 	
 	//## Delete paged image
 	if(casa_img){
-		INFO_LOG("Deleting imported casa image...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Deleting imported casa image...");
+		#endif
 		delete casa_img;
 		casa_img= 0;
 	}

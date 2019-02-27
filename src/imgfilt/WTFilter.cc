@@ -68,7 +68,9 @@ std::vector<Image*> WTFilter::GetDecomposition(Image* image,int nScales){
 	imgCollection.clear();
 	imgCollection.resize(0);
 	if(!image){
-		ERROR_LOG("Null prt to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null prt to given image!");
+		#endif
 		return imgCollection;
 	}
 
@@ -93,7 +95,9 @@ std::vector<Image*> WTFilter::GetDecomposition(Image* image,int nScales){
 	F[0]= I;
 
 	for(int n=1;n<nScales+1;n++){
-		DEBUG_LOG("Compute convolution at scale "<<n<<" ...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Compute convolution at scale "<<n<<" ...");
+		#endif
 		F[n]= Caesar::MathUtils::GetATrousConvolution(F[n-1],H,n);
 		W[n-1]= F[n-1]-F[n];
 	}//end loop scales

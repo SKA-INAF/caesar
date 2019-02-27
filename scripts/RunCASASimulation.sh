@@ -63,6 +63,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--startid=[START_ID] - Run start id (default: 1)"
 	echo "--containerrun - Run inside Caesar container"
 	echo "--containerimg=[CONTAINER_IMG] - Singularity container image file (.simg) with CAESAR installed software"
+	echo "--containeroptions=[CONTAINER_OPTIONS] - Options to be passed to container run (e.g. -B /home/user:/home/user) (default=none)"
 	echo "--with-graphics - Enable graphics in simobserve. NB: Container run crashes with CASA graphics enabled (default=disabled)" 
 	echo ""
 
@@ -95,6 +96,7 @@ SOURCE_GEN_MARGIN_SIZE=0
 GEN_SOURCES=true
 GEN_EXT_SOURCES=false
 CONTAINER_IMG=""
+CONTAINER_OPTIONS=""
 RUN_IN_CONTAINER=false
 BMAJ=9.8
 BMIN=5.8
@@ -297,6 +299,9 @@ do
 		--containerrun*)
     	RUN_IN_CONTAINER=true
     ;;
+		--containeroptions=*)
+    	CONTAINER_OPTIONS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
 		
 		--with-graphics*)
     	GRAPHICS_FLAG="--graphics"
@@ -482,12 +487,12 @@ for ((index=1; index<=$NRUNS; index=$index+1))
     echo 'cd $JOBDIR'
 
 		if [ "$RUN_IN_CONTAINER" = true ] ; then
-			echo 'EXE="'"singularity run --app skymodel $CONTAINER_IMG"'"'
+			echo 'EXE="'"singularity run $CONTAINER_OPTIONS --app skymodel $CONTAINER_IMG"'"'
 		else
 			echo 'EXE="'"$CAESAR_SCRIPTS_DIR/skymodel_generator.py"'"'
 		fi
 
-		echo 'EXE_ARGS="'"--nx=$MAP_SIZE --ny=$MAP_SIZE --pixsize=$PIX_SIZE --marginx=$SOURCE_GEN_MARGIN_SIZE --marginy=$SOURCE_GEN_MARGIN_SIZE $GEN_SOURCE_FLAG $GEN_EXT_SOURCE_FLAG --bmaj=$BMAJ --bmin=$BMIN --bpa=$BPA --crpix1=$CRPIX --crpix2=$CRPIX --bkg --bkg_level=$BKG_LEVEL --bkg_rms=$BKG_RMS --zmin=$ZMIN --zmax=$ZMAX --zmin_ext=$ZMIN_EXT --zmax_ext=$ZMAX_EXT --nsources=$NSOURCES --source_density=$SOURCE_DENSITY --trunc_thr=$TRUNC_THRESHOLD --ext_source_type=$EXT_SOURCE_TYPE --ext_nsources=$EXT_NSOURCES --ext_source_density=$EXT_SOURCE_DENSITY --ext_scale_min=$EXT_SCALE_MIN --ext_scale_max=$EXT_SCALE_MAX --ring_wmin=$RING_WIDTH_MIN --ring_wmax=$RING_WIDTH_MAX --outputfile=$simmapfile --outputfile_model=$skymodelfile --outputfile_sources=$sourcefile --outputfile_ds9region=$ds9regionfile --outputfile_casaregion=$casaregionfile "'"'
+		echo 'EXE_ARGS="'"--nx=$MAP_SIZE --ny=$MAP_SIZE --pixsize=$PIX_SIZE --marginx=$SOURCE_GEN_MARGIN_SIZE --marginy=$SOURCE_GEN_MARGIN_SIZE $GEN_SOURCE_FLAG $GEN_EXT_SOURCE_FLAG --bmaj=$BMAJ --bmin=$BMIN --bpa=$BPA --crpix1=$CRPIX --crpix2=$CRPIX --bkg --bkg_level=$BKG_LEVEL --bkg_rms=$BKG_RMS --zmin=$ZMIN --zmax=$ZMAX --zmin_ext=$ZMIN_EXT --zmax_ext=$ZMAX_EXT --nsources=$NSOURCES --source_density=$SOURCE_DENSITY --trunc_thr=$TRUNC_THRESHOLD --ext_source_type=$EXT_SOURCE_TYPE --ext_nsources=$EXT_NSOURCES --ext_source_density=$EXT_SOURCE_DENSITY --ext_scale_min=$EXT_SCALE_MIN --ext_scale_max=$EXT_SCALE_MAX --ring_wmin=$RING_WIDTH_MIN --ring_wmax=$RING_WIDTH_MAX --outputfile=$JOB_DIR/$simmapfile --outputfile_model=$JOB_DIR/$skymodelfile --outputfile_sources=$JOB_DIR/$sourcefile --outputfile_ds9region=$JOB_DIR/$ds9regionfile --outputfile_casaregion=$JOB_DIR/$casaregionfile "'"'
 
 		echo 'echo "Running command $EXE $EXE_ARGS"'
 		echo '$EXE $EXE_ARGS'
@@ -504,7 +509,7 @@ for ((index=1; index<=$NRUNS; index=$index+1))
     echo 'cd $JOBDIR'
 
 		if [ "$RUN_IN_CONTAINER" = true ] ; then
-			echo 'EXE="'"singularity run --app simulation $CONTAINER_IMG"'"'
+			echo 'EXE="'"singularity run $CONTAINER_OPTIONS --app simulation $CONTAINER_IMG"'"'
 		else
 			echo 'EXE="'"$CASAPATH/bin/casa --nologger --log2term --nogui -c $CAESAR_SCRIPTS_DIR/simulate_observation.py"'"'
 		fi

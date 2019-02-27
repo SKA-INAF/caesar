@@ -25,8 +25,8 @@
 * @date 20/01/2015
 */
 
-#ifndef _SLICData_h
-#define _SLICData_h 1
+#ifndef _SLIC_DATA_h
+#define _SLIC_DATA_h 1
 
 #include <Region.h>
 #include <Contour.h>
@@ -264,13 +264,7 @@ class SLICData : public TObject {
 		/**
 		* \brief Get edgeness pixel value 
 		*/
-		double GetSedge(long int ix,long int iy){
-			if(!edgeImg) {
-				ERROR_LOG("Trying to access to edge map, which is not allocated, returning zero!");
-				return 0;
-			}
-			return edgeImg->GetPixelValue(ix,iy);
-		}
+		double GetSedge(long int ix,long int iy);
 		/**
 		* \brief Get pixel value (NB: No check is done!)
 		*/
@@ -696,19 +690,8 @@ class SLICNeighborCollection : public TObject {
 		/** 
 		\brief Set total dissimilarity info of neighbor data with the given index in collection
  		*/
-		int SetDtot(int index,double Dtot,double Dtot_n){
-			//Check index
-			if(index<0 || index>=GetN()) {
-				ERROR_LOG("Invalid neighbor index ("<<index<<") requested, valid values are [0,"<<m_neighbors.size()-1<<"]!");
-				return -1;
-			}
+		int SetDtot(int index,double Dtot,double Dtot_n);
 
-			//Set Dtot
-			m_neighbors[index].Dtot= Dtot;
-			m_neighbors[index].Dtot_n= Dtot_n;
-
-			return 0;
-		}
 
 	private:
 		std::vector<SLICNeighborData> m_neighbors;

@@ -34,6 +34,10 @@
 #include <WCSUtils.h>
 #include <Consts.h>
 
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
+
 #include <TObject.h>
 #include <TEllipse.h>
 
@@ -131,13 +135,17 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 		if(!wcs){
 			ImgMetaData* metadata= sources[k]->GetImageMetaData();
 			if(!metadata){
-				WARN_LOG("No metadata are available to retrieve WCS!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No metadata are available to retrieve WCS!");
+				#endif
 				return -1;
 			}
 			//wcs= metadata->GetWorldCoord(wcsType);
 			wcs= metadata->GetWCS(wcsType);
 			if(!wcs){
-				ERROR_LOG("Failed to get WCS from metadata!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to get WCS from metadata!");
+				#endif
 				return -1;
 			}
 			deleteWCS= true;
@@ -185,7 +193,9 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 
 	//Check source
 	if(!source){
-		WARN_LOG("Null input source ptr given!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null input source ptr given!");
+		#endif
 		return sourceStrList;
 	}
 
@@ -199,10 +209,16 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 			//wcs= metadata->GetWorldCoord(wcsType);
 			wcs= metadata->GetWCS(wcsType);
 			if(wcs) deleteWCS= true;
-			else WARN_LOG("Failed to get WCS from metadata!");
+			else {
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to get WCS from metadata!");
+				#endif
+			}
 		}
 		else {
-			WARN_LOG("No metadata are available to retrieve WCS!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("No metadata are available to retrieve WCS!");
+			#endif
 		}		
 	}
 	
@@ -393,13 +409,17 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 		if(!wcs){
 			ImgMetaData* metadata= sources[k]->GetImageMetaData();
 			if(!metadata){
-				WARN_LOG("No metadata are available to retrieve WCS!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No metadata are available to retrieve WCS!");
+				#endif
 				return -1;
 			}
 			//wcs= metadata->GetWorldCoord(wcsType);
 			wcs= metadata->GetWCS(wcsType);
 			if(!wcs){
-				ERROR_LOG("Failed to get WCS from metadata!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to get WCS from metadata!");
+				#endif
 				return -1;
 			}
 			deleteWCS= true;
@@ -433,7 +453,9 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 	
 	//Check source
 	if(!source){
-		WARN_LOG("Null input source ptr given!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null input source ptr given!");
+		#endif
 		return fitComponentStrList;
 	}
 
@@ -447,10 +469,16 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			//wcs= metadata->GetWorldCoord(wcsType);
 			wcs= metadata->GetWCS(wcsType);
 			if(wcs) deleteWCS= true;
-			else WARN_LOG("Failed to get WCS from metadata!");
+			else {
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to get WCS from metadata!");
+				#endif
+			}
 		}
-		else {
-			WARN_LOG("No metadata are available to retrieve WCS!");
+		else {	
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("No metadata are available to retrieve WCS!");
+			#endif
 		}		
 	}
 
@@ -499,7 +527,9 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			double bmin= 0;
 			double pa= 0;
 			if(fitPars.GetComponentFitEllipsePars(k,x0,y0,bmaj,bmin,pa)<0){
-				WARN_LOG("Failed to retrieve ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
 			}
 		
 			double x0_err= 0;
@@ -508,7 +538,9 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			double bmin_err= 0;
 			double pa_err= 0;
 			if(fitPars.GetComponentFitEllipseParErrors(k,x0_err,y0_err,bmaj_err,bmin_err,pa_err)<0){
-				WARN_LOG("Failed to retrieve ellipse par errors for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve ellipse par errors for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
 			}
 
 			//- Fit ellipse eccentricity, area & rot angle vs beam
@@ -523,7 +555,9 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			double bmin_wcs= 0;
 			double pa_wcs= 0;
 			if(fitPars.GetComponentFitWCSEllipsePars(k,x0_wcs,y0_wcs,bmaj_wcs,bmin_wcs,pa_wcs)<0){
-				WARN_LOG("Failed to retrieve WCS ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve WCS ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
 			}
 			
 			double x0_wcs_err= 0;
@@ -532,7 +566,9 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			double bmin_wcs_err= 0;
 			double pa_wcs_err= 0;
 			if(fitPars.GetComponentFitWCSEllipseParErrors(k,x0_wcs_err,y0_wcs_err,bmaj_wcs_err,bmin_wcs_err,pa_wcs_err)<0){
-				WARN_LOG("Failed to retrieve WCS ellipse par errors for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve WCS ellipse par errors for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
 			}
 
 			//- Beam ellipse pars
@@ -540,7 +576,9 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			double bmin_beam= 0;
 			double pa_beam= 0;
 			if(fitPars.GetComponentBeamEllipsePars(k,bmaj_beam,bmin_beam,pa_beam)<0){
-				WARN_LOG("Failed to retrieve beam ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve beam ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
 			}
 
 			//- Beam eccentricity & area
@@ -559,7 +597,9 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			double bmin_deconv_wcs= 0;
 			double pa_deconv_wcs= 0;
 			if(fitPars.GetComponentFitWCSDeconvolvedEllipsePars(k,bmaj_deconv_wcs,bmin_deconv_wcs,pa_deconv_wcs)<0){
-				WARN_LOG("Failed to retrieve WCS beam-deconvolved ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve WCS beam-deconvolved ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
 			}
 
 			//Compute IAU name
@@ -572,7 +612,9 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 				AstroUtils::PixelToWCSStrCoords(wcspos_str,wcs,x0,y0);	
 				int status= AstroUtils::GetIAUCoords(iau,wcspos_str);
 				if(status<0){
-					WARN_LOG("Failed to compute IAU name for component no. "<<k+1<<", assume default name "<<iau_default<<" ...");
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Failed to compute IAU name for component no. "<<k+1<<", assume default name "<<iau_default<<" ...");
+					#endif
 					iau= iau_default;		
 				}
 			}
@@ -581,7 +623,9 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			//Get component flag
 			int componentFlag= -1;
 			if(fitPars.GetComponentFlag(componentFlag,k)<0){
-				WARN_LOG("Failed to retrieve flag for component no. "<<k+1<<"!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve flag for component no. "<<k+1<<"!");
+				#endif
 			}
 	
 			//## Fill source component
@@ -685,11 +729,15 @@ int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& 
 	std::string ds9WCSTypeHeader= "image";
 	if(convertDS9RegionsToWCS) ds9WCSTypeHeader= AstroUtils::GetDS9WCSTypeHeader(ds9WCSType);
 
-	DEBUG_LOG("Saving DS9 region header...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Saving DS9 region header...");
+	#endif
 	fprintf(fout,"global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
 	fprintf(fout,"%s\n",ds9WCSTypeHeader.c_str());
 
-	DEBUG_LOG("Saving "<<sources.size()<<" sources to file...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Saving "<<sources.size()<<" sources to file...");
+	#endif
 
 	for(size_t k=0;k<sources.size();k++){
 		int source_type= sources[k]->Type;
@@ -698,11 +746,17 @@ int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& 
 		//If WCS is not computed, compute it
 		if(convertDS9RegionsToWCS && !wcs){
 			wcs= sources[k]->GetWCS(ds9WCSType);
-			if(!wcs) WARN_LOG("Failed to compute WCS from source no "<<k<<"!");
+			if(!wcs) {
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to compute WCS from source no "<<k<<"!");
+				#endif
+			}
 		}
 	
 		//Get DS9 regions
-		DEBUG_LOG("Dumping DS9 region info for source no. "<<k<<" ...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Dumping DS9 region info for source no. "<<k<<" ...");
+		#endif
 		std::string regionInfo= "";
 		if(ds9RegionFormat==ePolygonRegion) {
 			regionInfo= SourceToDS9Region(sources[k],true,convertDS9RegionsToWCS,wcs,ds9WCSType);
@@ -711,7 +765,9 @@ int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& 
 			regionInfo= SourceToDS9EllipseRegion(sources[k],true);
 		}
 		else {
-			WARN_LOG("Invalid DS9RegionType given ("<<ds9RegionFormat<<")");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Invalid DS9RegionType given ("<<ds9RegionFormat<<")");
+			#endif
 			return -1;
 		}
 
@@ -720,7 +776,9 @@ int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& 
 	  	
 	}//end loop sources
 		
-	DEBUG_LOG("Closing DS9 file region...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Closing DS9 file region...");
+	#endif
 	fclose(fout);
 
 	return 0;
@@ -738,20 +796,30 @@ int SourceExporter::WriteComponentsToDS9(std::string filename,const std::vector<
 	if(convertDS9RegionsToWCS) ds9WCSTypeHeader= AstroUtils::GetDS9WCSTypeHeader(ds9WCSType);
 
 	//## Saving DS9 file region
-	DEBUG_LOG("Saving DS9 region header for fitted source catalog...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Saving DS9 region header for fitted source catalog...");
+	#endif
 	fprintf(fout_fit,"global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
 	fprintf(fout_fit,"%s\n",ds9WCSTypeHeader.c_str());
 
-	DEBUG_LOG("Saving "<<sources.size()<<" sources to file...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Saving "<<sources.size()<<" sources to file...");
+	#endif
 	bool useFWHM= true;
 
 	for(size_t k=0;k<sources.size();k++){
-		DEBUG_LOG("Dumping DS9 region fitting info for source no. "<<k<<" ...");
+		#ifdef LOGGING_ENABLED		
+			DEBUG_LOG("Dumping DS9 region fitting info for source no. "<<k<<" ...");
+		#endif
 
 		//If WCS is not computed, compute it
 		if(convertDS9RegionsToWCS && !wcs){
 			wcs= sources[k]->GetWCS(ds9WCSType);
-			if(!wcs) WARN_LOG("Failed to compute WCS from source no "<<k<<"!");
+			if(!wcs) {
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to compute WCS from source no "<<k<<"!");
+				#endif
+			}
 		}
 
 		//Get DS9 regions for fitted components
@@ -760,7 +828,9 @@ int SourceExporter::WriteComponentsToDS9(std::string filename,const std::vector<
 		fprintf(fout_fit,"%s\n",regionInfo.c_str());
 	}//end loop sources
 		
-	DEBUG_LOG("Closing DS9 file region for fitted sources...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Closing DS9 file region for fitted sources...");
+	#endif
 	fclose(fout_fit);
 
 	return 0;
@@ -785,7 +855,9 @@ const std::string SourceExporter::SourceToDS9Region(Source* source,bool dumpNest
 {
 	//Check source
 	if(!source){
-		WARN_LOG("Null input source ptr given!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null input source ptr given!");
+		#endif
 		return std::string("");
 	}
 
@@ -806,7 +878,9 @@ const std::string SourceExporter::SourceToDS9Region(Source* source,bool dumpNest
 		int pixOffset= 1;
 		std::vector<Contour*> contours_wcs= source->GetWCSContours(wcs,coordSystem,pixOffset);		
 		if(contours_wcs.empty()){
-			WARN_LOG("Failed to convert contours in WCS, region will be empty!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to convert contours in WCS, region will be empty!");
+			#endif
 		}
 		else{
 			//Loop over WCS contours
@@ -845,7 +919,9 @@ const std::string SourceExporter::SourceToDS9Region(Source* source,bool dumpNest
 				int pixOffset= 1;
 				std::vector<Contour*> contours_wcs= nestedSources[k]->GetWCSContours(wcs,coordSystem,pixOffset);
 				if(contours_wcs.empty()){
-					WARN_LOG("Failed to convert contours in WCS, region will be empty!");
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Failed to convert contours in WCS, region will be empty!");
+					#endif
 				}
 				else{
 					//Loop over WCS contours
@@ -880,7 +956,9 @@ const std::string SourceExporter::SourceToDS9EllipseRegion(Source* source,bool d
 {
 	//Check source
 	if(!source){
-		WARN_LOG("Null input source ptr given!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null input source ptr given!");
+		#endif
 		return std::string("");
 	}
 
@@ -938,14 +1016,18 @@ const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,
 {
 	//Check source
 	if(!source){
-		WARN_LOG("Null input source ptr given!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null input source ptr given!");
+		#endif
 		return std::string("");
 	}
 
 	//Check WCS & metadata
 	ImgMetaData* metadata= source->GetImageMetaData();
 	if(convertToWCS && !wcs && !metadata){
-		WARN_LOG("Requested to convert ellipse to WCS but no wcs was provided and no metadata to compute it are available!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Requested to convert ellipse to WCS but no wcs was provided and no metadata to compute it are available!");
+		#endif
 		return std::string("");
 	}
 
@@ -967,7 +1049,9 @@ const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,
 		std::vector<TEllipse*> ellipses;
 		
 		if(source->GetFitEllipses(ellipses,useFWHM,convertToWCS,wcs,coordSystem,pixOffset)<0){
-			ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to get WorldCoord system from metadata!");
+			#endif
 			return std::string("");
 		}
 

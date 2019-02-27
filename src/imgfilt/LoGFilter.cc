@@ -59,11 +59,13 @@ LoGFilter::~LoGFilter(){
 //===================================
 //==        NEW IMAGE METHODS
 //===================================
-Image* LoGFilter::GetLoGFilter(Image* image){
-
+Image* LoGFilter::GetLoGFilter(Image* image)
+{
 	//## Check image
 	if(!image){
-		ERROR_LOG("Null prt to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null prt to given image!");
+		#endif
 		return 0;
 	}
 	long int Nx= image->GetNx();
@@ -110,11 +112,13 @@ Image* LoGFilter::GetLoGFilter(Image* image){
 }//close GetLoGFilter()
 
 
-Image* LoGFilter::GetNormLoGFilter(Image* image,int size,double scale){
-	
+Image* LoGFilter::GetNormLoGFilter(Image* image,int size,double scale)
+{	
 	//## Check image
 	if(!image){
-		ERROR_LOG("Null prt to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null prt to given image!");
+		#endif
 		return 0;
 	}
 	long int Nx= image->GetNx();

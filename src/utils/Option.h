@@ -27,7 +27,9 @@
 #ifndef _OPTION_h
 #define _OPTION_h 1
 
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 #include <json/json.h>
 
@@ -37,8 +39,7 @@
 
 #include <vector>
 #include <string>
-
-#include <string>
+#include <iostream>
 
 using namespace std;
 
@@ -497,7 +498,9 @@ class Option : public OptionBase {
 		int GetJsonString(std::string& jsonString,bool isMinified=true){
 			Json::Value jsonObj;
 			if(GetJson(jsonObj)<0) {
-				ERROR_LOG("Failed to encode option to json object!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to encode option to json object!");
+				#endif
 				return -1;
 			}
 			try {
@@ -511,7 +514,9 @@ class Option : public OptionBase {
 				}
 			}
 			catch(...){
-				ERROR_LOG("Failed to encode argument to json string!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to encode argument to json string!");
+				#endif
 				return -1;
 			}
 			return 0;
@@ -563,12 +568,16 @@ class Option : public OptionBase {
  		*/
 		int AddBranch(TTree* tree){
 			if(!tree) {
-				ERROR_LOG("Null tree ptr given!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Null tree ptr given!");
+				#endif
 				return -1;
 			}
 			TBranch* branch= tree->Branch(m_name.c_str(),this);
 			if(!branch) {
-				WARN_LOG("Failed to create a branch for this option...");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to create a branch for this option...");
+				#endif
 				return -1;
 			}
 			return 0;

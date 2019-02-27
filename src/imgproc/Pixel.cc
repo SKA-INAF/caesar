@@ -26,7 +26,9 @@
 */
 
 #include <Pixel.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 #include <TObject.h>
 
@@ -75,9 +77,12 @@ Pixel::~Pixel(){
 }//close destructor
 
 
-Pixel::Pixel(const Pixel& pixel) : TObject(pixel) {
+Pixel::Pixel(const Pixel& pixel) : TObject(pixel) 
+{
   // Contour copy constructor
-	DEBUG_LOG("Copy constuctor called...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copy constuctor called...");
+	#endif
   Init();
   ((Pixel&)pixel).Copy(*this);
 }

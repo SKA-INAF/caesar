@@ -362,6 +362,7 @@ message Source {
 	//Fit pars
 	optional bool m_HasFitInfo= 15;
 	optional SourceFitPars m_fitPars= 16;
+	optional int32 m_fitStatus= 17;
 	
 }//close Source schema
 

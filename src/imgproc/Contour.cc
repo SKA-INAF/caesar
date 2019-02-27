@@ -27,7 +27,9 @@
 
 #include <Contour.h>
 #include <MathUtils.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 #include <TMath.h>
 #include <TEllipse.h>
@@ -67,9 +69,12 @@ Contour::~Contour(){
 }//close destructor
 
 
-Contour::Contour(const Contour& contour) : TObject(contour) {
+Contour::Contour(const Contour& contour) : TObject(contour) 
+{
   // Contour copy constructor
-	DEBUG_LOG("Copy constuctor called...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copy constuctor called...");
+	#endif
   Init();
   ((Contour&)contour).Copy(*this);
 }
@@ -196,7 +201,9 @@ TGraph* Contour::GetGraph(bool addLastPoint){
 	//Check number of contour pts
 	int nContourPts= m_Points.size();
 	if(nContourPts<=0) {
-		WARN_LOG("No contour points available (did you fill the contour?), returning null ptr graph!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No contour points available (did you fill the contour?), returning null ptr graph!");
+		#endif
 		return 0;
 	}
 	//Fill contour graph
@@ -211,10 +218,12 @@ TGraph* Contour::GetGraph(bool addLastPoint){
 }//close Contour::GetGraph()
 
 
-TPolyLine* Contour::GetBoundingBoxLine(){
-
+TPolyLine* Contour::GetBoundingBoxLine()
+{
 	if(!HasPoints() || !HasParameters){
-		WARN_LOG("No contour points and/or parameters available (did you fill the contour and compute its parameters?)!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No contour points and/or parameters available (did you fill the contour and compute its parameters?)!");
+		#endif
 		return 0;
 	}
 
@@ -246,20 +255,26 @@ TPaveText* Contour::GetParamInfoBox(){
 
 }//close GetParamInfoBox()
 
-int Contour::ComputeParameters(){
-
+int Contour::ComputeParameters()
+{
 	int nContourPts= m_Points.size();
 	if(nContourPts<=0) {
-		WARN_LOG("No contour points available (did you fill the contour?)!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No contour points available (did you fill the contour?)!");
+		#endif
 		return -1;
 	}
 	if(nContourPts<4) {
-		WARN_LOG("Too few contour points available (n="<<nContourPts<<") to get any reliable parameter estimate!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Too few contour points available (n="<<nContourPts<<") to get any reliable parameter estimate!");
+		#endif
 		return -1;
 	}
 
 	//## Copy points to cv::Point list
-	DEBUG_LOG("Copying contour points in cv::Point list...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copying contour points in cv::Point list...");
+	#endif
 	std::vector<cv::Point2f> points;
 	for(unsigned int i=0;i<m_Points.size();i++){
 		double x= m_Points[i].X();
@@ -276,7 +291,9 @@ int Contour::ComputeParameters(){
 	
 		//## Compute fitted ellipse
 		//if(ComputeFittedEllipse()<0){
+		//#ifdef LOGGING_ENABLED
 		//	WARN_LOG("Failed to fit an ellipse to the contour!");
+		//#endif
 		//	status= -1;
 		//}
 
@@ -292,12 +309,16 @@ int Contour::ComputeParameters(){
 
 	}//close try block
 	catch(cv::Exception ex){//something goes wrong!
-  	ERROR_LOG("Computing contour parameters failed (err: "<<ex.msg <<")");
+		#ifdef LOGGING_ENABLED
+  		ERROR_LOG("Computing contour parameters failed (err: "<<ex.msg <<")");
+		#endif
 		HasParameters= false;
 		return -1;
   }		
 	catch(...){//something goes wrong!
-  	ERROR_LOG("Unknown exception caught while computing contour parameters!");
+		#ifdef LOGGING_ENABLED
+  		ERROR_LOG("Unknown exception caught while computing contour parameters!");
+		#endif
 		HasParameters= false;
 		return -1;
   }
@@ -464,22 +485,26 @@ TEllipse* Contour::GetFittedEllipse(){
 
 }//close GetFittedEllipse()
 
-int Contour::ComputeFittedEllipse(){
-	
+int Contour::ComputeFittedEllipse()
+{	
 	//## Fit an ellipse to contour points
 	HasEllipseFit= true;//checked in internal routines and swithed to false if the fit fails
 	
 	// Get the contour graph
 	TGraph* contourGraph= GetGraph();
 	if(!contourGraph){
-		ERROR_LOG("Cannot get contour graph!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Cannot get contour graph!");
+		#endif
 		return -1;
 	}
 
 	//Get ellipse conic
 	TVectorD conic;
 	if(EllipseFitter(conic,contourGraph)<0){
-		ERROR_LOG("Failed to compute the ellipse conic!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute the ellipse conic!");
+		#endif
 		if(contourGraph) contourGraph->Delete();
 		return -1;
 	}
@@ -487,14 +512,18 @@ int Contour::ComputeFittedEllipse(){
 	//Convert to parametric representation
   TVectorD ellipseParams;
 	if(ConicToParametric(ellipseParams,conic)<0){
-		WARN_LOG("Failed to convert ellipse from conic to parametric representation!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to convert ellipse from conic to parametric representation!");
+		#endif
 		if(contourGraph) contourGraph->Delete();	
 		return -1;
 	}
 
 	//Check for errors
 	if(!HasEllipseFit){
-		WARN_LOG("Ellipse fit failed!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Ellipse fit failed!");
+		#endif
 		if(contourGraph) contourGraph->Delete();	
 		return -1;
 	}
@@ -529,8 +558,11 @@ int Contour::ComputeFittedEllipse(){
 	sstream<<"a="<<ellipseParams[2]<<" b="<<ellipseParams[3]<<", ";
 	sstream<<"theta(deg)="<<ellipseParams[4]<<", ";
 	sstream<<"chi2="<<chi2<<" redchi2="<<EllipseFitRedChi2;
-	DEBUG_LOG(sstream.str());
-	
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG(sstream.str());
+	#endif
+
 	/*
 	//OpenCV method
 	std::vector<cv::Point2f> hull;
@@ -556,11 +588,13 @@ int Contour::ComputeFittedEllipse(){
 }//close ComputeFittedEllipse()
 
  
-int Contour::EllipseFitter(TVectorD& ellipse,TGraph* contourGraph){
-
+int Contour::EllipseFitter(TVectorD& ellipse,TGraph* contourGraph)
+{
   //TVectorD ellipse;
   if (!contourGraph) {
-		ERROR_LOG("Null ptr to input contour graph, no ellipse fit will be performed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input contour graph, no ellipse fit will be performed!");
+		#endif
 		HasEllipseFit= false;
 		return -1;
 	}
@@ -568,7 +602,9 @@ int Contour::EllipseFitter(TVectorD& ellipse,TGraph* contourGraph){
 	//Check number of points
 	int N = contourGraph->GetN();
   if(N<6) {
-		WARN_LOG("Contour has less then 6 points, cannot fit ellipse!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Contour has less then 6 points, cannot fit ellipse!");
+		#endif
 		HasEllipseFit= false;
 		return -1;
 	}
@@ -610,7 +646,9 @@ int Contour::EllipseFitter(TVectorD& ellipse,TGraph* contourGraph){
   S3.Invert(&tmp); 
 	S3*= -1.0;
   if (tmp == 0.0) {
-    WARN_LOG("Linear part of the scatter matrix is singular!");
+		#ifdef LOGGING_ENABLED
+  	  WARN_LOG("Linear part of the scatter matrix is singular!");
+		#endif
 		HasEllipseFit= false;
     return -1;
   }
@@ -632,7 +670,9 @@ int Contour::EllipseFitter(TVectorD& ellipse,TGraph* contourGraph){
   TMatrixDEigen eig(M); // note: eigenvectors are not normalized
   const TMatrixD &evec = eig.GetEigenVectors();
   if ((eig.GetEigenValuesIm()).Norm2Sqr() != 0.0) {
-    WARN_LOG("Eigenvalues have nonzero imaginary parts!");
+		#ifdef LOGGING_ENABLED
+  	  WARN_LOG("Eigenvalues have nonzero imaginary parts!");
+		#endif
 		HasEllipseFit= false;
     return -1;
   }
@@ -643,7 +683,9 @@ int Contour::EllipseFitter(TVectorD& ellipse,TGraph* contourGraph){
     if (tmp > 0.0) break;
   }
   if (i > 2) {
-    WARN_LOG("No min. pos. eigenvalue found!");
+		#ifdef LOGGING_ENABLED
+    	WARN_LOG("No min. pos. eigenvalue found!");
+		#endif
     // i = 2;
 		HasEllipseFit= false;
     return -1;
@@ -656,7 +698,9 @@ int Contour::EllipseFitter(TVectorD& ellipse,TGraph* contourGraph){
     a1*= 1.0/sqrt(tmp); // normalize this eigenvector
   } 
 	else {
-    WARN_LOG("Eigenvector for min. pos. eigenvalue is NULL!");
+		#ifdef LOGGING_ENABLED
+   		WARN_LOG("Eigenvector for min. pos. eigenvalue is NULL!");
+		#endif
 		HasEllipseFit= false;
     return -1;
   }
@@ -679,11 +723,13 @@ int Contour::EllipseFitter(TVectorD& ellipse,TGraph* contourGraph){
 }//close EllipseFitter()
 
 
-int Contour::ConicToParametric(TVectorD& ellipse,const TVectorD &conic) {
-  
+int Contour::ConicToParametric(TVectorD& ellipse,const TVectorD &conic) 
+{  
 	//TVectorD ellipse;  
   if (conic.GetNrows() != 8) {
-    ERROR_LOG("Improper input vector length!");
+		#ifdef LOGGING_ENABLED
+    	ERROR_LOG("Improper input vector length!");
+		#endif
 		HasEllipseFit= false;
     //return ellipse;
 		return -1;
@@ -707,7 +753,9 @@ int Contour::ConicToParametric(TVectorD& ellipse,const TVectorD &conic) {
   
   // http://mathworld.wolfram.com/QuadraticCurve.html
   if (!( (Delta != 0.0) && (J < 0.0) && (I != 0.0) && (Delta / I < 0.0) )) {
-    ERROR_LOG("Ellipse (real) specific constraints not met!");
+		#ifdef LOGGING_ENABLED
+    	ERROR_LOG("Ellipse (real) specific constraints not met!");
+		#endif
 		HasEllipseFit= false;
     //return ellipse;
 		return -1;
@@ -847,7 +895,10 @@ void Contour::ComputeFourierDescriptors(){
 		ImagFDs.push_back(std::imag(Fn_norm));
 
 		ModFDs.push_back(FDMod);
-		DEBUG_LOG("FD no. "<<k<<" scale="<<index<<" FD="<<std::real(Fn[k])<<" + i "<<std::imag(Fn[k])<<" |FD|="<<FDMod);
+
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("FD no. "<<k<<" scale="<<index<<" FD="<<std::real(Fn[k])<<" + i "<<std::imag(Fn[k])<<" |FD|="<<FDMod);
+		#endif
 	}//end loop fourier coeff
 
 	HasFDPars= true;
@@ -900,7 +951,10 @@ void Contour::ComputeBendingEnergy(){
 		BendingEnergy*= pow(L,2)/N;
 		//BendingEnergy/= (double)N;
 		BendingEnergies.push_back(BendingEnergy);
-		DEBUG_LOG("Scale no. "<<k<<"="<<smoothPar<<" BE="<<BendingEnergy);
+
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Scale no. "<<k<<"="<<smoothPar<<" BE="<<BendingEnergy);
+		#endif
 	}//end loop scales
 
 	HasBEPars= true;

@@ -29,7 +29,9 @@
 #include <Source.pb.h>
 #include <TaskData.pb.h>
 
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <CodeUtils.h>
 
 #include <TVector2.h>
@@ -70,7 +72,9 @@ int Serializer::EncodeSourceComponentParsToProtobuf(CaesarPB::SourceComponentPar
 {
 	//Check pointer
 	if(!sourceCompPars_pb){
-		ERROR_LOG("Null ptr given to source fit pars protobuf object!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr given to source fit pars protobuf object!");
+		#endif
 		return -1;
 	}
 
@@ -187,7 +191,9 @@ int Serializer::EncodeSourceComponentParsToProtobuf(CaesarPB::SourceComponentPar
 
 	}//close try block
 	catch(std::exception const & e) {
-		ERROR_LOG("Source component pars encoding to protobuf failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Source component pars encoding to protobuf failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 
@@ -229,7 +235,9 @@ int Serializer::EncodeSourceFitParsToProtobuf(CaesarPB::SourceFitPars& sourceFit
 	for(size_t i=0;i<pars.size();i++){
 		CaesarPB::SourceComponentPars* compFitPars_pb= sourceFitPars_pb.add_pars();
 		if(EncodeSourceComponentParsToProtobuf(compFitPars_pb,pars[i])<0){
-			ERROR_LOG("Failed to encode fit pars for component "<<i+1<<" in protobuf!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to encode fit pars for component "<<i+1<<" in protobuf!");
+			#endif
 			return -1;
 		}
 	}//end loop component fit pars
@@ -269,7 +277,9 @@ int Serializer::EncodeMetaDataToProtobuf(CaesarPB::ImgMetaData& metadata_pb,ImgM
 		metadata_pb.set_m_wcstype(metadata->GetWCSType());
 	}
 	catch(std::exception const & e) {
-		ERROR_LOG("Image metadata encoding to protobuf failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Image metadata encoding to protobuf failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 
@@ -277,14 +287,16 @@ int Serializer::EncodeMetaDataToProtobuf(CaesarPB::ImgMetaData& metadata_pb,ImgM
 
 }//close EncodeMetaDataToProtobuf()
 
-int Serializer::EncodePointToProtobuf(CaesarPB::Point& point_pb,TVector2& point){
-
+int Serializer::EncodePointToProtobuf(CaesarPB::Point& point_pb,TVector2& point)
+{
 	try {
 		point_pb.set_x(point.X());
 		point_pb.set_y(point.Y());
 	}
 	catch(std::exception const & e) {
-		ERROR_LOG("Point encoding to protobuf failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Point encoding to protobuf failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 
@@ -410,7 +422,9 @@ int Serializer::EncodeContourToProtobuf(CaesarPB::Contour& contour_pb,Contour* c
 		}
 	}//close try block
 	catch(std::exception const & e) {
-		ERROR_LOG("Point encoding to protobuf failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Point encoding to protobuf failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 
@@ -458,7 +472,9 @@ int Serializer::EncodePixelToProtobuf(CaesarPB::Pixel& pixel_pb,Pixel* pixel){
 
 	}//close try block
 	catch(std::exception const & e) {
-		ERROR_LOG("Pixel encoding to protobuf failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Pixel encoding to protobuf failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 
@@ -600,7 +616,9 @@ int Serializer::EncodeBlobToProtobuf(CaesarPB::Blob& blob_pb,Source* source){
 
 	}//close try block
 	catch(std::exception const & e) {
-		ERROR_LOG("Blob encoding to protobuf failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Blob encoding to protobuf failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 
@@ -635,6 +653,9 @@ int Serializer::EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* sourc
 		source_pb.set_m_y0_true(y0_true);
 
 		//Set fit pars
+		source_pb.set_m_hasfitinfo(source->HasFitInfo());
+		source_pb.set_m_fitstatus(source->GetFitStatus());
+
 		SourceFitPars fitPars= source->GetFitPars();
 		CaesarPB::SourceFitPars* fitPars_pb= new CaesarPB::SourceFitPars;
 		if(EncodeSourceFitParsToProtobuf(*fitPars_pb,fitPars)<0){
@@ -661,7 +682,9 @@ int Serializer::EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* sourc
 
 	}//close try block
 	catch(std::exception const & e) {
-		ERROR_LOG("Source encoding to protobuf failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Source encoding to protobuf failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 
@@ -736,7 +759,9 @@ int Serializer::EncodeTaskDataToProtobuf(CaesarPB::TaskData& taskData_pb,TaskDat
 		}
 	}//close try block
 	catch(std::exception const & e) {
-		ERROR_LOG("Task data encoding to protobuf failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Task data encoding to protobuf failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 
@@ -744,7 +769,7 @@ int Serializer::EncodeTaskDataToProtobuf(CaesarPB::TaskData& taskData_pb,TaskDat
 
 }//close EncodeTaskDataToProtobuf()
 
-//int Serializer::EncodeTaskDataCollectionToProtobuf(CaesarPB::TaskDataCollection& taskDataCollection_pb,std::vector<TaskData*> taskDataCollection)
+
 int Serializer::EncodeTaskDataCollectionToProtobuf(CaesarPB::TaskDataCollection& taskDataCollection_pb,const std::vector<TaskData*>& taskDataCollection)
 {
 	//Fill task collections
@@ -779,8 +804,8 @@ int Serializer::EncodeSourceCollectionToProtobuf(CaesarPB::SourceCollection& sou
 }//close EncodeSourceCollectionToProtobuf()
 
 
-int Serializer::SourceToBuffer(SBuffer& buffer,Source* source){
-
+int Serializer::SourceToBuffer(SBuffer& buffer,Source* source)
+{
 	//## Check input source
 	if(!source) return -1;
 
@@ -797,7 +822,9 @@ int Serializer::SourceToBuffer(SBuffer& buffer,Source* source){
 		
 	}//close try block
 	catch(std::exception const & e) {
-		ERROR_LOG("Source encoding failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Source encoding failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 
@@ -806,8 +833,8 @@ int Serializer::SourceToBuffer(SBuffer& buffer,Source* source){
 }//close SourceToBuffer()
 
 
-int Serializer::TaskDataToBuffer(SBuffer& buffer,TaskData* taskData){
-
+int Serializer::TaskDataToBuffer(SBuffer& buffer,TaskData* taskData)
+{
 	//## Check input data
 	if(!taskData) {
 		return -1;
@@ -826,14 +853,16 @@ int Serializer::TaskDataToBuffer(SBuffer& buffer,TaskData* taskData){
 		
 	}//close try block
 	catch(std::exception const & e) {
-		ERROR_LOG("Task data encoding failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Task data encoding failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 	return 0;
 
 }//close TaskDataToBuffer()
 
-//int Serializer::TaskDataCollectionToBuffer(SBuffer& buffer,std::vector<TaskData*> taskDataCollection){
+
 int Serializer::TaskDataCollectionToBuffer(SBuffer& buffer,const std::vector<TaskData*>& taskDataCollection)
 {
 	try {
@@ -849,7 +878,9 @@ int Serializer::TaskDataCollectionToBuffer(SBuffer& buffer,const std::vector<Tas
 		
 	}//close try block
 	catch(std::exception const & e) {
-		ERROR_LOG("Task data collection encoding failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Task data collection encoding failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 	return 0;
@@ -880,7 +911,9 @@ char* Serializer::TaskDataToCharArray(long int& buffer_size,TaskData* taskData){
 		
 	}//close try blocks
 	catch(std::exception const & e) {
-		ERROR_LOG("Source encoding failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Source encoding failed with status "<<e.what());
+		#endif
 		return 0;
 	}
 
@@ -889,7 +922,6 @@ char* Serializer::TaskDataToCharArray(long int& buffer_size,TaskData* taskData){
 }//close TaskDataToCharArray()
 
 
-//char* Serializer::TaskDataCollectionToCharArray(long int& buffer_size,std::vector<TaskData*> taskDataCollection){
 char* Serializer::TaskDataCollectionToCharArray(long int& buffer_size,const std::vector<TaskData*>& taskDataCollection)
 {
 	char* buffer= 0;
@@ -908,7 +940,9 @@ char* Serializer::TaskDataCollectionToCharArray(long int& buffer_size,const std:
 		
 	}//close try blocks
 	catch(std::exception const & e) {
-		ERROR_LOG("Source encoding failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Source encoding failed with status "<<e.what());
+		#endif
 		return 0;
 	}
 
@@ -935,7 +969,9 @@ char* Serializer::SourceCollectionToCharArray(long int& buffer_size,const std::v
 		
 	}//close try blocks
 	catch(std::exception const & e) {
-		ERROR_LOG("Source collection encoding failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Source collection encoding failed with status "<<e.what());
+		#endif
 		return 0;
 	}
 
@@ -1016,7 +1052,9 @@ int Serializer::EncodeProtobufToSourceComponentPars(SourceComponentPars& sourceC
 
 	}//close try blocl
 	catch(std::exception const & e) {
-		ERROR_LOG("Encoding protobuf to source component pars failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Encoding protobuf to source component pars failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 	
@@ -1024,7 +1062,7 @@ int Serializer::EncodeProtobufToSourceComponentPars(SourceComponentPars& sourceC
 
 }//close EncodeProtobufToSourceComponentPars()
 
-int Serializer::EncodeProtobufToSourceFitPars(SourceFitPars& sourceFitPars,CaesarPB::SourceFitPars& sourceFitPars_pb)
+int Serializer::EncodeProtobufToSourceFitPars(SourceFitPars& sourceFitPars,const CaesarPB::SourceFitPars& sourceFitPars_pb)
 {
 	try {	
 		if(sourceFitPars_pb.has_ncomponents()) sourceFitPars.SetNComponents(sourceFitPars_pb.ncomponents());	
@@ -1067,7 +1105,9 @@ int Serializer::EncodeProtobufToSourceFitPars(SourceFitPars& sourceFitPars,Caesa
 	
 	}//close try block
 	catch(std::exception const & e) {
-		ERROR_LOG("Encoding protobuf to source fit pars failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Encoding protobuf to source fit pars failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 	return 0;
@@ -1094,13 +1134,31 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 		if(source_pb.has_m_hastrueinfo()) {
 			source.SetTrueInfo(source_pb.m_s_true(),source_pb.m_x0_true(),source_pb.m_y0_true());
 		}
-		
+
+		if(source_pb.has_m_hasfitinfo()){
+			const CaesarPB::SourceFitPars fitPars_pb= source_pb.m_fitpars();
+			Caesar::SourceFitPars fitPars;
+			int status= EncodeProtobufToSourceFitPars(fitPars,fitPars_pb);
+			if(status<0){
+				std::stringstream errMsg;
+				errMsg<<"Source fitpars encoding from protobuf failed!";
+				throw std::runtime_error(errMsg.str().c_str());
+			}
+			source.SetFitPars(fitPars);
+		}
+		else{
+			source.SetHasFitInfo(false);
+		}
+
+		if(source_pb.has_m_fitstatus()) source.SetFitStatus(source_pb.m_fitstatus());
 		
 		//Set blob fields
 		if(source_pb.has_blob()){
 			const CaesarPB::Blob& blob_pb= source_pb.blob();
 			if(EncodeProtobufToBlob(source,blob_pb)<0){
-				ERROR_LOG("Blob encoding failed!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Blob encoding failed!");
+				#endif
 				return -1;
 			}
 		}//close if has blob
@@ -1131,7 +1189,9 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 
 	}//close try block
 	catch(std::exception const & e) {
-		ERROR_LOG("Encoding protobuf to source failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Encoding protobuf to source failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 
@@ -1306,7 +1366,9 @@ int Serializer::EncodeProtobufToBlob(Source& source,const CaesarPB::Blob& blob_p
 
 	}//close try block
 	catch(std::exception const & e) {
-		ERROR_LOG("Blob encoding from protobuf failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Blob encoding from protobuf failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 
@@ -1348,7 +1410,9 @@ int Serializer::EncodeProtobufToPixel(Pixel& pixel,const CaesarPB::Pixel& pixel_
 	
 	}//close try block
 	catch(std::exception const & e) {
-		ERROR_LOG("Pixel encoding to protobuf failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Pixel encoding to protobuf failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 
@@ -1388,7 +1452,9 @@ int Serializer::EncodeProtobufToMetaData(ImgMetaData& metadata,const CaesarPB::I
 	
 	}//close try block
 	catch(std::exception const & e) {
-		ERROR_LOG("Image metadata encoding from protobuf failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Image metadata encoding from protobuf failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 	
@@ -1516,7 +1582,9 @@ int Serializer::EncodeProtobufToContour(Contour& contour,const CaesarPB::Contour
 
 	}//close try block
 	catch(std::exception const & e) {
-		ERROR_LOG("Contour encoding from protobuf failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Contour encoding from protobuf failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 	
@@ -1524,14 +1592,16 @@ int Serializer::EncodeProtobufToContour(Contour& contour,const CaesarPB::Contour
 
 }//close EncodeProtobufToContour()
 
-int Serializer::EncodeProtobufToPoint(TVector2& point,const CaesarPB::Point& point_pb){
-
+int Serializer::EncodeProtobufToPoint(TVector2& point,const CaesarPB::Point& point_pb)
+{
 	try {
 		if(point_pb.has_x()) point.SetX(point_pb.x());
 		if(point_pb.has_y()) point.SetY(point_pb.y());
 	}
 	catch(std::exception const & e) {
-		ERROR_LOG("Point encoding from protobuf failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Point encoding from protobuf failed with status "<<e.what());
+		#endif
 		return -1;
 	}
 
@@ -1539,114 +1609,79 @@ int Serializer::EncodeProtobufToPoint(TVector2& point,const CaesarPB::Point& poi
 
 }//close EncodeProtobufToPoint()
 
-int Serializer::EncodeProtobufToTaskData(TaskData& taskData,const CaesarPB::TaskData& taskData_pb){
-
+int Serializer::EncodeProtobufToTaskData(TaskData& taskData,const CaesarPB::TaskData& taskData_pb)
+{
 	try {		
 		//Fill task info
-		/*
-		//--> filename
-		if(!taskData_pb.has_filename()){
-			ERROR_LOG("Missing filename field, failed to encode!");
-			return -1;
-		}
-		taskData.filename= taskData_pb.filename();
-		if(taskData.filename==""){
-			ERROR_LOG("Empty string filename field, failed to encode!");
-			return -1;
-		}
-
-		//--> jobId
-		if(!taskData_pb.has_jobid()){
-			ERROR_LOG("Missing filename field, failed to encode!");
-			return -1;
-		}
-		taskData.jobId= taskData_pb.jobid();
-		if(taskData.jobId==""){
-			ERROR_LOG("Empty string jobId field, failed to encode!");
-			return -1;
-		}
-		*/
-
+		
 		//--> workerId
 		if(!taskData_pb.has_workerid()){
-			ERROR_LOG("Missing workerId field, failed to encode!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Missing workerId field, failed to encode!");
+			#endif
 			return -1;
 		}
 		taskData.workerId= taskData_pb.workerid();
 
 		//--> ix_min
 		if(!taskData_pb.has_ix_min()){
-			ERROR_LOG("Missing ix_min field, failed to encode!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Missing ix_min field, failed to encode!");
+			#endif
 			return -1;
 		}
 		taskData.ix_min= taskData_pb.ix_min();
 		if(taskData.ix_min<0 && taskData.ix_min!=-1){
-			ERROR_LOG("Invalid ix_min field, failed to encode!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Invalid ix_min field, failed to encode!");
+			#endif
 			return -1;
 		}
 
 		//--> ix_max
 		if(!taskData_pb.has_ix_max()){
-			ERROR_LOG("Missing ix_max field, failed to encode!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Missing ix_max field, failed to encode!");
+			#endif
 			return -1;
 		}
 		taskData.ix_max= taskData_pb.ix_max();
 		if(taskData.ix_max<0 && taskData.ix_max!=-1){
-			ERROR_LOG("Invalid ix_max field, failed to encode!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Invalid ix_max field, failed to encode!");
+			#endif
 			return -1;
 		}
 
 		//--> iy_min
 		if(!taskData_pb.has_iy_min()){
-			ERROR_LOG("Missing iy_min field, failed to encode!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Missing iy_min field, failed to encode!");
+			#endif
 			return -1;
 		}
 		taskData.iy_min= taskData_pb.iy_min();
 		if(taskData.iy_min<0 && taskData.iy_min!=-1){
-			ERROR_LOG("Invalid iy_min field, failed to encode!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Invalid iy_min field, failed to encode!");
+			#endif
 			return -1;
 		}
 
 		//--> iy_max
 		if(!taskData_pb.has_iy_max()){
-			ERROR_LOG("Missing iy_max field, failed to encode!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Missing iy_max field, failed to encode!");
+			#endif
 			return -1;
 		}
 		taskData.iy_max= taskData_pb.iy_max();
 		if(taskData.iy_max<0 && taskData.iy_max!=-1){
-			ERROR_LOG("Invalid iy_max field, failed to encode!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Invalid iy_max field, failed to encode!");
+			#endif
 			return -1;
 		}
-
-		/*
-		//--> x_min
-		if(!taskData_pb.has_x_min()){
-			ERROR_LOG("Missing x_min field, failed to encode!");
-			return -1;
-		}
-		taskData.x_min= taskData_pb.x_min();
-		
-		//--> x_max
-		if(!taskData_pb.has_x_max()){
-			ERROR_LOG("Missing x_max field, failed to encode!");
-			return -1;
-		}
-		taskData.x_max= taskData_pb.x_max();
-		
-		//--> y_min
-		if(!taskData_pb.has_y_min()){
-			ERROR_LOG("Missing y_min field, failed to encode!");
-			return -1;
-		}
-		taskData.y_min= taskData_pb.y_min();
-
-		//--> y_max
-		if(!taskData_pb.has_y_max()){
-			ERROR_LOG("Missing y_max field, failed to encode!");
-			return -1;
-		}
-		taskData.y_max= taskData_pb.y_max();
-		*/
 
 	
 		//Encode neighbour list
@@ -1736,7 +1771,10 @@ int Serializer::EncodeProtobufToTaskData(TaskData& taskData,const CaesarPB::Task
 		}
 		taskData.ext_sources_edge.clear();
 
-		ERROR_LOG("Task data encoding from protobuf failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Task data encoding from protobuf failed with status "<<e.what());
+		#endif
+
 		return -1;
 	}
 	
@@ -1782,7 +1820,11 @@ int Serializer::EncodeProtobufToTaskDataCollection(std::vector<TaskData*>& taskD
 				}
 			}//end loop tasks
 			taskDataCollection.clear();
-			ERROR_LOG("Task data collection encoding from protobuf failed with status "<<e.what());
+	
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Task data collection encoding from protobuf failed with status "<<e.what());
+			#endif
+
 			return -1;
 		}
 	}//close if
@@ -1811,7 +1853,10 @@ int Serializer::EncodeProtobufToTaskDataCollection(std::vector<TaskData*>& taskD
 		catch(std::exception const & e) {
 			//Do not clear allocated tasks in this case (because they have been previously allocated)
 			//NB: Some of the tasks (before the crash) have been updated in the vector
-			ERROR_LOG("Task data collection encoding from protobuf failed with status "<<e.what());
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Task data collection encoding from protobuf failed with status "<<e.what());
+			#endif
+
 			return -1;
 		}
 	}//close else
@@ -1859,7 +1904,11 @@ int Serializer::EncodeProtobufToSourceCollection(std::vector<Source*>& sources,c
 				}
 			}//end loop tasks
 			sources.clear();
-			ERROR_LOG("Source collection encoding from protobuf failed with status "<<e.what());
+
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Source collection encoding from protobuf failed with status "<<e.what());
+			#endif
+
 			return -1;
 		}
 	}//close if
@@ -1888,7 +1937,10 @@ int Serializer::EncodeProtobufToSourceCollection(std::vector<Source*>& sources,c
 		catch(std::exception const & e) {
 			//Do not clear allocated tasks in this case (because they have been previously allocated)
 			//NB: Some of the tasks (before the crash) have been updated in the vector
-			ERROR_LOG("Source collection encoding from protobuf failed with status "<<e.what());
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Source collection encoding from protobuf failed with status "<<e.what());
+			#endif
+
 			return -1;
 		}
 	}//close else
@@ -1919,7 +1971,10 @@ int Serializer::BufferToSource(Source& source,SBuffer& buffer){
 		
 	}//close try
 	catch(std::exception const & e) {
-		ERROR_LOG("Parsing source from buffer failed with status "<<e.what());
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Parsing source from buffer failed with status "<<e.what());
+		#endif
+
 		return -1;
 	}
 
@@ -1950,7 +2005,9 @@ int Serializer::BufferToTaskData(TaskData& taskData,SBuffer& buffer){
 		
 	}//close try
 	catch(std::exception const & e) {
-		ERROR_LOG("Parsing taskData from buffer failed (err="<<e.what()<<")");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Parsing taskData from buffer failed (err="<<e.what()<<")");
+		#endif
 		return -1;
 	}
 
@@ -1980,7 +2037,9 @@ int Serializer::CharArrayToTaskData(TaskData& taskData,char* buffer,long int buf
 		
 	}//close try
 	catch(std::exception const & e) {
-		ERROR_LOG("Parsing taskData from buffer failed (err="<<e.what()<<")");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Parsing taskData from buffer failed (err="<<e.what()<<")");
+		#endif
 		return -1;
 	}
 
@@ -2010,7 +2069,9 @@ int Serializer::BufferToTaskDataCollection(std::vector<TaskData*>& taskDataColle
 		
 	}//close try
 	catch(std::exception const & e) {
-		ERROR_LOG("Parsing taskDataCollection from buffer failed (err="<<e.what()<<")");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Parsing taskDataCollection from buffer failed (err="<<e.what()<<")");
+		#endif
 		return -1;
 	}
 
@@ -2039,7 +2100,9 @@ int Serializer::CharArrayToTaskDataCollection(std::vector<TaskData*>& taskDataCo
 		
 	}//close try
 	catch(std::exception const & e) {
-		ERROR_LOG("Parsing taskDataCollection from char array failed (err="<<e.what()<<")");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Parsing taskDataCollection from char array failed (err="<<e.what()<<")");
+		#endif
 		return -1;
 	}
 	return 0;
@@ -2068,7 +2131,9 @@ int Serializer::CharArrayToSourceCollection(std::vector<Source*>& sources,char* 
 		
 	}//close try
 	catch(std::exception const & e) {
-		ERROR_LOG("Parsing SourceCollection from char array failed (err="<<e.what()<<")");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Parsing SourceCollection from char array failed (err="<<e.what()<<")");
+		#endif
 		return -1;
 	}
 	return 0;

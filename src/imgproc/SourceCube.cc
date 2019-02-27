@@ -33,6 +33,10 @@
 #include <Image.h>
 #include <Contour.h>
 
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
+
 #include <TObject.h>
 #include <TCanvas.h>
 #include <TH2D.h>
@@ -80,32 +84,47 @@ SourceCube::SourceCube(std::string name)
 SourceCube::~SourceCube()
 {
 	//Delete source collection
-	DEBUG_LOG("Deleting source collection added in cube...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Deleting source collection added in cube...");
+	#endif
 	CodeUtils::DeletePtrCollection<Source>(m_sources);
-	DEBUG_LOG("done!");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("done!");
+	#endif
 
-	DEBUG_LOG("Deleting source plot canvas...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Deleting source plot canvas...");
+	#endif
 	CodeUtils::DeletePtr<TCanvas>(m_sourcePlot);
-	DEBUG_LOG("done!");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("done!");
+	#endif
 
-	DEBUG_LOG("Deleting source SED plot canvas...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Deleting source SED plot canvas...");
+	#endif
 	CodeUtils::DeletePtr<TCanvas>(m_sourceSEDPlot);
-	DEBUG_LOG("done!");
-	
+	#ifdef LOGGING_ENABLED	
+		DEBUG_LOG("done!");
+	#endif
 }//close destructor
 
 
 SourceCube::SourceCube(const SourceCube& sourceCube) 
 {
   // Copy constructor
-	DEBUG_LOG("Copy constuctor called...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copy constuctor called...");
+	#endif
   Init();
   ((SourceCube&)sourceCube).Copy(*this);
 }
 
 void SourceCube::Copy(TObject &obj) const 
 {
-	DEBUG_LOG("Copying parent TNamed...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copying parent TNamed...");
+	#endif
 	TNamed::Copy((SourceCube&)obj);
 
 	// Delete and copy sourceplot canvas
@@ -202,7 +221,9 @@ int SourceCube::DoSourceImagePlot(bool useWCS,int coordSyst)
 			//Retrieve image from pad primitives
 			Image* simg= GraphicsUtils::FindImageFromPad();
 			if(simg){
-				INFO_LOG("Deleting source image retrieved as primitive from pad no. "<<padCounter);
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Deleting source image retrieved as primitive from pad no. "<<padCounter);
+				#endif
 				CodeUtils::DeletePtr<Image>(simg);
 			}
 
@@ -210,7 +231,9 @@ int SourceCube::DoSourceImagePlot(bool useWCS,int coordSyst)
 		}//end loop pads
 
 		//Delete canvas
-		INFO_LOG("Deleting source plot canvas...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Deleting source plot canvas...");
+		#endif
 		CodeUtils::DeletePtr<TCanvas>(m_sourcePlot);
 	}//close if m_sourcePlot
 
@@ -265,7 +288,9 @@ int SourceCube::DoSourceImagePlot(bool useWCS,int coordSyst)
 		//Get source image
 		Image* simg= m_sources[i]->GetImage(eFluxMap,pixMargin);
 		if(!simg){
-			ERROR_LOG("Failed to get source image for cube channel "<<i+1<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to get source image for cube channel "<<i+1<<"!");
+			#endif
 			return nullptr;
 		}
 	
@@ -326,8 +351,10 @@ int SourceCube::DoSourceImagePlot(bool useWCS,int coordSyst)
 				xaxis_wcs->Draw("same");
 				yaxis_wcs->Draw("same");
 			}
-			else{
-				WARN_LOG("Failed to set gAxis!");
+			else{	
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to set gAxis!");
+				#endif
 			}	
 		}//close if useWCS
 		*/
@@ -360,7 +387,9 @@ int SourceCube::DoSourceSEDs()
 		//Get source metadata
 		ImgMetaData* metadata= m_sources[i]->GetImageMetaData();
 		if(!metadata){
-			WARN_LOG("Failed to get metadata for source channel no. "<<i+1<<"!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to get metadata for source channel no. "<<i+1<<"!");
+			#endif
 			return -1;
 		}
 	
@@ -381,11 +410,15 @@ int SourceCube::DoSourceSEDs()
 		double flux= 0;
 		double fluxErr= 0;
 		if(m_sources[i]->GetFluxDensity(flux)<0){
-			WARN_LOG("Failed to get flux density for source channel no. "<<i+1<<"!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to get flux density for source channel no. "<<i+1<<"!");
+			#endif
 			return -1;
 		}
 		if(m_sources[i]->GetFluxDensityErr(fluxErr)<0){
-			WARN_LOG("Failed to get flux density error for source channel no. "<<i+1<<"!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to get flux density error for source channel no. "<<i+1<<"!");
+			#endif
 			return -1;
 		}
 		double lgFlux= log10(flux);
@@ -396,10 +429,14 @@ int SourceCube::DoSourceSEDs()
 		//Get estimated condon errors on components
 		std::vector<double> componentFluxDensityErr_condon;
 		if(m_sources[i]->GetCondonComponentFluxDensityErr(componentFluxDensityErr_condon)<0){
-			WARN_LOG("Failed to estimated condon errors on components...");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to estimated condon errors on components...");
+			#endif
 		}
 
-		INFO_LOG("Channel no. "<<i+1<<": nu="<<Nu<<", dnu="<<dNu<<", flux="<<flux<<", fluxErr="<<fluxErr<<", fluxErr(Condon)="<<componentFluxDensityErr_condon[0]);
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Channel no. "<<i+1<<": nu="<<Nu<<", dnu="<<dNu<<", flux="<<flux<<", fluxErr="<<fluxErr<<", fluxErr(Condon)="<<componentFluxDensityErr_condon[0]);
+		#endif
 
 		//Fill SED
 		m_sourceSED->SetPoint(i,lgNu,lgFlux);
@@ -419,8 +456,10 @@ int SourceCube::DoSourceSEDs()
 		for(size_t j=0;j<m_componentIndexes[i].size();j++){//loop over channels
 			size_t sindex= m_componentIndexes[i][j].first;
 			size_t cindex= m_componentIndexes[i][j].second;
-			INFO_LOG("Match component no. "<<i+1<<": sindex="<<sindex<<", cindex="<<cindex);
-		
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Match component no. "<<i+1<<": sindex="<<sindex<<", cindex="<<cindex);
+			#endif
+
 			//Get component flux
 			SourceFitPars fitPars= m_sources[sindex]->GetFitPars();	
 			double flux= fitPars.GetComponentFluxDensity(cindex); 
@@ -431,7 +470,9 @@ int SourceCube::DoSourceSEDs()
 			//Get source metadata
 			ImgMetaData* metadata= m_sources[sindex]->GetImageMetaData();
 			if(!metadata){
-				WARN_LOG("Failed to get metadata for source channel no. "<<i+1<<"!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to get metadata for source channel no. "<<i+1<<"!");
+				#endif
 				return -1;
 			}
 
@@ -501,6 +542,25 @@ int SourceCube::DoSourceSEDs()
 	return 0;
 
 }//close DoSourceSEDs()
+
+
+int SourceCube::AddIndexToComponent(int cubeComponentIndex,size_t sindex,size_t componentIndex)
+{
+	//Check if cube component id was allocated
+	int nComponents= static_cast<int>(m_componentIndexes.size());
+	if(nComponents<=0 || nComponents<cubeComponentIndex+1){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Component with index "<<cubeComponentIndex<<" was not allocated!");
+		#endif
+		return -1;
+	}
+	
+	//Fill component indexes
+	m_componentIndexes[cubeComponentIndex].push_back(std::make_pair(sindex,componentIndex));
+				
+	return 0;
+		
+}//close AddIndexToComponent()
 
 }//close namespace 
 

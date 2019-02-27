@@ -37,7 +37,9 @@
 #include <MathUtils.h>
 #include <SysUtils.h>
 #include <ImgUtils.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <Consts.h>
 #include <GausFilter.h>
 
@@ -96,10 +98,13 @@ SFinder::SFinder()
 SFinder::~SFinder(){
 	
 	//Clearup
-	INFO_LOG("Clearup source finder allocated data...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Clearup source finder allocated data...");
+	#endif
 	Clear();
-	INFO_LOG("Clearup completed...");
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Clearup completed...");
+	#endif
 
 }//close destructor
 
@@ -111,7 +116,9 @@ void SFinder::Clear()
 	//## NB: When objects are written to file their memory is released, so don't delete them!
 	if(m_procId==MASTER_ID){
 		if( m_OutputFile && m_OutputFile->IsOpen() ) {
-			DEBUG_LOG("Closing output ROOT file...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Closing output ROOT file...");
+			#endif
 			m_OutputFile->Close();
 		}
 	}
@@ -119,24 +126,32 @@ void SFinder::Clear()
 	//## Delete source tree
 	if(m_procId==MASTER_ID){
 		if(m_SourceTree && !m_saveSources) {
-			DEBUG_LOG("Deleting source tree...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Deleting source tree...");
+			#endif
 			m_SourceTree->Delete();
 		}
 	}
 
 	//## Delete images & objects not written to file
 	if(m_InputImg && !m_saveInputMap){	
-		DEBUG_LOG("Deleting input image...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Deleting input image...");
+		#endif
 		delete m_InputImg;
 		m_InputImg= 0;
 	}
 	if(m_BkgData && !m_saveBkgMap && !m_saveNoiseMap){
-		DEBUG_LOG("Deleting bkg data...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Deleting bkg data...");
+		#endif
 		delete m_BkgData;
 		m_BkgData= 0;
 	}
-	if(m_ResidualImg && !m_saveResidualMap) {
-		DEBUG_LOG("Deleting residual image...");
+	if(m_ResidualImg && !m_saveResidualMap) {	
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Deleting residual image...");
+		#endif
 		delete m_ResidualImg;
 		m_ResidualImg= 0;
 	}
@@ -145,27 +160,37 @@ void SFinder::Clear()
 		m_SignificanceMap= 0;
 	}			
 	if(m_EdgeImg && !m_saveEdgenessMap){
-		DEBUG_LOG("Deleting edgeness image...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Deleting edgeness image...");
+		#endif
 		delete m_EdgeImg;
 		m_EdgeImg= 0;
 	}
 	if(m_LaplImg && !m_saveCurvatureMap){
-		DEBUG_LOG("Deleting Laplacian image...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Deleting Laplacian image...");
+		#endif
 		delete m_LaplImg;
 		m_LaplImg= 0;
 	}
 	if(m_SegmImg && !m_saveSegmentedMap){
-		DEBUG_LOG("Deleting Segmented image...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Deleting Segmented image...");
+		#endif
 		delete m_SegmImg;
 		m_SegmImg= 0;
 	}
 	if(m_SaliencyImg && !m_saveSaliencyMap){
-		DEBUG_LOG("Deleting Saliency image...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Deleting Saliency image...");
+		#endif
 		delete m_SaliencyImg;
 		m_SaliencyImg= 0;
 	}
 	if(m_blobMask){
-		DEBUG_LOG("Deleting blob mask image...");	
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Deleting blob mask image...");	
+		#endif
 		delete m_blobMask;
 		m_blobMask= 0;		
 	}
@@ -176,7 +201,9 @@ void SFinder::Clear()
 	//}
 
 	//## Delete task data
-	DEBUG_LOG("Deleting task data...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Deleting task data...");
+	#endif
 	for(size_t i=0;i<m_taskDataPerWorkers.size();i++) {
 		for(size_t j=0;j<m_taskDataPerWorkers[i].size();j++) {
 			if(m_taskDataPerWorkers[i][j]){
@@ -193,17 +220,23 @@ void SFinder::Clear()
 	#ifdef MPI_ENABLED
 		if(m_mpiEnabled && m_mpiGroupsInitialized){
 			if( (m_WorkerGroup!=MPI_GROUP_NULL) && (&m_WorkerGroup!=NULL) && (m_WorkerGroup!=NULL) && (m_WorkerGroup!=MPI_GROUP_EMPTY) ) {
-				INFO_LOG("Freeing worker MPI groups...");				
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Freeing worker MPI groups...");				
+				#endif
 				MPI_Group_free(&m_WorkerGroup);
 			}
 			
 			if(m_WorkerComm!=MPI_COMM_NULL) {
-				INFO_LOG("Freeing worker MPI comm...");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Freeing worker MPI comm...");
+				#endif
 				MPI_Comm_free(&m_WorkerComm);
 			}
 
 			if( (m_WorldGroup!=MPI_GROUP_NULL) && (&m_WorldGroup!=NULL) && (m_WorldGroup!=MPI_GROUP_EMPTY) ) {
-				INFO_LOG("Freeing world MPI group...");	
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Freeing world MPI group...");	
+				#endif
 				MPI_Group_free(&m_WorldGroup);
 			}
 		}
@@ -228,8 +261,11 @@ void SFinder::InitOptions()
 		MPI_Comm_rank(MPI_COMM_WORLD, &m_procId);
 	}
 	#endif
-	INFO_LOG("Using #"<<m_nProc<<" processors for this run (MPI enabled? "<<m_mpiEnabled<<") ...");
-	
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Using #"<<m_nProc<<" processors for this run (MPI enabled? "<<m_mpiEnabled<<") ...");
+	#endif
+
 	//Input file options
 	m_InputFileName= "";
 	m_InputImgName= "";
@@ -338,6 +374,20 @@ void SFinder::InitOptions()
 	sourceFitTime_min= 0;	
 	sourceFitTime_max= 0;	
 	sourceFitTime_sum= 0;		
+	edgeSourceFitTime= 0;
+	mergeTaskSourceTime= 0;
+	mergeTaskSourceTime_min= 0;	
+	mergeTaskSourceTime_max= 0;	
+	mergeTaskSourceTime_sum= 0;
+	workerDataCollectTime= 0;	
+	workerDataReduceTime= 0;
+	workerDataSerializationTime= 0;
+	workerDataRecvTime= 0;
+	workerDataProbeTime= 0;
+	workerBarrier1= 0;
+	workerBarrier2= 0;
+	
+	mergeEdgeSourceTime= 0;	
 	saveTime= 0;
 	virtMemPeak= 0;
 	virtMemPeak_min= 0;
@@ -364,7 +414,9 @@ int SFinder::Init()
 
 	//## Configure from parser
 	if(Configure()<0){
-		ERROR_LOG("Failed to configure options from parser!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to configure options from parser!");
+		#endif
 		return -1;
 	}
 
@@ -377,7 +429,9 @@ int SFinder::Init()
 	//## Create output file
 	//## NB: Done only by processor 0 in MPI run
 	if(m_saveToFile && m_procId==MASTER_ID){
-		DEBUG_LOG("Opening ROOT output file "<<m_OutputFileName<<" ...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Opening ROOT output file "<<m_OutputFileName<<" ...");
+		#endif
 		if(!m_OutputFile) m_OutputFile= new TFile(m_OutputFileName.c_str(),"RECREATE");	
 		m_OutputFile->cd();
 	
@@ -385,7 +439,9 @@ int SFinder::Init()
 		if(m_saveSources){
 			m_Source= 0;
 			if(!m_SourceTree) {
-				DEBUG_LOG("Creating ROOT source tree ...");	
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Creating ROOT source tree ...");	
+				#endif
 				m_SourceTree= new TTree("SourceInfo","SourceInfo");
 			}
 			m_SourceTree->Branch("Source",&m_Source);
@@ -394,7 +450,9 @@ int SFinder::Init()
 
 		//Init task info tree
 		if(!m_TaskInfoTree) {
-			DEBUG_LOG("Creating ROOT task data tree ...");	
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Creating ROOT task data tree ...");	
+			#endif
 			m_TaskInfoTree= new TTree("TaskInfo","TaskInfo");
 		}
 		m_TaskInfoTree->Branch("xmin",&m_xmin);
@@ -405,7 +463,9 @@ int SFinder::Init()
 
 		//Init time performance tree
 		if(!m_PerfTree) {
-			DEBUG_LOG("Creating ROOT run performance stats tree ...");	
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Creating ROOT run performance stats tree ...");	
+			#endif
 			m_PerfTree= new TTree("PerformanceInfo","PerformanceInfo");
 		}
 		m_PerfTree->Branch("tot",&totTime,"tot/D");
@@ -445,6 +505,7 @@ int SFinder::Init()
 		m_PerfTree->Branch("sfit_min",&sourceFitTime_min,"sfit_min/D");	
 		m_PerfTree->Branch("sfit_max",&sourceFitTime_max,"sfit_max/D");
 		m_PerfTree->Branch("sfit_sum",&sourceFitTime_sum,"sfit_sum/D");
+		m_PerfTree->Branch("sfit_edge",&edgeSourceFitTime,"sfit_edge/D");
 		m_PerfTree->Branch("imgres",&imgResidualTime,"imgres/D");
 		m_PerfTree->Branch("imgres_min",&imgResidualTime_min,"imgres_min/D");
 		m_PerfTree->Branch("imgres_max",&imgResidualTime_max,"imgres_max/D");
@@ -453,7 +514,19 @@ int SFinder::Init()
 		m_PerfTree->Branch("extsfinder_min",&extendedSourceTime_min,"extsfinder_min/D");
 		m_PerfTree->Branch("extsfinder_max",&extendedSourceTime_max,"extsfinder_max/D");
 		m_PerfTree->Branch("extsfinder_sum",&extendedSourceTime_sum,"extsfinder_sum/D");
-		
+		m_PerfTree->Branch("datacollect",&workerDataCollectTime,"datacollect/D");
+		m_PerfTree->Branch("datareduce",&workerDataReduceTime,"datareduce/D");
+		m_PerfTree->Branch("dataprobe",&workerDataProbeTime,"dataprobe/D");	
+		m_PerfTree->Branch("datarecv",&workerDataRecvTime,"datarecv/D");
+		m_PerfTree->Branch("dataserialization",&workerDataSerializationTime,"dataserialization/D");
+		m_PerfTree->Branch("collectbarrier1",&workerBarrier1,"collectbarrier1/D");
+		m_PerfTree->Branch("collectbarrier2",&workerBarrier2,"collectbarrier2/D");
+		m_PerfTree->Branch("mergetasksources",&mergeTaskSourceTime,"mergetasksources/D");
+		m_PerfTree->Branch("mergetasksources_min",&mergeTaskSourceTime_min,"mergetasksources_min/D");
+		m_PerfTree->Branch("mergetasksources_max",&mergeTaskSourceTime_max,"mergetasksources_max/D");
+		m_PerfTree->Branch("mergetasksources_sum",&mergeTaskSourceTime_sum,"mergetasksources_sum/D");
+		m_PerfTree->Branch("mergeedgesources",&mergeEdgeSourceTime,"mergeedgesources/D");
+
 		m_PerfTree->Branch("virtMemPeak",&virtMemPeak,"virtMemPeak/D");
 		m_PerfTree->Branch("virtMemPeak_min",&virtMemPeak_min,"virtMemPeak_min/D");
 		m_PerfTree->Branch("virtMemPeak_max",&virtMemPeak_max,"virtMemPeak_max/D");
@@ -463,12 +536,16 @@ int SFinder::Init()
 
 	//## Init and fill task data
 	//## NB: Done by all processors in MPI run
-	DEBUG_LOG("Initializing and filling task data ...");	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Initializing and filling task data ...");	
+	#endif
 	for(int i=0;i<m_nProc;i++){
 		m_taskDataPerWorkers.push_back( std::vector<TaskData*>() );
 	}
 	if(PrepareWorkerTasks()<0){
-		ERROR_LOG("Preparation of tasks per worker failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Preparation of tasks per worker failed!");
+		#endif
 		return -1;
 	}
 
@@ -476,11 +553,13 @@ int SFinder::Init()
 
 }//close Init()
 
-int SFinder::Configure(){
-
+int SFinder::Configure()
+{
 	//Get image read options
 	if(GET_OPTION_VALUE(inputFile,m_InputFileName)<0){
-		ERROR_LOG("Failed to get inputFile option!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get inputFile option!");
+		#endif
 		return -1;
 	}
 	GET_OPTION_VALUE(inputImage,m_InputImgName);
@@ -508,11 +587,15 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(tileStepSizeY,m_TileStepSizeY);
 	
 	if(m_splitInTiles && (m_TileSizeX<=0 || m_TileSizeY<=0) ) {
-		ERROR_LOG("Invalid tileSizeX/tileSizeY options!");
+		#ifdef LOGGING_ENABLED		
+			ERROR_LOG("Invalid tileSizeX/tileSizeY options!");
+		#endif
 		return -1;	
 	}
 	if(m_splitInTiles && (m_TileStepSizeX<=0 || m_TileStepSizeY<=0 || m_TileStepSizeX>1 || m_TileStepSizeY>1)){
-		ERROR_LOG("Invalid tileStepSizeX/tileStepSizeY options!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid tileStepSizeX/tileStepSizeY options!");
+		#endif
 		return -1;
 	}
 	if(!m_UseTileOverlap){
@@ -533,7 +616,9 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(beamBmin,m_beamFWHMMin);
 	GET_OPTION_VALUE(beamTheta,m_beamTheta);
 	m_fluxCorrectionFactor= AstroUtils::GetBeamAreaInPixels(m_beamFWHMMax,m_beamFWHMMin,m_pixSize,m_pixSize);
-	DEBUG_LOG("User-supplied beam info (bmaj="<<m_beamFWHMMax<<", bmin="<<m_beamFWHMMin<<", theta="<<m_beamTheta<<", dx="<<m_pixSize<<", fluxCorrFactor="<<m_fluxCorrectionFactor<<")");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("User-supplied beam info (bmaj="<<m_beamFWHMMax<<", bmin="<<m_beamFWHMMin<<", theta="<<m_beamTheta<<", dx="<<m_pixSize<<", fluxCorrFactor="<<m_fluxCorrectionFactor<<")");
+	#endif
 
 	//Get output file options
 	GET_OPTION_VALUE(outputFile,m_OutputFileName);
@@ -600,11 +685,15 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(blobMaskMethod,m_blobMaskMethod);
 	
 	if(m_nestedBlobMinScale>m_nestedBlobMaxScale){
-		ERROR_LOG("Invalid nested blob search scales given (hint: min scale cannot be larger than max scale)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid nested blob search scales given (hint: min scale cannot be larger than max scale)!");
+		#endif
 		return -1;
 	}
 	if(m_nestedBlobScaleStep<=0){
-		ERROR_LOG("Invalid nested blob scale step given (hint: step must be >0)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid nested blob scale step given (hint: step must be >0)!");
+		#endif
 		return -1;
 	}
 
@@ -693,20 +782,28 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(fitEllipseAreaRatioMaxCut,m_fitEllipseAreaRatioMaxCut);
 	GET_OPTION_VALUE(fitEllipseRotAngleCut,m_fitEllipseRotAngleCut);
 	if(m_fitApplyFitEllipseCuts && m_fitEllipseEccentricityRatioMinCut>=m_fitEllipseEccentricityRatioMaxCut){
-		ERROR_LOG("Invalid fit ellipse eccentricity ratio cut option given (hint: min cut value must be smaller than max cut value)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid fit ellipse eccentricity ratio cut option given (hint: min cut value must be smaller than max cut value)!");
+		#endif
 		return -1;
 	}
 	if(m_fitApplyFitEllipseCuts && m_fitEllipseAreaRatioMinCut>=m_fitEllipseAreaRatioMaxCut){
-		ERROR_LOG("Invalid fit ellipse area ratio cut option given (hint: min cut value must be smaller than max cut value)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid fit ellipse area ratio cut option given (hint: min cut value must be smaller than max cut value)!");
+		#endif
 		return -1;
 	}	
 
 	if(m_peakMinKernelSize>m_peakMaxKernelSize){
-		ERROR_LOG("Invalid peak kernel size option given (hint: min kernel must be larger or equal to max kernel size)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid peak kernel size option given (hint: min kernel must be larger or equal to max kernel size)!");
+		#endif
 		return -1;
 	}
 	if(m_peakMinKernelSize<=0 || m_peakMinKernelSize%2==0 || m_peakMaxKernelSize<=0 || m_peakMaxKernelSize%2==0){
-		ERROR_LOG("Invalid peak kernel sizes given (hint: kernel size must be positive and odd)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid peak kernel sizes given (hint: kernel size must be positive and odd)!");
+		#endif
 		return -1;
 	}
 
@@ -735,7 +832,9 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(saliencySpatialDistRegPar,m_SaliencySpatialDistRegPar);
 		
 	if(m_SaliencyResoMin>m_SaliencyResoMax){
-		ERROR_LOG("Invalid saliency reso scale min/max given (hint: max scale shall be >= min scale)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid saliency reso scale min/max given (hint: max scale shall be >= min scale)!");
+		#endif
 		return -1;
 	}
 
@@ -747,7 +846,9 @@ int SFinder::Configure(){
 	GET_OPTION_VALUE(useResidualInExtendedSearch,m_UseResidualInExtendedSearch);
 			
 	if(m_wtScaleSearchMin>m_wtScaleSearchMax){
-		ERROR_LOG("Invalid wt scale min/max given (hint: wtscale max shall be >= wtscale min)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid wt scale min/max given (hint: wtscale max shall be >= wtscale min)!");
+		#endif
 		return -1;
 	}
 
@@ -801,7 +902,9 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 {
 	//Check task data
 	if(!taskData){
-		ERROR_LOG("Null ptr to task data given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to task data given!");
+		#endif
 		return -1;
 	}
 
@@ -820,9 +923,11 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 	int status= 0;
 
 	//==================================
-	//==   Read task input image
+	//==   READ TASK TILE IMG
 	//==================================
-	DEBUG_LOG("Reading input image ["<<ix_min<<","<<ix_max<<"] ["<<iy_min<<","<<iy_max<<"]...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Reading input image ["<<ix_min<<","<<ix_max<<"] ["<<iy_min<<","<<iy_max<<"]...");
+	#endif
 	auto t0_read = chrono::steady_clock::now();	
 	
 	FileInfo info;
@@ -836,7 +941,9 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 		double ymax= taskImg->GetYmax();
 	}	
 	else{
-		ERROR_LOG("Reading of input image failed, skip to next task...");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Reading of input image failed, skip to next task...");
+		#endif
 		stopTask= true;
 		status= -1;
 	}
@@ -844,45 +951,57 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 	readImageTime+= chrono::duration <double, milli> (t1_read-t0_read).count();
 	
 
-	//============================
-	//== Find image stats & bkg
-	//============================
+	//===================================
+	//== FIND TASK TILE IMG STATS & BKG
+	//===================================
 	if(!stopTask){
-		INFO_LOG("Computing image stats and bkg...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Computing image stats and bkg...");
+		#endif
 		bkgData= ComputeStatsAndBkg(taskImg);
-		if(!bkgData){
-			ERROR_LOG("Failed to compute bkg for input image!");
+		if(!bkgData){	
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute bkg for input image!");
+			#endif
 			stopTask= true;
 			status= -1;
 		}
 	}
 
-	//============================
-	//== Find compact sources
-	//============================	
+	//================================
+	//== FIND TASK EXTENDED SOURCES
+	//================================
 	if(!stopTask && m_SearchCompactSources ){ 	
-		INFO_LOG("Searching compact sources...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Searching compact sources...");
+		#endif
 		auto t0_sfinder = chrono::steady_clock::now();	
 
 		significanceMap= FindCompactSourcesRobust(taskImg,bkgData,taskData,m_compactSourceSearchNIters);
 		if(!significanceMap){
-			ERROR_LOG("Compact source search failed!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Compact source search failed!");
+			#endif
 			status= -1;
 		}
 		auto t1_sfinder = chrono::steady_clock::now();	
 		compactSourceTime+= chrono::duration <double, milli> (t1_sfinder-t0_sfinder).count();
 	}
 
-	//============================
-	//== Find extended sources
-	//============================
+	//================================
+	//== FIND TASK EXTENDED SOURCES
+	//================================
 	if(!stopTask && m_SearchExtendedSources){
-		INFO_LOG("Searching extended sources...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Searching extended sources...");
+		#endif
 		auto t0_extsfinder = chrono::steady_clock::now();	
 
 		segmentedImg= FindExtendedSources(taskImg,bkgData,taskData,storeData);
 		if(!segmentedImg){
-			ERROR_LOG("Extended source search failed!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Extended source search failed!");
+			#endif
 			status= -1;
 		}
 		auto t1_extsfinder = chrono::steady_clock::now();	
@@ -891,41 +1010,59 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 	}//close if search extended sources
 
 	//============================
-	//== Merge task sources
+	//== MERGE TASK SOURCES
 	//============================
 	if(!stopTask && m_mergeSources){
-		INFO_LOG("Merging task sources ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Merging task sources ...");	
+		#endif
+		auto t0_smerge = chrono::steady_clock::now();	
+
 		if(MergeTaskSources(taskImg,bkgData,taskData)<0){
-			ERROR_LOG("Merging task sources failed!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Merging task sources failed!");
+			#endif
 			status= -1;
 		}
+		auto t1_smerge = chrono::steady_clock::now();	
+		mergeTaskSourceTime+= chrono::duration <double, milli> (t1_smerge-t0_smerge).count();
 	}
 
 	//============================
-	//== Find edge sources
+	//== FIND TASK EDGE SOURCES
 	//============================
 	if(!stopTask){
-		INFO_LOG("Finding sources at tile edges ...");
-		if(FindSourcesAtEdge()<0){
-			ERROR_LOG("Finding sources at tile edges failed!");
+		#ifdef LOGGING_ENABLED	
+			INFO_LOG("Finding sources at tile edges ...");
+		#endif
+		//if(FindSourcesAtEdge()<0){
+		if(FindTaskSourcesAtEdge(taskData)<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Finding sources at tile edges failed!");
+			#endif
 			status= -1;
 		}
 	}
 
-	//============================
-	//== Fit sources not at edge
-	//============================
+	//====================================
+	//== FIT TASK SOURCES (NOT AT EDGE)
+	//====================================
 	if(!stopTask){
 		auto t0_sfit = chrono::steady_clock::now();
 		if(m_fitSources){
-			INFO_LOG("Fitting task sources not located at tile edge ...");
-			if(FitTaskSources()<0){
-				ERROR_LOG("Fitting sources not at tile edges failed!");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Fitting task sources not located at tile edge ...");
+			#endif
+			//if(FitTaskSources()<0){
+			if(FitTaskSources(taskData)<0){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Fitting sources not at tile edges failed!");
+				#endif
 				status= -1;
 			}
 		}
 		auto t1_sfit = chrono::steady_clock::now();	
-		sourceFitTime= chrono::duration <double, milli> (t1_sfit-t0_sfit).count();
+		sourceFitTime+= chrono::duration <double, milli> (t1_sfit-t0_sfit).count();
 	}
 
 	//============================
@@ -977,10 +1114,14 @@ int SFinder::Run()
 	//================================================
 	//== Init options & data (done by all processors)
 	//================================================
-	INFO_LOG("Initializing source finder run ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Initializing source finder run ...");
+	#endif
 	auto t0_init = chrono::steady_clock::now();
 	if(Init()<0){
-		ERROR_LOG("Initialization failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Initialization failed!");
+		#endif
 		return -1;
 	}
 	auto t1_init = chrono::steady_clock::now();
@@ -1000,10 +1141,14 @@ int SFinder::Run()
 	for(size_t j=0;j<nTasks;j++){
 
 		//Run task
-		INFO_LOG("Start processing of task "<<j+1<<"/"<<nTasks<<" ...");
-		
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Start processing of task "<<j+1<<"/"<<nTasks<<" ...");
+		#endif
+
 		if(RunTask(m_taskDataPerWorkers[m_procId][j],storeData)<0){
-			ERROR_LOG("Failed to run task no. "<<j<<", skip to next!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to run task no. "<<j<<", skip to next!");
+			#endif
 			status= -1;
 			continue;
 		}
@@ -1011,7 +1156,9 @@ int SFinder::Run()
 	}//end loop tasks per worker
 	
 	if(status<0){
-		WARN_LOG("One or more errors occurred in source finding tasks...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("One or more errors occurred in source finding tasks...");
+		#endif
 	}
 
 	
@@ -1020,11 +1167,19 @@ int SFinder::Run()
 	//## (check if it is better to replace with MPI_Gather and put it available in all workers)
 	#ifdef MPI_ENABLED
 	if(m_mpiEnabled){
-		INFO_LOG("Gathering task data from all workers...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Gathering task data from all workers...");
+		#endif
+
+		auto t0_collect = chrono::steady_clock::now();
 		if(GatherTaskDataFromWorkers()<0){
-			ERROR_LOG("Gathering task data from workers failed!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Gathering task data from workers failed!");
+			#endif
 			return -1;
 		}
+		auto t1_collect = chrono::steady_clock::now();
+		workerDataCollectTime= chrono::duration <double, milli> (t1_collect-t0_collect).count();
 	}
 	#endif
 
@@ -1035,9 +1190,13 @@ int SFinder::Run()
 		if(m_mpiEnabled) MPI_Barrier(MPI_COMM_WORLD);
 	#endif
 	if(m_procId==MASTER_ID) {
-		INFO_LOG("Finding sources at tile edges ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Finding sources at tile edges ...");
+		#endif
 		if(FindSourcesAtEdge()<0){
-			ERROR_LOG("Finding sources at tile edges failed!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Finding sources at tile edges failed!");
+			#endif
 			return -1;
 		}
 	}
@@ -1049,32 +1208,46 @@ int SFinder::Run()
 			if(m_mpiEnabled) MPI_Barrier(MPI_COMM_WORLD);
 		#endif
 		if(m_procId==MASTER_ID) {
-			INFO_LOG("Merging sources find at tile edges by all workers...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Merging sources found at tile edges by all workers...");
+			#endif
+			auto t0_smerge = chrono::steady_clock::now();
 			if(MergeSourcesAtEdge()<0){
-				ERROR_LOG("Merging sources at tile edges failed!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Merging sources at tile edges failed!");
+				#endif
 				return -1;
 			}
+			auto t1_smerge = chrono::steady_clock::now();
+			mergeEdgeSourceTime= chrono::duration <double, milli> (t1_smerge-t0_smerge).count();
 		}
 	}//close if merge sources at edges
 
 	//## Merge sources found in each task in unique collection
 	if(m_procId==MASTER_ID && MergeTaskData()<0){
-		ERROR_LOG("Merging sources found in each task in unique collection failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Merging sources found in each task in unique collection failed!");
+		#endif
 		return -1;
 	}
 
 
-	//============================
-	//== Fit sources
-	//============================
+	//==================================================================
+	//== Fit sources (not fitted in tasks, e.g. those merged at edges)
+	//==================================================================
 	if(m_fitSources && m_procId==MASTER_ID) {
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Fitting sources not already fitted by workers (e.g. edge merged sources)...");
+		#endif
 		auto t0_sfit = chrono::steady_clock::now();	
 		if(FitSources(m_SourceCollection)<0){
-			ERROR_LOG("Failed to fit sources!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to fit sources!");
+			#endif
 			return -1;
 		}
 		auto t1_sfit = chrono::steady_clock::now();	
-		sourceFitTime+= chrono::duration <double, milli> (t1_sfit-t0_sfit).count();
+		edgeSourceFitTime+= chrono::duration <double, milli> (t1_sfit-t0_sfit).count();
 	}
 
 	//Stop timer
@@ -1091,10 +1264,14 @@ int SFinder::Run()
 	int procMemStatus= SysUtils::GetProcMemoryInfo(memInfo);
 	if(procMemStatus==0){
 		virtMemPeak= memInfo.virtPeakMem;
-		INFO_LOG("Peak virtual memory (kB)="<<virtMemPeak);		
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Peak virtual memory (kB)="<<virtMemPeak);		
+		#endif
 	}
 	else{
-		ERROR_LOG("Failed to read process memory info!");		
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read process memory info!");		
+		#endif
 		virtMemPeak= -1;
 	}	
 
@@ -1106,7 +1283,9 @@ int SFinder::Run()
 		MPI_Reduce(&virtMemPeak, &virtMemPeak_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
 		if (m_procId == MASTER_ID) {
 			//virtMemPeak= virtMemPeak_max;
-			INFO_LOG("Virtual memory peak across all processor min/max="<<virtMemPeak_max<<"/"<<virtMemPeak_min<<" kB");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Virtual memory peak across all processor min/max="<<virtMemPeak_max<<"/"<<virtMemPeak_min<<" kB");
+			#endif
 		}
 	}
 	#endif
@@ -1115,7 +1294,9 @@ int SFinder::Run()
 	//== Save to file
 	//============================
 	if(m_saveToFile && m_procId==MASTER_ID) {
-		INFO_LOG("Saving data to files...");	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving data to files...");	
+		#endif
 		auto t0_save = chrono::steady_clock::now();
 		Save();	
 		auto t1_save = chrono::steady_clock::now();	
@@ -1142,7 +1323,9 @@ int SFinder::FindSources(std::vector<Source*>& sources,Image* inputImg,double se
 {
 	//Check input image
 	if(!inputImg) {
-		ERROR_LOG("Null ptr to given input image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given input image!");
+		#endif
 		return -1;
 	}
 
@@ -1150,27 +1333,37 @@ int SFinder::FindSources(std::vector<Source*>& sources,Image* inputImg,double se
 	if(searchedImg) img= searchedImg;
 
 	//## Compute stats and bkg
-	INFO_LOG("Computing image stats/bkg...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing image stats/bkg...");
+	#endif
 	ImgBkgData* bkgData= ComputeStatsAndBkg(img);	
 	if(!bkgData){
-		ERROR_LOG("Failed to compute stats/bkg info!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute stats/bkg info!");
+		#endif
 		return -1;
 	}
 
 	//## Compute significance map
 	Image* significanceMap= img->GetSignificanceMap(bkgData,m_UseLocalBkg);
 	if(!significanceMap){
-		ERROR_LOG("Failed to compute significance map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute significance map!");
+		#endif
 		CodeUtils::DeletePtr<ImgBkgData>(bkgData);
 		return -1;
 	}
 
 	//## Compute blob mask
 	if(!m_blobMask && m_SearchNestedSources){
-		INFO_LOG("Computing multi-scale blob mask...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Computing multi-scale blob mask...");
+		#endif
 		m_blobMask= ComputeBlobMaskImage(img);
 		if(!m_blobMask){
-			ERROR_LOG("Failed to compute blob mask map!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute blob mask map!");
+			#endif
 			CodeUtils::DeletePtr<ImgBkgData>(bkgData);
 			CodeUtils::DeletePtr<Image>(significanceMap);
 			return -1;
@@ -1186,15 +1379,20 @@ int SFinder::FindSources(std::vector<Source*>& sources,Image* inputImg,double se
 		if(beamArea>0 && std::isnormal(beamArea)) hasBeamData= true;
 	}
 	if(!hasBeamData){
-		INFO_LOG("Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+		#endif
 		beamArea= m_fluxCorrectionFactor;
 	}
 	long int nPixThrToSearchNested= std::ceil(m_SourceToBeamAreaThrToSearchNested*beamArea);	
-	INFO_LOG("Assuming a threshold nPix>"<<nPixThrToSearchNested<<" to add nested sources...");
-		
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Assuming a threshold nPix>"<<nPixThrToSearchNested<<" to add nested sources...");
+	#endif
 
 	//## Find sources
-	INFO_LOG("Finding sources...");	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Finding sources...");	
+	#endif
 	/*
 	int status= inputImg->FindCompactSource(
 		sources,
@@ -1217,12 +1415,16 @@ int SFinder::FindSources(std::vector<Source*>& sources,Image* inputImg,double se
 
 	//## Check status
 	if(status<0) {
-		ERROR_LOG("Source finding failed!");	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Source finding failed!");	
+		#endif
 		return -1;
 	}
 	int nSources= static_cast<int>(sources.size());
-	INFO_LOG("#"<<nSources<<" sources detected in input image...");	
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<nSources<<" sources detected in input image...");	
+	#endif
+
 	return 0;
 
 }//close FindSources()
@@ -1231,7 +1433,9 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 {
 	//## Check img
 	if(!inputImg || !bkgData || !taskData){
-		ERROR_LOG("Null ptr to input img and/or bkg/task data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input img and/or bkg/task data!");
+		#endif
 		return nullptr;
 	}
 
@@ -1244,19 +1448,25 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		if(beamArea>0 && std::isnormal(beamArea)) hasBeamData= true;
 	}
 	if(!hasBeamData){
-		INFO_LOG("Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+		#endif
 		beamArea= m_fluxCorrectionFactor;
 	}
 	long int nPixThrToSearchNested= std::ceil(m_SourceToBeamAreaThrToSearchNested*beamArea);	
-	INFO_LOG("Assuming a threshold nPix>"<<nPixThrToSearchNested<<" to add nested sources...");
-		
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Assuming a threshold nPix>"<<nPixThrToSearchNested<<" to add nested sources...");
+	#endif
+
 
 	//## Copy input image (this will be masked with sources at each iteration)
 	bool copyMetaData= true;
 	bool resetStats= false;
 	Image* img= inputImg->GetCloned("",copyMetaData,resetStats);
 	if(!img){
-		ERROR_LOG("Failed to clone input image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to clone input image!");
+		#endif
 		return nullptr;
 	}
 
@@ -1264,7 +1474,9 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	/*
 	Image* curvMap= ComputeLaplacianImage(inputImg);
 	if(!curvMap){
-		WARN_LOG("Failed to compute curvature map!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to compute curvature map!");
+		#endif
 		return nullptr;
 	}
 	*/
@@ -1272,10 +1484,14 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	//## Compute blob mask
 	auto t0_blobmask = chrono::steady_clock::now();	
 	if(!m_blobMask && m_SearchNestedSources){
-		DEBUG_LOG("Computing multi-scale blob mask...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Computing multi-scale blob mask...");
+		#endif
 		m_blobMask= ComputeBlobMaskImage(inputImg);
 		if(!m_blobMask){
-			ERROR_LOG("Failed to compute blob mask map!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute blob mask map!");
+			#endif
 			CodeUtils::DeletePtr<Image>(img);
 			return nullptr;
 		}
@@ -1304,10 +1520,14 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 			double seedThr_iter= seedThr-m_seedThrStep;//reduce seedThr by step after the first iteration
 			if(seedThr_iter>m_MergeThr) seedThr= seedThr_iter;//do not allow seed thr equal or smaller than mergeThr (if so stop seedThr adaptive decrease)
 
-			INFO_LOG("Computing image stats & bkg at iter no. "<<k+1<<" ...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Computing image stats & bkg at iter no. "<<k+1<<" ...");
+			#endif
 			bkgData_iter= ComputeStatsAndBkg(img);
 			if(!bkgData_iter){
-				ERROR_LOG("Failed to compute bkg for input image at iter no. "<<k+1<<"!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to compute bkg for input image at iter no. "<<k+1<<"!");
+				#endif
 				CodeUtils::DeletePtr<Image>(img);
 				CodeUtils::DeletePtrCollection<Source>(sources);
 				return nullptr;
@@ -1317,7 +1537,9 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		//## Compute significance map
 		Image* significanceMap_iter= img->GetSignificanceMap(bkgData_iter,m_UseLocalBkg);
 		if(!significanceMap_iter){
-			ERROR_LOG("Failed to compute significance map at iter no. "<<k+1<<"!");			
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute significance map at iter no. "<<k+1<<"!");			
+			#endif
 			CodeUtils::DeletePtr<Image>(img);
 			CodeUtils::DeletePtr<ImgBkgData>(bkgData_iter);
 			CodeUtils::DeletePtrCollection<Source>(sources);
@@ -1325,7 +1547,9 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		}
 
 		//## Find compact sources
-		INFO_LOG("Finding compact sources at iter no. "<<k+1<<" ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Finding compact sources at iter no. "<<k+1<<" ...");
+		#endif
 		auto t0_blobfind = chrono::steady_clock::now();	
 		std::vector<Source*> sources_iter;
 		bool searchNested= false;
@@ -1349,7 +1573,9 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		
 
 		if(status<0) {
-			ERROR_LOG("Compact source finding failed!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Compact source finding failed!");
+			#endif
 			CodeUtils::DeletePtr<Image>(img);
 			CodeUtils::DeletePtr<Image>(significanceMap_iter);
 			CodeUtils::DeletePtr<ImgBkgData>(bkgData_iter);
@@ -1359,12 +1585,16 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 
 		//## If no sources have been found stop iteration loop
 		if(sources_iter.empty()){
-			INFO_LOG("No compact sources found at iter "<<k+1<<", stop iteration.");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("No compact sources found at iter "<<k+1<<", stop iteration.");
+			#endif
 			CodeUtils::DeletePtr<ImgBkgData>(bkgData_iter);
 			significanceMap= significanceMap_iter;
 			break;
 		}
-		INFO_LOG("#"<<sources_iter.size()<<" compact sources found at iter "<<k+1<<", appending them to list...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("#"<<sources_iter.size()<<" compact sources found at iter "<<k+1<<", appending them to list...");
+		#endif
 		iterations_done++;
 
 		//## Rename sources (from 2nd iterations)
@@ -1384,7 +1614,9 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		sources.insert(sources.end(),sources_iter.begin(),sources_iter.end());
 
 		//## Mask sources found (replace pixels with zeros) at this iteration
-		DEBUG_LOG("Masking #"<<sources_iter.size()<<" sources found at iter "<<k+1<<"...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Masking #"<<sources_iter.size()<<" sources found at iter "<<k+1<<"...");
+		#endif
 		img->MaskSources(sources_iter,0.);		
 
 		//## Clear iter data
@@ -1403,13 +1635,17 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	
 	//Merge sources found at each iterations
 	//NB: First compute the mask and then use it in flood-fill for final source collection
-	INFO_LOG("Merging compact sources found at each iteration cycle (#"<<sources.size()<<" sources in list after #"<<iterations_done<<" iterations) ...");
+	#ifdef LOGGING_ENABLED	
+		INFO_LOG("Merging compact sources found at each iteration cycle (#"<<sources.size()<<" sources in list after #"<<iterations_done<<" iterations) ...");
+	#endif
 	t0_blobmask = chrono::steady_clock::now();	
 	bool isBinary= true;
 	bool invert= false;
 	Image* segmMap= inputImg->GetSourceMask(sources,isBinary,invert);
 	if(!segmMap){
-		ERROR_LOG("Failed to compute segmented map from all compact sources found!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute segmented map from all compact sources found!");
+		#endif
 		CodeUtils::DeletePtr<Image>(img);
 		CodeUtils::DeletePtrCollection(sources);
 		return nullptr;
@@ -1445,7 +1681,9 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	CodeUtils::DeletePtrCollection<Source>(sources);
 
 	if(merge_status<0) {
-		ERROR_LOG("Failed to compute merged compact sources!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute merged compact sources!");
+		#endif
 		CodeUtils::DeletePtr<Image>(significanceMap);
 		return nullptr;				
 	}
@@ -1453,7 +1691,9 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	
 	//## Tag found sources as compact 
 	int nSources= static_cast<int>( sources_merged.size() );
-	INFO_LOG("#"<<nSources<<" compact sources detected in input image after #"<<iterations_done<<" iterations ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<nSources<<" compact sources detected in input image after #"<<iterations_done<<" iterations ...");
+	#endif
 	for(size_t k=0;k<sources_merged.size();k++) {	
 		sources_merged[k]->SetId(k+1);
 		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
@@ -1470,9 +1710,13 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	
 	//## Apply source selection?
 	if(m_ApplySourceSelection && nSources>0){
-		INFO_LOG("Applying source selection to the "<<nSources<<" compact sources detected ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Applying source selection to the "<<nSources<<" compact sources detected ...");
+		#endif
 		if(SelectSources(sources_merged)<0){
-			ERROR_LOG("Failed to select sources!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to select sources!");
+			#endif
 			CodeUtils::DeletePtr<Image>(significanceMap);
 			CodeUtils::DeletePtrCollection(sources_merged);
 			return nullptr;
@@ -1493,7 +1737,9 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		BkgSampleData bkgSampleData;
 		int status= inputImg->GetBkgInfoAroundSource(bkgSampleData,sources_merged[k],m_sourceBkgBoxBorderSize,m_BkgEstimator,img,m_useParallelMedianAlgo);
 		if(status<0){
-			WARN_LOG("Failed to compute bkg info in box around source "<<k+1<<", will not set bkg box pars in source!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to compute bkg info in box around source "<<k+1<<", will not set bkg box pars in source!");
+			#endif
 		}
 		else{
 			sources_merged[k]->SetBoxBkgInfo(bkgSampleData.bkgLevel,bkgSampleData.bkgRMS);
@@ -1511,7 +1757,9 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 			BkgSampleData bkgSampleData_nested;
 			status= inputImg->GetBkgInfoAroundSource(bkgSampleData_nested,nestedSources[l],m_sourceBkgBoxBorderSize,m_BkgEstimator,nullptr,m_useParallelMedianAlgo);
 			if(status<0){
-				WARN_LOG("Failed to compute bkg info in box around nested source "<<l+1<<", will not set bkg box pars in source!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to compute bkg info in box around nested source "<<l+1<<", will not set bkg box pars in source!");
+				#endif
 			}
 			else{
 				nestedSources[l]->SetBoxBkgInfo(bkgSampleData_nested.bkgLevel,bkgSampleData_nested.bkgRMS);
@@ -1524,8 +1772,10 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 	CodeUtils::DeletePtr<Image>(img);
 			
 	//## Add sources to task data sources
-	(taskData->sources).insert( (taskData->sources).end(),sources_merged.begin(),sources_merged.end());			
-	INFO_LOG("#"<<nSources<<" compact sources added to task data ...");
+	(taskData->sources).insert( (taskData->sources).end(),sources_merged.begin(),sources_merged.end());		
+	#ifdef LOGGING_ENABLED	
+		INFO_LOG("#"<<nSources<<" compact sources added to task data ...");
+	#endif
 
 	return significanceMap;
 
@@ -1536,23 +1786,32 @@ Image* SFinder::FindCompactSources(Image* inputImg, ImgBkgData* bkgData, TaskDat
 
 	//## Check img
 	if(!inputImg || !bkgData || !taskData){
-		ERROR_LOG("Null ptr to input img and/or bkg/task data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input img and/or bkg/task data!");
+		#endif
 		return nullptr;
 	}
 
 	//## Compute significance map
 	Image* significanceMap= inputImg->GetSignificanceMap(bkgData,m_UseLocalBkg);
 	if(!significanceMap){
-		ERROR_LOG("Failed to compute significance map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute significance map!");
+		#endif
 		return nullptr;
 	}
 
 	//## Compute blob mask
 	if(!m_blobMask && m_SearchNestedSources){
-		INFO_LOG("Computing multi-scale blob mask...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Computing multi-scale blob mask...");
+		#endif
+
 		m_blobMask= ComputeBlobMaskImage(inputImg);
 		if(!m_blobMask){
-			ERROR_LOG("Failed to compute blob mask map!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute blob mask map!");
+			#endif
 			CodeUtils::DeletePtr<Image>(significanceMap);
 			return nullptr;
 		}
@@ -1567,16 +1826,21 @@ Image* SFinder::FindCompactSources(Image* inputImg, ImgBkgData* bkgData, TaskDat
 		if(beamArea>0) hasBeamData= true;
 	}
 
-	if(!hasBeamData){
-		INFO_LOG("Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+	if(!hasBeamData){	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+		#endif
 		beamArea= m_fluxCorrectionFactor;
 	}
 	long int nPixThrToSearchNested= std::ceil(m_SourceToBeamAreaThrToSearchNested*beamArea);	
-	INFO_LOG("Assuming a threshold nPix>"<<nPixThrToSearchNested<<" to add nested sources...");
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Assuming a threshold nPix>"<<nPixThrToSearchNested<<" to add nested sources...");
+	#endif
 
 	//## Find sources
-	INFO_LOG("Finding compact sources...");	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Finding compact sources...");	
+	#endif
 	std::vector<Source*> sources;
 	/*
 	int status= inputImg->FindCompactSource(
@@ -1594,14 +1858,18 @@ Image* SFinder::FindCompactSources(Image* inputImg, ImgBkgData* bkgData, TaskDat
 	);
 
 	if(status<0) {
-		ERROR_LOG("Compact source finding failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Compact source finding failed!");
+		#endif
 		CodeUtils::DeletePtr<Image>(significanceMap);
 		return nullptr;
 	}
 
 	//## Tag found sources as compact 
 	int nSources= static_cast<int>( sources.size() );
-	INFO_LOG("#"<<nSources<<" compact sources detected in input image ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<nSources<<" compact sources detected in input image ...");
+	#endif
 	for(size_t k=0;k<sources.size();k++) {
 		sources[k]->SetType(eCompact);
 	}
@@ -1610,7 +1878,9 @@ Image* SFinder::FindCompactSources(Image* inputImg, ImgBkgData* bkgData, TaskDat
 	//int nSources= static_cast<int>(taskData->sources.size());	
 	if(m_ApplySourceSelection && nSources>0){
 		if(SelectSources(sources)<0){
-			ERROR_LOG("Failed to select sources!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to select sources!");
+			#endif
 			CodeUtils::DeletePtr<Image>(significanceMap);
 			return nullptr;
 		}
@@ -1627,8 +1897,10 @@ Image* SFinder::FindCompactSources(Image* inputImg, ImgBkgData* bkgData, TaskDat
 	}	
 			
 	//## Add sources to task data sources
-	(taskData->sources).insert( (taskData->sources).end(),sources.begin(),sources.end());			
-	INFO_LOG("#"<<nSources<<" compact sources added to task data ...");
+	(taskData->sources).insert( (taskData->sources).end(),sources.begin(),sources.end());		
+	#ifdef LOGGING_ENABLED	
+		INFO_LOG("#"<<nSources<<" compact sources added to task data ...");
+	#endif
 
 	return significanceMap;
 
@@ -1640,21 +1912,27 @@ Image* SFinder::FindResidualMap(Image* inputImg,ImgBkgData* bkgData,std::vector<
 {
 	//Check input image
 	if(!inputImg){
-		ERROR_LOG("Null ptr to given input image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given input image!");
+		#endif
 		return nullptr;
 	}
 
 	//#####  DEBUG ###########
-	//INFO_LOG("Printing source info before residual map...");
-	//for(size_t k=0;k<sources.size();k++) {
-	//	INFO_LOG("Source no. "<<k<<": name="<<sources[k]->GetName()<<",id="<<sources[k]->Id<<", n="<<sources[k]->NPix<<" type="<<sources[k]->Type<<" (X0,Y0)=("<<sources[k]->X0<<","<<sources[k]->Y0<<")");
-	//}//end loop sources
+	//#ifdef LOGGING_ENABLED
+	//	INFO_LOG("Printing source info before residual map...");
+	//	for(size_t k=0;k<sources.size();k++) {
+	//		INFO_LOG("Source no. "<<k<<": name="<<sources[k]->GetName()<<",id="<<sources[k]->Id<<", n="<<sources[k]->NPix<<" type="<<sources[k]->Type<<" (X0,Y0)=("<<sources[k]->X0<<","<<sources[k]->Y0<<")");
+	//	}//end loop sources
+	//#endif
 	//########################
 
 	//Compute residual map
 	Image* residualImg= 0;
 	if(m_UseResidualInExtendedSearch && sources.size()>0){
-		INFO_LOG("Computing residual image (#"<<sources.size()<<" sources present)...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Computing residual image (#"<<sources.size()<<" sources present)...");
+		#endif
 		residualImg= inputImg->GetSourceResidual(
 			sources,
 			m_dilateKernelSize,m_residualModel,m_removedSourceType,m_removeNestedSources,	
@@ -1672,12 +1950,16 @@ Image* SFinder::FindResidualMap(Image* inputImg,ImgBkgData* bkgData,std::vector<
 		*/
 	}//close if
 	else{
-		INFO_LOG("Setting residual image to input image...");
+		#ifdef LOGGING_ENABLED	
+			INFO_LOG("Setting residual image to input image...");
+		#endif
 		residualImg= inputImg->GetCloned("",true,true);
 	}
 
 	if(!residualImg){
-		ERROR_LOG("Failed to compute residual map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute residual map!");
+		#endif
 		return nullptr;
 	}
 	
@@ -1691,7 +1973,9 @@ Image* SFinder::ComputeSmoothedImage(Image* inputImg,int model){
 
 	//Check input image
 	if(!inputImg){
-		ERROR_LOG("Null ptr to given input image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given input image!");
+		#endif
 		return nullptr;
 	}
 
@@ -1704,12 +1988,16 @@ Image* SFinder::ComputeSmoothedImage(Image* inputImg,int model){
 		smoothedImg= inputImg->GetGuidedFilterImage(m_GuidedFilterRadius,m_GuidedFilterColorEps);
 	}
 	else{
-		ERROR_LOG("Invalid smoothing algo ("<<model<<") selected!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid smoothing algo ("<<model<<") selected!");
+		#endif
 		return nullptr;
 	}
 
 	if(!smoothedImg){
-		ERROR_LOG("Image smoothing failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Image smoothing failed!");
+		#endif
 		return nullptr;
 	}
 
@@ -1722,7 +2010,9 @@ Image* SFinder::FindExtendedSources(Image* inputImg,ImgBkgData* bkgData,TaskData
 {
 	//## Check input image
 	if(!inputImg || !taskData || !bkgData){
-		ERROR_LOG("Null ptr to input image and/or bkg/task data given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input image and/or bkg/task data given!");
+		#endif
 		return nullptr;
 	}
 
@@ -1736,7 +2026,9 @@ Image* SFinder::FindExtendedSources(Image* inputImg,ImgBkgData* bkgData,TaskData
 		}
 	}
 	if(!foundMethod){
-		ERROR_LOG("Invalid extended source method selected (method="<<m_ExtendedSearchMethod<<")!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid extended source method selected (method="<<m_ExtendedSearchMethod<<")!");
+		#endif
 		return nullptr;
 	}
 
@@ -1745,10 +2037,14 @@ Image* SFinder::FindExtendedSources(Image* inputImg,ImgBkgData* bkgData,TaskData
 	//****************************
 	//** Find residual map
 	//****************************
-	DEBUG_LOG("Computing residual image ...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Computing residual image ...");
+	#endif
 	Image* residualImg= FindResidualMap(inputImg,bkgData,taskData->sources);
 	if(!residualImg){
-		ERROR_LOG("Residual map computation failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Residual map computation failed!");
+		#endif
 		return nullptr;
 	}
 	if(storeData) m_ResidualImg= residualImg;
@@ -1756,10 +2052,14 @@ Image* SFinder::FindExtendedSources(Image* inputImg,ImgBkgData* bkgData,TaskData
 
 	
 	//Compute bkg & noise map for residual img
-	INFO_LOG("Computing residual image stats & bkg...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing residual image stats & bkg...");
+	#endif
 	ImgBkgData* residualBkgData= ComputeStatsAndBkg(residualImg);
 	if(!residualBkgData){
-		ERROR_LOG("Failed to compute bkg data for residual map!");
+		#ifdef LOGGING_ENABLED	
+			ERROR_LOG("Failed to compute bkg data for residual map!");
+		#endif
 		if(residualImg && !storeData){
 			delete residualImg;
 			residualImg= 0;
@@ -1776,7 +2076,9 @@ Image* SFinder::FindExtendedSources(Image* inputImg,ImgBkgData* bkgData,TaskData
 	if(m_UsePreSmoothing){
 		smoothedImg= ComputeSmoothedImage(residualImg,m_SmoothFilter);
 		if(!smoothedImg){
-			ERROR_LOG("Failed to compute residual smoothed image!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute residual smoothed image!");
+			#endif
 			if(residualImg && !storeData){
 				delete residualImg;
 				residualImg= 0;
@@ -1796,7 +2098,9 @@ Image* SFinder::FindExtendedSources(Image* inputImg,ImgBkgData* bkgData,TaskData
 	//****************************
 	//** Run segmentation
 	//****************************
-	INFO_LOG("Run extended source segmentation algorithm...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Run extended source segmentation algorithm...");
+	#endif
 	Image* segmentedImg= 0;
 	if(m_ExtendedSearchMethod==eHClust){
 		segmentedImg= FindExtendedSources_HClust(inputImg,residualBkgData,taskData,searchImg,storeData);
@@ -1813,7 +2117,9 @@ Image* SFinder::FindExtendedSources(Image* inputImg,ImgBkgData* bkgData,TaskData
 
 	//Check if segmentation succeeded
 	if(!segmentedImg){
-		ERROR_LOG("Failed to run the segmentation algorithm!");	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to run the segmentation algorithm!");	
+		#endif
 		if(residualImg && !storeData){
 			delete residualImg;
 			residualImg= 0;
@@ -1852,8 +2158,10 @@ Image* SFinder::FindExtendedSources(Image* inputImg,ImgBkgData* bkgData,TaskData
 Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,TaskData* taskData,Image* searchedImg,bool storeData)
 {
 	//Check input image
-	if(!inputImg || !bkgData || !taskData){
-		ERROR_LOG("Null ptr to input image and/or bkg/task data given!");
+	if(!inputImg || !bkgData || !taskData){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input image and/or bkg/task data given!");
+		#endif
 		return nullptr;
 	}
 
@@ -1875,7 +2183,9 @@ Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,T
 		if(storeData) m_SaliencyImg= saliencyImg;	
 	}
 	else{
-		ERROR_LOG("Failed to compute saliency map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute saliency map!");
+		#endif
 		return nullptr;
 	}
 
@@ -1891,7 +2201,9 @@ Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,T
 	//==    FIND SOURCES
 	//==========================================
 	//## Find compact blobs in saliency map by simple thresholding
-	INFO_LOG("Finding blobs in saliency map with threshold="<<signalThr<<"...");	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Finding blobs in saliency map with threshold="<<signalThr<<"...");	
+	#endif
 	bool findNestedSources= false;
 	int minNPix= m_NMinPix;
 	std::vector<Source*> sources;
@@ -1908,7 +2220,9 @@ Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,T
 	}
 
 	if(status<0){
-		ERROR_LOG("Compact source finding with saliency map failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Compact source finding with saliency map failed!");
+		#endif
 		return nullptr;
 	}
 
@@ -1922,13 +2236,17 @@ Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,T
 	}
 
 	if(!hasBeamData){
-		INFO_LOG("Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+		#endif
 		fluxCorrection= m_fluxCorrectionFactor;
 	}
 	
 	//## Tag found sources as extended 
 	int nSources= static_cast<int>( sources.size() );
-	INFO_LOG("#"<<nSources<<" extended sources detected in input image by thresholding the saliency map...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<nSources<<" extended sources detected in input image by thresholding the saliency map...");
+	#endif
 	for(size_t k=0;k<sources.size();k++) {
 		sources[k]->SetId(k+1);
 		sources[k]->SetName(Form("Sext%d",(signed)(k+1)));
@@ -1946,11 +2264,15 @@ Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,T
 	bool invert= false;
 	Image* segmMap= inputImg->GetSourceMask(sources,isBinary,invert);
 	if(!segmMap){
-		ERROR_LOG("Failed to compute segmented map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute segmented map!");
+		#endif
 		return nullptr;
 	}
 	
-	INFO_LOG("#"<<nSources<<" extended sources to the list...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<nSources<<" extended sources to the list...");
+	#endif
 
 	return segmMap;
 
@@ -1958,11 +2280,13 @@ Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,T
 
 
 
-Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,TaskData* taskData,Image* searchedImg,bool storeData){
-
+Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,TaskData* taskData,Image* searchedImg,bool storeData)
+{
 	//Check input image
 	if(!inputImg || !bkgData || !taskData){
-		ERROR_LOG("Null ptr to input image and/or bkg/task data given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input image and/or bkg/task data given!");
+		#endif
 		return nullptr;
 	}
 
@@ -1984,7 +2308,9 @@ Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,T
 		if(storeData) m_SaliencyImg= saliencyImg;
  	}
 	else{
-		ERROR_LOG("Failed to compute saliency map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute saliency map!");
+		#endif
 		return nullptr;
 	}
 
@@ -1994,11 +2320,15 @@ Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,T
 	double signalThr= saliencyImg->FindOptimalGlobalThreshold(m_SaliencyThrFactor,pixelHistoNBins,smoothPixelHisto);
 	double bkgThr= saliencyImg->FindMedianThreshold(m_SaliencyBkgThrFactor);
 	if(TMath::IsNaN(signalThr) || fabs(signalThr)==TMath::Infinity()){
-		ERROR_LOG("Invalid numeric threshold returned as threshold computation failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid numeric threshold returned as threshold computation failed!");
+		#endif
 		return nullptr;
 	}
 
-	INFO_LOG("Computing binarized saliency maps (signalThr="<<signalThr<<", bkgThr="<<bkgThr);
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing binarized saliency maps (signalThr="<<signalThr<<", bkgThr="<<bkgThr);
+	#endif
 	double fgValue= 1;
 	Image* signalMarkerImg= saliencyImg->GetBinarizedImage(signalThr,fgValue,false);
 	Image* bkgMarkerImg= saliencyImg->GetBinarizedImage(bkgThr,fgValue,true);
@@ -2010,24 +2340,32 @@ Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,T
 	}
 
 	//## Compute Laplacian filtered image
-	INFO_LOG("Computing laplacian image...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing laplacian image...");
+	#endif
 	Image* laplImg= ComputeLaplacianImage(img);
 	if(laplImg){
 		if(storeData) m_LaplImg= laplImg;
 	}
 	else{
-		ERROR_LOG("Failed to compute laplacian image, cannot perform extended source finding!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute laplacian image, cannot perform extended source finding!");
+		#endif
 		return nullptr;
 	}
 
 	//## Compute edge image	
-	INFO_LOG("Computing edgeness image...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing edgeness image...");
+	#endif
 	Image* edgeImg= ComputeEdgeImage(img,m_spMergingEdgeModel);
 	if(edgeImg){
 		if(storeData) m_EdgeImg= edgeImg;
 	}
 	else{
-		ERROR_LOG("Failed to compute the edgeness image, cannot perform extended source finding!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute the edgeness image, cannot perform extended source finding!");
+		#endif
 		if(laplImg && !storeData){
 			delete laplImg;		
 			laplImg= 0;
@@ -2039,7 +2377,9 @@ Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,T
 	bool normalizeImage= true;
 	SLICData* slicData_init= SLIC::SPGenerator(img,m_spSize,m_spBeta,m_spMinArea,normalizeImage,m_spUseLogContrast,laplImg,edgeImg);
 	if(!slicData_init){
-		ERROR_LOG("Failed to compute the initial superpixel partition, cannot perform extended source finding!");	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute the initial superpixel partition, cannot perform extended source finding!");	
+		#endif
 		if(laplImg && !storeData){
 			delete laplImg;		
 			laplImg= 0;
@@ -2053,7 +2393,9 @@ Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,T
 
 	//## Tag the superpixel partition
 	if(SLIC::TagRegions(slicData_init->regions,bkgMarkerImg,signalMarkerImg)<0){
-		ERROR_LOG("Failed to tag (signal vs bkg) the initial superpixel partition, cannot perform extended source finding!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to tag (signal vs bkg) the initial superpixel partition, cannot perform extended source finding!");
+		#endif
 		delete slicData_init;
 		slicData_init= 0;
 		if(laplImg && !storeData){
@@ -2089,7 +2431,9 @@ Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,T
 	//==    RUN SEGMENTATION
 	//==========================================
 	//## Run the segmentation
-	INFO_LOG("Running the hierarchical clustering segmenter...");	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Running the hierarchical clustering segmenter...");	
+	#endif
 	SLICData slicData_segm;
 	SLICSegmenter::FindSegmentation(
 		*slicData_init, slicData_segm,
@@ -2100,12 +2444,16 @@ Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,T
 	);
 
 	//## Get segmentation results	
-	INFO_LOG("Computing the segmented map from slic segmented data...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing the segmented map from slic segmented data...");
+	#endif
 	bool normalizeSegmImg= true;
 	bool binarizeSegmImg= true;
 	Image* segmentedImg= SLIC::GetSegmentedImage(inputImg,slicData_segm.regions,Region::eSignalTag,normalizeSegmImg,binarizeSegmImg);
 	if(!segmentedImg){
-		ERROR_LOG("Failed to compute the segmented image from slic segmented data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute the segmented image from slic segmented data!");
+		#endif
 		delete slicData_init;
 		slicData_init= 0;
 		if(laplImg && !storeData){
@@ -2152,7 +2500,9 @@ Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,T
 		findNestedSources
 	);
 	if(status<0){
-		ERROR_LOG("Finding sources in hierarchical algorithm segmented mask failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Finding sources in hierarchical algorithm segmented mask failed!");
+		#endif
 		return nullptr;
 	}
 
@@ -2171,7 +2521,9 @@ Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,T
 
 	}//close if
 	else {
-		WARN_LOG("Input image has no stats computed (hint: you must have computed them before!), cannot remove negative excess from sources!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Input image has no stats computed (hint: you must have computed them before!), cannot remove negative excess from sources!");
+		#endif
 	}	
 
 
@@ -2184,7 +2536,9 @@ Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,T
 	}
 
 	if(!hasBeamData){
-		INFO_LOG("Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+		#endif
 		fluxCorrection= m_fluxCorrectionFactor;
 	}
 	
@@ -2211,7 +2565,9 @@ Image* SFinder::ComputeBlobMaskImage(Image* inputImg)
 {
 	//## Check input image
 	if(!inputImg){
-		ERROR_LOG("Null ptr to given input image!");
+		#ifdef LOGGING_ENABLED	
+			ERROR_LOG("Null ptr to given input image!");
+		#endif
 		return nullptr;
 	}
 
@@ -2229,7 +2585,9 @@ Image* SFinder::ComputeBlobMaskImage(Image* inputImg)
 	//## Compute blob mask
 	Image* blobMask= 0;
 	if(m_blobMaskMethod==eCurvMask){//NB: bmaj/bmin shall be given in arcsec (NOT in pixels)
-		INFO_LOG("Computing curvature blob mask ...");		
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Computing curvature blob mask ...");		
+		#endif
 		double kernNSigmaSize= 3;
 
 		blobMask= BlobFinder::ComputeBlobMask(
@@ -2244,8 +2602,10 @@ Image* SFinder::ComputeBlobMaskImage(Image* inputImg)
 		double sigmaMin= m_nestedBlobMinScale*beamPixSize/GausSigma2FWHM;//convert from FWHM to sigma
 		double sigmaMax= m_nestedBlobMaxScale*beamPixSize/GausSigma2FWHM;//convert from FWHM to sigma
 		double sigmaStep= m_nestedBlobScaleStep;	
-		INFO_LOG("Computing multi-scale blob mask (scale min/max/step="<<sigmaMin<<"/"<<sigmaMax<<"/"<<sigmaStep<<") ...");
-		
+		#ifdef LOGGING_ENABLED	
+			INFO_LOG("Computing multi-scale blob mask (scale min/max/step="<<sigmaMin<<"/"<<sigmaMax<<"/"<<sigmaStep<<") ...");
+		#endif
+
 		blobMask= BlobFinder::ComputeMultiScaleBlobMask(
 			inputImg,
 			sigmaMin,sigmaMax,sigmaStep,
@@ -2255,12 +2615,16 @@ Image* SFinder::ComputeBlobMaskImage(Image* inputImg)
 		);
 	}//close else if
 	else{
-		ERROR_LOG("Invalid blob mask method ("<<m_blobMaskMethod<<") given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid blob mask method ("<<m_blobMaskMethod<<") given!");
+		#endif
 		return nullptr;
 	}
 
 	if(!blobMask){
-		ERROR_LOG("Failed to compute blob mask!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute blob mask!");
+		#endif
 		return nullptr;
 	}
 
@@ -2268,25 +2632,33 @@ Image* SFinder::ComputeBlobMaskImage(Image* inputImg)
 
 }//close ComputeBlobMaskImage()
 
-Image* SFinder::ComputeLaplacianImage(Image* inputImg){
-
+Image* SFinder::ComputeLaplacianImage(Image* inputImg)
+{
 	//Check input image
 	if(!inputImg){
-		ERROR_LOG("Null ptr to given input image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given input image!");
+		#endif
 		return nullptr;
 	}
 
 	//Compute laplacian image
-	INFO_LOG("Computing Laplacian image ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing Laplacian image ...");
+	#endif
 	Image* laplImg= inputImg->GetLaplacianImage(true);
 	if(!laplImg){
-		ERROR_LOG("Failed to compute Laplacian image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute Laplacian image!");
+		#endif
 		return nullptr;
 	}
 
 	//Compute laplacian image stats
-	INFO_LOG("Compute Laplacian image stats...");
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Compute Laplacian image stats...");
+	#endif
+
 	bool computeRobustStats= true;	
 	bool forceRecomputing= false;
 	bool useRange= false;
@@ -2294,34 +2666,44 @@ Image* SFinder::ComputeLaplacianImage(Image* inputImg){
 	double maxRange= std::numeric_limits<double>::infinity();
 	
 	if(laplImg->ComputeStats(computeRobustStats,forceRecomputing,useRange,minRange,maxRange,m_useParallelMedianAlgo)<0){	
-		ERROR_LOG("Failed to compute Laplacian image stats, returning nullptr!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute Laplacian image stats, returning nullptr!");
+		#endif
 		delete laplImg;
 		laplImg= 0;
 		return nullptr;
 	}
-	INFO_LOG("Laplacian image stats");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Laplacian image stats");
+	#endif
 	laplImg->PrintStats();
 
 	return laplImg;
 
 }//close ComputeLaplacianImage()
 
-Image* SFinder::ComputeEdgeImage(Image* inputImg,int edgeModel){
-
+Image* SFinder::ComputeEdgeImage(Image* inputImg,int edgeModel)
+{
 	//Check input image
 	if(!inputImg){
-		ERROR_LOG("Null ptr to given input image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given input image!");
+		#endif
 		return nullptr;
 	}
 
 	//Compute edge image according to desired model
 	Image* edgeImg= 0;
 	if(edgeModel == eKirschEdge){
-		INFO_LOG("Computing edge image using a Kirsch model...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Computing edge image using a Kirsch model...");
+		#endif
 		edgeImg= inputImg->GetKirschImage();	
 	}
 	else if(edgeModel == eChanVeseEdge){
-		INFO_LOG("Computing edge image using a Chan-Vese contour model...");	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Computing edge image using a Chan-Vese contour model...");	
+		#endif
 		bool returnContourImg= true;
 		edgeImg= ChanVeseSegmenter::FindSegmentation (
 			inputImg, 0, returnContourImg,
@@ -2330,18 +2712,24 @@ Image* SFinder::ComputeEdgeImage(Image* inputImg,int edgeModel){
 		);
 	}
 	else {
-		ERROR_LOG("Invalid edge model selected!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid edge model selected!");
+		#endif
 		return nullptr;
 	}
 
 	//Check if edge image computing failed
 	if(!edgeImg){
-		ERROR_LOG("Failed to compute edge image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute edge image!");
+		#endif
 		return nullptr;
 	}
 
 	//Compute edge image stats
-	INFO_LOG("Compute edge image stats...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Compute edge image stats...");
+	#endif
 	bool computeRobustStats= true;	
 	bool forceRecomputing= false;
 	bool useRange= false;
@@ -2349,13 +2737,17 @@ Image* SFinder::ComputeEdgeImage(Image* inputImg,int edgeModel){
 	double maxRange= std::numeric_limits<double>::infinity();
 	
 	if(edgeImg->ComputeStats(computeRobustStats,forceRecomputing,useRange,minRange,maxRange,m_useParallelMedianAlgo)<0){
-		ERROR_LOG("Failed to compute edge image stats, returning nullptr!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute edge image stats, returning nullptr!");
+		#endif
 		delete edgeImg;
 		edgeImg= 0;
 		return nullptr;
 	}
 
-	INFO_LOG("Edgeness image stats");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Edgeness image stats");
+	#endif
 	edgeImg->PrintStats();
 	
 	return edgeImg;
@@ -2366,14 +2758,18 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 {
 	//## Check input image
 	if(!inputImg || !bkgData || !taskData){
-		ERROR_LOG("Null ptr to input image and/or to bkg/task data given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input image and/or to bkg/task data given!");
+		#endif
 		return nullptr;
 	}
 
 	Image* img= inputImg;
 	if(searchedImg) img= searchedImg;
 
-	INFO_LOG("Searching extended sources with the active contour method...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Searching extended sources with the active contour method...");
+	#endif
 
 	//==========================================
 	//==    PRELIMINARY STAGES
@@ -2384,7 +2780,9 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 	//if( (m_activeContourMethod==eChanVeseAC && m_cvInitContourToSaliencyMap) || (m_activeContourMethod==eLRAC && m_lracInitContourToSaliencyMap) ){
 	if( m_acInitLevelSetMethod==eSaliencyLevelSet )	
 	{
-		INFO_LOG("Computing image saliency map...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Computing image saliency map...");
+		#endif
 		Image* saliencyImg= img->GetMultiResoSaliencyMap(
 			m_SaliencyResoMin,m_SaliencyResoMax,m_SaliencyResoStep,
 			m_spBeta,m_spMinArea,m_SaliencyNNFactor,m_SaliencyUseRobustPars,m_SaliencyDissExpFalloffPar,m_SaliencySpatialDistRegPar,
@@ -2396,26 +2794,36 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 			if(storeData) m_SaliencyImg= saliencyImg;
 		}
 		else{
-			ERROR_LOG("Failed to compute saliency map!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute saliency map!");
+			#endif
 			return nullptr;
 		}
 	
 		//## Get saliency map optimal threshold
-		INFO_LOG("Computing saliency map optimal threshold...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Computing saliency map optimal threshold...");
+		#endif
 		bool smoothPixelHisto= true;
 		int pixelHistoNBins= 100;
 		double signalThr= saliencyImg->FindOptimalGlobalThreshold(m_SaliencyThrFactor,pixelHistoNBins,smoothPixelHisto);
 		if(TMath::IsNaN(signalThr) || fabs(signalThr)==TMath::Infinity()){
-			ERROR_LOG("Invalid numeric threshold returned as threshold computation failed!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Invalid numeric threshold returned as threshold computation failed!");
+			#endif
 			return nullptr;
 		}	
 
 		//## Get saliency binarized image
-		INFO_LOG("Thresholding the saliency map @ thr="<<signalThr<<" and compute binarized map...");
-		
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Thresholding the saliency map @ thr="<<signalThr<<" and compute binarized map...");
+		#endif
+
 		signalMarkerImg= saliencyImg->GetBinarizedImage(signalThr,fgValue,false);
 		if(!signalMarkerImg){
-			ERROR_LOG("Failed to get saliency binarized map!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to get saliency binarized map!");
+			#endif
 			if(saliencyImg && !storeData){
 				delete saliencyImg;
 				saliencyImg= 0;
@@ -2431,7 +2839,9 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 
 		//## If binarized mage is empty (e.g. only background) do not run contour algorithm
 		if(signalMarkerImg->GetMaximum()<=0){
-			WARN_LOG("No signal objects detected in saliency map (only background), will not run active contour (NB: no extended sources detected in this image!)");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("No signal objects detected in saliency map (only background), will not run active contour (NB: no extended sources detected in this image!)");
+			#endif
 			delete signalMarkerImg;
 			signalMarkerImg= 0;
 			return nullptr;
@@ -2439,26 +2849,36 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 	}//close if initCVToSaliencyMap
 	else if( m_acInitLevelSetMethod==eCircleLevelSet )
 	{
-		INFO_LOG("Computing circle level set image...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Computing circle level set image...");
+		#endif
 		signalMarkerImg= ImgUtils::GetCircleLevelSetImage(img->GetNx(),img->GetNy(),m_acInitLevelSetSizePar);	
 		if(!signalMarkerImg){
-			ERROR_LOG("Failed to compute circle level set image!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute circle level set image!");
+			#endif
 			return nullptr;
 		}
 		
 	}//close else if circle level set
 	else if( m_acInitLevelSetMethod==eCheckerboardLevelSet )
 	{
-		INFO_LOG("Computing checkerboard level set image...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Computing checkerboard level set image...");
+		#endif
 		signalMarkerImg= ImgUtils::GetCheckerBoardLevelSetImage(img->GetNx(),img->GetNy(),m_acInitLevelSetSizePar);	
 		if(!signalMarkerImg){
-			ERROR_LOG("Failed to compute checkerboard level set image!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute checkerboard level set image!");
+			#endif
 			return nullptr;
 		}
 
 	}//close else if checkerboard level set
 	else{
-		WARN_LOG("Unknown or invalid init level set method given ("<<m_acInitLevelSetMethod<<"), init level set map won't be computed");	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Unknown or invalid init level set method given ("<<m_acInitLevelSetMethod<<"), init level set map won't be computed");	
+		#endif
 	}
 
 	//==========================================
@@ -2482,7 +2902,9 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 		);
 	}
 	else{
-		ERROR_LOG("Invalid active contour method specified ("<<m_acMethod<<")!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid active contour method specified ("<<m_acMethod<<")!");
+		#endif
 		if(signalMarkerImg){		
 			delete signalMarkerImg;
 			signalMarkerImg= 0;
@@ -2497,7 +2919,9 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 	}
 
 	if(!segmentedImg){
-		ERROR_LOG("Failed to compute Active Contour image segmentation!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute Active Contour image segmentation!");
+		#endif
 		return nullptr;
 	}
 	
@@ -2519,7 +2943,9 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 		findNestedSources
 	);
 	if(status<0){
-		ERROR_LOG("Finding sources in active contour segmented mask failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Finding sources in active contour segmented mask failed!");
+		#endif
 		return nullptr;
 	}
 
@@ -2535,11 +2961,15 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 			if(Smedian<imgMedian) sourcesToBeRemoved.push_back(k);
 		}
 		CodeUtils::DeletePtrItems(sources, sourcesToBeRemoved);
-		INFO_LOG("#"<<sourcesToBeRemoved.size()<<" sources found by ChanVese algo were removed (tagged as negative excess)...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("#"<<sourcesToBeRemoved.size()<<" sources found by ChanVese algo were removed (tagged as negative excess)...");
+		#endif
 
 	}//close if
 	else {
-		WARN_LOG("Input image has no stats computed (hint: you must have computed them before!), cannot remove negative excess from sources!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Input image has no stats computed (hint: you must have computed them before!), cannot remove negative excess from sources!");
+		#endif
 	}	
 
 	//## Set flux correction factor
@@ -2551,7 +2981,9 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 	}
 
 	if(!hasBeamData){
-		INFO_LOG("Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+		#endif
 		fluxCorrection= m_fluxCorrectionFactor;
 	}
 
@@ -2574,18 +3006,22 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 
 
 
-Image* SFinder::FindExtendedSources_WT(Image* inputImg,TaskData* taskData,Image* searchedImg){
-
+Image* SFinder::FindExtendedSources_WT(Image* inputImg,TaskData* taskData,Image* searchedImg)
+{
 	//## Check input image
 	if(!inputImg || !taskData){
-		ERROR_LOG("Null ptr to input image and/or task data given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input image and/or task data given!");
+		#endif
 		return nullptr;
 	}
 	Image* img= inputImg;
 	if(searchedImg) img= searchedImg;
 	
 	//## Find extended sources in the scales of the residual image (with POINT-LIKE SOURCES removed)
-	INFO_LOG("Find extended sources in the residual image Wavelet scales min/max="<<m_wtScaleSearchMin<<"/"<<m_wtScaleSearchMax<<" ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Find extended sources in the residual image Wavelet scales min/max="<<m_wtScaleSearchMin<<"/"<<m_wtScaleSearchMax<<" ...");
+	#endif
 	std::vector<Image*> wt_extended= img->GetWaveletDecomposition(m_wtScaleSearchMax);
 	
 	std::vector<Source*> sources_wtall;
@@ -2599,7 +3035,9 @@ Image* SFinder::FindExtendedSources_WT(Image* inputImg,TaskData* taskData,Image*
 			}
 		}//close if
 		else{
-			WARN_LOG("Failed to find sources at WT scale "<<scaleId<<", exit finding ...");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to find sources at WT scale "<<scaleId<<", exit finding ...");
+			#endif
 			break;	
 		}
 	}//end loop scales
@@ -2615,7 +3053,9 @@ Image* SFinder::FindExtendedSources_WT(Image* inputImg,TaskData* taskData,Image*
 
 	//## If errors occurred at one/more scales clear up sources and return
 	if(status<0){
-		ERROR_LOG("Extended source finding failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Extended source finding failed!");
+		#endif
 		for(size_t i=0;i<sources_wtall.size();i++){
 			if(sources_wtall[i]) {
 				delete sources_wtall[i];
@@ -2631,7 +3071,9 @@ Image* SFinder::FindExtendedSources_WT(Image* inputImg,TaskData* taskData,Image*
 	bool invert= false;
 	Image* binaryMaskImg= inputImg->GetSourceMask(sources_wtall,isBinary,invert);
 	if(!binaryMaskImg){
-		ERROR_LOG("Failed to found binary mask using all sources found at all WT scales!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to found binary mask using all sources found at all WT scales!");
+		#endif
 		for(size_t i=0;i<sources_wtall.size();i++){
 			if(sources_wtall[i]) {
 				delete sources_wtall[i];
@@ -2671,7 +3113,9 @@ Image* SFinder::FindExtendedSources_WT(Image* inputImg,TaskData* taskData,Image*
 	);
 
 	if(status<0){
-		ERROR_LOG("Failed to found source blobs in binary mask!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to found source blobs in binary mask!");
+		#endif
 		return nullptr;
 	}
 
@@ -2690,13 +3134,17 @@ Image* SFinder::FindExtendedSources_WT(Image* inputImg,TaskData* taskData,Image*
 	}
 
 	if(!hasBeamData){
-		INFO_LOG("Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+		#endif
 		fluxCorrection= m_fluxCorrectionFactor;
 	}
 	
 	//## Tag sources as extended
-	int nSources= static_cast<int>( sources.size() );		
-	INFO_LOG("#"<<nSources<<" found...");
+	int nSources= static_cast<int>( sources.size() );
+	#ifdef LOGGING_ENABLED			
+		INFO_LOG("#"<<nSources<<" found...");
+	#endif
 
 	for(size_t k=0;k<sources.size();k++){
 		sources[k]->SetId(k+1);
@@ -2716,7 +3164,9 @@ Image* SFinder::FindExtendedSources_WT(Image* inputImg,TaskData* taskData,Image*
 	invert= false;
 	Image* segmMap= inputImg->GetSourceMask(sources,isBinary,invert);
 	if(!segmMap){
-		ERROR_LOG("Failed to compute segmented map!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute segmented map!");
+		#endif
 		return nullptr;
 	}
 
@@ -2746,18 +3196,24 @@ int SFinder::SelectSources(std::vector<Source*>& sources)
 		
 		//Is bad source (i.e. line-like blob, etc...)?
 		if(!IsGoodSource(sources[i])) {
-			DEBUG_LOG("Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as bad source, skipped!");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as bad source, skipped!");
+			#endif
 			sources[i]->SetGoodSourceFlag(false);
 			continue;
 		}
 			
 		//Is point-like source?
 		if( IsPointLikeSource(sources[i]) ){
-			DEBUG_LOG("Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as a point-like source ...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as a point-like source ...");
+			#endif
 			sources[i]->SetType(ePointLike);
 		}
 		else{
-			DEBUG_LOG("Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) NOT tagged as point-like source ...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) NOT tagged as point-like source ...");
+			#endif
 		}
 
 		//Tag nested sources
@@ -2774,14 +3230,18 @@ int SFinder::SelectSources(std::vector<Source*>& sources)
 
 			//Check if good source
 			if(!isGoodSource_nested) {
-				DEBUG_LOG("Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as bad source, skipped!");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as bad source, skipped!");
+				#endif
 				nestedSources[j]->SetGoodSourceFlag(false);
 				continue;
 			}
 
 			//Check if point-source
 			if(isPointSource_nested){
-				DEBUG_LOG("Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as a point-like source ...");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as a point-like source ...");
+				#endif
 				nestedSources[j]->SetType(ePointLike);
 			}
 			
@@ -2801,8 +3261,9 @@ int SFinder::SelectSources(std::vector<Source*>& sources)
 		nSelSources++;
 	}//end loop sources
 
-	
-	INFO_LOG("Selected "<<nSelSources<<"/"<<nSources<<" sources after cuts ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Selected "<<nSelSources<<"/"<<nSources<<" sources after cuts ...");
+	#endif
 
 	//Clear initial vector (DO NOT CLEAR MEMORY!) and fill with selection (then reset selection)
 	sources.clear();
@@ -2827,13 +3288,17 @@ bool SFinder::IsGoodSource(Source* aSource)
 
 	//## Check for line-like source
 	if( (aSource->GetContours()).size()<=0) {
-		WARN_LOG("No contour stored for this source, cannot perform check!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No contour stored for this source, cannot perform check!");
+		#endif
 		return true;
 	}
 
 	double BoundingBoxMin= ((aSource->GetContours())[0])->BoundingBoxMin;
 	if(m_useMinBoundingBoxCut && BoundingBoxMin<m_SourceMinBoundingBox) {
-		DEBUG_LOG("BoundingBox cut not passed (BoundingBoxMin="<<BoundingBoxMin<<"<"<<m_SourceMinBoundingBox<<")");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("BoundingBox cut not passed (BoundingBoxMin="<<BoundingBoxMin<<"<"<<m_SourceMinBoundingBox<<")");
+		#endif
 		return false;
 	}
 
@@ -2853,8 +3318,10 @@ bool SFinder::IsPointLikeSource(Source* aSource)
 	auto t0_ssel = chrono::steady_clock::now();	
 
 	if(!aSource) return false;
-	if(!aSource->HasParameters()) {
-		WARN_LOG("No parameters are available for this source (did you compute them?)...point-like check cannot be performed!");
+	if(!aSource->HasParameters()) {	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No parameters are available for this source (did you compute them?)...point-like check cannot be performed!");
+		#endif
 		return true;
 	}
 
@@ -2872,14 +3339,18 @@ bool SFinder::IsPointLikeSource(Source* aSource)
 
 		//Test circularity ratio: 1= circle
 		if(m_useCircRatioCut && thisContour->CircularityRatio<m_psCircRatioThr) {
-			DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass CircularityRatio cut (CR="<<thisContour->CircularityRatio<<"<"<<m_psCircRatioThr<<")");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass CircularityRatio cut (CR="<<thisContour->CircularityRatio<<"<"<<m_psCircRatioThr<<")");
+			#endif
 			isPointLike= false;
 			break;
 		}
 
 		//Test elongation (how symmetrical is the shape): 0=circle,square
 		if(m_useElongCut && thisContour->Elongation>m_psElongThr) {
-			DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass Elongation cut (ELONG="<<thisContour->CircularityRatio<<">"<<m_psElongThr<<")");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass Elongation cut (ELONG="<<thisContour->CircularityRatio<<">"<<m_psElongThr<<")");
+			#endif
 			isPointLike= false;
 			break;	
 		}
@@ -2889,7 +3360,9 @@ bool SFinder::IsPointLikeSource(Source* aSource)
 				(thisContour->EllipseAreaRatio<m_psEllipseAreaRatioMinThr || thisContour->EllipseAreaRatio>m_psEllipseAreaRatioMaxThr) 
 		) 
 		{
-			DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass EllipseAreaRatio cut (EAR="<<thisContour->EllipseAreaRatio<<" outside range ["<<m_psEllipseAreaRatioMinThr<<","<<m_psEllipseAreaRatioMaxThr<<"])");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass EllipseAreaRatio cut (EAR="<<thisContour->EllipseAreaRatio<<" outside range ["<<m_psEllipseAreaRatioMinThr<<","<<m_psEllipseAreaRatioMaxThr<<"])");
+			#endif
 			isPointLike= false;
 			break;	
 		}
@@ -2902,15 +3375,21 @@ bool SFinder::IsPointLikeSource(Source* aSource)
 	if(m_useNBeamsCut && beamArea>0){	
 		double nBeams= (double)(NPix)/beamArea;
 		if(nBeams>m_psNBeamsThr){
-			DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass nBeams cut (beamArea="<<beamArea<<", NPix="<<NPix<<", nBeams="<<nBeams<<">"<<m_psNBeamsThr<<")");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass nBeams cut (beamArea="<<beamArea<<", NPix="<<NPix<<", nBeams="<<nBeams<<">"<<m_psNBeamsThr<<")");
+			#endif
 			isPointLike= false;
 		}
 	}
 
 	//Check number of pixels
-	DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") (NPix="<<NPix<<">"<<m_psMaxNPix<<")");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") (NPix="<<NPix<<">"<<m_psMaxNPix<<")");
+	#endif
 	if(m_useMaxNPixCut && NPix>m_psMaxNPix){
-		DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass nMaxPix cut (NPix="<<NPix<<">"<<m_psMaxNPix<<")");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass nMaxPix cut (NPix="<<NPix<<">"<<m_psMaxNPix<<")");
+		#endif
 		isPointLike= false;
 	}
 
@@ -2937,7 +3416,9 @@ bool SFinder::IsFittableSource(Source* aSource)
 		double nBeams= 0;
 		if(beamArea>0) nBeams= NPix/beamArea;
 		if(nBeams>m_nBeamsMaxToFit) {
-			INFO_LOG("Source "<<aSource->GetName()<<" not fittable as a whole (nBeams="<<nBeams<<">"<<m_nBeamsMaxToFit<<")");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Source "<<aSource->GetName()<<" not fittable as a whole (nBeams="<<nBeams<<">"<<m_nBeamsMaxToFit<<")");
+			#endif
 			return false;
 		}
 	}
@@ -2951,13 +3432,17 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 {
 	//Check given source list
 	if(sources.empty()){
-		WARN_LOG("Empty source list, nothing to be fitted!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Empty source list, nothing to be fitted!");
+		#endif
 		return 0;
 	}
 
 	//## Loop over image sources and perform fitting stage for non-extended sources
-	INFO_LOG("Loop over image sources and perform fitting stage for non-extended sources...");
-		
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Loop over image sources and perform fitting stage for non-extended sources...");
+	#endif
+
 	//Set fit options
 	SourceFitOptions fitOptions;	
 	fitOptions.bmaj= fabs(m_beamBmaj/m_pixSizeX);//converted in pixels
@@ -3021,14 +3506,18 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	//## Check minimizer support
 	if(fitOptions.fitMinimizer=="Minuit2" || fitOptions.fitMinimizer=="minuit2"){
 		#ifndef MINUIT2_ENABLED
-			WARN_LOG("Minuit2 minimizer was selected as option but not available/found in the system, switching to Minuit+Migrad as fallback.");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Minuit2 minimizer was selected as option but not available/found in the system, switching to Minuit+Migrad as fallback.");
+			#endif
 			fitOptions.fitMinimizer= "Minuit";
 			fitOptions.fitMinimizerAlgo= "Migrad";
 		#endif
 	}
 	if(fitOptions.fitMinimizer=="R" || fitOptions.fitMinimizer=="r"){
 		#ifndef ROOTR_ENABLED
-			WARN_LOG("R minimizer was selected as option but not available/found in the system, switching to Minuit+Migrad as fallback.");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("R minimizer was selected as option but not available/found in the system, switching to Minuit+Migrad as fallback.");
+			#endif
 			fitOptions.fitMinimizer= "Minuit";
 			fitOptions.fitMinimizerAlgo= "Migrad";
 		#endif
@@ -3037,15 +3526,21 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	//## Check fit minimizer multithread support
 	bool fitInMultithread= m_fitUseThreads;
 	if(m_fitUseThreads && (fitOptions.fitMinimizer=="Minuit" || fitOptions.fitMinimizer=="minuit")){
-		WARN_LOG("Selected Minuit minimizer is not thread-safe, switching off source fit multithread.");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Selected Minuit minimizer is not thread-safe, switching off source fit multithread.");
+		#endif
 		fitInMultithread= false;
 	}
 	if(m_fitUseThreads && (fitOptions.fitMinimizer=="R" || fitOptions.fitMinimizer=="r")){
-		WARN_LOG("Selected R minimizer is not thread-safe, switching off source fit multithread.");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Selected R minimizer is not thread-safe, switching off source fit multithread.");
+		#endif
 		fitInMultithread= false;
 	}
-	INFO_LOG("Fitting sources in multithread? "<<fitInMultithread);
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Fitting sources in multithread? "<<fitInMultithread);
+	#endif
+
 	//## NB: Convert scale pars in pixels assuming they represent multiple of beam width (Bmin)	
 	//double pixSize= fabs(std::min(m_pixSizeX,m_pixSizeY));
 	double pixSize= std::min(fabs(m_pixSizeX),fabs(m_pixSizeY));
@@ -3062,6 +3557,9 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	fitOptions.blobMapThrFactor= m_NestedBlobThrFactor;
 	fitOptions.blobMapKernelFactor= m_nestedBlobKernFactor; 
 
+	long int nFittedSources= 0;
+	std::vector<std::string> fittedSourceNames;
+
 	#ifdef OPENMP_ENABLED
 		#pragma omp parallel for if(fitInMultithread)
 	#endif
@@ -3069,39 +3567,55 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 		//Skip if already fitted (e.g. in worker tasks)
 		//NB: If fitting is done in worker tasks only edge merged source are to be fitted at this stage
 		bool hasFitInfo= sources[i]->HasFitInfo();
-		if(hasFitInfo) continue;
+		int fitStatus= sources[i]->GetFitStatus();
+		//if(hasFitInfo) continue;
+		if(fitStatus!=eFitUnknownStatus) continue;
 
 		//If source is non-fittable fit only nested components individually, otherwise perform a joint fit
 		bool isFittable= IsFittableSource(sources[i]);
 		if(isFittable) {
 			//Fit mother source
-			#ifdef OPENMP_ENABLED
-				INFO_LOG("[PROC "<<m_procId<<", threadId="<<omp_get_thread_num()<<"] - Source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") fittable as a whole...");
-			#else
+			#ifdef LOGGING_ENABLED
 				INFO_LOG("Source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") fittable as a whole...");
 			#endif
+
+			
+			nFittedSources++;
+			fittedSourceNames.push_back(sources[i]->GetName());
+
 			if(sources[i]->Fit(fitOptions)<0) {
-				WARN_LOG("Failed to fit source no. "<<i+1<<" (name="<<sources[i]->GetName()<<"), skip to next...");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to fit source no. "<<i+1<<" (name="<<sources[i]->GetName()<<"), skip to next...");
+				#endif
 				continue;
 			}
 		}//close if fittable
 		else{
 			//Fit nested sources
 			std::vector<Source*> nestedSources= sources[i]->GetNestedSources();	
-			INFO_LOG("Source "<<sources[i]->GetName()<<" not fittable as a whole (extended or large compact), fitting nested components individually (#"<<nestedSources.size()<<" components present) ...");
-			
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Source "<<sources[i]->GetName()<<" not fittable as a whole (extended or large compact), fitting nested components individually (#"<<nestedSources.size()<<" components present) ...");
+			#endif
+
 			for(size_t j=0;j<nestedSources.size();j++){
 				if(!nestedSources[j]) continue;
 				bool isFittable_nested= IsFittableSource(nestedSources[j]);
 				if(isFittable_nested){
-					INFO_LOG("Fitting nested source no. "<<j+1<<" (name="<<nestedSources[j]->GetName()<<") of source no. "<<i+1<<" (name="<<sources[i]->GetName()<<")...");
+					#ifdef LOGGING_ENABLED
+						INFO_LOG("Fitting nested source no. "<<j+1<<" (name="<<nestedSources[j]->GetName()<<") of source no. "<<i+1<<" (name="<<sources[i]->GetName()<<")...");
+					#endif
+
 					if(nestedSources[j]->Fit(fitOptions)<0){
-						WARN_LOG("Failed to fit nested source no. "<<j<<" of source no. "<<i<<" (name="<<sources[i]->GetName()<<"), skip to next nested...");
+						#ifdef LOGGING_ENABLED
+							WARN_LOG("Failed to fit nested source no. "<<j<<" of source no. "<<i<<" (name="<<sources[i]->GetName()<<"), skip to next nested...");
+						#endif
 						continue;
 					}
 				}//close if
 				else{
-					INFO_LOG("Nested source no. "<<j+1<<" (name="<<nestedSources[j]->GetName()<<") of source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") not fittable as a whole, no fit performed...");
+					#ifdef LOGGING_ENABLED
+						INFO_LOG("Nested source no. "<<j+1<<" (name="<<nestedSources[j]->GetName()<<") of source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") not fittable as a whole, no fit performed...");
+					#endif
 					continue;
 				}
 			}//end loop nested sources
@@ -3109,6 +3623,21 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	
 	}//end loop sources
 	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Fitted #"<<nFittedSources<<"/"<<sources.size()<<" sources at this stage...");
+	#endif
+
+	//== DEBUG ==
+	std::stringstream ss;
+	ss<<"fitted sources {";
+	for(size_t i=0;i<fittedSourceNames.size();i++){
+		ss<<fittedSourceNames[i]<<",";
+	}
+	ss<<"}";
+	#ifdef LOGGING_ENABLED
+		INFO_LOG(ss.str());
+	#endif
+
 	return 0;
 
 }//close FitSources()
@@ -3168,7 +3697,9 @@ Image* SFinder::ReadImage(FileInfo& info,std::string filename,std::string imgnam
 	//## Check file
 	bool match_extension= false;
 	if(!SysUtils::CheckFile(filename,info,match_extension,"")){
-		ERROR_LOG("Invalid input file name specified (filename="<<filename<<"), invalid file path?!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid input file name specified (filename="<<filename<<"), invalid file path?!");
+		#endif
 		return nullptr;
 	}
 	
@@ -3180,23 +3711,31 @@ Image* SFinder::ReadImage(FileInfo& info,std::string filename,std::string imgnam
 	if(info.extension==".root"){// Read image from ROOT file
 		TFile* inputFile = new TFile(filename.c_str(),"READ");
 		if(!inputFile || inputFile->IsZombie()){
-			ERROR_LOG("Cannot open input file "<<filename<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Cannot open input file "<<filename<<"!");
+			#endif
 			return nullptr;
 		}
 		
 		if(readTile){
 			//Read full image
 			Image* fullImg= (Image*)inputFile->Get(imgname.c_str());
-			if(!fullImg){
-				ERROR_LOG("Cannot get image "<<imgname<<" from input file "<<filename<<"!");
+			if(!fullImg){	
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Cannot get image "<<imgname<<" from input file "<<filename<<"!");
+				#endif
 				return nullptr;
 			}
 			
 			//Read tile
-			INFO_LOG("Reading image tile (file="<<filename<<", hdu="<<m_fitsHDUId<<", range[xmin,xmax]=["<<ix_min<<","<<ix_max<<"], [ymin,ymax]=["<<iy_min<<","<<iy_max<<"])");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Reading image tile (file="<<filename<<", hdu="<<m_fitsHDUId<<", range[xmin,xmax]=["<<ix_min<<","<<ix_max<<"], [ymin,ymax]=["<<iy_min<<","<<iy_max<<"])");
+			#endif
 			img= fullImg->GetTile(ix_min,ix_max,iy_min,iy_max);	
 			if(!img){
-				ERROR_LOG("Failed to read image tile [xmin,xmax]=["<<ix_min<<","<<ix_max<<"], [ymin,ymax]=["<<iy_min<<","<<iy_max<<"]");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to read image tile [xmin,xmax]=["<<ix_min<<","<<ix_max<<"], [ymin,ymax]=["<<iy_min<<","<<iy_max<<"]");
+				#endif
 				delete fullImg;
 				fullImg= 0;
 				return nullptr;
@@ -3205,7 +3744,9 @@ Image* SFinder::ReadImage(FileInfo& info,std::string filename,std::string imgnam
 		else{
 			img= (Image*)inputFile->Get(imgname.c_str());
 			if(!img){
-				ERROR_LOG("Cannot get image "<<imgname<<" from input file "<<filename<<"!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Cannot get image "<<imgname<<" from input file "<<filename<<"!");
+				#endif
 				return nullptr;
 			}	
 		}
@@ -3218,16 +3759,22 @@ Image* SFinder::ReadImage(FileInfo& info,std::string filename,std::string imgnam
 
 		int status= 0;
 		if(readTile) {
-			INFO_LOG("Reading image tile (file="<<filename<<", hdu="<<m_fitsHDUId<<", range[xmin,xmax]=["<<ix_min<<","<<ix_max<<"], [ymin,ymax]=["<<iy_min<<","<<iy_max<<"])");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Reading image tile (file="<<filename<<", hdu="<<m_fitsHDUId<<", range[xmin,xmax]=["<<ix_min<<","<<ix_max<<"], [ymin,ymax]=["<<iy_min<<","<<iy_max<<"])");
+			#endif
 			status= img->ReadFITS(filename,m_fitsHDUId,ix_min,ix_max,iy_min,iy_max); 
 		}
 		else {
-			INFO_LOG("Reading image (file="<<filename<<", hdu="<<m_fitsHDUId<<")");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Reading image (file="<<filename<<", hdu="<<m_fitsHDUId<<")");
+			#endif
 			status= img->ReadFITS(filename,m_fitsHDUId);
 		}
 
 		if(status<0){
-			ERROR_LOG("Failed to read image from input file "<<filename<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read image from input file "<<filename<<"!");
+			#endif
 			if(img) {
 				delete img;
 				img= 0;
@@ -3238,7 +3785,9 @@ Image* SFinder::ReadImage(FileInfo& info,std::string filename,std::string imgnam
 
 	//== Invalid extension ==
 	else{
-		ERROR_LOG("Invalid file extension detected (ext="<<info.extension<<")!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid file extension detected (ext="<<info.extension<<")!");
+		#endif
 		return nullptr;
 	}
 	
@@ -3253,18 +3802,24 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 {
 	//## Check input img
 	if(!img){
-		ERROR_LOG("Null ptr to input image given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input image given!");
+		#endif
 		return nullptr;
 	}
 
 	//## Compute stats
-	DEBUG_LOG("Computing image stats...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Computing image stats...");
+	#endif
 	auto t0_stats = chrono::steady_clock::now();	
 	bool computeRobustStats= true;
 	bool forceRecomputing= false;
 
 	if(img->ComputeStats(computeRobustStats,forceRecomputing,useRange,minThr,maxThr,m_useParallelMedianAlgo)<0){
-		ERROR_LOG("Stats computing failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Stats computing failed!");
+		#endif
 		return nullptr;
 	}
 	auto t1_stats = chrono::steady_clock::now();	
@@ -3297,7 +3852,9 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 		
 		//If beam data are not present in metadata, use those provided in the config file
 		if(!hasBeamData){
-			WARN_LOG("Using user-provided beam info to set bkg box size (beam info are not available/valid in image)...");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Using user-provided beam info to set bkg box size (beam info are not available/valid in image)...");
+			#endif
 			pixelWidthInBeam= AstroUtils::GetBeamWidthInPixels(m_beamFWHMMax,m_beamFWHMMin,m_pixSize,m_pixSize);
 			m_beamBmaj= m_beamFWHMMax;
 			m_beamBmin= m_beamFWHMMin;
@@ -3307,27 +3864,37 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 		}
 
 		if(pixelWidthInBeam<=0){
-			ERROR_LOG("Invalid pixel width in beam computed from user-supplied beam info (Bmaj,Bmin,Bpa,pixSize)=("<<m_beamBmaj<<", "<<m_beamBmin<<", "<<m_beamBpa<<","<<m_pixSize<<")!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Invalid pixel width in beam computed from user-supplied beam info (Bmaj,Bmin,Bpa,pixSize)=("<<m_beamBmaj<<", "<<m_beamBmin<<", "<<m_beamBpa<<","<<m_pixSize<<")!");
+			#endif
 			return nullptr;
 		}
 
 		boxSizeX= pixelWidthInBeam*m_BoxSizeX;
 		boxSizeY= pixelWidthInBeam*m_BoxSizeY;
-		INFO_LOG("Setting bkg boxes to ("<<boxSizeX<<","<<boxSizeY<<") pixels (set equal to ("<<m_BoxSizeX<<","<<m_BoxSizeY<<") x beam (beam=#"<<pixelWidthInBeam<<" pixels)) ...");
-		
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Setting bkg boxes to ("<<boxSizeX<<","<<boxSizeY<<") pixels (set equal to ("<<m_BoxSizeX<<","<<m_BoxSizeY<<") x beam (beam=#"<<pixelWidthInBeam<<" pixels)) ...");
+		#endif
+
 	}//close if use beam info
 	else{
-		WARN_LOG("Using image fractions to set bkg box size (beam info option is turned off)...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Using image fractions to set bkg box size (beam info option is turned off)...");
+		#endif
 		double Nx= static_cast<double>(img->GetNx());
 		double Ny= static_cast<double>(img->GetNy());
 		boxSizeX= m_BoxSizeX*Nx;
 		boxSizeY= m_BoxSizeY*Ny;
-		INFO_LOG("Setting bkg boxes to ("<<boxSizeX<<","<<boxSizeY<<") pixels ...");	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Setting bkg boxes to ("<<boxSizeX<<","<<boxSizeY<<") pixels ...");	
+		#endif
 	}
 
 	double gridSizeX= m_GridSizeX*boxSizeX;
 	double gridSizeY= m_GridSizeY*boxSizeY;
-	INFO_LOG("Setting grid size to ("<<gridSizeX<<","<<gridSizeY<<") pixels ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Setting grid size to ("<<gridSizeX<<","<<gridSizeY<<") pixels ...");
+	#endif
 
 	//## Compute Bkg
 	auto t0_bkg = chrono::steady_clock::now();	
@@ -3342,7 +3909,9 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 	imageBkgTime+= chrono::duration <double, milli> (t1_bkg-t0_bkg).count();
 	
 	if(!bkgData) {
-		ERROR_LOG("Bkg computing failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Bkg computing failed!");
+		#endif
 		return nullptr;
 	}
 		
@@ -3364,11 +3933,16 @@ int SFinder::SaveDS9RegionFile()
 	std::string ds9WCSTypeHeader= "image";
 	if(m_convertDS9RegionsToWCS) ds9WCSTypeHeader= AstroUtils::GetDS9WCSTypeHeader(m_ds9WCSType);
 
-	DEBUG_LOG("Saving DS9 region header...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Saving DS9 region header...");
+	#endif
+
 	fprintf(fout,"global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
 	fprintf(fout,"%s\n",ds9WCSTypeHeader.c_str());
 
-	DEBUG_LOG("Saving "<<m_SourceCollection.size()<<" sources to file...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Saving "<<m_SourceCollection.size()<<" sources to file...");
+	#endif
 
 	//Init WCS
 	//WorldCoor* wcs= 0;
@@ -3381,11 +3955,17 @@ int SFinder::SaveDS9RegionFile()
 		//If WCS is not computed, compute it
 		if(m_convertDS9RegionsToWCS && !wcs){
 			wcs= m_SourceCollection[k]->GetWCS(m_ds9WCSType);
-			if(!wcs) WARN_LOG("Failed to compute WCS from source no "<<k<<"!");
+			if(!wcs) {
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to compute WCS from source no "<<k<<"!");
+				#endif
+			}
 		}
 	
 		//Get DS9 regions
-		DEBUG_LOG("Dumping DS9 region info for source no. "<<k<<" ...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Dumping DS9 region info for source no. "<<k<<" ...");
+		#endif
 		std::string regionInfo= "";
 		if(m_DS9RegionFormat==ePolygonRegion) {
 			regionInfo= m_SourceCollection[k]->GetDS9Region(true,m_convertDS9RegionsToWCS,wcs,m_ds9WCSType);
@@ -3394,7 +3974,9 @@ int SFinder::SaveDS9RegionFile()
 			regionInfo= m_SourceCollection[k]->GetDS9EllipseRegion(true);
 		}
 		else {
-			WARN_LOG("Invalid DS9RegionType given ("<<m_DS9RegionFormat<<")");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Invalid DS9RegionType given ("<<m_DS9RegionFormat<<")");
+			#endif
 			return -1;
 		}
 
@@ -3403,7 +3985,9 @@ int SFinder::SaveDS9RegionFile()
 	  	
 	}//end loop sources
 		
-	DEBUG_LOG("Closing DS9 file region...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Closing DS9 file region...");
+	#endif
 	fclose(fout);
 
 	//========================================
@@ -3414,20 +3998,30 @@ int SFinder::SaveDS9RegionFile()
 		FILE* fout_fit= fopen(m_DS9FitCatalogFileName.c_str(),"w");
 
 		//## Saving DS9 file region
-		DEBUG_LOG("Saving DS9 region header for fitted source catalog...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Saving DS9 region header for fitted source catalog...");
+		#endif
 		fprintf(fout_fit,"global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
 		fprintf(fout_fit,"%s\n",ds9WCSTypeHeader.c_str());
 
-		DEBUG_LOG("Saving "<<m_SourceCollection.size()<<" sources to file...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Saving "<<m_SourceCollection.size()<<" sources to file...");
+		#endif
 		bool useFWHM= true;
 
 		for(size_t k=0;k<m_SourceCollection.size();k++){
-			DEBUG_LOG("Dumping DS9 region fitting info for source no. "<<k<<" ...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Dumping DS9 region fitting info for source no. "<<k<<" ...");
+			#endif
 
 			//If WCS is not computed, compute it
 			if(m_convertDS9RegionsToWCS && !wcs){
 				wcs= m_SourceCollection[k]->GetWCS(m_ds9WCSType);
-				if(!wcs) WARN_LOG("Failed to compute WCS from source no "<<k<<"!");
+				if(!wcs) {
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Failed to compute WCS from source no "<<k<<"!");
+					#endif
+				}
 			}
 
 			//Get DS9 regions for fitted components
@@ -3436,7 +4030,10 @@ int SFinder::SaveDS9RegionFile()
 			fprintf(fout_fit,"%s\n",regionInfo.c_str());
 		}//end loop sources
 		
-		DEBUG_LOG("Closing DS9 file region for fitted sources...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Closing DS9 file region for fitted sources...");
+		#endif
+
 		fclose(fout_fit);
 	}//close if fit sources
 
@@ -3449,7 +4046,9 @@ int SFinder::SaveCatalogFile()
 {
 	//Return if no sources are found
 	if(m_SourceCollection.empty()){
-		WARN_LOG("No sources detected, no catalog file will be written!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No sources detected, no catalog file will be written!");
+		#endif
 		return 0;
 	}
 
@@ -3457,23 +4056,33 @@ int SFinder::SaveCatalogFile()
 	//WorldCoor* wcs= m_SourceCollection[0]->GetWCS(m_ds9WCSType);
 	WCS* wcs= m_SourceCollection[0]->GetWCS(m_ds9WCSType);
 	if(!wcs) {
-		WARN_LOG("Failed to compute WCS from sources!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to compute WCS from sources!");
+		#endif
 	}	
 
 	//Saving island/blob catalog to ascii file
-	INFO_LOG("Writing source catalog to file "<<m_catalogOutFileName<<" ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Writing source catalog to file "<<m_catalogOutFileName<<" ...");
+	#endif
 	bool dumpNestedSourceInfo= true;
 	int status= SourceExporter::WriteToAscii(m_catalogOutFileName,m_SourceCollection,dumpNestedSourceInfo,m_ds9WCSType,wcs);
 	if(status<0){
-		WARN_LOG("Writing source catalog to file "<<m_catalogOutFileName<<" failed!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Writing source catalog to file "<<m_catalogOutFileName<<" failed!");
+		#endif
 	}
 	
 	//Saving source fitted components to ascii file
 	if(m_fitSources){
-		INFO_LOG("Writing source catalog to file "<<m_catalogComponentsOutFileName<<" ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Writing source catalog to file "<<m_catalogComponentsOutFileName<<" ...");
+		#endif
 		status= SourceExporter::WriteComponentsToAscii(m_catalogComponentsOutFileName,m_SourceCollection,dumpNestedSourceInfo,m_ds9WCSType,wcs);
 		if(status<0){
-			WARN_LOG("Writing source fitted component catalog to file "<<m_catalogOutFileName<<" failed!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Writing source fitted component catalog to file "<<m_catalogOutFileName<<" failed!");
+			#endif
 		}
 	}
 
@@ -3483,33 +4092,45 @@ int SFinder::SaveCatalogFile()
 
 int SFinder::Save()
 {
-	INFO_LOG("Storing results to file & catalog...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Storing results to file & catalog...");
+	#endif
 
 	//Save DS9 regions?
 	if(m_saveDS9Region && SaveDS9RegionFile()<0){
-		WARN_LOG("Failed to save sources to DS9 region file!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to save sources to DS9 region file!");
+		#endif
 	}
 
 	//Save ascii catalogs?
-	if(m_saveToCatalogFile && SaveCatalogFile()<0){
-		WARN_LOG("Failed to save sources to catalog ascii file!");
+	if(m_saveToCatalogFile && SaveCatalogFile()<0){	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to save sources to catalog ascii file!");
+		#endif
 	}
 
 	//Check ROOT output file
 	if(!m_OutputFile) {
-		WARN_LOG("Null ptr to output file, nothing will be saved in ROOT file!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null ptr to output file, nothing will be saved in ROOT file!");
+		#endif
 		return -1;
 	}
 	m_OutputFile->cd();
 
 	//Save source tree?
 	if(m_saveSources){
-		DEBUG_LOG("Filling source ROOT TTree...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Filling source ROOT TTree...");
+		#endif
 		for(size_t k=0;k<m_SourceCollection.size();k++){
 			m_Source= m_SourceCollection[k];
 			m_SourceTree->Fill();
 		}
-		DEBUG_LOG("Writing tree to file...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Writing tree to file...");
+		#endif
 		m_SourceTree->Write();
 	}
 	
@@ -3527,28 +4148,36 @@ int SFinder::Save()
 
 	//Save input image to file?
 	if(m_saveInputMap && m_InputImg){
-		INFO_LOG("Saving input map to file...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving input map to file...");
+		#endif
 		m_InputImg->SetNameTitle("img","img");
 		m_InputImg->Write();
 	}
 	
 	//Save residual map?
 	if(m_saveResidualMap && m_ResidualImg){
-		INFO_LOG("Saving residual map to file...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving residual map to file...");
+		#endif
 		m_ResidualImg->SetNameTitle("img_residual","img_residual");
 		m_ResidualImg->Write();
 	}
 	
 	//Save significance map?
 	if(m_saveSignificanceMap && m_SignificanceMap){
-		INFO_LOG("Saving significance map to file...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving significance map to file...");
+		#endif
 		m_SignificanceMap->SetNameTitle("img_significance","img_significance");
 		m_SignificanceMap->Write();
 	}
 
 	//Save bkg & noise maps
 	if(m_saveBkgMap && m_BkgData && m_BkgData->BkgMap){
-		INFO_LOG("Saving bkg map to file...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving bkg map to file...");
+		#endif
 		(m_BkgData->BkgMap)->SetNameTitle("img_bkg","img_bkg");
 		(m_BkgData->BkgMap)->Write();
 	}
@@ -3559,37 +4188,49 @@ int SFinder::Save()
 
 	//Save saliency map
 	if(m_saveSaliencyMap && m_SaliencyImg){
-		INFO_LOG("Saving saliency map to file...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving saliency map to file...");
+		#endif
 		m_SaliencyImg->SetNameTitle("img_saliency","img_saliency");
 		m_SaliencyImg->Write();
 	}
 
 	//Save Laplacian
 	if(m_saveCurvatureMap && m_LaplImg){
-		INFO_LOG("Saving curvature map to file...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving curvature map to file...");
+		#endif
 		m_LaplImg->SetNameTitle("img_lapl","img_lapl");
 		m_LaplImg->Write();
 	}
 
 	//Save Edgeness
 	if(m_saveEdgenessMap && m_EdgeImg){
-		INFO_LOG("Saving edgeness map to file...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving edgeness map to file...");
+		#endif
 		m_EdgeImg->SetNameTitle("img_edge","img_edge");
 		m_EdgeImg->Write();
 	}
 
 	//Save segmented map
 	if(m_saveSegmentedMap && m_SegmImg){
-		INFO_LOG("Saving segmented map to file...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving segmented map to file...");
+		#endif
 		m_SegmImg->SetNameTitle("img_segm","img_segm");
 		m_SegmImg->Write();
 	}
 
 	//## Close ROOT output file
-	INFO_LOG("Closing output file...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Closing output file...");
+	#endif
 	if(m_OutputFile && m_OutputFile->IsOpen()) m_OutputFile->Close();
 
-	INFO_LOG("End save to file");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("End save to file");
+	#endif
 
 	return 0;
 
@@ -3598,24 +4239,68 @@ int SFinder::Save()
 
 void SFinder::PrintPerformanceStats()
 {
-	INFO_LOG("===========================");
-	INFO_LOG("===   PERFORMANCE INFO  ===");
-	INFO_LOG("===========================");
-	INFO_LOG("tot (ms)= "<<totTime);
-	INFO_LOG("init (ms)= "<<initTime<<" ["<<initTime/totTime*100.<<"%], min/max/sum="<<initTime_min<<"/"<<initTime_max<<"/"<<initTime_sum);
-	INFO_LOG("read image (ms)= "<<readImageTime<<" ["<<readImageTime/totTime*100.<<"%], min/max/sum="<<readImageTime_min<<"/"<<readImageTime_max<<"/"<<readImageTime_sum);
-	INFO_LOG("image stats(ms)= "<<imageStatsTime<<" ["<<imageStatsTime/totTime*100.<<"%], min/max/sum="<<imageStatsTime_min<<"/"<<imageStatsTime_max<<"/"<<imageStatsTime_sum);
-	INFO_LOG("image bkg(ms)= "<<imageBkgTime<<" ["<<imageBkgTime/totTime*100.<<"%], min/max/sum="<<imageBkgTime_min<<"/"<<imageBkgTime_max<<"/"<<imageBkgTime_sum);
-	INFO_LOG("blob mask (ms)= "<<blobMaskTime<<" ["<<blobMaskTime/totTime*100.<<"%], min/max/sum="<<blobMaskTime_min<<"/"<<blobMaskTime_max<<"/"<<blobMaskTime_sum);
-	INFO_LOG("blob finding (ms)= "<<blobFindingTime<<" ["<<blobFindingTime/totTime*100.<<"%], min/max/sum="<<blobFindingTime_min<<"/"<<blobFindingTime_max<<"/"<<blobFindingTime_sum);
-	INFO_LOG("source finding (ms)= "<<compactSourceTime<<" ["<<compactSourceTime/totTime*100.<<"%], min/max/sum="<<compactSourceTime_min<<"/"<<compactSourceTime_max<<"/"<<compactSourceTime_sum);
-	INFO_LOG("source selection (ms)= "<<sourceSelectionTime<<" ["<<sourceSelectionTime/totTime*100.<<"%], min/max/sum="<<sourceSelectionTime_min<<"/"<<sourceSelectionTime_max<<"/"<<sourceSelectionTime_sum);
-	INFO_LOG("source fitting (ms)= "<<sourceFitTime<<" ["<<sourceFitTime/totTime*100.<<"%], min/max/sum="<<sourceFitTime_min<<"/"<<sourceFitTime_max<<"/"<<sourceFitTime_sum);
-	INFO_LOG("img residual (ms)= "<<imgResidualTime<<" ["<<imgResidualTime/totTime*100.<<"%], min/max/sum="<<imgResidualTime_min<<"/"<<imgResidualTime_max<<"/"<<imgResidualTime_sum);
-	INFO_LOG("ext source finding (ms)= "<<extendedSourceTime<<" ["<<extendedSourceTime/totTime*100.<<"%], min/max/sum="<<extendedSourceTime_min<<"/"<<extendedSourceTime_max<<"/"<<extendedSourceTime_sum);
-	INFO_LOG("save (ms)= "<<saveTime<<" ["<<saveTime/totTime*100.<<"%]");
-	INFO_LOG("virtMemPeak (kB)= "<<virtMemPeak<<", min/max="<<virtMemPeak_min<<"/"<<virtMemPeak_max);
-	INFO_LOG("===========================");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("===========================");
+		INFO_LOG("===   PERFORMANCE INFO  ===");
+		INFO_LOG("===========================");
+		INFO_LOG("tot (ms)= "<<totTime);
+		INFO_LOG("init (ms)= "<<initTime<<" ["<<initTime/totTime*100.<<"%], min/max/sum="<<initTime_min<<"/"<<initTime_max<<"/"<<initTime_sum);
+		INFO_LOG("read image (ms)= "<<readImageTime<<" ["<<readImageTime/totTime*100.<<"%], min/max/sum="<<readImageTime_min<<"/"<<readImageTime_max<<"/"<<readImageTime_sum);
+		INFO_LOG("image stats(ms)= "<<imageStatsTime<<" ["<<imageStatsTime/totTime*100.<<"%], min/max/sum="<<imageStatsTime_min<<"/"<<imageStatsTime_max<<"/"<<imageStatsTime_sum);
+		INFO_LOG("image bkg(ms)= "<<imageBkgTime<<" ["<<imageBkgTime/totTime*100.<<"%], min/max/sum="<<imageBkgTime_min<<"/"<<imageBkgTime_max<<"/"<<imageBkgTime_sum);
+		INFO_LOG("blob mask (ms)= "<<blobMaskTime<<" ["<<blobMaskTime/totTime*100.<<"%], min/max/sum="<<blobMaskTime_min<<"/"<<blobMaskTime_max<<"/"<<blobMaskTime_sum);
+		INFO_LOG("blob finding (ms)= "<<blobFindingTime<<" ["<<blobFindingTime/totTime*100.<<"%], min/max/sum="<<blobFindingTime_min<<"/"<<blobFindingTime_max<<"/"<<blobFindingTime_sum);
+		INFO_LOG("source finding (ms)= "<<compactSourceTime<<" ["<<compactSourceTime/totTime*100.<<"%], min/max/sum="<<compactSourceTime_min<<"/"<<compactSourceTime_max<<"/"<<compactSourceTime_sum);
+		INFO_LOG("source selection (ms)= "<<sourceSelectionTime<<" ["<<sourceSelectionTime/totTime*100.<<"%], min/max/sum="<<sourceSelectionTime_min<<"/"<<sourceSelectionTime_max<<"/"<<sourceSelectionTime_sum);
+		INFO_LOG("source fitting (ms)= "<<sourceFitTime<<" ["<<sourceFitTime/totTime*100.<<"%], min/max/sum="<<sourceFitTime_min<<"/"<<sourceFitTime_max<<"/"<<sourceFitTime_sum);
+		INFO_LOG("edge source fitting (ms)= "<<edgeSourceFitTime<<" ["<<edgeSourceFitTime/totTime*100.<<"%]");
+		INFO_LOG("img residual (ms)= "<<imgResidualTime<<" ["<<imgResidualTime/totTime*100.<<"%], min/max/sum="<<imgResidualTime_min<<"/"<<imgResidualTime_max<<"/"<<imgResidualTime_sum);
+		INFO_LOG("ext source finding (ms)= "<<extendedSourceTime<<" ["<<extendedSourceTime/totTime*100.<<"%], min/max/sum="<<extendedSourceTime_min<<"/"<<extendedSourceTime_max<<"/"<<extendedSourceTime_sum);
+		INFO_LOG("merge task sources (ms)= "<<mergeTaskSourceTime<<" ["<<mergeTaskSourceTime/totTime*100.<<"%], min/max/sum="<<mergeTaskSourceTime_min<<"/"<<mergeTaskSourceTime_max<<"/"<<mergeTaskSourceTime_sum);
+		INFO_LOG("data reduce (ms)= "<<workerDataReduceTime<<" ["<<workerDataReduceTime/totTime*100.<<"%]");
+		INFO_LOG("data collect (ms)= "<<workerDataCollectTime<<" ["<<workerDataCollectTime/totTime*100.<<"%]");
+		INFO_LOG("data probe (ms)= "<<workerDataProbeTime<<" ["<<workerDataProbeTime/totTime*100.<<"%]");
+		INFO_LOG("data recv (ms)= "<<workerDataRecvTime<<" ["<<workerDataRecvTime/totTime*100.<<"%]");
+		INFO_LOG("data serialization (ms)= "<<workerDataSerializationTime<<" ["<<workerDataSerializationTime/totTime*100.<<"%]");
+		INFO_LOG("data collect barrier1 (ms)= "<<workerBarrier1<<" ["<<workerBarrier1/totTime*100.<<"%]");
+		INFO_LOG("data collect barrier2 (ms)= "<<workerBarrier2<<" ["<<workerBarrier2/totTime*100.<<"%]");
+		INFO_LOG("merge edge sources (ms)= "<<mergeEdgeSourceTime<<" ["<<mergeEdgeSourceTime/totTime*100.<<"%]");
+		INFO_LOG("save (ms)= "<<saveTime<<" ["<<saveTime/totTime*100.<<"%]");
+		INFO_LOG("virtMemPeak (kB)= "<<virtMemPeak<<", min/max="<<virtMemPeak_min<<"/"<<virtMemPeak_max);
+		INFO_LOG("===========================");
+	#else
+		std::stringstream ss;
+		ss<<"==========================="<<endl;
+		ss<<"===   PERFORMANCE INFO  ==="<<endl;
+		ss<<"==========================="<<endl;
+		ss<<"tot (ms)= "<<totTime<<endl;
+		ss<<"init (ms)= "<<initTime<<" ["<<initTime/totTime*100.<<"%], min/max/sum="<<initTime_min<<"/"<<initTime_max<<"/"<<initTime_sum<<endl;
+		ss<<"read image (ms)= "<<readImageTime<<" ["<<readImageTime/totTime*100.<<"%], min/max/sum="<<readImageTime_min<<"/"<<readImageTime_max<<"/"<<readImageTime_sum<<endl;
+		ss<<"image stats(ms)= "<<imageStatsTime<<" ["<<imageStatsTime/totTime*100.<<"%], min/max/sum="<<imageStatsTime_min<<"/"<<imageStatsTime_max<<"/"<<imageStatsTime_sum<<endl;
+		ss<<"image bkg(ms)= "<<imageBkgTime<<" ["<<imageBkgTime/totTime*100.<<"%], min/max/sum="<<imageBkgTime_min<<"/"<<imageBkgTime_max<<"/"<<imageBkgTime_sum<<endl;
+		ss<<"blob mask (ms)= "<<blobMaskTime<<" ["<<blobMaskTime/totTime*100.<<"%], min/max/sum="<<blobMaskTime_min<<"/"<<blobMaskTime_max<<"/"<<blobMaskTime_sum<<endl;
+		ss<<"blob finding (ms)= "<<blobFindingTime<<" ["<<blobFindingTime/totTime*100.<<"%], min/max/sum="<<blobFindingTime_min<<"/"<<blobFindingTime_max<<"/"<<blobFindingTime_sum<<endl;
+		ss<<"source finding (ms)= "<<compactSourceTime<<" ["<<compactSourceTime/totTime*100.<<"%], min/max/sum="<<compactSourceTime_min<<"/"<<compactSourceTime_max<<"/"<<compactSourceTime_sum<<endl;
+		ss<<"source selection (ms)= "<<sourceSelectionTime<<" ["<<sourceSelectionTime/totTime*100.<<"%], min/max/sum="<<sourceSelectionTime_min<<"/"<<sourceSelectionTime_max<<"/"<<sourceSelectionTime_sum<<endl;
+		ss<<"source fitting (ms)= "<<sourceFitTime<<" ["<<sourceFitTime/totTime*100.<<"%], min/max/sum="<<sourceFitTime_min<<"/"<<sourceFitTime_max<<"/"<<sourceFitTime_sum<<endl;
+		ss<<"edge source fitting (ms)= "<<edgeSourceFitTime<<" ["<<edgeSourceFitTime/totTime*100.<<"%]"<<endl;
+		ss<<"img residual (ms)= "<<imgResidualTime<<" ["<<imgResidualTime/totTime*100.<<"%], min/max/sum="<<imgResidualTime_min<<"/"<<imgResidualTime_max<<"/"<<imgResidualTime_sum<<endl;
+		ss<<"ext source finding (ms)= "<<extendedSourceTime<<" ["<<extendedSourceTime/totTime*100.<<"%], min/max/sum="<<extendedSourceTime_min<<"/"<<extendedSourceTime_max<<"/"<<extendedSourceTime_sum<<endl;
+		ss<<"merge task sources (ms)= "<<mergeTaskSourceTime<<" ["<<mergeTaskSourceTime/totTime*100.<<"%], min/max/sum="<<mergeTaskSourceTime_min<<"/"<<mergeTaskSourceTime_max<<"/"<<mergeTaskSourceTime_sum<<endl;
+		ss<<"data reduce (ms)= "<<workerDataReduceTime<<" ["<<workerDataReduceTime/totTime*100.<<"%]"<<endl;
+		ss<<"data collect (ms)= "<<workerDataCollectTime<<" ["<<workerDataCollectTime/totTime*100.<<"%]"<<endl;
+		ss<<"data probe (ms)= "<<workerDataProbeTime<<" ["<<workerDataProbeTime/totTime*100.<<"%]"<<endl;
+		ss<<"data recv (ms)= "<<workerDataRecvTime<<" ["<<workerDataRecvTime/totTime*100.<<"%]"<<endl;
+		ss<<"data serialization (ms)= "<<workerDataSerializationTime<<" ["<<workerDataSerializationTime/totTime*100.<<"%]"<<endl;
+		ss<<"data collect barrier1 (ms)= "<<workerBarrier1<<" ["<<workerBarrier1/totTime*100.<<"%]"<<endl;
+		ss<<"data collect barrier2 (ms)= "<<workerBarrier2<<" ["<<workerBarrier2/totTime*100.<<"%]"<<endl;
+		ss<<"merge edge sources (ms)= "<<mergeEdgeSourceTime<<" ["<<mergeEdgeSourceTime/totTime*100.<<"%]"<<endl;
+		ss<<"save (ms)= "<<saveTime<<" ["<<saveTime/totTime*100.<<"%]"<<endl;
+		ss<<"virtMemPeak (kB)= "<<virtMemPeak<<", min/max="<<virtMemPeak_min<<"/"<<virtMemPeak_max<<endl;
+		ss<<"==========================="<<endl;
+
+		cout<<ss.str()<<endl;
+	#endif
 
 }//close PrintPerformanceStats()
 
@@ -3624,13 +4309,17 @@ int SFinder::PrepareWorkerTasks()
 {
 	//## Generate a uuid for this job
 	std::string jobId= CodeUtils::GenerateUUID();
-	DEBUG_LOG("Generated jobId: "<<jobId);
-	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Generated jobId: "<<jobId);
+	#endif
+
 	//## Get input image size
 	FileInfo info;
 	bool match_extension= false;
 	if(!SysUtils::CheckFile(m_InputFileName,info,match_extension,"")){
-		ERROR_LOG("Invalid input file name specified (filename="<<m_InputFileName<<"), invalid file path?!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid input file name specified (filename="<<m_InputFileName<<"), invalid file path?!");
+		#endif
 		return -1;
 	}
 	
@@ -3644,13 +4333,17 @@ int SFinder::PrepareWorkerTasks()
 		//Read image from file
 		TFile* inputFile= new TFile(m_InputFileName.c_str(),"READ");	
 		if(!inputFile || inputFile->IsZombie()){
-			ERROR_LOG("Failed to open input file image "<<m_InputFileName<<" and get image size!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to open input file image "<<m_InputFileName<<" and get image size!");
+			#endif
 			return -1;
 		}
 
 		Image* inputImg= (Image*)inputFile->Get(m_InputImgName.c_str());
 		if(!inputImg) {
-			ERROR_LOG("Failed to open input file image "<<m_InputFileName<<" and get image size!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to open input file image "<<m_InputFileName<<" and get image size!");
+			#endif
 			return -1;	
 		}
 
@@ -3683,18 +4376,24 @@ int SFinder::PrepareWorkerTasks()
 		}
 		else{//READ FULL MAP
 			if(SysUtils::GetFITSImageSize(m_InputFileName,Nx,Ny)<0){
-				ERROR_LOG("Failed to open input file image "<<m_InputFileName<<" and get image size!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to open input file image "<<m_InputFileName<<" and get image size!");
+				#endif
 				return -1;
 			}
 		}
 	}//close else if		
 	else{
-		ERROR_LOG("Invalid/unsupported file extension ("<<info.extension<<") detected!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid/unsupported file extension ("<<info.extension<<") detected!");
+		#endif
 		return -1;
 	}
 
-	DEBUG_LOG("Image size: "<<Nx<<"x"<<Ny<<", Image coord origin("<<m_ImgXmin<<","<<m_ImgYmin<<")");
-	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Image size: "<<Nx<<"x"<<Ny<<", Image coord origin("<<m_ImgXmin<<","<<m_ImgYmin<<")");
+	#endif
+
 	//==========================================
 	//==    IMAGE PARTITION IN TILES
 	//=========================================
@@ -3720,24 +4419,36 @@ int SFinder::PrepareWorkerTasks()
 		}
 	}
 
-	INFO_LOG("Computing tile partition for distributed run: tileSize("<<tileSizeX<<","<<tileSizeY<<"), tileOverlap("<<tileOverlapX<<","<<tileOverlapY<<")");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing tile partition for distributed run: tileSize("<<tileSizeX<<","<<tileSizeY<<"), tileOverlap("<<tileOverlapX<<","<<tileOverlapY<<")");
+	#endif
+
 	if(MathUtils::Compute2DGrid(ix_min,ix_max,iy_min,iy_max,Nx,Ny,tileSizeX,tileSizeY,tileStepSizeX,tileStepSizeY)<0){
-		WARN_LOG("Failed to compute a 2D partition from input image!");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to compute a 2D partition from input image!");
+		#endif
 		return -1;
 	}
 	int nExpectedTasks= ix_min.size()*iy_min.size();
-	INFO_LOG("#"<<nExpectedTasks<<" expected number of distributed tasks ("<<ix_min.size()<<"x"<<iy_min.size()<<")");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<nExpectedTasks<<" expected number of distributed tasks ("<<ix_min.size()<<"x"<<iy_min.size()<<")");
+	#endif
 
 	//## Compute worker tasks (check max number of tasks per worker)
-	DEBUG_LOG("Computing worker task list...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Computing worker task list...");
+	#endif
+
 	TaskData* aTaskData= 0;
 	long int workerCounter= 0;
 
 	for(size_t j=0;j<iy_min.size();j++){
 		for(size_t i=0;i<ix_min.size();i++){
 			//Assign worker
-			DEBUG_LOG("Assign task ("<<i<<","<<j<<") to worker no. "<<workerCounter<<"...");
-				
+			#ifdef LOGGING_ENABLED	
+				DEBUG_LOG("Assign task ("<<i<<","<<j<<") to worker no. "<<workerCounter<<"...");
+			#endif
+
 			aTaskData= new TaskData;
 			aTaskData->workerId= workerCounter;
 			aTaskData->SetTile(
@@ -3802,8 +4513,9 @@ int SFinder::PrepareWorkerTasks()
 		ss<<workerIds[i]<<",";
 	}
 	ss<<"}";
-	DEBUG_LOG(ss.str());
-	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG(ss.str());
+	#endif
 
 	
 	//## Create a worker group (if MPI run is performed)
@@ -3835,14 +4547,17 @@ int SFinder::PrepareWorkerTasks()
     	MPI_Comm_size(m_WorkerComm, &m_nWorkers);
 		}
 		else {
-			WARN_LOG("Worker MPI communicator is null (this processor has no tasks and was not inserted in the worker group)!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Worker MPI communicator is null (this processor has no tasks and was not inserted in the worker group)!");
+			#endif
 		}
 
 	}//close if	
 	#endif
 	
-	DEBUG_LOG("WORLD RANK/SIZE: "<<m_procId<<"/"<<m_nProc<<" WORKER RANK/SIZE: "<<m_workerRanks<<"/"<<m_nWorkers);
-
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("WORLD RANK/SIZE: "<<m_procId<<"/"<<m_nProc<<" WORKER RANK/SIZE: "<<m_workerRanks<<"/"<<m_nWorkers);
+	#endif
 
 	//Print
 	if(m_procId==MASTER_ID){
@@ -3871,7 +4586,9 @@ int SFinder::PrepareWorkerTasks()
 					ss<<"("<<neighborWorkerId<<","<<neighborTaskId<<") ["<<next_ix_min<<","<<next_ix_max<<"] ["<<next_iy_min<<","<<next_iy_max<<"], ";
 				}	
 				ss<<"}";
-				INFO_LOG(ss.str());	
+				#ifdef LOGGING_ENABLED
+					INFO_LOG(ss.str());	
+				#endif
 			}//end loop tasks
 		}//end loop workers
 	}//close if MASTER
@@ -3887,7 +4604,9 @@ int SFinder::PrepareWorkerTasks()
 	}
 
 	if(hasTooManyTasks){
-		WARN_LOG("Too many tasks per worker (thr="<<MAX_NTASKS_PER_WORKER<<")");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Too many tasks per worker (thr="<<MAX_NTASKS_PER_WORKER<<")");
+		#endif
 		return -1;
 	}
 
@@ -3900,22 +4619,17 @@ int SFinder::PrepareWorkerTasks()
 int SFinder::GatherTaskDataFromWorkers()
 {
 	//## Put a barrier and collect all sources from workers in the master processor
-	MPI_Barrier(MPI_COMM_WORLD);
+	auto t0_barrier1 = chrono::steady_clock::now();
+	MPI_Barrier(MPI_COMM_WORLD);	
+	auto t1_barrier1 = chrono::steady_clock::now();
+	workerBarrier1= chrono::duration <double, milli> (t1_barrier1-t0_barrier1).count();
 
 	//## Sum and average all the elapsed timers across workers 
-	INFO_LOG("Summing up and averaging he elapsed cpu timers across workers...");
-	//double initTime_sum;
-	//double readImageTime_sum;
-	//double imageStatsTime_sum;
-	//double imageBkgTime_sum;
-	//double blobMaskTime_sum;
-	//double blobFindingTime_sum;	
-	//double compactSourceTime_sum;
-	//double sourceSelectionTime_sum;
-	//double imgResidualTime_sum;
-	//double extendedSourceTime_sum;
-	//double sourceFitTime_sum;
-
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Summing up and averaging the elapsed cpu timers across workers...");
+	#endif
+	auto t0_reduce = chrono::steady_clock::now();
+	
 	MPI_Reduce(&initTime, &initTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
 	MPI_Reduce(&initTime, &initTime_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
 	MPI_Reduce(&initTime, &initTime_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
@@ -3957,54 +4671,76 @@ int SFinder::GatherTaskDataFromWorkers()
 	MPI_Reduce(&extendedSourceTime, &extendedSourceTime_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
 	MPI_Reduce(&extendedSourceTime, &extendedSourceTime_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
 
-	
-	DEBUG_LOG("CPU times (ms): {init="<<initTime<<", read="<<readImageTime<<", stats="<<imageStatsTime<<", bkg="<<imageBkgTime<<", blobmask="<<blobMaskTime<<", blobfind="<<blobFindingTime<<", sourcefind="<<compactSourceTime<<", residual="<<imgResidualTime<<", sourcesel="<<sourceSelectionTime<<", extsourcefind="<<extendedSourceTime<<", sourceFitTime="<<sourceFitTime<<"}");
+	MPI_Reduce(&mergeTaskSourceTime, &mergeTaskSourceTime_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&mergeTaskSourceTime, &mergeTaskSourceTime_min, 1, MPI_DOUBLE, MPI_MIN, MASTER_ID, MPI_COMM_WORLD);
+	MPI_Reduce(&mergeTaskSourceTime, &mergeTaskSourceTime_max, 1, MPI_DOUBLE, MPI_MAX, MASTER_ID, MPI_COMM_WORLD);
+
+	auto t1_reduce = chrono::steady_clock::now();	
+	workerDataReduceTime= chrono::duration <double, milli> (t1_reduce-t0_reduce).count();
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("CPU times (ms): {init="<<initTime<<", read="<<readImageTime<<", stats="<<imageStatsTime<<", bkg="<<imageBkgTime<<", blobmask="<<blobMaskTime<<", blobfind="<<blobFindingTime<<", sourcefind="<<compactSourceTime<<", residual="<<imgResidualTime<<", sourcesel="<<sourceSelectionTime<<", extsourcefind="<<extendedSourceTime<<", sourceFitTime="<<sourceFitTime<<", mergetasksources="<<mergeTaskSourceTime<<"}");
+	#endif
 
 	if (m_procId == MASTER_ID) {
-		//initTime= initTime_sum;
-		//readImageTime= readImageTime_sum;
-		//imageStatsTime= imageStatsTime_sum;
-		//imageBkgTime= imageBkgTime_sum;
-		//blobFindingTime= blobFindingTime_sum;
-		//blobMaskTime= blobMaskTime_sum;
-		//compactSourceTime= compactSourceTime_sum;
-		//sourceSelectionTime= sourceSelectionTime_sum;
-		//imgResidualTime= imgResidualTime_sum;
-		//extendedSourceTime= extendedSourceTime_sum;
-		//sourceFitTime= sourceFitTime_sum;
-		DEBUG_LOG("Cumulative cpu times (ms): {init="<<initTime_sum<<", read="<<readImageTime_sum<<", stats="<<imageStatsTime_sum<<", bkg="<<imageBkgTime_sum<<", blobmask="<<blobMaskTime_sum<<", blobfind="<<blobFindingTime_sum<<", sourcefind="<<compactSourceTime_sum<<", residual="<<imgResidualTime_sum<<", sourcesel="<<sourceSelectionTime_sum<<", extsourcefind="<<extendedSourceTime_sum<<", sourceFitTime="<<sourceFitTime_sum);
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Cumulative cpu times (ms): {init="<<initTime_sum<<", read="<<readImageTime_sum<<", stats="<<imageStatsTime_sum<<", bkg="<<imageBkgTime_sum<<", blobmask="<<blobMaskTime_sum<<", blobfind="<<blobFindingTime_sum<<", sourcefind="<<compactSourceTime_sum<<", residual="<<imgResidualTime_sum<<", sourcesel="<<sourceSelectionTime_sum<<", extsourcefind="<<extendedSourceTime_sum<<", sourceFitTime="<<sourceFitTime_sum<<", mergetasksources="<<mergeTaskSourceTime_sum<<", datareduce="<<workerDataReduceTime);
+		#endif
 	}
 
 	//## Merge all sources found by workers in a unique collection
-	INFO_LOG("Gathering task data found by workers in master processor...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Gathering task data found by workers in master processor...");
+	#endif
 	int MSG_TAG= 1;
 	if (m_procId == MASTER_ID) {//Receive data from the workers
 
 		for (int i=1; i<m_nProc; i++) {
 			//Check if this processor has tasks assigned, otherwise skip!
 			if(m_taskDataPerWorkers[i].size()==0){
-				INFO_LOG("No tasks assigned to process "<<i<<", nothing to be collected, skip to next worker...");
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("No tasks assigned to process "<<i<<", nothing to be collected, skip to next worker...");
+				#endif
 				continue;
 			}
   
 			//## Probe for an incoming message from process zero
-			INFO_LOG("Probing for message from process "<<i<<"...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Probing for message from process "<<i<<"...");
+			#endif
     	MPI_Status status;
 
-			if(MPI_Probe(i, MSG_TAG, MPI_COMM_WORLD, &status)==MPI_SUCCESS){
-				DEBUG_LOG("a message has been probed from process "<<i<<" (tag="<< status.MPI_TAG << ", source " << status.MPI_SOURCE<<")");
+			auto t0_probe = chrono::steady_clock::now();
+			int probe_status= MPI_Probe(i, MSG_TAG, MPI_COMM_WORLD, &status);
+			auto t1_probe = chrono::steady_clock::now();
+			workerDataProbeTime+= chrono::duration <double, milli> (t1_probe-t0_probe).count();
+
+			if(probe_status==MPI_SUCCESS){
+			//if(MPI_Probe(i, MSG_TAG, MPI_COMM_WORLD, &status)==MPI_SUCCESS){
+
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("A message has been probed from process "<<i<<" (tag="<< status.MPI_TAG << ", source " << status.MPI_SOURCE<<")");
+				#endif
 
     		//## When probe returns, the status object has the size and other
     		//## attributes of the incoming message. Get the message size
-				DEBUG_LOG("Getting size of message received from process "<<i<<" ... ");
-    	
+				#ifdef LOGGING_ENABLED	
+					DEBUG_LOG("Getting size of message received from process "<<i<<" ... ");
+    		#endif
+
+				auto t0_recv = chrono::steady_clock::now();
 				int rcvMsgSize= 0;
     		MPI_Get_count(&status, MPI_CHAR, &rcvMsgSize);
 
 				//## Allocate a buffer to hold the incoming numbers
-				DEBUG_LOG("Allocating a message of size "<<rcvMsgSize);
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Allocating a message of size "<<rcvMsgSize);
+				#endif
+
 				if(rcvMsgSize<=0){
-					ERROR_LOG("rcvMsg size is negative/null!");
+					#ifdef LOGGING_ENABLED
+						ERROR_LOG("rcvMsg size is negative/null!");
+					#endif
 					continue;
 				}
 				char* recvBuffer= (char*)malloc(rcvMsgSize);
@@ -4013,20 +4749,36 @@ int SFinder::GatherTaskDataFromWorkers()
     		//MPI_Recv(recvBuffer, rcvMsgSize, MPI_CHAR, MPI_ANY_SOURCE, MSG_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 				MPI_Recv(recvBuffer, rcvMsgSize, MPI_CHAR, i, MSG_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-    		DEBUG_LOG("Received a message of size "<<rcvMsgSize<<") from process "<<i);
+				auto t1_recv = chrono::steady_clock::now();
+				workerDataRecvTime+= chrono::duration <double, milli> (t1_recv-t0_recv).count();
+
+				#ifdef LOGGING_ENABLED
+    			DEBUG_LOG("Received a message of size "<<rcvMsgSize<<") from process "<<i);
+				#endif
 
 				//## Update task data with received worker data	
+				auto t0_serializer = chrono::steady_clock::now();
 				bool isTaskCollectionPreAllocated= true;
-				if(Serializer::CharArrayToTaskDataCollection(m_taskDataPerWorkers[i],recvBuffer,rcvMsgSize,isTaskCollectionPreAllocated)<0 ){
-					ERROR_LOG("Failed to decode recv message into task data list!");
+				int serialization_status= Serializer::CharArrayToTaskDataCollection(m_taskDataPerWorkers[i],recvBuffer,rcvMsgSize,isTaskCollectionPreAllocated);
+				if(serialization_status<0){
+					#ifdef LOGGING_ENABLED
+						ERROR_LOG("Failed to decode recv message into task data list!");		
+					#endif
     			if(recvBuffer) free(recvBuffer);
+					continue;
 				}
 
 				//## Free received buffer
     		if(recvBuffer) free(recvBuffer);
+
+				auto t1_serializer = chrono::steady_clock::now();
+				workerDataSerializationTime+= chrono::duration <double, milli> (t1_serializer-t0_serializer).count();
+
 			}//close if
 			else{
-				ERROR_LOG("Message probing from process "<<i<<" failed!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Message probing from process "<<i<<" failed!");
+				#endif
 				return -1;
 				//continue;
 			}
@@ -4035,48 +4787,34 @@ int SFinder::GatherTaskDataFromWorkers()
 
 	else {//Send data to master
 		//## First encode taskData in protobuf
-		DEBUG_LOG("Encoding task data collection to buffer...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Encoding task data collection to buffer...");
+		#endif
 		long int msg_size= 0;
 		char* msg= Serializer::TaskDataCollectionToCharArray(msg_size,m_taskDataPerWorkers[m_procId]);
 		if(!msg){
-			ERROR_LOG("Failed to encode task data to protobuf!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to encode task data to protobuf!");
+			#endif
 			return -1;
 		}
 
 		//## Send buffer to master processor	
-		INFO_LOG("Sending task data to master process (msg: "<<msg<<", size="<<msg_size<<")...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Sending task data to master process (msg: "<<msg<<", size="<<msg_size<<")...");
+		#endif
 		MPI_Send((void*)(msg),msg_size, MPI_CHAR, MASTER_ID, MSG_TAG, MPI_COMM_WORLD);
 
 		//## Free buffer
 		if(msg) free(msg);
+
 	}//close else
 
+	auto t0_barrier2 = chrono::steady_clock::now();
 	MPI_Barrier(MPI_COMM_WORLD);
-
-	//## Print sources
-	/*
-	if (m_procId == 0) {
-		INFO_LOG("Printing aggregated sources...");
-		for(size_t i=0;i<m_taskDataPerWorkers.size();i++){
-			if(m_taskDataPerWorkers[i].size()==0) continue;//no tasks present
-			
-			
-			for(size_t j=0;j<m_taskDataPerWorkers[i].size();j++){
-				INFO_LOG("Sources NOT at edge found in process "<<i<<", task "<<j<<" ...");
-				for(size_t k=0;k<(m_taskDataPerWorkers[i][j]->sources).size();k++){
-					(m_taskDataPerWorkers[i][j]->sources)[k]->Print();
-				}//end loop sources
+	auto t1_barrier2 = chrono::steady_clock::now();
+	workerBarrier2= chrono::duration <double, milli> (t1_barrier2-t0_barrier2).count();
 	
-				INFO_LOG("Sources at edge found in process "<<i<<", task "<<j<<" ...");
-				for(size_t k=0;k<(m_taskDataPerWorkers[i][j]->sources_edge).size();k++){
-					(m_taskDataPerWorkers[i][j]->sources_edge)[k]->Print();
-				}//end loop sources
-
-			}//end loop tasks in worker
-		}//end process loop
-	}//close if
-	*/
-
 	return 0;
 
 }//close GatherTaskDataFromWorkers()
@@ -4090,7 +4828,9 @@ int SFinder::MergeTaskData()
 	if (m_procId == 0) {
 
 		//Print task data
-		DEBUG_LOG("Printing task data...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Printing task data...");
+		#endif
 		for(size_t i=0;i<m_taskDataPerWorkers.size();i++){
 			if(m_taskDataPerWorkers[i].size()==0) continue;//no tasks present
 			
@@ -4110,51 +4850,98 @@ int SFinder::MergeTaskData()
 
 				ss<<"Task no. "<<j<<", PixelRange["<<ix_min<<","<<ix_max<<"] ["<<iy_min<<","<<iy_max<<"], ";
 			}//end loop tasks
-			DEBUG_LOG(ss.str());			
-	
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG(ss.str());			
+			#endif
 		}//end loop workers
 
 		//Add sources
-		int nCompactSources= 0;
-		int nExtendedSources= 0;
-		int nPointLikeSources= 0;
-		int nUnknown= 0;
-		int nEdgeSources= 0;
-		int nSources= 0;
+		long int nCompactSources= 0;
+		long int nExtendedSources= 0;
+		long int nPointLikeSources= 0;
+		long int nUnknown= 0;
+		long int nEdgeSources= 0;
+		long int nSources= 0;
+		long int nCompactSourcesWithFitInfo= 0;
+		long int nCompactSourcesWithFitInfo_edge= 0;
+		long int nSourcesFinal= 0;
+
 		for(size_t i=0;i<m_taskDataPerWorkers.size();i++){
 			for(size_t j=0;j<m_taskDataPerWorkers[i].size();j++){
 
 				//Process sources not at edge
 				for(size_t k=0;k<(m_taskDataPerWorkers[i][j]->sources).size();k++){
 					int sourceType= (m_taskDataPerWorkers[i][j]->sources)[k]->Type;
+					bool hasFitInfo= (m_taskDataPerWorkers[i][j]->sources)[k]->HasFitInfo();
 					if(sourceType==eCompact) nCompactSources++;
 					else if(sourceType==eExtended) nExtendedSources++;
 					else if(sourceType==ePointLike) nPointLikeSources++;
 					else nUnknown++;
+					if( (sourceType==ePointLike || sourceType==eCompact) && hasFitInfo ) nCompactSourcesWithFitInfo++;
+
+					//Reset source name (otherwise we have sources with same name coming from different workers)
+					(m_taskDataPerWorkers[i][j]->sources)[k]->SetId(nSourcesFinal);
+					(m_taskDataPerWorkers[i][j]->sources)[k]->SetName(Form("S%d",nSourcesFinal));
+					std::vector<Source*> nestedSources= (m_taskDataPerWorkers[i][j]->sources)[k]->GetNestedSources();
+					for(size_t l=0;l<nestedSources.size();l++){
+						nestedSources[l]->SetId((signed)(l+1));
+						nestedSources[l]->SetName(Form("S%d_N%d",nSourcesFinal,(signed)(l+1)));
+					}
+
+					//Add source to final collection
 					nSources++;
+					nSourcesFinal++;
 					m_SourceCollection.push_back( (m_taskDataPerWorkers[i][j]->sources)[k] );
 				}//end loop sources per task
 
 				//Add edge sources not merged (if merging was not selected as option)
 				for(size_t k=0;k<(m_taskDataPerWorkers[i][j]->sources_edge).size();k++){
 					int sourceType= (m_taskDataPerWorkers[i][j]->sources_edge)[k]->Type;
+					bool hasFitInfo= (m_taskDataPerWorkers[i][j]->sources_edge)[k]->HasFitInfo();
 					if(sourceType==eCompact) nCompactSources++;
 					else if(sourceType==eExtended) nExtendedSources++;
 					else if(sourceType==ePointLike) nPointLikeSources++;
 					else nUnknown++;
+					if( (sourceType==ePointLike || sourceType==eCompact) && hasFitInfo ) nCompactSourcesWithFitInfo_edge++;
+
+					//Reset source name (otherwise we have sources with same name coming from different workers)
+					(m_taskDataPerWorkers[i][j]->sources_edge)[k]->SetId(nSourcesFinal);
+					(m_taskDataPerWorkers[i][j]->sources_edge)[k]->SetName(Form("Sedge%d",nSourcesFinal));
+					std::vector<Source*> nestedSources= (m_taskDataPerWorkers[i][j]->sources_edge)[k]->GetNestedSources();
+					for(size_t l=0;l<nestedSources.size();l++){
+						nestedSources[l]->SetId((signed)(l+1));
+						nestedSources[l]->SetName(Form("Sedge%d_N%d",nSourcesFinal,(signed)(l+1)));
+					}
+
+					//Add edge source to final collection
 					nSources++;
 					nEdgeSources++;
-					if(!m_mergeSourcesAtEdge) m_SourceCollection.push_back( (m_taskDataPerWorkers[i][j]->sources_edge)[k] );
+					if(!m_mergeSourcesAtEdge) {
+						m_SourceCollection.push_back( (m_taskDataPerWorkers[i][j]->sources_edge)[k] );
+						nSourcesFinal++;
+					}
 				}//end loop sources per task		
 
 			}//end loop tasks
 		}//end loop workers
 
-		//Add merged sources at edge	
-		m_SourceCollection.insert(m_SourceCollection.end(),m_SourcesMergedAtEdges.begin(),m_SourcesMergedAtEdges.end());
-	
-		INFO_LOG("#"<<nSources<<" sources found in total (#"<<nCompactSources<<" compact, #"<<nPointLikeSources<<" point-like, #"<<nExtendedSources<<" extended, #"<<nUnknown<<" unknown/unclassified, #"<<nEdgeSources<<" edge sources, #"<<m_SourcesMergedAtEdges.size()<<" merged at edges), #"<<m_SourceCollection.size()<<" sources added to collection ...");
-		
+		//Add merged sources at edge
+		for(size_t k=0;k<m_SourcesMergedAtEdges.size();k++){	
+			m_SourcesMergedAtEdges[k]->SetId(nSourcesFinal);
+			m_SourcesMergedAtEdges[k]->SetName(Form("Smerged%d",nSourcesFinal));
+			std::vector<Source*> nestedSources= m_SourcesMergedAtEdges[k]->GetNestedSources();
+			for(size_t l=0;l<nestedSources.size();l++){
+				nestedSources[l]->SetId((signed)(l+1));
+				nestedSources[l]->SetName(Form("Smerged%d_N%d",nSourcesFinal,(signed)(l+1)));
+			}
+			nSourcesFinal++;
+			m_SourceCollection.push_back(m_SourcesMergedAtEdges[k]);
+		}
+		//m_SourceCollection.insert(m_SourceCollection.end(),m_SourcesMergedAtEdges.begin(),m_SourcesMergedAtEdges.end());
+
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("#"<<nSources<<" sources found in total (#"<<nCompactSources<<" compact, #"<<nPointLikeSources<<" point-like (#"<<nCompactSourcesWithFitInfo<<" fit ok), #"<<nExtendedSources<<" extended, #"<<nUnknown<<" unknown/unclassified, #"<<nEdgeSources<<" edge sources (#"<<nCompactSourcesWithFitInfo_edge<<" fit ok), #"<<m_SourcesMergedAtEdges.size()<<" merged at edges), #"<<nSourcesFinal<<" (collection size="<<m_SourceCollection.size()<<") sources added to collection ...");
+		#endif
 	}//close if
 
 	return 0;
@@ -4166,13 +4953,17 @@ int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* task
 {
 	//Check input data
 	if(!taskData || !inputImg || !bkgData){
-		ERROR_LOG("Null ptr to input data (img/bkgData/taskData) given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input data (img/bkgData/taskData) given!");
+		#endif
 		return -1;
 	}
 
 	//## Return if there are no sources to be merged
 	if( (taskData->sources).empty() ){
-		DEBUG_LOG("No task sources to be merged, nothing to be done...");
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("No task sources to be merged, nothing to be done...");
+		#endif
 		return 0;
 	}
 
@@ -4185,36 +4976,50 @@ int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* task
 		if(beamArea>0 && std::isnormal(beamArea)) hasBeamData= true;
 	}
 	if(!hasBeamData){
-		WARN_LOG("Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Beam information are not available in image or invalid, using correction factor ("<<m_fluxCorrectionFactor<<") computed from user-supplied beam info ...");	
+		#endif
 		beamArea= m_fluxCorrectionFactor;
 	}
 	long int nPixThrToSearchNested= std::ceil(m_SourceToBeamAreaThrToSearchNested*beamArea);	
-	INFO_LOG("Assuming a threshold nPix>"<<nPixThrToSearchNested<<" to add nested sources...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Assuming a threshold nPix>"<<nPixThrToSearchNested<<" to add nested sources...");
+	#endif
 
 	//## Create a mask with all detected sources
 	//NB: First compute the mask and then use it in flood-fill for final source collection
-	INFO_LOG("Computing mask with all detected sources ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing mask with all detected sources ...");
+	#endif
 	bool isBinary= true;
 	bool invert= false;
 	Image* sourceMask= inputImg->GetSourceMask(taskData->sources,isBinary,invert);
 	if(!sourceMask){
-		ERROR_LOG("Failed to compute mask from all detected sources!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute mask from all detected sources!");
+		#endif
 		return -1;
 	}
 	
 	//## Compute blob mask
 	if(!m_blobMask && m_SearchNestedSources){
-		INFO_LOG("Computing multi-scale blob mask...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Computing multi-scale blob mask...");
+		#endif
 		m_blobMask= ComputeBlobMaskImage(inputImg);
 		if(!m_blobMask){
-			ERROR_LOG("Failed to compute blob mask map!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute blob mask map!");
+			#endif
 			CodeUtils::DeletePtr<Image>(sourceMask);
 			return -1;
 		}
 	}	
 
 	//## Find aggregated sources
-	INFO_LOG("Merging all detected overlapping sources found (#"<<(taskData->sources).size()<<") using provided source mask ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Merging all detected overlapping sources found (#"<<(taskData->sources).size()<<") using provided source mask ...");
+	#endif
 	std::vector<Source*> sources_merged;
 	double seedThr_binary= 0.5;//dummy values (>0)
 	double mergeThr_binary= 0.4;//dummy values (>0)
@@ -4230,7 +5035,9 @@ int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* task
 	CodeUtils::DeletePtrCollection<Image>({sourceMask});
 	
 	if(status<0) {
-		ERROR_LOG("Failed to compute merged sources!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute merged sources!");
+		#endif
 		CodeUtils::DeletePtrCollection(sources_merged);
 		return -1;			
 	}
@@ -4238,7 +5045,9 @@ int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* task
 	
 	//## Tag aggregated sources 
 	int nSources= static_cast<int>( sources_merged.size() );
-	INFO_LOG("#"<<nSources<<" sources present in input image after merging ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<nSources<<" sources present in input image after merging ...");
+	#endif
 	for(size_t k=0;k<sources_merged.size();k++) {	
 		sources_merged[k]->SetId(k+1);
 		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
@@ -4268,15 +5077,18 @@ int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* task
 	//## Apply source selection?
 	if(m_ApplySourceSelection && nSources>0){
 		if(SelectSources(sources_merged)<0){
-			ERROR_LOG("Failed to select aggregated sources!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to select aggregated sources!");
+			#endif
 			CodeUtils::DeletePtrCollection(sources_merged);
 			return -1;
 		}
 		nSources= static_cast<int>(sources_merged.size());
 	}//close if source selection
 	
-	INFO_LOG("#"<<sources_merged.size()<<" sources present in merged collection after selection...");
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<sources_merged.size()<<" sources present in merged collection after selection...");
+	#endif
 
 	//## Set source pars
 	for(size_t k=0;k<sources_merged.size();k++) {
@@ -4328,7 +5140,9 @@ int SFinder::MergeSourcesAtEdge()
 	};//close MergedSourceInfo
 
 	//## Fill list of edge sources to be merged and fill corresponding Graph
-	DEBUG_LOG("Fill list of edge sources to be merged and fill corresponding graph data struct...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Fill list of edge sources to be merged and fill corresponding graph data struct...");
+	#endif
 	std::vector<MergedSourceInfo> sourcesToBeMerged;
 	Graph mergedSourceGraph;
 	for(size_t i=0;i<m_taskDataPerWorkers.size();i++){
@@ -4344,12 +5158,16 @@ int SFinder::MergeSourcesAtEdge()
 	
 	//## Return if there are no edge sources
 	if(sourcesToBeMerged.empty()){
-		INFO_LOG("No edge sources to be merged, nothing to be done...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("No edge sources to be merged, nothing to be done...");
+		#endif
 		return 0;
 	}
 
 	//## Find adjacent edge sources	
-	INFO_LOG("Finding adjacent edge sources (#"<<sourcesToBeMerged.size()<<" edge sources present, graph nvertex="<<mergedSourceGraph.GetNVertexes()<<") ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Finding adjacent edge sources (#"<<sourcesToBeMerged.size()<<" edge sources present, graph nvertex="<<mergedSourceGraph.GetNVertexes()<<") ...");
+	#endif
 
 	int itemPos= -1;
 	for(size_t i=0;i<sourcesToBeMerged.size()-1;i++){	
@@ -4368,7 +5186,9 @@ int SFinder::MergeSourcesAtEdge()
 			//Check if main worker tile is physically neighbor to this
 			//If not they cannot be adjacent, so skip the following check
 			if(windex!=windex_neighbor && !CodeUtils::FindItem(m_taskDataPerWorkers[windex][tindex]->neighborWorkerId,windex_neighbor,itemPos)){
-				DEBUG_LOG("Worker id "<<windex_neighbor<<" is not physically neighbor to worker "<<windex<<", so skip the source adjacency check and go to next...");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Worker id "<<windex_neighbor<<" is not physically neighbor to worker "<<windex<<", so skip the source adjacency check and go to next...");
+				#endif
 				continue;
 			}
 
@@ -4377,7 +5197,9 @@ int SFinder::MergeSourcesAtEdge()
 			//NB: If not skip the adjacency check
 			bool areBoundingBoxesOverlapping= source->CheckBoxOverlapping(source_neighbor);
 			if(!areBoundingBoxesOverlapping){
-				DEBUG_LOG("Sources (i,j)=("<<i<<" {"<<sindex<<","<<windex<<","<<tindex<<"} , "<<j<<" {"<<sindex_neighbor<<","<<windex_neighbor<<","<<tindex_neighbor<<"}) have NON-overlapping bounding boxes, skip the adjacency check...");
+				#ifdef LOGGING_ENABLED				
+					DEBUG_LOG("Sources (i,j)=("<<i<<" {"<<sindex<<","<<windex<<","<<tindex<<"} , "<<j<<" {"<<sindex_neighbor<<","<<windex_neighbor<<","<<tindex_neighbor<<"}) have NON-overlapping bounding boxes, skip the adjacency check...");
+				#endif
 			}
 			*/
 
@@ -4387,7 +5209,9 @@ int SFinder::MergeSourcesAtEdge()
 			if(!areAdjacentSources) continue;
 
 			//If they are adjacent add linking in graph
-			INFO_LOG("Sources (i,j)=("<<i<<" {"<<sindex<<","<<windex<<","<<tindex<<"} , "<<j<<" {"<<sindex_neighbor<<","<<windex_neighbor<<","<<tindex_neighbor<<"}) are adjacent and selected for merging...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Sources (i,j)=("<<i<<" {"<<sindex<<","<<windex<<","<<tindex<<"} , "<<j<<" {"<<sindex_neighbor<<","<<windex_neighbor<<","<<tindex_neighbor<<"}) are adjacent and selected for merging...");
+			#endif
 			mergedSourceGraph.AddEdge(i,j);
 
 		}//end loop sources
@@ -4397,11 +5221,15 @@ int SFinder::MergeSourcesAtEdge()
 
 	//## Find all connected components in graph corresponding to 
 	//## edge sources to be merged
-	DEBUG_LOG("Find all connected components in graph corresponding to edge sources to be merged...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Find all connected components in graph corresponding to edge sources to be merged...");	
+	#endif
 	std::vector<std::vector<int>> connected_source_indexes;
 	mergedSourceGraph.GetConnectedComponents(connected_source_indexes);
-	INFO_LOG("#"<<connected_source_indexes.size()<<"/"<<sourcesToBeMerged.size()<<" edge sources will be left after merging...");
-		
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<connected_source_indexes.size()<<"/"<<sourcesToBeMerged.size()<<" edge sources will be left after merging...");
+	#endif
+
 	//## Now merge the sources
 	std::vector<int> sourcesToBeRemoved;
 	bool copyPixels= true;//do not create memory for new pixels
@@ -4413,7 +5241,10 @@ int SFinder::MergeSourcesAtEdge()
 	
 	m_SourcesMergedAtEdges.clear();
 
-	INFO_LOG("Merging edge sources and adding them to collection...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Merging edge sources and adding them to collection...");
+	#endif
+
 	for(size_t i=0;i<connected_source_indexes.size();i++){
 		if(connected_source_indexes[i].empty()) continue;
 
@@ -4441,7 +5272,9 @@ int SFinder::MergeSourcesAtEdge()
 				
 			int status= merged_source->MergeSource(source_adj,copyPixels,checkIfAdjacent,computeStatPars,computeMorphPars);
 			if(status<0){
-				WARN_LOG("Failed to merge sources (i,j)=("<<index<<" {"<<sindex<<","<<windex<<","<<tindex<<"} , "<<index_adj<<" {"<<sindex_adj<<","<<windex_adj<<","<<tindex_adj<<"}), skip to next...");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to merge sources (i,j)=("<<index<<" {"<<sindex<<","<<windex<<","<<tindex<<"} , "<<index_adj<<" {"<<sindex_adj<<","<<windex_adj<<","<<tindex_adj<<"}), skip to next...");
+				#endif
 				continue;
 			}
 			nMerged++;
@@ -4453,13 +5286,19 @@ int SFinder::MergeSourcesAtEdge()
 
 		//If at least one was merged recompute stats & pars of merged source
 		if(nMerged>0) {
-			DEBUG_LOG("Recomputing stats & moments of merged source in merge group "<<i<<" after #"<<nMerged<<" merged source...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Recomputing stats & moments of merged source in merge group "<<i<<" after #"<<nMerged<<" merged source...");
+			#endif
 			if(merged_source->ComputeStats(computeRobustStats,forceRecomputing,m_useParallelMedianAlgo)<0){
-				WARN_LOG("Failed to compute stats for merged source in merge group "<<i<<"...");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to compute stats for merged source in merge group "<<i<<"...");
+				#endif
 				continue;
 			}
 			if(merged_source->ComputeMorphologyParams()<0){
-				WARN_LOG("Failed to compute morph pars for merged source in merge group "<<i<<"...");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to compute morph pars for merged source in merge group "<<i<<"...");
+				#endif
 				continue;
 			}
 		}//close if
@@ -4469,12 +5308,50 @@ int SFinder::MergeSourcesAtEdge()
 
 	}//end loop number of components
 
-	INFO_LOG("#"<<m_SourcesMergedAtEdges.size()<<" merged sources at edge...");
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<m_SourcesMergedAtEdges.size()<<" merged sources at edge...");
+	#endif
+
 	return 0;
 
 }//close MergeSourcesAtEdge()
 
+
+int SFinder::FitTaskSources(TaskData* taskData)
+{
+	//Check input data
+	if(!taskData){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input task data given!");
+		#endif
+		return -1;
+	}
+
+	//Return if there are no sources to be searched
+	if( (taskData->sources).empty() ){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("No sources available to fit in worker "<<taskData->workerId<<", nothing to be done...");
+		#endif
+		return 0;
+	}
+
+	//Loop over sources not at edge
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Fitting #"<<(taskData->sources).size()<<" task sources (not at tile edge) in worker "<<taskData->workerId<<" ...");
+	#endif
+	int status= FitSources( taskData->sources );
+	if(status<0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Fitting task sources (worker="<<taskData->workerId<<") not at edge failed!");
+		#endif
+		return -1;
+	}
+
+	return 0;
+
+}//close FitTaskSources()
+
+/*
 int SFinder::FitTaskSources()
 {
 	//Loop over workers
@@ -4483,7 +5360,7 @@ int SFinder::FitTaskSources()
 
 		//Loop over tasks per worker
 		for(size_t j=0;j<m_taskDataPerWorkers[i].size();j++){
-			INFO_LOG("Fitting "<<(m_taskDataPerWorkers[i][j]->sources).size()<<" sources (not at tile edge) ...");
+			INFO_LOG("Fitting "<<(m_taskDataPerWorkers[i][j]->sources).size()<<" sources (not at tile edge) (worker="<<i<<", task="<<j<<") ...");
 	
 			int status= FitSources( m_taskDataPerWorkers[i][j]->sources );
 			if(status<0){
@@ -4497,6 +5374,112 @@ int SFinder::FitTaskSources()
 	return 0;
 
 }//close FitTaskSources()
+*/
+
+
+
+int SFinder::FindTaskSourcesAtEdge(TaskData* taskData)
+{	
+	//Check input data
+	if(!taskData){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input task data given!");
+		#endif
+		return -1;
+	}
+
+	//Return if there are no sources to be searched
+	if( (taskData->sources).empty() ){
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("No task sources to be searched to set edge flag, nothing to be done...");
+		#endif
+		return 0;
+	}
+
+	//## Find if sources (both compact and extended) are at tile edge
+	//## Those found at the edge are removed from the list and added to the edge list for further processing
+	float xmin_s, xmax_s, ymin_s, ymax_s;
+	
+	std::vector<Source*> sources_not_at_edges;
+	long int nSources= static_cast<long int>( (taskData->sources).size() );
+	long int nEdgeSources= 0;
+
+	for(long int k=0;k<nSources;k++)	
+	{
+		//Get source coordinate range
+		(taskData->sources)[k]->GetSourceRange(xmin_s,xmax_s,ymin_s,ymax_s);
+
+		//Check if source is at the edge of its tile
+		long int workerId= taskData->workerId;
+		float xmin_tile= taskData->ix_min;// + m_ImgXmin;
+		float xmax_tile= taskData->ix_max;// + m_ImgXmin;
+		float ymin_tile= taskData->iy_min;// + m_ImgYmin;
+		float ymax_tile= taskData->iy_max;// + m_ImgYmin; 
+		bool isAtTileEdge= (taskData->sources)[k]->IsAtBoxEdge(xmin_tile,xmax_tile,ymin_tile,ymax_tile);
+				
+		if(isAtTileEdge){
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Source no. "<<k<<"(x["<<xmin_s<<","<<xmax_s<<"] y["<<ymin_s<<","<<ymax_s<<"]) is at edge of its tile (x["<<xmin_tile<<","<<xmax_tile<<"] y["<<ymin_tile<<","<<ymax_tile<<"])");
+			#endif
+		}
+
+		//Check if source is inside neighbour tile, e.g. is in overlapping area
+		//NB: This is done only if source is not found at tile border previously
+		bool isInOverlapArea= false;
+
+		if(!isAtTileEdge){	
+			for(size_t l=0;l<(taskData->neighborWorkerId).size();l++) {	
+				long int neighborTaskId= (taskData->neighborTaskId)[l];
+				long int neighborWorkerId= (taskData->neighborWorkerId)[l];
+					
+				float xmin= (m_taskDataPerWorkers[neighborWorkerId][neighborTaskId])->ix_min;//+ m_ImgXmin;
+				float xmax= (m_taskDataPerWorkers[neighborWorkerId][neighborTaskId])->ix_max;//+ m_ImgXmin;
+				float ymin= (m_taskDataPerWorkers[neighborWorkerId][neighborTaskId])->iy_min;//+ m_ImgYmin;
+				float ymax= (m_taskDataPerWorkers[neighborWorkerId][neighborTaskId])->iy_max;//+ m_ImgYmin;
+				bool isOverlapping= (taskData->sources)[k]->HasBoxOverlap(xmin,xmax,ymin,ymax);
+				if(isOverlapping){
+					#ifdef LOGGING_ENABLED
+						DEBUG_LOG("Source no. "<<k<<"(x["<<xmin_s<<","<<xmax_s<<"] y["<<ymin_s<<","<<ymax_s<<"]) overlaps with neighbor tile (x["<<xmin<<","<<xmax<<"] y["<<ymin<<","<<ymax<<"])");
+					#endif
+					isInOverlapArea= true;
+					break;
+				}
+			}//end loop neighbors
+		}//close if
+
+		//Tag source at edge is is located at the border of its tile or if it is located inside an overlapping area with another neighbor tile
+		bool isAtEdge= (isAtTileEdge || isInOverlapArea);
+
+		//Set edge flag in source
+		if(isAtEdge) {
+			(taskData->sources)[k]->SetEdgeFlag(true);
+			(taskData->sources_edge).push_back( (taskData->sources)[k] );
+			nEdgeSources++;
+		}
+		else {
+			(taskData->sources)[k]->SetEdgeFlag(false);
+			sources_not_at_edges.push_back( (taskData->sources)[k] );
+		}
+	}//end loop sources	
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<nEdgeSources<<"/"<<nSources<<" sources are found at tile edges...");
+	#endif
+
+	//## Clear initial vector (DO NOT CLEAR MEMORY!) and fill with selection (then reset selection)
+	(taskData->sources).clear();
+	(taskData->sources).insert( 
+		(taskData->sources).end(),
+		sources_not_at_edges.begin(),
+		sources_not_at_edges.end()
+	);
+	sources_not_at_edges.clear();
+			
+	return 0;
+
+}//close FindTaskSourcesAtEdge()
+
+
 
 int SFinder::FindSourcesAtEdge()
 {	
@@ -4530,7 +5513,9 @@ int SFinder::FindSourcesAtEdge()
 				bool isAtTileEdge= (m_taskDataPerWorkers[i][j]->sources)[k]->IsAtBoxEdge(xmin_tile,xmax_tile,ymin_tile,ymax_tile);
 				
 				if(isAtTileEdge){
-					DEBUG_LOG("workerId="<<workerId<<", source no. "<<k<<"(x["<<xmin_s<<","<<xmax_s<<"] y["<<ymin_s<<","<<ymax_s<<"]) is at edge of its tile (x["<<xmin_tile<<","<<xmax_tile<<"] y["<<ymin_tile<<","<<ymax_tile<<"])");
+					#ifdef LOGGING_ENABLED
+						DEBUG_LOG("workerId="<<workerId<<", source no. "<<k<<"(x["<<xmin_s<<","<<xmax_s<<"] y["<<ymin_s<<","<<ymax_s<<"]) is at edge of its tile (x["<<xmin_tile<<","<<xmax_tile<<"] y["<<ymin_tile<<","<<ymax_tile<<"])");
+					#endif
 				}
 
 				//Check if source is inside neighbour tile, e.g. is in overlapping area
@@ -4550,7 +5535,9 @@ int SFinder::FindSourcesAtEdge()
 						float ymax= (m_taskDataPerWorkers[neighborWorkerId][neighborTaskId])->iy_max;//+ m_ImgYmin;
 						bool isOverlapping= (m_taskDataPerWorkers[i][j]->sources)[k]->HasBoxOverlap(xmin,xmax,ymin,ymax);
 						if(isOverlapping){
-							DEBUG_LOG("workerId="<<workerId<<", source no. "<<k<<"(x["<<xmin_s<<","<<xmax_s<<"] y["<<ymin_s<<","<<ymax_s<<"]) overlaps with neighbor tile (x["<<xmin<<","<<xmax<<"] y["<<ymin<<","<<ymax<<"])");
+							#ifdef LOGGING_ENABLED
+								DEBUG_LOG("workerId="<<workerId<<", source no. "<<k<<"(x["<<xmin_s<<","<<xmax_s<<"] y["<<ymin_s<<","<<ymax_s<<"]) overlaps with neighbor tile (x["<<xmin<<","<<xmax<<"] y["<<ymin<<","<<ymax<<"])");
+							#endif
 							isInOverlapArea= true;
 							break;
 						}
@@ -4574,8 +5561,10 @@ int SFinder::FindSourcesAtEdge()
 			}//end loop sources	
 
 			//int nEdgeSources= static_cast<int>((m_taskDataPerWorkers[i][j]->sources_edge).size());
-			INFO_LOG("#"<<nEdgeSources<<"/"<<nSources<<" sources are found at tile edges...");
-	
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("#"<<nEdgeSources<<"/"<<nSources<<" sources are found at tile edges...");
+			#endif
+
 			//Clear initial vector (DO NOT CLEAR MEMORY!) and fill with selection (then reset selection)
 			(m_taskDataPerWorkers[i][j]->sources).clear();
 			(m_taskDataPerWorkers[i][j]->sources).insert( 
@@ -4591,5 +5580,7 @@ int SFinder::FindSourcesAtEdge()
 	return 0;
 
 }//close FindSourcesAtEdge()
+
+
 
 }//close namespace

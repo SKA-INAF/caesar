@@ -110,7 +110,9 @@ Image* GradientFilter::GetGradientFilter(Image* image)
 {
 	//## Check image
 	if(!image){
-		ERROR_LOG("Null prt to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null prt to given image!");
+		#endif
 		return 0;
 	}
 
@@ -160,10 +162,11 @@ Image* GradientFilter::GetGradientFilter(Image* image)
 
 Image* GradientFilter::GetLaplaceFilter(Image* image)
 {
-	
 	//## Check image
 	if(!image){
-		ERROR_LOG("Null prt to given image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null prt to given image!");
+		#endif
 		return nullptr;
 	}
 
@@ -181,7 +184,9 @@ Image* GradientFilter::GetLaplaceFilter(Image* image)
 	TString imgName= Form("%s_Lapl",image->GetName().c_str());
 	Image* filteredImg= image->GetCloned(std::string(imgName),true,true);
 	if(!filteredImg){
-		ERROR_LOG("Failed to clone image!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to clone image!");
+		#endif
 		return nullptr;
 	}
 

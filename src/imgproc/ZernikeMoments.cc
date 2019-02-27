@@ -28,7 +28,9 @@
 
 #include <ZernikeMoments.h>
 #include <Image.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 
 //ROOT headers
 #include <TFile.h>
@@ -204,8 +206,10 @@ std::vector<double> ZernikeMoments::GetZernike2D_Direct(Image* img, double order
 					ss<<F<<",";
 				}//end loop m
 				ss<<")";
-				DEBUG_LOG(ss.str());
-					
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG(ss.str());
+				#endif
+
 				n_s.push_back(n);
 				l_s.push_back(l);
 				zsum.push_back( std::complex<double>(0.0,0.0) );
@@ -248,8 +252,6 @@ std::vector<double> ZernikeMoments::GetZernike2D_Direct(Image* img, double order
 			//Skip pixels outside unit-radius circle
 			if (r>1.) continue;
 
-			//DEBUG_LOG("(Nx,Ny)="<<Nx<<","<<Ny<<") M("<<m10_m00<<","<<m01_m00<<") (ix,iy)=("<<ix<<","<<iy<<"), (x,y)=("<<x<<","<<y<<") (x0,y0)="<<x0<<","<<y0<<") r="<<r<<", r0="<<r0<<" theta="<<theta<<" theta0="<<theta0<<" p="<<p<<" R="<<R);
-
 			//Count number of pixels in unit-radius circle
 			if(r>0){
 				npixInCircle++;
@@ -272,7 +274,10 @@ std::vector<double> ZernikeMoments::GetZernike2D_Direct(Image* img, double order
 	}//end loop bins X
 
 	npixInCircle+= 1;
-	DEBUG_LOG("npixInCircle="<<npixInCircle<<" wSumInCircle="<<wSumInCircle);
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("npixInCircle="<<npixInCircle<<" wSumInCircle="<<wSumInCircle);
+	#endif
 
 	double Re, Im;
 	std::vector<double> moments;
@@ -286,7 +291,9 @@ std::vector<double> ZernikeMoments::GetZernike2D_Direct(Image* img, double order
 		double phase= atan2(Im,Re)*TMath::RadToDeg();
 		double ampl= fabs(sqrt(Re*Re+Im*Im));
 		moments.push_back(ampl);
-		DEBUG_LOG("(n,m)=("<<n<<","<<m<<"), Z="<<Re<<"+"<<Im<<"i, A="<<ampl<<" phase="<<phase);
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("(n,m)=("<<n<<","<<m<<"), Z="<<Re<<"+"<<Im<<"i, A="<<ampl<<" phase="<<phase);
+		#endif
 	}
 
 	return moments;
@@ -382,7 +389,9 @@ std::vector<double> ZernikeMoments::mb_Znl(double *X, double *Y, double *P, int 
 		double phase= atan2(pimag,preal)*TMath::RadToDeg();
 		double ampl= fabs(sqrt(preal*preal+pimag*pimag));
 		zvalues.push_back(ampl);
-		DEBUG_LOG("(n,m)=("<<n<<","<<m<<"), Z="<<preal<<"+"<<pimag<<"i, A="<<ampl<<" phase="<<phase);
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("(n,m)=("<<n<<","<<m<<"), Z="<<preal<<"+"<<pimag<<"i, A="<<ampl<<" phase="<<phase);
+		#endif
 	}
 
 	return zvalues;
@@ -621,7 +630,9 @@ std::vector<double> ZernikeMoments::GetZernike2D (Image* image, double order, do
 				//AI[n][m] *= AI[n][m];
 				double ampl= fabs (sqrt ( Re*Re + Im*Im ));			
 				zvalues.push_back(ampl);
-				DEBUG_LOG("(n,m)=("<<n<<","<<m<<"), Z="<<Re<<"+"<<Im<<"i, A="<<ampl<<" phase="<<phase);
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("(n,m)=("<<n<<","<<m<<"), Z="<<Re<<"+"<<Im<<"i, A="<<ampl<<" phase="<<phase);
+				#endif
 				numZ++;
 			}
 		}

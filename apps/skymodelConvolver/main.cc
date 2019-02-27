@@ -20,7 +20,9 @@
 #include <Source.h>
 
 #include <ConfigParser.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <CodeUtils.h>
 #include <Graph.h>
 #include <Consts.h>
@@ -146,41 +148,57 @@ int main(int argc, char *argv[])
 	//== Parse command line options
 	//================================
 	if(ParseOptions(argc,argv)<0){
-		ERROR_LOG("Failed to parse command line options!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to parse command line options!");
+		#endif
 		return -1;
 	}
 	
 	//=======================
 	//== Init
 	//=======================
-	INFO_LOG("Initializing data...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Initializing data...");	
+	#endif
 	Init();
 
 	//=======================
 	//== Read data
 	//=======================
-	INFO_LOG("Reading source data ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Reading source data ...");
+	#endif
 	if(ReadData()<0){
-		ERROR_LOG("Reading of source data failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Reading of source data failed!");
+		#endif
 		return -1;
 	}
 
 	//=======================
 	//== Convolver
 	//=======================
-	INFO_LOG("Convolve skymodel sources ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Convolve skymodel sources ...");
+	#endif
 	if(RunConvolver()<0){
-		ERROR_LOG("Skymodel source convolver failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Skymodel source convolver failed!");
+		#endif
 		return -1;
 	}
 
 	//=======================
 	//== Save
 	//=======================
-	INFO_LOG("Saving data to file ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Saving data to file ...");
+	#endif
 	Save();
 
-	INFO_LOG("End skymodel convolver");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("End skymodel convolver");
+	#endif
 
 	return 0;
 
@@ -319,39 +337,51 @@ int ParseOptions(int argc, char *argv[])
 	//=======================
 	//## Set logging level
 	std::string sloglevel= GetStringLogLevel(verbosity);
-	LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
-	
+	#ifdef LOGGING_ENABLED
+		LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
+	#endif
+
 	//=======================
 	//== Check args 
 	//=======================
 	//Check input file
 	if(fileName==""){
-		ERROR_LOG("Invalid/empty input file name given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid/empty input file name given!");
+		#endif
 		return -1;
 	}
 
 	//Check rec map (if given)
 	if(recMapGiven){
 		if(fileName_recmap==""){
-			ERROR_LOG("Empty rec map filename given!");	
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Empty rec map filename given!");	
+			#endif
 			return -1;
 		}
 	}
 	else{
 		bool userBeamGiven= (bmajGiven && bminGiven && bpaGiven);
 		if(!userBeamGiven){
-			ERROR_LOG("No or incomplete beam parameters given (hint: when recmap is not given as argument all beam pars must be specified!)");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("No or incomplete beam parameters given (hint: when recmap is not given as argument all beam pars must be specified!)");
+			#endif
 			return -1;
 		}
 		if(Bmin<0 || Bmaj<0 || Bpa<0){
-			ERROR_LOG("Invalid beam parameters given (hint: beam pars are mandatory and shall be >0)");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Invalid beam parameters given (hint: beam pars are mandatory and shall be >0)");
+			#endif
 			return -1;
 		}
 	}//close else
 
 	//Check nsigmas
 	if(nSigmas<=0){
-		ERROR_LOG("Invalid nsigma arg given (hint: shall be >0)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid nsigma arg given (hint: shall be >0)!");
+		#endif
 		return -1;
 	}
 
@@ -389,14 +419,18 @@ int RunConvolver()
 		dY= fabs(metadata->dY*3600);//convert to arcsec
 	}
 	else{
-		WARN_LOG("Input map has no metadata, assuming pixel sizes=1...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Input map has no metadata, assuming pixel sizes=1...");
+		#endif
 	}
 	double beamArea= AstroUtils::GetBeamAreaInPixels(Bmaj,Bmin,dX,dY);
 
 	int source_counter= 0;
 
 	for(size_t i=0;i<sources.size();i++){
-		if(i%100==0) INFO_LOG("#"<<i+1<<"/"<<sources.size()<<" sources convolved...");
+		#ifdef LOGGING_ENABLED
+			if(i%100==0) INFO_LOG("#"<<i+1<<"/"<<sources.size()<<" sources convolved...");
+		#endif
 
 		//Get true source info
 		int type= sources[i]->Type;
@@ -405,7 +439,9 @@ int RunConvolver()
 		int flag= sources[i]->Flag;
 		bool hasTrueInfo= sources[i]->HasTrueInfo();
 		if(!hasTrueInfo){
-			WARN_LOG("Source no. "<<i<<" has no true info stored, skip it!");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Source no. "<<i<<" has no true info stored, skip it!");
+			#endif
 			continue;
 		}
 		double S_true= sources[i]->GetTrueFlux(); 
@@ -416,7 +452,9 @@ int RunConvolver()
 		//NB: For compact source use true info and fill pixel, for extended source use pixel list
 		Image* sourceImg= img->GetCloned("",true,true);
 		if(!sourceImg){
-			ERROR_LOG("Failed to create image mask for source "<<i+1<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to create image mask for source "<<i+1<<"!");
+			#endif
 			return -1;
 		}
 		sourceImg->Reset();
@@ -433,7 +471,9 @@ int RunConvolver()
 			}//end loop pixels
 		}//close else
 		else{
-			WARN_LOG("Unknown type for source no. "<<i+1<<", skip it...");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Unknown type for source no. "<<i+1<<", skip it...");
+			#endif
 			continue;
 		}
 
@@ -443,7 +483,9 @@ int RunConvolver()
 		bool invert= false;
 		Image* sourceImg= img->GetSourceMask({sources[i]},isBinary,invert);
 		if(!sourceImg){
-			ERROR_LOG("Failed to compute image mask for source "<<i+1<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute image mask for source "<<i+1<<"!");
+			#endif
 			return -1;
 		}
 		*/
@@ -451,7 +493,9 @@ int RunConvolver()
 		//Convolve source image with beam
 		Image* sourceImg_conv= sourceImg->GetBeamConvolvedImage(Bmaj,Bmin,Bpa,nSigmas);
 		if(!sourceImg_conv){
-			ERROR_LOG("Failed to convolve source image "<<i+1<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to convolve source image "<<i+1<<"!");
+			#endif
 			delete sourceImg;	
 			sourceImg= 0;
 			return -1;
@@ -483,14 +527,18 @@ int RunConvolver()
 		//Find convolved source
 		std::vector<Source*> csources;
 		if(sourceImg_conv->FindCompactSource(csources,thr,minPixels)<0){
-			ERROR_LOG("Failed to find convolved source "<<i+1<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to find convolved source "<<i+1<<"!");
+			#endif
 			delete sourceImg_conv;	
 			sourceImg_conv= 0;
 			return -1;
 		}
 	
 		if(csources.empty()){
-			WARN_LOG("Source "<<i+1<<" not found after convolution (below npix/flux threshold?) will be removed...");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Source "<<i+1<<" not found after convolution (below npix/flux threshold?) will be removed...");
+			#endif
 			delete sourceImg_conv;
 			sourceImg_conv= 0;
 			continue;
@@ -498,7 +546,9 @@ int RunConvolver()
 
 		int csourceIndex= 0;
 		if(csources.size()>1){
-			WARN_LOG("More than 1 source found in convolved image for source no. "<<i+1<<" (name="<<sources[i]->GetName()<<", id="<<sources[i]->Id<<", type="<<sources[i]->Type<<"), this should not occur normally (could be one extended source broke up at image edge), will take the larger one...");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("More than 1 source found in convolved image for source no. "<<i+1<<" (name="<<sources[i]->GetName()<<", id="<<sources[i]->Id<<", type="<<sources[i]->Type<<"), this should not occur normally (could be one extended source broke up at image edge), will take the larger one...");
+			#endif
 			long int nPix_max= -999;
 			for(size_t k=0;k<csources.size();k++){
 				long int nPix= csources[k]->NPix;
@@ -535,7 +585,9 @@ int RunConvolver()
 
 	}//end loop sources
 
-	INFO_LOG("#"<<sources_conv.size()<<" sources present after convolution...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<sources_conv.size()<<" sources present after convolution...");
+	#endif
 
 	//Set metadata in skymodel convolved image
 	ImgMetaData* metadata_conv= img_conv->GetMetaData();
@@ -547,12 +599,16 @@ int RunConvolver()
 	}
 
 	//Compute stats of skymodel convolved image
-	INFO_LOG("Computing stats of skymodel convolved image...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing stats of skymodel convolved image...");
+	#endif
 	img_conv->ComputeStats(true);
 
 	//Merge convolved sources
 	if(mergeOverlappingSources && MergeSources()<0){
-		ERROR_LOG("Failed to merge convolved sources!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to merge convolved sources!");
+		#endif
 		return -1;
 	}
 
@@ -568,7 +624,9 @@ int RunConvolver()
 			dY_rec= fabs(metadata_rec->dY*3600);//convert to arcsec
 		}
 		else{
-			WARN_LOG("Rec map has no metadata, assuming pixel sizes=1...");
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Rec map has no metadata, assuming pixel sizes=1...");
+			#endif
 		}
 		double beamArea_rec= AstroUtils::GetBeamAreaInPixels(Bmaj,Bmin,dX_rec,dY_rec);
 
@@ -647,12 +705,16 @@ int MergeSources()
 {
 	//## Return if there are no sources to be merged
 	if(sources_conv.empty()){
-		WARN_LOG("No sources to be merged, nothing to be done...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No sources to be merged, nothing to be done...");
+		#endif
 		return 0;
 	}
 
 	//## Fill source graph
-	INFO_LOG("Fill list of sources to be merged and fill corresponding graph data struct...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Fill list of sources to be merged and fill corresponding graph data struct...");
+	#endif
 	Graph mergedSourceGraph;
 	std::vector<bool> isMergeableSource;
 	for(size_t i=0;i<sources_conv.size();i++){
@@ -661,8 +723,10 @@ int MergeSources()
 	}
 
 	//## Find adjacent sources	
-	INFO_LOG("Finding adjacent/overlapping sources (#"<<mergedSourceGraph.GetNVertexes()<<") ...");
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Finding adjacent/overlapping sources (#"<<mergedSourceGraph.GetNVertexes()<<") ...");
+	#endif
+
 	for(size_t i=0;i<sources_conv.size()-1;i++){
 		Source* source= sources_conv[i];
 		int type= source->Type;
@@ -677,18 +741,24 @@ int MergeSources()
 			bool isExtendedSource_neighbor= (type_neighbor==eExtended || type_neighbor==eCompactPlusExtended);
 
 			//Check if both sources are compact and if they are allowed to be merged
-			if(isCompactSource && isCompactSource_neighbor && !enableCompactSourceMerging){			
-				DEBUG_LOG("Skip merging as both sources (i,j)=("<<i<<","<<j<<") are compact and merging among compact sources is disabled...");
+			if(isCompactSource && isCompactSource_neighbor && !enableCompactSourceMerging){	
+				#ifdef LOGGING_ENABLED		
+					DEBUG_LOG("Skip merging as both sources (i,j)=("<<i<<","<<j<<") are compact and merging among compact sources is disabled...");
+				#endif
 				continue;
 			}
 	
 			//Check if both sources are extended or if one is extended and the other compact and if they are allowed to be merged
-			if(isExtendedSource && isExtendedSource_neighbor && !enableExtendedSourceMerging){			
-				DEBUG_LOG("Skip merging as both sources (i,j)=("<<i<<","<<j<<") are extended and merging among extended sources is disabled...");
+			if(isExtendedSource && isExtendedSource_neighbor && !enableExtendedSourceMerging){
+				#ifdef LOGGING_ENABLED			
+					DEBUG_LOG("Skip merging as both sources (i,j)=("<<i<<","<<j<<") are extended and merging among extended sources is disabled...");
+				#endif
 				continue;
 			}
-			if( ((isCompactSource && isExtendedSource_neighbor) || (isExtendedSource && isCompactSource_neighbor)) && !enableExtendedSourceMerging){			
-				DEBUG_LOG("Skip merging between sources (i,j)=("<<i<<","<<j<<") as merging among extended and compact sources is disabled...");
+			if( ((isCompactSource && isExtendedSource_neighbor) || (isExtendedSource && isCompactSource_neighbor)) && !enableExtendedSourceMerging){		
+				#ifdef LOGGING_ENABLED	
+					DEBUG_LOG("Skip merging between sources (i,j)=("<<i<<","<<j<<") as merging among extended and compact sources is disabled...");
+				#endif
 				continue;
 			}
 		
@@ -698,7 +768,9 @@ int MergeSources()
 			if(!areAdjacentSources) continue;
 
 			//If they are adjacent add linking in graph
-			INFO_LOG("Sources (i,j)=("<<i<<","<<j<<") are adjacent and selected for merging...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Sources (i,j)=("<<i<<","<<j<<") are adjacent and selected for merging...");
+			#endif
 			mergedSourceGraph.AddEdge(i,j);
 			isMergeableSource[i]= true;
 			isMergeableSource[j]= true;
@@ -726,11 +798,15 @@ int MergeSources()
 
 
 	//## Find all connected components in graph corresponding to sources to be merged
-	INFO_LOG("Find all connected components in graph corresponding to sources to be merged...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Find all connected components in graph corresponding to sources to be merged...");
+	#endif
 	std::vector<std::vector<int>> connected_source_indexes;
 	mergedSourceGraph.GetConnectedComponents(connected_source_indexes);
-	INFO_LOG("#"<<connected_source_indexes.size()<<"/"<<sources_conv.size()<<" selected for merging...");
-		
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<connected_source_indexes.size()<<"/"<<sources_conv.size()<<" selected for merging...");
+	#endif
+
 	//## Now merge the sources
 	bool copyPixels= true;//create memory for new pixels
 	bool checkIfAdjacent= false;//already done before
@@ -739,8 +815,10 @@ int MergeSources()
 	bool computeMorphPars= false;
 	bool computeRobustStats= true;
 	bool forceRecomputing= true;//need to re-compute moments because pixel flux of merged sources are summed up
-	
-	INFO_LOG("Merging sources and adding them to collection...");
+
+	#ifdef LOGGING_ENABLED	
+		INFO_LOG("Merging sources and adding them to collection...");
+	#endif
 	for(size_t i=0;i<connected_source_indexes.size();i++){
 		//Skip empty or single sources
 		if(connected_source_indexes[i].size()<=1) continue;
@@ -762,7 +840,9 @@ int MergeSources()
 				
 			int status= merged_source->MergeSource(source_adj,copyPixels,checkIfAdjacent,computeStatPars,computeMorphPars,sumMatchingPixels);
 			if(status<0){
-				WARN_LOG("Failed to merge sources (i,j)=("<<index<<","<<index_adj<<"), skip to next...");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to merge sources (i,j)=("<<index<<","<<index_adj<<"), skip to next...");
+				#endif
 				continue;
 			}
 			nMerged++;
@@ -777,15 +857,21 @@ int MergeSources()
 			merged_source->SetName(std::string(sname));
 
 			//Compute stats
-			DEBUG_LOG("Recomputing stats & moments of merged source in merge group "<<i<<" after #"<<nMerged<<" merged source...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Recomputing stats & moments of merged source in merge group "<<i<<" after #"<<nMerged<<" merged source...");
+			#endif
 			if(merged_source->ComputeStats(computeRobustStats,forceRecomputing)<0){
-				WARN_LOG("Failed to compute stats for merged source in merge group "<<i<<"...");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to compute stats for merged source in merge group "<<i<<"...");
+				#endif
 				continue;
 			}
 	
 			//Compute morph params
 			if(merged_source->ComputeMorphologyParams()<0){
-				WARN_LOG("Failed to compute morph pars for merged source in merge group "<<i<<"...");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to compute morph pars for merged source in merge group "<<i<<"...");
+				#endif
 				continue;
 			}
 		}//close if
@@ -795,8 +881,10 @@ int MergeSources()
 
 	}//end loop number of components
 
-	INFO_LOG("#"<<sources_conv_merged.size()<<" sources present in merged collection...");
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<sources_conv_merged.size()<<" sources present in merged collection...");
+	#endif
+
 	return 0;
 
 }//close MergeSources()
@@ -806,14 +894,18 @@ int MergeSources()
 void Init()
 {
 	//Open output file
-	if(!outputFile) {
-		INFO_LOG("Opening ROOT file "<<outputFileName<<" ...");
+	if(!outputFile) {	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Opening ROOT file "<<outputFileName<<" ...");
+		#endif
 		outputFile= new TFile(outputFileName.c_str(),"RECREATE");
 	}
 
 	//Create source Tree
 	if(!sourceTree) {
-		INFO_LOG("Creating ROOT Tree SourceInfo ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Creating ROOT Tree SourceInfo ...");
+		#endif
 		sourceTree= new TTree("SourceInfo","SourceInfo");	
 	}
 	aSource= 0;
@@ -823,25 +915,33 @@ void Init()
 	std::string outputFileName_base= CodeUtils::ExtractSubString(outputFileName,".");
 	if(!outputFileNameGiven_fits){		
 		outputFileName_fits= outputFileName_base + std::string(".fits");
-		INFO_LOG("Set skymodel convolved FITS output to "<<outputFileName_fits<<" ...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Set skymodel convolved FITS output to "<<outputFileName_fits<<" ...");
+		#endif
 	}
 
 	//Define output FITS file name
 	if(!outputFileNameGiven_ds9regions){
-		outputFileName_ds9regions= outputFileName_base + std::string(".reg");
-		INFO_LOG("Set DS9 output regions file to "<<outputFileName_ds9regions<<" ...");
+		outputFileName_ds9regions= outputFileName_base + std::string(".reg");	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Set DS9 output regions file to "<<outputFileName_ds9regions<<" ...");
+		#endif
 	}
 
 	//Create file & source Tree with rec sources (if rec map given)
 	if(recMapGiven){
 		std::string outputFileName_rec= outputFileName_base + std::string("_rec.root");
 		if(!outputFile_rec) {
-			INFO_LOG("Opening ROOT file "<<outputFileName_rec<<" ...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Opening ROOT file "<<outputFileName_rec<<" ...");
+			#endif
 			outputFile_rec= new TFile(outputFileName_rec.c_str(),"RECREATE");
 		}
 
 		if(!sourceTree_rec) {
-			INFO_LOG("Creating ROOT Tree SourceInfo for rec sources...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Creating ROOT Tree SourceInfo for rec sources...");
+			#endif
 			sourceTree_rec= new TTree("SourceInfo","SourceInfo");	
 		}
 		aSource= 0;
@@ -873,14 +973,18 @@ int ReadData()
 	if(recMapGiven){
 		img_rec= new Image();
 		if(img_rec->ReadFITS(fileName_recmap)<0){
-			ERROR_LOG("Failed to read rec map FITS file "<<fileName_recmap<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read rec map FITS file "<<fileName_recmap<<"!");
+			#endif
 			return -1;
 		}
 		
 		//Get beam info
 		ImgMetaData* metadata= img_rec->GetMetaData();	
 		if(!metadata){
-			ERROR_LOG("Rec map has no metadata!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Rec map has no metadata!");
+			#endif
 			delete img_rec;
 			img_rec= 0;
 			return -1;
@@ -888,38 +992,51 @@ int ReadData()
 		Bmaj= metadata->Bmaj*3600;
 		Bmin= metadata->Bmin*3600;
 		Bpa= metadata->Bpa;
-		INFO_LOG("Read beam info from recmap: {Bmaj,Bmin,Bpa}={"<<Bmaj<<","<<Bmin<<","<<Bpa<<"}");
-
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Read beam info from recmap: {Bmaj,Bmin,Bpa}={"<<Bmaj<<","<<Bmin<<","<<Bpa<<"}");
+		#endif
 	}//close if
 
 	
 	//Open file with source collection
 	TFile* inputFile= new TFile(fileName.c_str(),"READ");
 	if(!inputFile){
-		ERROR_LOG("Failed to open file "<<fileName<<"!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to open file "<<fileName<<"!");
+		#endif
 		return -1;
 	}
 
 	//Read skymodel image
-	INFO_LOG("Reading skymodel image from file "<<fileName<<"...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Reading skymodel image from file "<<fileName<<"...");
+	#endif
 	img= (Image*)inputFile->Get("img");
-	if(!img){
-		ERROR_LOG("Failed to read skymodel image from input file "<<fileName<<"!");
+	if(!img){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read skymodel image from input file "<<fileName<<"!");
+		#endif
 		return -1;
 	}
 	
 	//Get access to source trees
-	INFO_LOG("Get access to source tree from file "<<fileName<<"...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Get access to source tree from file "<<fileName<<"...");
+	#endif
 
 	TTree* sourceDataTree= (TTree*)inputFile->Get("SourceInfo");
 	if(!sourceDataTree || sourceDataTree->IsZombie()){
-		ERROR_LOG("Failed to get access to source tree in file "<<fileName<<"!");	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get access to source tree in file "<<fileName<<"!");	
+		#endif
 		return -1;
 	}
 	sourceDataTree->SetBranchAddress("Source",&aSource);
 
 	//Read sources
-	INFO_LOG("Reading #"<<sourceDataTree->GetEntries()<<" sources in file "<<fileName<<"...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Reading #"<<sourceDataTree->GetEntries()<<" sources in file "<<fileName<<"...");
+	#endif
 	for(int i=0;i<sourceDataTree->GetEntries();i++){
 		sourceDataTree->GetEntry(i);
 
@@ -928,7 +1045,9 @@ int ReadData()
 		sources.push_back(source);
 	}//end loop sources
 
-	INFO_LOG("#"<<sources.size()<<" sources read...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<sources.size()<<" sources read...");
+	#endif
 
 	
 	return 0;
@@ -941,10 +1060,14 @@ void Save()
 	SaveDS9RegionFile();
 	
 	//Write fits image
-	if(img_conv){
-		INFO_LOG("Saving convolved skymodel to FITS file...");
+	if(img_conv){	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving convolved skymodel to FITS file...");
+		#endif
 		if(img_conv->WriteFITS(outputFileName_fits)<0){
-			ERROR_LOG("Failed to write skymodel convolved to FITS file "<<outputFileName_fits<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to write skymodel convolved to FITS file "<<outputFileName_fits<<"!");
+			#endif
 		}
 	}
 
@@ -954,14 +1077,18 @@ void Save()
 
 		//Save convolved skymodel image
 		if(img_conv) {
-			INFO_LOG("Saving convolved skymodel to ROOT file...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Saving convolved skymodel to ROOT file...");
+			#endif
 			img_conv->SetName("img");
 			img_conv->Write(); 
 		}
 
 		//Save source tree?
 		if(sourceTree){
-			INFO_LOG("Filling source ROOT TTree...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Filling source ROOT TTree...");
+			#endif
 			if(mergeOverlappingSources){
 				for(size_t k=0;k<sources_conv_merged.size();k++){
 					aSource= sources_conv_merged[k];
@@ -974,7 +1101,9 @@ void Save()
 					sourceTree->Fill();
 				}
 			}
-			INFO_LOG("Writing tree to file...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Writing tree to file...");
+			#endif
 			sourceTree->Write();
 		}//close if save source tree
 
@@ -987,12 +1116,16 @@ void Save()
 
 		//Save source tree?
 		if(sourceTree_rec){
-			INFO_LOG("Filling rec source ROOT TTree...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Filling rec source ROOT TTree...");
+			#endif
 			for(size_t k=0;k<sources_rec.size();k++){
 				aSource= sources_rec[k];
 				sourceTree_rec->Fill();
 			}
-			INFO_LOG("Writing source rec tree to file...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Writing source rec tree to file...");
+			#endif
 			sourceTree_rec->Write();
 		}//close if save source tree
 
@@ -1002,15 +1135,19 @@ void Save()
 }//close Save()
 
 
-void SaveDS9RegionFile(){
+void SaveDS9RegionFile()
+{
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Saving "<<sources_conv_merged.size()<<" sources to DS9 region file "<<outputFileName_ds9regions<<" ...");
+	#endif
 
-	INFO_LOG("Saving "<<sources_conv_merged.size()<<" sources to DS9 region file "<<outputFileName_ds9regions<<" ...");
-	
 	//Open file
 	FILE* fout= fopen(outputFileName_ds9regions.c_str(),"w");
 
 	//Writing header
-	DEBUG_LOG("Saving DS9 region header...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Saving DS9 region header...");
+	#endif
 	fprintf(fout,"global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
 	fprintf(fout,"image\n");
 	
@@ -1046,7 +1183,9 @@ void SaveDS9RegionFile(){
 	}//end loop sources
 		
 	//Close file
-	DEBUG_LOG("Closing DS9 file region...");
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Closing DS9 file region...");
+	#endif
 	fclose(fout);
 
 }//close SaveDS9RegionFile()

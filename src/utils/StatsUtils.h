@@ -31,7 +31,9 @@
 
 #include <SysUtils.h>
 #include <CodeUtils.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <Consts.h>
 
 #include <TObject.h>
@@ -283,12 +285,14 @@ class StatsUtils : public TObject {
 		* \brief Compute box plot stats (min/max, median, Q1, Q3)
 		*/
 		template < typename T >
-		static BoxStats<T> ComputeBoxStats(std::vector<T>& vec,bool sorted=false){
-
+		static BoxStats<T> ComputeBoxStats(std::vector<T>& vec,bool sorted=false)
+		{
 			//Check empty vector
 			BoxStats<T> stats;
 			if(vec.size()<=1) {
-				WARN_LOG("Empty or scalar data vector, returning zero!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Empty or scalar data vector, returning zero!");
+				#endif
 				return stats;
 			}
 
@@ -323,7 +327,9 @@ class StatsUtils : public TObject {
 			//Check empty vector
 			std::vector<T> statVec {0,0,0};
 			if(vec.size()<=1) {
-				WARN_LOG("Empty or scalar data vector, returning zero!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Empty or scalar data vector, returning zero!");
+				#endif
 				return statVec;
 			}
 
@@ -398,12 +404,16 @@ class StatsUtils : public TObject {
 
 			//Check empty vector
 			if(vec.empty()) {
-				WARN_LOG("Empty data vector, returning zero!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Empty data vector, returning zero!");
+				#endif
 				return 0;
 			}
 			size_t N= vec.size();
 			if(start<0 || start>=N-1 || end<=0 || end>N-1 || start<=end){
-				WARN_LOG("Invalid range ("<<start<<","<<end<<") given, returning zero!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Invalid range ("<<start<<","<<end<<") given, returning zero!");
+				#endif
 				return 0;
 			}
 	
@@ -439,7 +449,9 @@ class StatsUtils : public TObject {
 		{
 			//Check empty vector
 			if(vec.size()<=0) {
-				DEBUG_LOG("Empty data vector, returning zero!");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Empty data vector, returning zero!");
+				#endif
 				return 0;
 			}
 			std::size_t n = vec.size()/2;
@@ -472,7 +484,9 @@ class StatsUtils : public TObject {
 		{
 			size_t n = vec.size();
 			if(n<=0) {
-				DEBUG_LOG("Empty data vector, returning zero!");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Empty data vector, returning zero!");
+				#endif
 				return 0;
 			}
 			std::vector<T> MADs;
@@ -504,7 +518,9 @@ class StatsUtils : public TObject {
 		static T GetMedian( std::vector<T>&vec, bool isSorted=false){//this should run in O(nlog(n))
 			size_t n = vec.size();
 			if(n<=0) {
-				DEBUG_LOG("Empty data vector, returning zero!");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Empty data vector, returning zero!");
+				#endif
 				return 0;
 			}
   		if(!isSorted) std::sort(vec.begin(), vec.end());
@@ -521,11 +537,15 @@ class StatsUtils : public TObject {
 		static T GetRangeMedian( std::vector<T>&vec, int start, int end, bool isSorted=false){//this should run in O(nlog(n))
 			size_t n = vec.size();
 			if(n<=0) {
-				WARN_LOG("Empty data vector, returning zero!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Empty data vector, returning zero!");
+				#endif
 				return 0;
 			}
 			if(start<0 || start>=n-1 || end<=0 || end>n-1 || start<=end){
-				WARN_LOG("Invalid range ("<<start<<","<<end<<") given, returning zero!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Invalid range ("<<start<<","<<end<<") given, returning zero!");
+				#endif
 				return 0;
 			}
 	
@@ -546,7 +566,9 @@ class StatsUtils : public TObject {
 		static T GetMAD( std::vector<T>const &vec, T median){
 			size_t n = vec.size();
 			if(n<=0) {
-				DEBUG_LOG("Empty data vector, returning zero!");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Empty data vector, returning zero!");
+				#endif
 				return 0;
 			}
 			std::vector<double> MADs;
@@ -616,7 +638,9 @@ class StatsUtils : public TObject {
 
 			//Check if there are still data
 			if(vec_clipped.empty()){
-				DEBUG_LOG("Clipped data is empty, return.");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Clipped data is empty, return.");
+				#endif
 				return -1;
 			}
 
@@ -678,7 +702,9 @@ class StatsUtils : public TObject {
 				std::vector<T> data;
 				if(iter==0){
 					if(UpdateClippedStats(stats,data,vec,stats_pre,clipsig,useParallelVersion)<0){
-						DEBUG_LOG("Stop clipping iteration as clipped vector has no more data!");
+						#ifdef LOGGING_ENABLED
+							DEBUG_LOG("Stop clipping iteration as clipped vector has no more data!");
+						#endif
 						stats= stats_pre;	
 						//data= data_pre;				
 						break;
@@ -686,7 +712,9 @@ class StatsUtils : public TObject {
 				}
 				else{
 					if(UpdateClippedStats(stats,data,data_pre,stats_pre,clipsig,useParallelVersion)<0){
-						DEBUG_LOG("Stop clipping iteration as clipped vector has no more data!");
+						#ifdef LOGGING_ENABLED
+							DEBUG_LOG("Stop clipping iteration as clipped vector has no more data!");
+						#endif
 						stats= stats_pre;	
 						//data= data_pre;				
 						break;
@@ -964,8 +992,10 @@ class StatsUtils : public TObject {
 
 					int thread_id= omp_get_thread_num();
 					int nthreads= SysUtils::GetOMPThreads();
-					DEBUG_LOG("Starting image moment computing in thread "<<thread_id<<" (nthreads="<<nthreads<<") ...");
-			
+					#ifdef LOGGING_ENABLED
+						DEBUG_LOG("Starting image moment computing in thread "<<thread_id<<" (nthreads="<<nthreads<<") ...");
+					#endif
+
 					//Init moments
 					minVal_t= std::numeric_limits<T>::max();
 					maxVal_t= -std::numeric_limits<T>::max();
@@ -1030,7 +1060,9 @@ class StatsUtils : public TObject {
 						}//end loop vector
 					}//close else 
 
-					DEBUG_LOG("Thread id="<<omp_get_thread_num()<<": N="<<N_t<<", M1="<<M1_t<<", M2="<<M2_t<<", M3="<<M3_t<<", M4="<<M4_t);
+					#ifdef LOGGING_ENABLED
+						DEBUG_LOG("Thread id="<<omp_get_thread_num()<<": N="<<N_t<<", M1="<<M1_t<<", M2="<<M2_t<<", M3="<<M3_t<<", M4="<<M4_t);
+					#endif
 
 					//Fill moments for this thread
 					moments_parallel[thread_id].N= N_t;
@@ -1045,7 +1077,9 @@ class StatsUtils : public TObject {
 			
 				//Compute aggregated moments
 				if(ComputeMomentsFromParallel(moments,moments_parallel)<0){
-					ERROR_LOG("Failed to aggregate moments from parallel estimates!");
+					#ifdef LOGGING_ENABLED
+						ERROR_LOG("Failed to aggregate moments from parallel estimates!");
+					#endif
 					return -1;
 				}
 
@@ -1224,10 +1258,6 @@ class StatsUtils : public TObject {
 			TMatrixDEigen E(C);
 			TMatrixD eigenvect= E.GetEigenVectors();
 			TMatrixD eigenvals= E.GetEigenValues();
-			//INFO_LOG("Eigenvec");
-			//eigenvect.Print();
-			//INFO_LOG("Eigenvals");
-			//eigenvals.Print();
 			
 			double lambda1= eigenvals(0,0);
 			double lambda2= eigenvals(1,1);
@@ -1312,7 +1342,9 @@ class StatsUtils : public TObject {
 				a*= scaleFactor; 
 				b*= scaleFactor;
 			}
-			INFO_LOG("sigmaX="<<sigmaX<<", sigmaY="<<sigmaY<<", covXY="<<covXY<<", theta="<<theta<<", a="<<a<<", b="<<b);
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("sigmaX="<<sigmaX<<", sigmaY="<<sigmaY<<", covXY="<<covXY<<", theta="<<theta<<", a="<<a<<", b="<<b);
+			#endif
 
 			//Compute ellipse
 			TEllipse* ellipse= new TEllipse(x0,y0,a,b,0.,360.,theta);
@@ -1371,7 +1403,9 @@ class StatsUtils : public TObject {
 
 			//Check data are not empty
 			if(data.empty()){
-				WARN_LOG("Input data are empty, nothing to be removed!");
+				#ifdef LOGGING_ENABLED	
+					WARN_LOG("Input data are empty, nothing to be removed!");
+				#endif
 				return -1;
 			}
 
@@ -1404,7 +1438,9 @@ class StatsUtils : public TObject {
 				}
 
 				//Remove data
-				INFO_LOG("Deleting #"<<deleteIndexes.size()<<" outliers from data at iter no. "<<niters<<" (data size="<<data.size()<<") ...");
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Deleting #"<<deleteIndexes.size()<<" outliers from data at iter no. "<<niters<<" (data size="<<data.size()<<") ...");
+				#endif
 				CodeUtils::DeleteItems(data,deleteIndexes);
 
 				//Recompute stats & cut value
@@ -1420,12 +1456,16 @@ class StatsUtils : public TObject {
 			
 			//Check if max iters was reached
 			if(niters==niters_max){
-				WARN_LOG("Maximum number of iters ("<<niters_max<<") reached, check computation!");
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Maximum number of iters ("<<niters_max<<") reached, check computation!");
+				#endif
 				return -1;
 			}
 	
 			size_t ndata_final= data.size();
-			INFO_LOG("Removed #"<<ndata-ndata_final<<" outliers from input data after #"<<niters<<" iterations ...");
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Removed #"<<ndata-ndata_final<<" outliers from input data after #"<<niters<<" iterations ...");
+			#endif
 
 			return 0;
 
@@ -1448,14 +1488,18 @@ class StatsUtils : public TObject {
 
 			//Check data size
 			if(data.empty()){
-				WARN_LOG("Empty data given, nothing to be computed!");
+				#ifdef LOGGING_ENABLED	
+					WARN_LOG("Empty data given, nothing to be computed!");
+				#endif
 				return -1;
 			}
 
 			//Generate bootstrap samples
 			std::vector<std::vector<T>> bootstrap_samples;
 			if(CodeUtils::ExtractVectorRandomSamples(bootstrap_samples,data,nSamples,-1,true)<0){
-				ERROR_LOG("Failed to generate "<<nSamples<<" bootstrap samples!");
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to generate "<<nSamples<<" bootstrap samples!");
+				#endif
 				return -1;
 			}
 

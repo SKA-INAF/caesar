@@ -138,7 +138,9 @@ int StatsUtils::ComputePageRank(std::vector<double>& ranks,TMatrixD& M,double d,
 		}
 	}
 	else{
-		cerr<<"Utils::ComputePageRank(): WARN: Page rank did not converge!"<<endl;
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Page rank did not converge!");
+		#endif
 		return -1;
 	}
 

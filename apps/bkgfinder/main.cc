@@ -18,7 +18,9 @@
 
 //Caesar headers
 #include <Image.h>
-#include <Logger.h>
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <SysUtils.h>
 #include <FITSReader.h>
 #include <BkgData.h>
@@ -155,7 +157,9 @@ int main(int argc, char *argv[])
 	//================================
 	auto t0_parse = chrono::steady_clock::now();
 	if(ParseOptions(argc,argv)<0){
-		ERROR_LOG("Failed to parse command line options!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to parse command line options!");
+		#endif
 		Clear();
 		return -1;
 	}
@@ -166,8 +170,10 @@ int main(int argc, char *argv[])
 	//== Open out file
 	//=======================
 	auto t0_outfile = chrono::steady_clock::now();
-	if(OpenOutputFile()<0){
-		ERROR_LOG("Failed to open output file!");
+	if(OpenOutputFile()<0){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to open output file!");
+		#endif
 		Clear();
 		return -1;	
 	}
@@ -179,7 +185,9 @@ int main(int argc, char *argv[])
 	//=======================
 	auto t0_read = chrono::steady_clock::now();
 	if(ReadImage()<0){
-		ERROR_LOG("Failed to read image from file!");		
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read image from file!");			
+		#endif
 		Clear();
 		return -1;
 	}
@@ -191,7 +199,9 @@ int main(int argc, char *argv[])
 	//=======================
 	auto t0_stats = chrono::steady_clock::now();
 	if(ComputeStats()<0){
-		ERROR_LOG("Failed to read image from file!");		
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read image from file!");		
+		#endif
 		Clear();
 		return -1;
 	}
@@ -204,7 +214,9 @@ int main(int argc, char *argv[])
 	//=======================
 	auto t0_bkg = chrono::steady_clock::now();	
 	if(ComputeBkg()<0){
-		ERROR_LOG("Failed to compute stats & bkg!");		
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute stats & bkg!");		
+		#endif
 		Clear();
 		return -1;
 	}
@@ -237,27 +249,46 @@ int main(int argc, char *argv[])
 	//=======================
 	ProcMemInfo memInfo;
 	if(SysUtils::GetProcMemoryInfo(memInfo)<0){
-		ERROR_LOG("Failed to read process memory info!");		
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read process memory info!");		
+		#endif
 		Clear();
 		return -1;
 	}	
 
-	INFO_LOG("===========================");
-	INFO_LOG("===   PERFORMANCE INFO  ===");
-	INFO_LOG("===========================");
-	INFO_LOG("dt(ms)= "<<dt);
-	INFO_LOG("dt_read(ms)= "<<dt_read<<" ["<<dt_read/dt*100.<<"%]");
-	INFO_LOG("dt_stats(ms)= "<<dt_stats<<" ["<<dt_stats/dt*100.<<"%]");
-	INFO_LOG("dt_bkg(ms)= "<<dt_bkg<<" ["<<dt_bkg/dt*100.<<"%]");
-	INFO_LOG("dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]");
-	INFO_LOG("real mem(kB)= "<<memInfo.realMem);
-	INFO_LOG("real mem peak(kB)= "<<memInfo.realPeakMem);
-	INFO_LOG("virt mem(kB)= "<<memInfo.virtMem);
-	INFO_LOG("virt mem peak(kB)= "<<memInfo.virtPeakMem);
-	INFO_LOG("===========================");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("===========================");
+		INFO_LOG("===   PERFORMANCE INFO  ===");
+		INFO_LOG("===========================");
+		INFO_LOG("dt(ms)= "<<dt);
+		INFO_LOG("dt_read(ms)= "<<dt_read<<" ["<<dt_read/dt*100.<<"%]");
+		INFO_LOG("dt_stats(ms)= "<<dt_stats<<" ["<<dt_stats/dt*100.<<"%]");
+		INFO_LOG("dt_bkg(ms)= "<<dt_bkg<<" ["<<dt_bkg/dt*100.<<"%]");
+		INFO_LOG("dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]");
+		INFO_LOG("real mem(kB)= "<<memInfo.realMem);
+		INFO_LOG("real mem peak(kB)= "<<memInfo.realPeakMem);
+		INFO_LOG("virt mem(kB)= "<<memInfo.virtMem);
+		INFO_LOG("virt mem peak(kB)= "<<memInfo.virtPeakMem);
+		INFO_LOG("===========================");
+	#else
+		cout<<"==========================="<<endl;
+		cout<<"===   PERFORMANCE INFO  ==="<<endl;
+		cout<<"==========================="<<endl;
+		cout<<"dt(ms)= "<<dt<<endl;
+		cout<<"dt_read(ms)= "<<dt_read<<" ["<<dt_read/dt*100.<<"%]"<<endl;
+		cout<<"dt_stats(ms)= "<<dt_stats<<" ["<<dt_stats/dt*100.<<"%]"<<endl;
+		cout<<"dt_bkg(ms)= "<<dt_bkg<<" ["<<dt_bkg/dt*100.<<"%]"<<endl;
+		cout<<"dt_save(ms)= "<<dt_save<<" ["<<dt_save/dt*100.<<"%]"<<endl;
+		cout<<"real mem(kB)= "<<memInfo.realMem<<endl;
+		cout<<"real mem peak(kB)= "<<memInfo.realPeakMem<<endl;
+		cout<<"virt mem(kB)= "<<memInfo.virtMem<<endl;
+		cout<<"virt mem peak(kB)= "<<memInfo.virtPeakMem<<endl;
+		cout<<"==========================="<<endl;
+	#endif
 	
-	
-	INFO_LOG("End background finder");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("End background finder");
+	#endif
 	
 	return 0;
 
@@ -461,32 +492,37 @@ int ParseOptions(int argc, char *argv[])
 	
 	//## Set logging level
 	std::string sloglevel= GetStringLogLevel(verbosity);
-	LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
-	
+	#ifdef LOGGING_ENABLED
+		LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
+	#endif
+
 	//## Check options
 	if(CheckOptions()<0){
-		ERROR_LOG("Invalid program options given, see logs!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid program options given, see logs!");
+		#endif
 		return -1;
 	}
 
 	//## Print options
-	INFO_LOG("========= OPTIONS ============");
-	INFO_LOG("input file: "<<inputFileName);
-	INFO_LOG("image name: "<<imageName);
-	INFO_LOG("output file: "<<outputFileName);
-	INFO_LOG("boxSize: "<<boxSize);
-	INFO_LOG("gridSize: "<<gridSize);
-	INFO_LOG("bkgEstimator: "<<bkgEstimator);	
-	INFO_LOG("computeSignificance? "<<computeSignificance);
-	INFO_LOG("use2ndPass? "<<use2ndPass);
-	INFO_LOG("skipOutliers? "<<skipOutliers);
-	INFO_LOG("seedThr: "<<seedThr);
-	INFO_LOG("mergeThr: "<<mergeThr);
-	INFO_LOG("minPixels: "<<minPixels);
-	INFO_LOG("nthreads: "<<nthreads<<" (NThreads="<<SysUtils::GetOMPMaxThreads()<<")");
-	INFO_LOG("useParallelAlgo? "<<useParallelVersion);	
-	INFO_LOG("===============================");
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("========= OPTIONS ============");
+		INFO_LOG("input file: "<<inputFileName);
+		INFO_LOG("image name: "<<imageName);
+		INFO_LOG("output file: "<<outputFileName);
+		INFO_LOG("boxSize: "<<boxSize);
+		INFO_LOG("gridSize: "<<gridSize);
+		INFO_LOG("bkgEstimator: "<<bkgEstimator);	
+		INFO_LOG("computeSignificance? "<<computeSignificance);
+		INFO_LOG("use2ndPass? "<<use2ndPass);
+		INFO_LOG("skipOutliers? "<<skipOutliers);
+		INFO_LOG("seedThr: "<<seedThr);
+		INFO_LOG("mergeThr: "<<mergeThr);
+		INFO_LOG("minPixels: "<<minPixels);
+		INFO_LOG("nthreads: "<<nthreads<<" (NThreads="<<SysUtils::GetOMPMaxThreads()<<")");
+		INFO_LOG("useParallelAlgo? "<<useParallelVersion);	
+		INFO_LOG("===============================");
+	#endif
 	
 	return 0;
 
@@ -495,43 +531,59 @@ int ParseOptions(int argc, char *argv[])
 int CheckOptions()
 {
 	//Check mandatory options
-	if(inputFileName==""){
-		ERROR_LOG("Missing or empty input file argument!");
+	if(inputFileName==""){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Missing or empty input file argument!");
+		#endif
 		return -1;
 	}
 
 	//Check optional options
 	//- Output file option
 	if(!useDefaultOutput && outputFileName==""){
-		ERROR_LOG("Empty output file argument given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty output file argument given!");
+		#endif
 		return -1;
 	}
-	if(!useDefaultOutput_bkg && outputFileName_bkg==""){
-		ERROR_LOG("Empty fits output file for bkg map argument given!");
+	if(!useDefaultOutput_bkg && outputFileName_bkg==""){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty fits output file for bkg map argument given!");
+		#endif
 		return -1;
 	}
 	if(!useDefaultOutput_rms && outputFileName_rms==""){
-		ERROR_LOG("Empty fits output file for rms map argument given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty fits output file for rms map argument given!");
+		#endif
 		return -1;
 	}	
 	if(!useDefaultOutput_significance && outputFileName_significance==""){
-		ERROR_LOG("Empty fits output file for significance map argument given!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty fits output file for significance map argument given!");
+		#endif
 		return -1;
 	}
 	
 	//- Detection options
-	if(seedThr<=0 || mergeThr<=0 || minPixels<=0){
-		ERROR_LOG("Invalid blob detection options given (hint: they must be positive)!");
+	if(seedThr<=0 || mergeThr<=0 || minPixels<=0){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid blob detection options given (hint: they must be positive)!");
+		#endif
 		return -1;
 	}
 
 	//- Sampling box options
 	if(boxSize<=0 ){
-		ERROR_LOG("Invalid sampling box size option given (hint: must be positive)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid sampling box size option given (hint: must be positive)!");
+		#endif
 		return -1;
 	}
 	if(gridSize<=0 || gridSize>1){
-		ERROR_LOG("Invalid sampling grid size option given (hint: must be positive and smaller than 1)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid sampling grid size option given (hint: must be positive and smaller than 1)!");
+		#endif
 		return -1;
 	}
 
@@ -550,28 +602,38 @@ int CheckOptions()
 		estimator= Caesar::eMedianClippedBkg;
 	}
 	else{
-		ERROR_LOG("Invalid/unknown bkg estimator specified!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid/unknown bkg estimator specified!");
+		#endif
 		return -1;
 	}
 
 	//- Number of threads
 	if(nthreads<=0){
-		ERROR_LOG("Invalid number of threads given (hint: must be positive)!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid number of threads given (hint: must be positive)!");
+		#endif
 		return -1;
 	}
 	if(nthreads>SysUtils::GetOMPMaxThreads()){
-		WARN_LOG("A number of threads exceeding detected machine core capacity ("<<SysUtils::GetOMPMaxThreads()<<") was given...");
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("A number of threads exceeding detected machine core capacity ("<<SysUtils::GetOMPMaxThreads()<<") was given...");
+		#endif
 	}
 	SysUtils::SetOMPThreads(nthreads);
 
 	//- Check given input file and get info
 	if(!Caesar::SysUtils::CheckFile(inputFileName,info,false)){
-		ERROR_LOG("Invalid input file ("<<inputFileName<<") specified!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid input file ("<<inputFileName<<") specified!");
+		#endif
 		return -1;
 	}
 	std::string file_extension= info.extension;
 	if(file_extension!= ".fits" && file_extension!=".root") {
-		ERROR_LOG("Invalid file extension ("<<file_extension<<")...nothing to be done!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid file extension ("<<file_extension<<")...nothing to be done!");
+		#endif
 		return -1;
 	}
 
@@ -605,7 +667,9 @@ int OpenOutputFile()
 	/*
 	if(useDefaultOutput){
 		std::string basefilename_wext= info.filename_wext;
-		INFO_LOG("basefilename_wext="<<basefilename_wext);
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("basefilename_wext="<<basefilename_wext);
+		#endif
 
 		if(writeToFITS){//FITS output
 			std::string outputFileNamePrefix= basefilename_wext;
@@ -639,32 +703,44 @@ int ReadImage()
 {
 	//--> ROOT reading
 	if(info.extension==".root"){// Read image from ROOT file
-		INFO_LOG("Reading ROOT input file "<<inputFileName<<"...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Reading ROOT input file "<<inputFileName<<"...");
+		#endif
 		TFile* inputFile = new TFile(inputFileName.c_str(),"READ");
 		if(!inputFile || inputFile->IsZombie()){
-			ERROR_LOG("Cannot open input file "<<inputFileName<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Cannot open input file "<<inputFileName<<"!");	
+			#endif
 			return -1;
 		}
 		inputImg=  (Caesar::Image*)inputFile->Get(imageName.c_str());
 		if(!inputImg){
-			ERROR_LOG("Cannot get image from input file "<<inputFileName<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Cannot get image from input file "<<inputFileName<<"!");
+			#endif
 			return -1;
 		}
 	}//close if
 
 	//--> FITS reading
 	if(info.extension==".fits"){// Read image from FITS file
-		INFO_LOG("Reading FITS input file "<<inputFileName<<"...");
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Reading FITS input file "<<inputFileName<<"...");
+		#endif
 		inputImg= new Caesar::Image;
 		inputImg->SetName(imageName);
 		if(inputImg->ReadFITS(inputFileName)<0){
-			ERROR_LOG("Failed to read image from input file "<<inputFileName<<"!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read image from input file "<<inputFileName<<"!");
+			#endif
 			return -1;
 		}
 	}//close else if
 
 	if(!inputImg){
-		ERROR_LOG("Failed to read image from input file "<<inputFileName<<"!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read image from input file "<<inputFileName<<"!");
+		#endif
 		return -1;
 	}
 
@@ -672,17 +748,21 @@ int ReadImage()
 
 }//close ReadImage()
 
-int ComputeStats(){
-
+int ComputeStats()
+{
 	//## Compute stats
-	INFO_LOG("Computing input image stats...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing input image stats...");
+	#endif
 	bool computeRobustStats= true;
 	bool useRange= false;
 	bool forceRecomputing= false;
 	double minThr= -std::numeric_limits<double>::infinity();
 	double maxThr= std::numeric_limits<double>::infinity();
 	if(inputImg->ComputeStats(computeRobustStats,forceRecomputing,useRange,minThr,maxThr,useParallelVersion)<0){
-		ERROR_LOG("Stats computing failed!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Stats computing failed!");
+		#endif
 		return -1;
 	}
 	inputImg->PrintStats();	
@@ -694,8 +774,10 @@ int ComputeStats(){
 int ComputeBkg()
 {
 	//## Compute background 
-	INFO_LOG("Starting background finder ...");
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Starting background finder ...");
+	#endif
+
 	//Compute sampling box size in pixels 
 	//If box size is given as a beam multiple find first the beam size from image
 	double boxSize_pix= boxSize;
@@ -703,13 +785,17 @@ int ComputeBkg()
 	if(boxSizeInBeam){
 		//Check if image has metadata with beam info
 		if(!inputImg->HasMetaData()){
-			ERROR_LOG("Requested to use sampling box size as multiple of image beam but input image has no metadata with beam information stored!");
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Requested to use sampling box size as multiple of image beam but input image has no metadata with beam information stored!");
+			#endif
 			return -1;
 		}
 	
 		//Compute box size in pixels
-		int pixelWidthInBeam= inputImg->GetMetaData()->GetBeamWidthInPixel();	
-		INFO_LOG("Read a beam size of "<<pixelWidthInBeam<<" pixels from input image ...");
+		int pixelWidthInBeam= inputImg->GetMetaData()->GetBeamWidthInPixel();
+		#ifdef LOGGING_ENABLED	
+			INFO_LOG("Read a beam size of "<<pixelWidthInBeam<<" pixels from input image ...");
+		#endif
 
 		boxSize_pix= pixelWidthInBeam*boxSize;
 		
@@ -718,13 +804,17 @@ int ComputeBkg()
 	//Compute grid size in pixels
 	double gridSize_pix= gridSize*boxSize_pix;
 
-	INFO_LOG("Computing background assuming sampling box of size "<<boxSize_pix<<" pixels and a grid size of "<<gridSize_pix<<" pixels ...");
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing background assuming sampling box of size "<<boxSize_pix<<" pixels and a grid size of "<<gridSize_pix<<" pixels ...");
+	#endif
 	
 	//Check grid & box size
 	long int Nx= inputImg->GetNx();
 	long int Ny= inputImg->GetNy();
 	if(boxSize_pix>=min(Nx,Ny) || gridSize_pix>=min(Nx,Ny) ){
-		ERROR_LOG("Box/grid size are too large compared to image size ("<<Nx<<","<<Ny<<")");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Box/grid size are too large compared to image size ("<<Nx<<","<<Ny<<")");
+		#endif
 		return -1;
 	}
 
@@ -732,7 +822,9 @@ int ComputeBkg()
 	bool computeLocalBkg= true;
 	bkgData= inputImg->ComputeBkg(estimator,computeLocalBkg,boxSize_pix,boxSize_pix,gridSize_pix,gridSize_pix,use2ndPass,skipOutliers,seedThr,mergeThr,minPixels);
 	if(!bkgData){
-		ERROR_LOG("Failed to compute bkg data!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute bkg data!");
+		#endif
 		return -1;
 	}
 

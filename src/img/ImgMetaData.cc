@@ -30,8 +30,9 @@
 #include <ImgMetaData.h>
 #include <CodeUtils.h>
 #include <Consts.h>
-#include <Logger.h>
-
+#ifdef LOGGING_ENABLED
+	#include <Logger.h>
+#endif
 #include <WCSUtils.h>
 
 
@@ -127,7 +128,9 @@ WorldCoor* ImgMetaData::GetWorldCoord(int coordSystem)
 	else if(coordSystem==-1 && m_wcsType!="")					
 		flag = (char*)(m_wcsType.c_str());
 	else{
-		ERROR_LOG("Invalid coord system type ("<<coordSystem<<") specified, will not build WCS!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid coord system type ("<<coordSystem<<") specified, will not build WCS!");
+		#endif
 		return nullptr;
 	}
 			
@@ -137,8 +140,9 @@ WorldCoor* ImgMetaData::GetWorldCoord(int coordSystem)
 	}
 			
 	wcsType= std::string(getwcsout(wcs));
-	DEBUG_LOG("wcsType="<<wcsType);
-
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("wcsType="<<wcsType);
+	#endif
 	return wcs;
 		
 }//close GetWorldCoord()
@@ -150,7 +154,9 @@ WCS* ImgMetaData::GetWCS(int coordSystem)
 	//Compute WCS from this metadata
 	WCS* wcs= WCSUtils::ComputeWCSFromImgMetaData(this,coordSystem);
 	if(!wcs){
-		ERROR_LOG("Failed to compute WCS from metadata!");
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute WCS from metadata!");
+		#endif
 		return nullptr;
 	}	
 
