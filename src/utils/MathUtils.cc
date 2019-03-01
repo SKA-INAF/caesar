@@ -980,6 +980,68 @@ double MathUtils::ComputeEllipseEccentricity(double bmaj,double bmin)
 }//close ComputeEllipseEccentricity()
 
 
+bool MathUtils::IsPointInsidePolygon(double x,double y,const std::vector<TVector2>& polygon)
+{
+	//Check polygon size
+	if(polygon.empty()) return false;
+
+	//Check bounding box
+	double minX= polygon[0].X();
+  double maxX= polygon[0].X();
+  double minY= polygon[0].Y();
+  double maxY= polygon[0].Y();
+  for(size_t i=1;i<polygon.size();i++){
+  	TVector2 q = polygon[i];
+    minX= std::min(q.X(), minX);
+    maxX= std::max(q.X(), maxX);
+    minY= std::min(q.Y(), minY);
+    maxY= std::max(q.Y(), maxY);
+  }//end loop points in polygon
+
+  if(x<=minX || x>=maxX || y<=minY || y>=maxY) {
+  	return false;
+  }
+
+  //Check if inside polygon
+	//http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
+  bool inside = false;
+  for(size_t i=0,j=polygon.size()-1;i<polygon.size(); j=i++)
+	{
+		double dx= (polygon[j].X()-polygon[i].X())*(y-polygon[i].Y())/(polygon[j].Y()-polygon[i].Y()) + polygon[i].X();
+
+		bool check= (
+			(polygon[i].Y()>y) != (polygon[j].Y()>y) &&
+			x<dx 
+		);
+
+  	if(check) inside= !inside;
+
+	}//end loop points
+
+  return inside;
+
+}//close IsPointInsidePolygon()
+
+
+void MathUtils::ComputeRotatedCoords(double& xrot,double& yrot,double x,double y,double cx,double cy,double theta)
+{
+	// cx, cy - center of square coordinates
+	// x, y - coordinates
+	// theta is the angle of rotation
+
+	//Convert theta to rad
+	double theta_rad= theta*TMath::DegToRad();
+	
+	// translate point to origin
+	double tempX = x - cx;
+	double tempY = y - cy;
+
+	// now apply rotation
+	xrot = cx + tempX*cos(theta_rad) - tempY*sin(theta_rad);
+	yrot = cy + tempX*sin(theta_rad) + tempY*cos(theta_rad);
+
+}//close ComputeRotatedCoords()
+
 }//close namespace
 
 

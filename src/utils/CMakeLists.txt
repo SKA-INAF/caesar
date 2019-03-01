@@ -19,6 +19,8 @@ set(THIS_SRCS ${THIS_SRCS}
 	${SRC_DIR}/Serializer.cc
 	${SRC_DIR}/ImgUtils.cc
 	${SRC_DIR}/WCSUtils.cc
+	${SRC_DIR}/DS9Region.cc
+	${SRC_DIR}/DS9RegionParser.cc
 ) 
 
 
@@ -38,6 +40,8 @@ set(THIS_HEADERS ${THIS_HEADERS}
 	${INC_DIR}/Serializer.h
 	${INC_DIR}/ImgUtils.h
 	${INC_DIR}/WCSUtils.h
+	${INC_DIR}/DS9Region.h
+	${INC_DIR}/DS9RegionParser.h
 )
 
 
@@ -56,6 +60,8 @@ set(THIS_DICT_HEADERS ${THIS_DICT_HEADERS}
 	Serializer.h
 	ImgUtils.h
 	WCSUtils.h
+	DS9Region.h
+	DS9RegionParser.h
 )
 
 set(THIS_DICT_SRCS ${THIS_DICT_SRCS} 
@@ -73,6 +79,8 @@ set(THIS_DICT_SRCS ${THIS_DICT_SRCS}
 	${SRC_DIR}/Serializer.cc
 	${SRC_DIR}/ImgUtils.cc
 	${SRC_DIR}/WCSUtils.cc
+	${SRC_DIR}/DS9Region.cc
+	${SRC_DIR}/DS9RegionParser.cc
 ) 
 
 if (ENABLE_LOGGING)

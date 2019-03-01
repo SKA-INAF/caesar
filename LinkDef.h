@@ -294,5 +294,19 @@
 #pragma link C++ struct SourceFitOptions+;
 //======================
 
+//DS9Region
+#pragma link C++ class Caesar::DS9RegionParser+;
+#pragma link C++ class Caesar::DS9Region+;
+#pragma link C++ class Caesar::vector<DS9Region>+;
+#pragma link C++ class Caesar::vector<DS9Region*>+;
+#pragma link C++ class Caesar::DS9PolygonRegion+;
+#pragma link C++ class Caesar::vector<DS9PolygonRegion>+;
+#pragma link C++ class Caesar::vector<DS9PolygonRegion*>+;
+#pragma link C++ class Caesar::DS9BoxRegion+;
+#pragma link C++ class Caesar::vector<DS9BoxRegion>+;
+#pragma link C++ class Caesar::vector<DS9BoxRegion*>+;
+#pragma link C++ class Caesar::DS9CircleRegion+;
+#pragma link C++ class Caesar::vector<DS9CircleRegion>+;
+#pragma link C++ class Caesar::vector<DS9CircleRegion*>+;
 
 #endif

@@ -46,6 +46,7 @@
 #include <TMatrixD.h>
 #include <TGraph.h>
 #include <TEllipse.h>
+#include <TVector2.h>
 
 //Boost headers
 #include <boost/geometry.hpp>
@@ -359,7 +360,26 @@ class MathUtils : public TObject {
 	
 			return fcn;
 		}//close EvalGaus2D()
+
+		/**
+		* \brief Check if 2D point with coordinates (x,y) is inside a polygon
+		*/
+		static bool IsPointInsidePolygon(double x,double y,const std::vector<TVector2>& polygon);
 		
+		/**
+		* \brief Check if 2D point with coordinates (x,y) is inside a polygon
+		*/
+		static bool IsPointInsidePolygon(const TVector2& point,const std::vector<TVector2>& polygon)
+		{
+			return IsPointInsidePolygon(point.X(),point.Y(),polygon);
+		}
+
+		/**
+		* \brief Compute rotated coordinates (x,y)
+		*/
+		static void ComputeRotatedCoords(double& xrot,double& yrot,double x,double y,double cx,double cy,double theta);
+		
+
 	private:
 	
 		ClassDef(MathUtils,1)

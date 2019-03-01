@@ -641,6 +641,16 @@ class CodeUtils : public TObject {
 		}
 
 		/**
+		* \brief Find pattern in string
+		*/
+		static bool HasPatternInString(std::string str,std::string pattern)
+		{
+			std::size_t found = str.find(pattern);
+  		if (found!=std::string::npos) return true;
+			return false;
+		}
+
+		/**
 		* \brief Strip blank spaces from string
 		*/
 		static int StripBlankSpaces(std::string& s){
