@@ -76,7 +76,7 @@ int DS9RegionParser::Parse(std::vector<DS9Region*>& regions,std::string filename
 
 	//## Read region file and get region text lines
 	std::vector<std::vector<std::string>> raw_data;
-	int wcsType= DS9Region::eUNKNOWN_CS; 
+	int wcsType= eUNKNOWN_CS; 
 	if(Read(raw_data,wcsType,filename)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to read region data from file "<<filename<<"!");
@@ -424,14 +424,15 @@ int DS9RegionParser::Read(std::vector<std::vector<std::string>>& data, int& wcsT
 	std::string parsedline= "";	
 	int line_counter= 0;
 	std::map<std::string,int> wcsTypeMap;
-	wcsTypeMap.insert(std::make_pair("image",DS9Region::eIMG_CS));
-	wcsTypeMap.insert(std::make_pair("fk5",DS9Region::eFK5_CS));
-	wcsTypeMap.insert(std::make_pair("fk4",DS9Region::eFK4_CS));
-	wcsTypeMap.insert(std::make_pair("galactic",DS9Region::eGAL_CS));
+	wcsTypeMap.insert(std::make_pair("image",eIMG_CS));
+	wcsTypeMap.insert(std::make_pair("fk5",eJ2000));
+	wcsTypeMap.insert(std::make_pair("fk4",eB1950));
+	wcsTypeMap.insert(std::make_pair("galactic",eGALACTIC));
 	
 	std::vector<std::string> skipLinePatterns {"global","image","fk5","fk4","galactic"};
 
-	wcsType= DS9Region::eUNKNOWN_CS;
+	wcsType= eUNKNOWN_CS;
+	bool foundWCS= false;
 
 	while(std::getline(in,parsedline)) {
 		line_counter++;
@@ -459,6 +460,7 @@ int DS9RegionParser::Read(std::vector<std::vector<std::string>>& data, int& wcsT
 				bool hasPattern= CodeUtils::HasPatternInString(field,it.first);
 				if(hasPattern){
 					wcsType= it.second;
+					foundWCS= true;
 					break;
 				}
 			}
@@ -490,6 +492,14 @@ int DS9RegionParser::Read(std::vector<std::vector<std::string>>& data, int& wcsT
 
 	//Close file
 	in.close();
+
+	//Check if WCS type was found
+	if(!foundWCS){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Cannot find and parse WCS type in region file (check if given WCS is supported)!");
+		#endif
+		return -1;
+	}
 
 	return 0;
 

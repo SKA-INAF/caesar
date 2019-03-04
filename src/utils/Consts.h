@@ -38,12 +38,14 @@ namespace Caesar {
 //===          ENUM              =====
 //====================================
 enum WCSType {
+	eUNKNOWN_CS= -1,
 	eJ2000= 0,
 	eB1950= 1,
 	eGALACTIC= 2,
 	eECLIPTIC= 3,
 	eALTAZ= 4,
-	eLINEAR= 5
+	eLINEAR= 5,
+	eIMG_CS= 6,
 };
 
 enum ImgFilters {

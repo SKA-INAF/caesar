@@ -33,6 +33,8 @@
 	#include <Logger.h>
 #endif
 
+#include <Consts.h>
+
 //ROOT headers
 #include <TObject.h>
 #include <TMath.h>
@@ -89,6 +91,7 @@ class DS9Region : public TObject
 		/**
 		* \brief Region coordinate system type
 		*/
+		/*
 		enum CSType {
 			eUNKNOWN_CS=0,
 			eIMG_CS=1,
@@ -96,6 +99,7 @@ class DS9Region : public TObject
 			eFK4_CS=3,
 			eGAL_CS=4
 		};
+		*/
 
 	public:
 		/**
