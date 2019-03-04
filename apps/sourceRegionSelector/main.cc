@@ -20,6 +20,7 @@
 #include <Source.h>
 #include <DS9Region.h>
 #include <DS9RegionParser.h>
+#include <SourceExporter.h>
 
 #include <ConfigParser.h>
 #ifdef LOGGING_ENABLED
@@ -54,7 +55,9 @@ void Usage(char* exeName){
   cout<<"-h, --help \t Show help message and exit"<<endl;
 	cout<<"-i, --input=[INPUT_FILE] \t Input ROOT file produced by CAESAR containing the source collection to be selected"<<endl;
 	cout<<"-r, --region=[REGION_FILE] \t Input DS9 region file containing the region(s) to be used to spatially select sources"<<endl;
-	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (ROOT format) where to store selected sources (default=sources_sel.root)"<<endl;
+	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (ROOT format) where to store selected sources (default=sources.root)"<<endl;
+	cout<<"-R, --region-output=[REGION_OUTPUT_FILE] \t Output DS9 region file name where to store selected sources (default=sources.reg)"<<endl;
+	cout<<"-C, --catalog-output=[CATALOG_OUTPUT_FILE] \t Output catalog file name where to store selected sources (default=catalog.dat)"<<endl;
 	cout<<"-v, --verbosity=[LEVEL] \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	
 	cout<<"=============================="<<endl;
@@ -65,6 +68,8 @@ static const struct option options_tab[] = {
   { "help", no_argument, 0, 'h' },
 	{ "input", required_argument, 0, 'i' },
 	{ "region", required_argument, 0, 'r' },
+	{ "region-output", required_argument, 0, 'R' },
+	{ "catalog-output", required_argument, 0, 'C' },
 	{ "verbosity", required_argument, 0, 'v'},
 	{ "output", required_argument, 0, 'o' },
   {(char*)0, (int)0, (int*)0, (int)0}
@@ -74,6 +79,12 @@ static const struct option options_tab[] = {
 //Options
 std::string fileName= "";
 std::string regionFileName= "";
+std::string outputFileName= "sources.root";
+std::string regionOutputFileName= "sources.reg";
+std::string regionComponentsOutputFileName= "sources_fitcomp.reg";
+std::string catalogOutputFileName= "catalog.dat";
+std::string catalogComponentsOutputFileName= "catalog_fitcomp.dat";
+int ds9WCSType= 0;//use original WCS type to save catalog
 int verbosity= 4;//INFO level
 TFile* inputFile= 0;
 TTree* sourceTree= 0;
@@ -83,7 +94,7 @@ TTree* configTree= 0;
 //Globar vars
 TFile* outputFile= 0;
 TTree* outputTree= 0;
-std::string outputFileName= "sources_sel.root";
+
 Source* m_source= 0;
 std::vector<Source*> m_sources;
 std::vector<Source*> m_sources_sel;
@@ -97,6 +108,9 @@ int ReadSourceData(std::string filename);
 int SelectSources();
 int CloneObjectsInFile(std::vector<std::string> excludedObjNames);
 void Save();
+int SaveSources();
+int SaveDS9Regions();
+int SaveCatalog();
 int Init();
 
 int main(int argc, char *argv[])
@@ -194,7 +208,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:r:o:v:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:r:o:R:C:v:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -221,6 +235,16 @@ int ParseOptions(int argc, char *argv[])
 				outputFileName= std::string(optarg);	
 				break;	
 			}
+			case 'R':	
+			{
+				regionOutputFileName= std::string(optarg);	
+				break;	
+			}
+			case 'C':	
+			{
+				catalogOutputFileName= std::string(optarg);	
+				break;	
+			}
 			case 'v':	
 			{
 				verbosity= atoi(optarg);	
@@ -243,6 +267,59 @@ int ParseOptions(int argc, char *argv[])
 	#ifdef LOGGING_ENABLED
 		LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
 	#endif
+
+	//=======================
+	//== CHECK ARGS 
+	//=======================
+	//Check input file name
+	if(fileName==""){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty input file name given!");
+		#endif
+		return -1;
+	}
+
+	//Check input region file name
+	if(regionFileName==""){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty input region file name given!");
+		#endif
+		return -1;
+	}
+
+	//Check output file name
+	if(outputFileName==""){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty output file name given!");
+		#endif
+		return -1;
+	}
+
+	//Check region output file name
+	if(regionOutputFileName==""){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty region output file name given!");
+		#endif
+		return -1;
+	}
+
+	//Check catalog output file name
+	if(catalogOutputFileName==""){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty catalog output file name given!");
+		#endif
+		return -1;
+	}
+
+	//Set DS9 region component file name
+	regionComponentsOutputFileName= regionOutputFileName;
+	CodeUtils::ExtractFileNameFromPath(regionComponentsOutputFileName,true);
+	regionComponentsOutputFileName+= "_fitcomp.reg";
+
+	//Set catalog component file name
+	catalogComponentsOutputFileName= catalogOutputFileName;
+	CodeUtils::ExtractFileNameFromPath(catalogComponentsOutputFileName,true);
+	catalogComponentsOutputFileName+= "_fitcomp.dat";
 
 	return 0;
 
@@ -507,6 +584,98 @@ int ReadSourceData(std::string filename)
 }//close ReadSourceData()
 
 
+int SaveDS9Regions()
+{
+	//Save DS9 regions for islands
+	bool convertDS9RegionsToWCS= false;
+	int status= SourceExporter::WriteToDS9(regionOutputFileName,m_sources_sel,convertDS9RegionsToWCS);
+	if(status<0){
+		return -1;
+	}
+
+	//Save DS9 regions for components
+	status= SourceExporter::WriteComponentsToDS9(regionComponentsOutputFileName,m_sources_sel,convertDS9RegionsToWCS);
+	if(status<0){
+		return -1;
+	}
+
+	return 0;
+
+}//close SaveDS9Regions()
+
+int SaveSources()
+{
+	//Check output file is open
+	if(!outputFile || !outputFile->IsOpen()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Output ROOT file not allocated or open!");
+		#endif
+		return -1;
+	}
+	if(!outputTree){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Output ROOT source TTree not allocated!");
+		#endif
+		return -1;
+	}
+
+	//Loop over selected sources and write TTree to output file
+	for(size_t i=0;i<m_sources_sel.size();i++){
+		m_source= m_sources_sel[i];
+		outputTree->Fill();
+	}
+
+	outputTree->Write();
+
+	return 0;
+
+}//close SaveSources()
+
+
+int SaveCatalog()
+{
+	//Return if no sources are found
+	if(m_sources_sel.empty()){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No sources selected, no catalog file will be written!");
+		#endif
+		return 0;
+	}
+
+	//Retrieve source WCS
+	WCS* wcs= m_sources_sel[0]->GetWCS(ds9WCSType);
+	if(!wcs) {
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to compute WCS from sources!");
+		#endif
+	}	
+
+	//Saving island/blob catalog to ascii file
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Writing source catalog to file "<<catalogOutputFileName<<" ...");
+	#endif
+	bool dumpNestedSourceInfo= true;
+	int status= SourceExporter::WriteToAscii(catalogOutputFileName,m_sources_sel,dumpNestedSourceInfo,ds9WCSType,wcs);
+	if(status<0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Writing source catalog to file "<<catalogOutputFileName<<" failed!");
+		#endif
+	}
+	
+	//Saving source fitted components to ascii file
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Writing source catalog to file "<<catalogComponentsOutputFileName<<" ...");
+	#endif
+	status= SourceExporter::WriteComponentsToAscii(catalogComponentsOutputFileName,m_sources_sel,dumpNestedSourceInfo,ds9WCSType,wcs);
+	if(status<0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Writing source fitted component catalog to file "<<catalogComponentsOutputFileName<<" failed!");
+		#endif
+	}
+
+	return 0;
+
+}//close SaveCatalog()
 
 void Save()
 {
@@ -518,20 +687,28 @@ void Save()
 		CloneObjectsInFile({"SourceInfo"});
 
 		//Write selected source TTree
-		if(outputTree){
-			for(size_t i=0;i<m_sources_sel.size();i++){
-				m_source= m_sources_sel[i];
-				outputTree->Fill();
-			}
-
-			outputTree->Write();
-		}//close if
+		SaveSources();
 
 		//Close file
 		outputFile->Close();
+
 	}//close if
 
+	//Save DS9 regions with selected sources	
+	#ifdef LOGGING_ENABLED
+		ERROR_LOG("Saving DS9 regions with selected sources...");
+	#endif
+	SaveDS9Regions();
+
+	//Save ascii catalog with selected sources
+	#ifdef LOGGING_ENABLED
+		ERROR_LOG("Saving ascii catalog with selected sources...");
+	#endif
+	SaveCatalog();
+
 }//close Save()
+
+
 
 std::string GetStringLogLevel(int verbosity)
 {

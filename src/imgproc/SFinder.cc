@@ -4081,7 +4081,7 @@ int SFinder::SaveCatalogFile()
 		status= SourceExporter::WriteComponentsToAscii(m_catalogComponentsOutFileName,m_SourceCollection,dumpNestedSourceInfo,m_ds9WCSType,wcs);
 		if(status<0){
 			#ifdef LOGGING_ENABLED
-				WARN_LOG("Writing source fitted component catalog to file "<<m_catalogOutFileName<<" failed!");
+				WARN_LOG("Writing source fitted component catalog to file "<<m_catalogComponentsOutFileName<<" failed!");
 			#endif
 		}
 	}

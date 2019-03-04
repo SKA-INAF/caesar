@@ -719,7 +719,6 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 //=================================================
 //==        DS9 EXPORTER
 //=================================================
-//int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS,int ds9WCSType,int ds9RegionFormat,WorldCoor* wcs)
 int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS,int ds9WCSType,int ds9RegionFormat,WCS* wcs)
 {
 	//## Open output file
@@ -786,7 +785,6 @@ int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& 
 }//close WriteToDS9()
 
 
-//int SourceExporter::WriteComponentsToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS,int ds9WCSType,WorldCoor* wcs)
 int SourceExporter::WriteComponentsToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS,int ds9WCSType,WCS* wcs)
 {
 	//## Open file
