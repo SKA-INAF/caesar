@@ -181,6 +181,11 @@ class Contour : public TObject {
 		TVector2* FindPoint(double x,double y,double tol=0);
 
 		/**
+		* \brief Check if point is inside contour
+		*/
+		bool IsPointInsideContour(double x,double y);
+
+		/**
 		* \brief Get contour point x & y
 		*/
 		int GetPointXY(double& x, double& y,int i){

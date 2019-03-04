@@ -977,4 +977,12 @@ TVector2* Contour::FindPoint(double x,double y,double tol)
 
 }//close FindPoint()
 
+
+bool Contour::IsPointInsideContour(double x,double y)
+{
+	return MathUtils::IsPointInsidePolygon(x,y,m_Points);
+
+}//close IsPointInsideContour()
+
+
 }//close namespace

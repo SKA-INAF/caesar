@@ -1198,7 +1198,7 @@ class SourceComponentPars : public TObject {
 		//- Source component flag
 		int m_flag;
 
-	ClassDef(SourceComponentPars,3)
+	ClassDef(SourceComponentPars,4)
 
 };//close SourceComponentPars()
 
@@ -2240,7 +2240,7 @@ class SourceFitPars : public TObject {
 
 		int fitQuality;
 
-	ClassDef(SourceFitPars,3)
+	ClassDef(SourceFitPars,4)
 
 };
 
