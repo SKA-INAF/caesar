@@ -934,7 +934,8 @@ Contour* Blob::GetWCSContour(int index,WCS* wcs,int coordSystem,int pixOffset,bo
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to compute WCS contour!");
 		#endif
-		if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+		//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+		if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 		return nullptr;	
 	}
 	
@@ -946,7 +947,8 @@ Contour* Blob::GetWCSContour(int index,WCS* wcs,int coordSystem,int pixOffset,bo
 	}
 
 	//Delete WCS
-	if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+	//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	return contour_wcs;
 		
@@ -1038,7 +1040,8 @@ std::vector<Contour*> Blob::GetWCSContours(WCS* wcs,int coordSystem,int pixOffse
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to convert contours to WCS!");
 		#endif
-		if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+		//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+		if(deleteWCS) WCSUtils::DeleteWCS(&wcs);		
 		return contours_wcs;
 	}
 
@@ -1055,7 +1058,8 @@ std::vector<Contour*> Blob::GetWCSContours(WCS* wcs,int coordSystem,int pixOffse
 	}
 
 	//Delete WCS
-	if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+	//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	return contours_wcs;
 

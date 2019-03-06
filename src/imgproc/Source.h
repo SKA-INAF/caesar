@@ -593,7 +593,6 @@ class Source : public Blob {
 		/**
 		* \brief Return source position in WCS coordinates
 		*/
-		//int GetWCSPos(double& xwcs,double& ywcs,WorldCoor* wcs=0,int coordSystem=eJ2000)
 		int GetWCSPos(double& xwcs,double& ywcs,WCS* wcs=0,int coordSystem=eJ2000)
 		{
 			return GetWCSCoords(xwcs,ywcs,X0,Y0,wcs,coordSystem);
@@ -602,7 +601,6 @@ class Source : public Blob {
 		/**
 		* \brief Return signal-weighted source position in WCS coordinates
 		*/
-		//int GetWCSWeightedPos(double& xwcs,double& ywcs,WorldCoor* wcs=0,int coordSystem=eJ2000)
 		int GetWCSWeightedPos(double& xwcs,double& ywcs,WCS* wcs=0,int coordSystem=eJ2000)
 		{
 			return GetWCSCoords(xwcs,ywcs,m_Sx,m_Sy,wcs,coordSystem);
@@ -611,7 +609,6 @@ class Source : public Blob {
 		/**
 		* \brief Return bounding box in WCS coordinates
 		*/
-		//int GetWCSSourceRange(double& xmin_wcs,double& xmax_wcs,double& ymin_wcs,double& ymax_wcs,WorldCoor* wcs=0,int coordSystem=eJ2000)
 		int GetWCSSourceRange(double& xmin_wcs,double& xmax_wcs,double& ymin_wcs,double& ymax_wcs,WCS* wcs=0,int coordSystem=eJ2000)
 		{
 			xmin_wcs= -999;

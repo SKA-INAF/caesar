@@ -174,8 +174,8 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 	}//end loop sources
 
 	//Delete WCS
-	//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
-	if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+	//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	//Close file
 	fclose(fout);
@@ -325,15 +325,14 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 		
 
 	//Delete WCS
-	//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
-	if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+	//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	return sourceStrList;
 
 }//close SourceToAscii()
 
 
-//int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WorldCoor* wcs)
 int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
 {
 	//Open output file
@@ -434,8 +433,8 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 	}//end loop sources
 
 	//Delete WCS
-	//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
-	if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+	//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	//Close file
 	fclose(fout);
@@ -709,8 +708,8 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 	
 	
 	//Delete WCS
-	//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
-	if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+	//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	return fitComponentStrList;
 

@@ -1375,8 +1375,8 @@ int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool
 					ERROR_LOG("Failed to convert fit ellipse no. "<<i+1<<" to WCS!");
 				#endif
 				CodeUtils::DeletePtrCollection<TEllipse>(fitEllipses);
-				//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
-				if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);	
+				//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);	
+				if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 				return -1;
 			}
 			fitEllipses_wcs.push_back(fitEllipse_wcs);
@@ -1387,8 +1387,8 @@ int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool
 		fitEllipses.insert(fitEllipses.end(),fitEllipses_wcs.begin(),fitEllipses_wcs.end());
 	
 		//Delete wcs (if allocated)
-		//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
-		if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+		//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+		if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	}//close if convert to WCS
 
@@ -1695,8 +1695,8 @@ std::string Source::GetIAUName(bool useWeightedPos,WCS* wcs,int coordSystem)
 			WARN_LOG("Failed to compute WCS source pos in string format!");
 		#endif
 
-		//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
-		if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+		//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+		if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 		return iau;
 	}
 
@@ -1707,20 +1707,19 @@ std::string Source::GetIAUName(bool useWeightedPos,WCS* wcs,int coordSystem)
 		#endif
 
 		iau= "";
-		//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);	
-		if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+		//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+		if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 		return iau;
 	}
 
 	//Delete WCS
-	//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
-	if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+	//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	return iau;
 
 }//close GetIAUName()
 
-//int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WorldCoor* wcs,int coordSystem)
 int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WCS* wcs,int coordSystem)
 {
 	//Init pos
@@ -1736,7 +1735,7 @@ int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WCS* wcs,in
 			#endif
 			return -1;
 		}
-		//wcs= m_imgMetaData->GetWorldCoord(coordSystem);
+		
 		wcs= m_imgMetaData->GetWCS(coordSystem);
 		if(!wcs){
 			#ifdef LOGGING_ENABLED
@@ -1757,12 +1756,12 @@ int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WCS* wcs,in
 	}
 
 	//Delete WCS
-	//if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
-	if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+	//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
+	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	return 0;
 
-}//close GetWCSPos()
+}//close GetWCSCoords()
 
 int Source::GetSpectralAxisInfo(double& val,double& dval,std::string& units)
 {
