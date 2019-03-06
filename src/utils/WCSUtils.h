@@ -60,7 +60,6 @@ class WCS;
 //==   WCS UTILS
 //========================================
 class WCSUtils : public TObject {
-//class WCSUtils {
 
   public:
 		
@@ -90,7 +89,10 @@ class WCSUtils : public TObject {
 		*/
 		static int PixelToWCSStrCoords(std::string& wcs_str,WCS* wcs,double ix,double iy,int max_str_length=4096);
 
-
+		/**
+		* \brief Delete WCS class
+		*/
+		static void DeleteWCS(WCS** wcs);
 
 	public:
 		/**
@@ -1128,7 +1130,11 @@ class WCS : public TObject
 {
 	public:
 		WCS(){};
-		virtual ~WCS(){};
+		virtual ~WCS()
+		{
+			
+		};//close destructor
+
 
 	private:
 		//Defines

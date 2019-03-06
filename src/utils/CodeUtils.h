@@ -33,6 +33,8 @@
 	#include <Logger.h>
 #endif
 
+#include <WCSUtils.h>
+
 #include <TObject.h>
 
 #include <json/json.h>
@@ -326,7 +328,6 @@ class CodeUtils : public TObject {
 				data= 0;
 			}
 		}//close DeletePtr()
-
 		
 		/**
 		* \brief Order vectors and get ordering index

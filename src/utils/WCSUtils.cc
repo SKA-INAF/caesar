@@ -74,6 +74,46 @@ WCSUtils::~WCSUtils()
 
 }
 
+void WCSUtils::DeleteWCS(WCS** wcs)
+{
+	//Free WCS structure if allocated but not filled
+	if (nowcs (*wcs)) {
+		if (*wcs) {
+			cout<<"Freeing WCS structure (allocated but not filled)..."<<endl;
+			free (*wcs);
+			*wcs= NULL;//ADDED
+		}
+		return;
+	}
+
+  // Free WCS on which this WCS depends
+  if ( (*wcs)->wcs) {
+		cout<<"Freeing WCS structure on which this WCS depends..."<<endl;
+		DeleteWCS( &((*wcs)->wcs) );
+		//wcsfree (wcs->wcs);
+		//wcs->wcs = NULL;
+	}
+
+  freewcscom (*wcs);
+  if ( (*wcs)->wcsname != NULL)
+		free ( (*wcs)->wcsname);
+  if ( (*wcs)->lin.imgpix != NULL)
+		free ( (*wcs)->lin.imgpix);
+  if ( (*wcs)->lin.piximg != NULL)
+		free ( (*wcs)->lin.piximg);
+  if ( (*wcs)->inv_x != NULL)
+		poly_end ( (*wcs)->inv_x);
+  if ( (*wcs)->inv_y != NULL)
+		poly_end ( (*wcs)->inv_y);
+
+	cout<<"Freeing WCS structure ..."<<endl;
+  free (*wcs);
+
+	*wcs= NULL;//ADDED
+    
+	return;
+
+}//close DeleteWCS()
 
 WCS* WCSUtils::ComputeWCSFromImgMetaData(ImgMetaData* metadata,int coordSystem)
 {
@@ -1904,12 +1944,17 @@ void WCSUtils::wcsfree(WCS* wcs)
 {
 	//Free WCS structure if allocated but not filled
 	if (nowcs (wcs)) {
-		if (wcs) free (wcs);
+		if (wcs) {
+			cout<<"Freeing WCS structure (allocated but not filled)..."<<endl;
+			free (wcs);
+			//wcs= NULL;//ADDED
+		}
 		return;
 	}
 
   // Free WCS on which this WCS depends
   if (wcs->wcs) {
+		cout<<"Freeing WCS structure on which this WCS depends..."<<endl;
 		wcsfree (wcs->wcs);
 		wcs->wcs = NULL;
 	}
@@ -1925,7 +1970,11 @@ void WCSUtils::wcsfree(WCS* wcs)
 		poly_end (wcs->inv_x);
   if (wcs->inv_y != NULL)
 		poly_end (wcs->inv_y);
+
+	cout<<"Freeing WCS structure ..."<<endl;
   free (wcs);
+
+	//wcs= NULL;//ADDED
     
 	return;
 

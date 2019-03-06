@@ -196,10 +196,11 @@ DS9PolygonRegion* DS9RegionParser::ParsePolygonRegion(const std::string& data_st
 	#endif
 
 	//Check if data are not given in real digit format (e.g. sexagesimal not supported)
-	bool hasPlusSigns= CodeUtils::HasPatternInString(parsed_data,"+");
-	bool hasMinusSigns= CodeUtils::HasPatternInString(parsed_data,"-");
+	//bool hasPlusSigns= CodeUtils::HasPatternInString(parsed_data,"+");
+	//bool hasMinusSigns= CodeUtils::HasPatternInString(parsed_data,"-");
 	bool hasColon= CodeUtils::HasPatternInString(parsed_data,":");
-	if(hasPlusSigns || hasMinusSigns || hasColon){
+	//if(hasPlusSigns || hasMinusSigns || hasColon){
+	if(hasColon){
 		#ifdef LOGGING_ENABLED		
 			ERROR_LOG("Sexagesimal data format not supported, use degrees!");
 		#endif
@@ -275,10 +276,11 @@ DS9BoxRegion* DS9RegionParser::ParseBoxRegion(const std::string& data_str)
 	#endif
 
 	//Check if data are not given in real digit format (e.g. sexagesimal not supported)
-	bool hasPlusSigns= CodeUtils::HasPatternInString(parsed_data,"+");
-	bool hasMinusSigns= CodeUtils::HasPatternInString(parsed_data,"-");
+	//bool hasPlusSigns= CodeUtils::HasPatternInString(parsed_data,"+");
+	//bool hasMinusSigns= CodeUtils::HasPatternInString(parsed_data,"-");
 	bool hasColon= CodeUtils::HasPatternInString(parsed_data,":");
-	if(hasPlusSigns || hasMinusSigns || hasColon){
+	//if(hasPlusSigns || hasMinusSigns || hasColon){
+	if(hasColon){
 		#ifdef LOGGING_ENABLED		
 			ERROR_LOG("Sexagesimal data format not supported, use degrees!");
 		#endif
@@ -361,10 +363,11 @@ DS9CircleRegion* DS9RegionParser::ParseCircleRegion(const std::string& data_str)
 	#endif
 
 	//Check if data are not given in real digit format (e.g. sexagesimal not supported)
-	bool hasPlusSigns= CodeUtils::HasPatternInString(parsed_data,"+");
-	bool hasMinusSigns= CodeUtils::HasPatternInString(parsed_data,"-");
+	//bool hasPlusSigns= CodeUtils::HasPatternInString(parsed_data,"+");
+	//bool hasMinusSigns= CodeUtils::HasPatternInString(parsed_data,"-");
 	bool hasColon= CodeUtils::HasPatternInString(parsed_data,":");
-	if(hasPlusSigns || hasMinusSigns || hasColon){
+	//if(hasPlusSigns || hasMinusSigns || hasColon){
+	if(hasColon){
 		#ifdef LOGGING_ENABLED		
 			ERROR_LOG("Sexagesimal data format not supported, use degrees!");
 		#endif

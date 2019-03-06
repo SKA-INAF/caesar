@@ -991,7 +991,7 @@ bool MathUtils::IsPointInsidePolygon(double x,double y,const std::vector<TVector
   double minY= polygon[0].Y();
   double maxY= polygon[0].Y();
   for(size_t i=1;i<polygon.size();i++){
-  	TVector2 q = polygon[i];
+  	TVector2 q (polygon[i].X(),polygon[i].Y());
     minX= std::min(q.X(), minX);
     maxX= std::max(q.X(), maxX);
     minY= std::min(q.Y(), minY);
