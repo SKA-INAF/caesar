@@ -384,9 +384,13 @@ int SelectSources()
 	else{
 
 		//Init WCS
-		WCS* wcs= 0;
+		WCS* wcs= nullptr;
 
 		for(size_t i=0;i<m_sources.size();i++){
+			#ifdef LOGGING_ENABLED
+				if(i%1000==0) INFO_LOG("Processing #"<<i+1<<"/"<<m_sources.size()<<" sources ...");
+			#endif
+
 			//Get source centroid
 			Source* source= m_sources[i];
 			if(!source->HasStats()){
@@ -396,6 +400,9 @@ int SelectSources()
 
 			//Compute wcs for this source collection if not done
 			if(!wcs){
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Computing WCS from source no. "<<i+1<<" ...");
+				#endif
 				wcs= source->GetWCS(wcsType);
 				if(!wcs){
 					#ifdef LOGGING_ENABLED
@@ -427,7 +434,8 @@ int SelectSources()
 		}//end loop sources
 
 		//Delete WCS for this collection
-		if(wcs) CodeUtils::DeletePtr<WCS>(wcs);
+		//if(wcs) CodeUtils::DeletePtr<WCS>(wcs);
+		if(wcs) WCSUtils::DeleteWCS(&wcs);
 
 	}//close else
 

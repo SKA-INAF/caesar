@@ -1474,14 +1474,13 @@ int ReadSourceData(std::string filename,int catalogIndex)
 	#endif
 
 	//Delete WCS for this collection
-	//CodeUtils::DeletePtr<WorldCoor>(wcs);
-	CodeUtils::DeletePtr<WCS>(wcs);
+	//CodeUtils::DeletePtr<WCS>(wcs);
+	WCSUtils::DeleteWCS(&wcs);
 
 	return 0;
 
 }//close ReadSourceData()
 
-//int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogIndex,int sourceIndex,int nestedSourceIndex,WorldCoor* wcs,int coordSystem)
 int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogIndex,int sourceIndex,int nestedSourceIndex,WCS* wcs,int coordSystem)
 {
 	//####  METHOD ##############################
