@@ -384,6 +384,10 @@ if(BUILD_APPS)
 	add_executable(SourceRegionSelectorExe ${Task_SourceRegionSelector_SRCS})
 	target_link_libraries(SourceRegionSelectorExe Caesar ${LINKED_LIBS})
 	set_target_properties(SourceRegionSelectorExe PROPERTIES OUTPUT_NAME SourceRegionSelector)
+
+	add_executable(SourceRegionMatchFinderExe ${Task_SourceRegionMatchFinder_SRCS})
+	target_link_libraries(SourceRegionMatchFinderExe Caesar ${LINKED_LIBS})
+	set_target_properties(SourceRegionMatchFinderExe PROPERTIES OUTPUT_NAME SourceRegionMatchFinder)
 	
 	if(ENABLE_MPI AND MPI_FOUND)
 		include_directories(${MPI_CXX_INCLUDE_PATH})
@@ -578,6 +582,7 @@ if(BUILD_APPS)
 		SkyModelConvolver
 		SourceMatchFinder
 		SourceRegionSelector
+		SourceRegionMatchFinder
 	)
 	if(ENABLE_MPI)
 		list(APPEND EXE_FILES FindSourceMPI)
