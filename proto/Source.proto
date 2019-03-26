@@ -302,8 +302,8 @@ message SourceComponentPars {
 	optional float m_pa_deconv_wcs= 37;
 
 	optional int32 m_flag= 38;
-
 	optional float m_pixSize= 39;
+	optional int32 m_type= 40;
 
 }//close SourceComponentPars()
 
