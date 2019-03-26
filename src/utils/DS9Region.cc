@@ -38,7 +38,10 @@
 
 //ROOT headers
 #include <TMath.h>
+#include <TEllipse.h>
 
+//OpenCV headers
+#include <opencv2/core/core.hpp>
 
 #include <iomanip>
 #include <iostream>
@@ -56,6 +59,8 @@ using namespace std;
 
 ClassImp(Caesar::DS9Region)
 ClassImp(Caesar::DS9PolygonRegion)
+ClassImp(Caesar::DS9BoxRegion)
+ClassImp(Caesar::DS9CircleRegion)
 
 namespace Caesar {
 
@@ -116,6 +121,79 @@ bool DS9PolygonRegion::IsPointInsideRegion(TVector2 p)
 
 }//close IsPointInsideRegion()
 
+
+TEllipse* DS9PolygonRegion::GetEllipse()
+{
+	//Check if polygon has points
+	if(points.empty()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No points found in polygon, returning nullptr!");
+		#endif
+		return nullptr;
+	}
+
+	//Create OpenCV point collection
+	std::vector<cv::Point2f> points_cv;
+	for(size_t i=0;i<points.size();i++){
+		double x= points[i].X();
+		double y= points[i].Y();
+		points_cv.push_back( cv::Point2f(x,y) );	
+	}
+
+	//Compute rotated bounding box
+	cv::RotatedRect MinBoundingRect= cv::minAreaRect(points);
+
+	double MinBoundingRect_height= MinBoundingRect.size.height;
+	double MinBoundingRect_width= MinBoundingRect.size.width;
+	TVector2 BoundingBoxCenter= TVector2(MinBoundingRect.center.x,MinBoundingRect.center.y);
+	double BoundingBoxMaj= std::max(MinBoundingRect_height,MinBoundingRect_width);
+	double BoundingBoxMin= std::min(MinBoundingRect_height,MinBoundingRect_width);
+	double BoundingBoxAngle= MinBoundingRect.angle;//counterclockwise in degree 
+	if(MinBoundingRect.size.width < MinBoundingRect.size.height){
+    BoundingBoxAngle+= 180;
+  }
+	else{
+		BoundingBoxAngle+= 90;  
+	}
+
+	//Return the ellipse
+	TEllipse* ellipse= new TEllipse;
+	ellipse->SetX1(BoundingBoxCenter.X());
+	ellipse->SetY1(BoundingBoxCenter.Y());
+	ellipse->SetTheta(BoundingBoxAngle);
+	ellipse->SetR1(BoundingBoxMaj/2.);
+	ellipse->SetR2(BoundingBoxMin/2.);
+
+	return ellipse;
+
+}//close GetEllipse()
+
+Contour* DS9PolygonRegion::GetContour(bool computePars)
+{
+	//Check if polygon has points
+	if(points.empty()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No points found in polygon, returning nullptr!");
+		#endif
+		return nullptr;
+	}
+	
+	//Create and fill contour
+	Contour* contour= new Contour;
+	for(size_t i=0;i<points.size();i++){
+		contour->AddPoint(points[i]);
+	}
+
+	//Compute contour parameters
+	if(computePars && contour->ComputeParameters()<0){	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("One/more failures occurred while computing contour parameters!");
+		#endif
+	}
+
+	return contour;
+
+}//close GetContour()
 
 //================================
 //==    DS9 BOX REGION CLASS
@@ -218,7 +296,57 @@ bool DS9BoxRegion::IsPointInsideRegion(TVector2 p)
 
 }//close IsPointInsideRegion()
 
+TEllipse* DS9BoxRegion::GetEllipse()
+{
+	//Compute ellipse bmaj/bmin
+	double bmaj= std::max(height,width);
+	double bmin= std::min(height,width);
+	double angle= theta;
+	if(width < height){
+    angle+= 180;
+  }
+	else{
+		angle+= 90;  
+	}
 
+	//Return the ellipse
+	TEllipse* ellipse= new TEllipse;
+	ellipse->SetX1(cx);
+	ellipse->SetY1(cy);
+	ellipse->SetTheta(angle);
+	ellipse->SetR1(bmaj/2.);
+	ellipse->SetR2(bmin/2.);
+
+	return ellipse;
+
+}//close GetEllipse()
+
+Contour* DS9BoxRegion::GetContour(bool computePars)
+{
+	//Check if polygon has points
+	if(points.empty()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No points found in box (check if computed), returning nullptr!");
+		#endif
+		return nullptr;
+	}
+	
+	//Create and fill contour
+	Contour* contour= new Contour;
+	for(size_t i=0;i<points.size();i++){
+		contour->AddPoint(points[i]);
+	}
+
+	//Compute contour parameters
+	if(computePars && contour->ComputeParameters()<0){	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("One/more failures occurred while computing contour parameters!");
+		#endif
+	}
+
+	return contour;
+	
+}//close GetContour()
 
 //================================
 //==    DS9 CIRCLE REGION CLASS
@@ -259,5 +387,53 @@ bool DS9CircleRegion::IsPointInsideRegion(TVector2 p)
 	return this->IsPointInsideRegion(p.X(),p.Y());
 
 }//close IsPointInsideRegion()
+
+TEllipse* DS9CircleRegion::GetEllipse()
+{
+	//Compute ellipse bmaj/bmin
+	double bmaj= 2*r;
+	double bmin= 2*r;
+	double angle= 0;
+	
+	//Return the ellipse
+	TEllipse* ellipse= new TEllipse;
+	ellipse->SetX1(cx);
+	ellipse->SetY1(cy);
+	ellipse->SetTheta(angle);
+	ellipse->SetR1(bmaj/2.);
+	ellipse->SetR2(bmin/2.);
+
+	return ellipse;
+
+}//close GetEllipse()
+
+Contour* DS9CircleRegion::GetContour(bool computePars)
+{
+	//Create contour
+	Contour* contour= new Contour;
+
+	//Fill contour
+	double theta= 0;
+	double theta_step= 2;
+	double theta_max= 360;
+	while(true){
+		if(theta>=theta_max) break;	
+		double theta_rad= theta*TMath::DegToRad();
+		double x= cx + r*cos(theta_rad);
+		double y= cy + r*sin(theta_rad);
+		contour->AddPoint(TVector2(x,y));
+		theta+= theta_step;		
+	}//end loop 
+	
+	//Compute contour parameters
+	if(computePars && contour->ComputeParameters()<0){	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("One/more failures occurred while computing contour parameters!");
+		#endif
+	}
+
+	return contour;
+
+}//close GetContour()
 
 }//close namespace

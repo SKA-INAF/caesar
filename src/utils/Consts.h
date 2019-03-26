@@ -136,7 +136,20 @@ inline std::string GetSourceFlagStr(int sourceFlag)
 	return flagStr;
 }
 
-
+/**
+* \brief Convert source type enumeration to string
+*/
+inline std::string GetSourceTypeStr(int sourceType)
+{
+	std::string typeStr= "";
+	if(sourceType==eUnknownType) typeStr= "unknown";
+	else if(sourceType==eCompact) typeStr= "compact";
+	else if(sourceType==ePointLike) typeStr= "point-like";
+	else if(sourceType==eExtended) typeStr= "extended";
+	else if(sourceType==eCompactPlusExtended) typeStr= "compact-extended";
+	else typeStr= "unknown";
+	return typeStr;
+}
 
 /**
 * \brief Simulated source type enumeration

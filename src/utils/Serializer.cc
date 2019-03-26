@@ -185,7 +185,8 @@ int Serializer::EncodeSourceComponentParsToProtobuf(CaesarPB::SourceComponentPar
 		sourceCompPars_pb->set_m_pa_deconv_wcs(pa_deconv_wcs);
 
 		sourceCompPars_pb->set_m_flag(sourceCompPars.GetFlag());
-
+		sourceCompPars_pb->set_m_type(sourceCompPars.GetType());
+	
 		sourceCompPars_pb->set_m_pixsize(sourceCompPars.GetImagePixSize());
 
 
@@ -1045,6 +1046,7 @@ int Serializer::EncodeProtobufToSourceComponentPars(SourceComponentPars& sourceC
 			sourceComponentPars.SetWCSDeconvolvedEllipsePars(m_bmaj_deconv_wcs,m_bmin_deconv_wcs,m_pa_deconv_wcs);
 			
 			sourceComponentPars.SetFlag(sourceComponentPars_pb.m_flag());
+			sourceComponentPars.SetType(sourceComponentPars_pb.m_type());
 
 			sourceComponentPars.SetImagePixSize(sourceComponentPars_pb.m_pixsize());
 

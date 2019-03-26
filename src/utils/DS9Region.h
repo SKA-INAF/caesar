@@ -39,6 +39,7 @@
 #include <TObject.h>
 #include <TMath.h>
 #include <TVector2.h>
+#include <TEllipse.h>
 
 //C++ headers
 #include <cstdlib>
@@ -57,6 +58,8 @@
 #include <ctime>
 
 namespace Caesar {
+
+class Contour;
 
 //===========================
 //==    DS9REGION CLASS
@@ -88,18 +91,6 @@ class DS9Region : public TObject
 			ePOLYGON_SHAPE=3
 		};
 
-		/**
-		* \brief Region coordinate system type
-		*/
-		/*
-		enum CSType {
-			eUNKNOWN_CS=0,
-			eIMG_CS=1,
-			eFK5_CS=2,
-			eFK4_CS=3,
-			eGAL_CS=4
-		};
-		*/
 
 	public:
 		/**
@@ -115,11 +106,20 @@ class DS9Region : public TObject
 		* \brief Is point inside region
 		*/
 		virtual bool IsPointInsideRegion(TVector2 p){return false;}
+		/**
+		* \brief Compute enclosed ellipse from region
+		*/
+		virtual TEllipse* GetEllipse(){return nullptr;}
+		/**
+		* \brief Compute contour from region
+		*/
+		virtual Contour* GetContour(bool computePars=true){return nullptr;}
 		
 
 	public:
 		int shapeType;
 		int csType;
+		
 
 	ClassDef(DS9Region,1)
 		
@@ -153,6 +153,14 @@ class DS9PolygonRegion : public DS9Region
 		* \brief Is point inside region
 		*/
 		virtual bool IsPointInsideRegion(TVector2 p);
+		/**
+		* \brief Compute enclosed ellipse from region
+		*/
+		virtual TEllipse* GetEllipse();
+		/**
+		* \brief Compute contour from region
+		*/
+		virtual Contour* GetContour(bool computePars=true);
 
 	public:
 
@@ -192,9 +200,18 @@ class DS9BoxRegion : public DS9Region
 		*/
 		virtual bool IsPointInsideRegion(TVector2 p);
 		/**
+		* \brief Compute enclosed ellipse from region
+		*/
+		virtual TEllipse* GetEllipse();
+		/**
+		* \brief Compute contour from region
+		*/
+		virtual Contour* GetContour(bool computePars=true);
+		/**
 		* \brief Compute box coordinates
 		*/
 		void ComputeBoxCoords();
+		
 
 	public:
 	
@@ -242,6 +259,14 @@ class DS9CircleRegion : public DS9Region
 		* \brief Is point inside region
 		*/
 		virtual bool IsPointInsideRegion(TVector2 p);
+		/**
+		* \brief Compute enclosed ellipse from region
+		*/
+		virtual TEllipse* GetEllipse();
+		/**
+		* \brief Compute contour from region
+		*/
+		virtual Contour* GetContour(bool computePars=true);
 
 	public:
 

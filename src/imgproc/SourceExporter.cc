@@ -185,7 +185,6 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 }//close WriteToAscii()
 
 
-//const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool dumpNestedSourceInfo,int wcsType,WorldCoor* wcs)
 const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
 {
 	//Init string list
@@ -396,6 +395,7 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 	ss<<"# NDF - Fit number of degrees of freedom.\n";
 	ss<<"# FitQuality - Fit quality flag (eBadFit=0,eLQFit=1,eMQFit=2,eHQFit=3)\n";
 	ss<<"# Flag- Fitted component flag (eReal=1,eCandidate=2,eFake=3)\n";
+	ss<<"# Type- Fitted component type (eUnknown=0,eCompact=1,ePoint-Like=2,eExtended=3)\n";
 	ss<<"# ---------------\n";
 	ss<<"#\n";
 	fprintf(fout,"%s",ss.str().c_str());
@@ -444,7 +444,6 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 }//close WriteComponentsToAscii()
 
 
-//const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* source,bool dumpNestedSourceInfo,int wcsType,WorldCoor* wcs)
 const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* source,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
 {
 	//Init vector
@@ -626,6 +625,14 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 					WARN_LOG("Failed to retrieve flag for component no. "<<k+1<<"!");
 				#endif
 			}
+
+			//Get component type
+			int componentType= -1;
+			if(fitPars.GetComponentType(componentType,k)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve type for component no. "<<k+1<<"!");
+				#endif
+			}
 	
 			//## Fill source component
 			std::stringstream ss;
@@ -684,7 +691,7 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			ss<<fitPars.GetChi2()<<"\t"<<fitPars.GetNDF()<<"\t";
 
 			//Source component flags
-			ss<<fitPars.GetFitQuality()<<"\t"<<componentFlag;
+			ss<<fitPars.GetFitQuality()<<"\t"<<componentFlag<<"\t"<<componentType;
 
 			//Store component string
 			fitComponentStrList.push_back(ss.str());
@@ -1066,11 +1073,16 @@ const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,
 			fitPars.GetComponentFlag(fitComponentFlag,i);
 			std::string fitComponentFlagStr= GetSourceFlagStr(fitComponentFlag);
 
+			//Get fit component type
+			int fitComponentType= -1;
+			fitPars.GetComponentType(fitComponentType,i);
+			std::string fitComponentTypeStr= GetSourceTypeStr(fitComponentType);
+
 			//Get encoded string region
 			std::string regionText(Form("%s_fitcomp%d",source->GetName(),(int)(i+1)));
 			std::string regionColor= "red";
 			
-			std::vector<std::string> regionTags {"point-like","fit-component",fitComponentFlagStr,fitQualityFlagStr};
+			std::vector<std::string> regionTags {"point-like","fit-component",fitComponentFlagStr,fitComponentTypeStr,fitQualityFlagStr};
 			std::string region= AstroUtils::EllipseToDS9Region(ellipses[i],regionText,regionColor,regionTags,useImageCoords);
 			sstream<<region;
 

@@ -676,6 +676,19 @@ class CodeUtils : public TObject {
 			return 0;
 		}//close StripBlankSpaces()
 
+		
+
+		/**
+		* \brief Compare string case insensitive 
+		*/
+		static bool AreEqualStringNoCase(std::string str1,std::string str2)
+		{
+			std::string s1= str1;
+			std::string s2= str2;
+			bool areEquals= ( strcasecmp(s1.c_str(),s2.c_str())==0 );
+			return areEquals;
+		}
+
 		/**
 		* \brief Extract filename from path
 		*/

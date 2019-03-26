@@ -285,6 +285,7 @@ class SourceComponentPars : public TObject {
 
 			//Init other vars
 			m_flag= eCandidate;
+			m_type= ePointLike;
 
 		}//close contructor
 
@@ -346,6 +347,17 @@ class SourceComponentPars : public TObject {
 		\brief Set source component flag
  		*/
 		void SetFlag(int flag){m_flag=flag;}
+
+		/** 
+		\brief Get source component type
+ 		*/	
+		int GetType(){return m_type;}
+
+		/** 
+		\brief Set source component type
+ 		*/
+		void SetType(int type){m_type=type;}
+
 
 		/** 
 		\brief Get fit ellipse
@@ -1198,7 +1210,10 @@ class SourceComponentPars : public TObject {
 		//- Source component flag
 		int m_flag;
 
-	ClassDef(SourceComponentPars,4)
+		//- Source component type
+		int m_type;
+
+	ClassDef(SourceComponentPars,5)
 
 };//close SourceComponentPars()
 
@@ -2151,6 +2166,45 @@ class SourceFitPars : public TObject {
 	
 			//Retrieve flag
 			flag= pars[componentId].GetFlag();
+
+			return 0;
+		}
+
+		/**
+		* \brief Set component flag
+		*/
+		int SetComponentType(int componentId,int type)
+		{		
+			//Check component id	
+			if(componentId<0 || componentId>=nComponents){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
+				return 0;
+			}
+
+			//Get component fit ellipse pars
+			pars[componentId].SetType(type);
+
+			return 0;
+		}
+
+		/**
+		* \brief Get component type
+		*/
+		int GetComponentType(int& type,int componentId)
+		{
+			//Check component id
+			type= -1;
+			if(componentId<0 || componentId>=nComponents){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
+				return -1;
+			}
+	
+			//Retrieve flag
+			type= pars[componentId].GetType();
 
 			return 0;
 		}

@@ -492,7 +492,7 @@ class Source : public Blob {
 		*/
 		void SetFitPars(SourceFitPars& fitPars){
 			m_fitPars= fitPars;
-			m_HasTrueInfo= true;
+			m_HasFitInfo= true;
 		}
 
 		/**
