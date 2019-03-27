@@ -1291,10 +1291,13 @@ bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPar
 		double posDist= AstroUtils::GetWCSPointDist_Haversine(Xc_1,Yc_1,Xc_2,Yc_2);
 		if(fabs(posDist)>posThr) {
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Ellipse pos diff above thr ("<<posDist<<">"<<posThr<<", pos1("<<Xc_1<<","<<Yc_1<<"), pos2("<<Xc_2<<","<<Yc_2<<"))");
+				DEBUG_LOG("NO POS MATCH: Ellipse pos diff above thr ("<<posDist<<">"<<posThr<<", pos1("<<Xc_1<<","<<Yc_1<<"), pos2("<<Xc_2<<","<<Yc_2<<"))");
 			#endif
 			return false;
 		}
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("POS MATCH: Ellipse pos diff below thr ("<<posDist<<"<"<<posThr<<", pos1("<<Xc_1<<","<<Yc_1<<"), pos2("<<Xc_2<<","<<Yc_2<<"))");
+		#endif
 	}
 
 	//## Check ellipse overlap (if requested)
@@ -1339,11 +1342,15 @@ bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPar
 		else {
 			if(overlapAreaFraction_1<compMatchOverlapThr || overlapAreaFraction_2<compMatchOverlapThr){	
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Ellipse overlap below thr ("<<overlapAreaFraction_1<<"<"<<compMatchOverlapThr<<", "<<overlapAreaFraction_2<<"<"<<compMatchOverlapThr<<")");
+					DEBUG_LOG("Ellipse overlap below thr ("<<overlapAreaFraction_1<<"<"<<compMatchOverlapThr<<", "<<overlapAreaFraction_2<<"<"<<compMatchOverlapThr<<")");
 				#endif
 				return false;
 			}
 		}
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("ELLIPSE OVERLAP MATCH: overlapArea1="<<overlapAreaFraction_1<<">"<<compMatchOverlapThr<<", overlapArea2="<<overlapAreaFraction_2<<">"<<compMatchOverlapThr<<")");
+		#endif
+
 	}//close if matchSourcesByOverlap
 
 	return true;
@@ -1382,7 +1389,7 @@ int FindSourceMatchesInTiles()
 			
 			if(!source){
 				#ifdef LOGGING_ENABLED
-				WARN_LOG("No source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<") found, this should not occur, skip source!");
+					WARN_LOG("No source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<") found, this should not occur, skip source!");
 				#endif
 			}
 
@@ -1435,16 +1442,26 @@ int FindSourceMatchesInTiles()
 					source->SetFitPars(fitPars);
 				}
 
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") and its component as fake (no match found)");
+				#endif
+
 				//Skip further processing
 				continue;
 			}
 			else if(nMatches==1){
 				source->SetFlag(eReal);
 				source->SetType(ePointLike);
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and point-like (1 match found)");
+				#endif
 			}
 			else if(nMatches>1){
 				source->SetFlag(eReal);
 				source->SetType(eCompact);
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and compact ("<<nMatches<<" match found)");
+				#endif
 			}
 
 			//Match source components
@@ -1469,14 +1486,24 @@ int FindSourceMatchesInTiles()
 					if(nComponentMatches<=0){
 						fitPars.SetComponentFlag(l,eFake);
 						fitPars.SetComponentType(l,eUnknownType);
+
+						#ifdef LOGGING_ENABLED
+							INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as fake (no match found)");
+						#endif
 					}
 					else if(nComponentMatches==1){
 						fitPars.SetComponentFlag(l,eReal);
 						fitPars.SetComponentType(l,ePointLike);
+						#ifdef LOGGING_ENABLED
+							INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and point-like (1 match found)");
+						#endif
 					}
 					else if(nComponentMatches>1){
 						fitPars.SetComponentFlag(l,eReal);
 						fitPars.SetComponentType(l,eCompact);
+						#ifdef LOGGING_ENABLED
+							INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and compact ("<<nComponentMatches<<" match found)");
+						#endif
 					}
 					source->SetFitPars(fitPars);
 
