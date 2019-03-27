@@ -1408,6 +1408,8 @@ int FindSourceMatchesInTiles()
 			//Match source components
 			for(size_t l=0;l<componentPars.size();l++){
 				ComponentPars* cpars= componentPars[l];
+				int nComponentMatches= 0;
+
 				for(size_t k=0;k<matchedRegionIndexes.size();k++){
 					long int tileIndex= matchedRegionIndexes[k].first;
 					long int regionIndex= matchedRegionIndexes[k].second;
@@ -1415,12 +1417,29 @@ int FindSourceMatchesInTiles()
 				
 					bool hasMatch= HaveComponentMatch(cpars,regionPars);
 					if(!hasMatch) continue;
-				
+								
+					nComponentMatches++;
 				}//end loop regions
+
+				//Tag source component
+				SourceFitPars fitPars= source->GetFitPars();
+				if(nComponentMatches<=0){
+					fitPars.SetComponentFlag(l,eFake);
+					fitPars.SetComponentType(l,eUnknownType);
+				}
+				else if(nComponentMatches==1){
+					fitPars.SetComponentFlag(l,eReal);
+					fitPars.SetComponentType(l,ePointLike);
+				}
+				else if(nComponentMatches>1){
+					fitPars.SetComponentFlag(l,eReal);
+					fitPars.SetComponentType(l,eCompact);
+				}
+				source->SetFitPars(fitPars);
+
 			}//end loop component pars
 	
 		}//end loop sources in this tile
-
 	}//end loop tiles
 
 	return 0;
