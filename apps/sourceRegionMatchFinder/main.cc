@@ -1291,12 +1291,12 @@ bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPar
 		double posDist= AstroUtils::GetWCSPointDist_Haversine(Xc_1,Yc_1,Xc_2,Yc_2);
 		if(fabs(posDist)>posThr) {
 			#ifdef LOGGING_ENABLED
-				DEBUG_LOG("NO POS MATCH: Ellipse pos diff above thr ("<<posDist<<">"<<posThr<<", pos1("<<Xc_1<<","<<Yc_1<<"), pos2("<<Xc_2<<","<<Yc_2<<"))");
+				DEBUG_LOG("NO ELLIPSE POS MATCH: Ellipse pos diff above thr ("<<posDist<<">"<<posThr<<", pos1("<<Xc_1<<","<<Yc_1<<"), pos2("<<Xc_2<<","<<Yc_2<<"))");
 			#endif
 			return false;
 		}
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("POS MATCH: Ellipse pos diff below thr ("<<posDist<<"<"<<posThr<<", pos1("<<Xc_1<<","<<Yc_1<<"), pos2("<<Xc_2<<","<<Yc_2<<"))");
+			INFO_LOG("ELLIPSE POS MATCH: Ellipse pos diff below thr ("<<posDist<<"<"<<posThr<<", pos1("<<Xc_1<<","<<Yc_1<<"), pos2("<<Xc_2<<","<<Yc_2<<"))");
 		#endif
 	}
 
