@@ -605,7 +605,15 @@ class CodeUtils : public TObject {
 		}//close StringFindAndReplace()
 
 		/**
-		* \brief Remove substring
+		* \brief Remove pattern in string
+		*/
+		static void RemovePatternInString(std::string& str,const std::string pattern)
+		{
+			StringFindAndReplace(str,pattern,"");
+		}
+
+		/**
+		* \brief Extract substring
 		*/
 		static std::string ExtractSubString(const std::string& s, const std::string& pattern, bool extractleft=true){
 			size_t pos = s.find(pattern);
