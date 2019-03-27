@@ -59,6 +59,8 @@ void Usage(char* exeName){
 	cout<<"-m, --ny=[NY] \t Number of divisions along Y (default=4)"<<endl;
 	cout<<"-P, --matchByPos \t Match source island and region by position centroid distance (default=false)"<<endl;
 	cout<<"-O, --matchByOverlap \t Match source island and region by contour overlap fraction (NB: skip if below thr) (default=false)"<<endl;
+	cout<<"-p, --matchComponentByPos \t Match source fit component and region by position centroid distance (default=false)"<<endl;
+	cout<<"-b, --matchComponentByOverlap \t Match source fit component and region by contour overlap fraction (NB: skip if below thr) (default=false)"<<endl;
 	cout<<"-T, --matchPosThr=[POS_THESHOLD] \t Source island-region centroid distance in arcsec below which we have a match (default=2.5)"<<endl;
 	cout<<"-A, --matchOverlapThr \t Source island-region contour overlap fraction (wrt to total area) threshold (default=0.5)"<<endl;
 	cout<<"-c, --matchSourceComponent \t Match source fit component and region by position centroid (if enabled) and ellipse overlap (if enabled) (default=false)"<<endl;
@@ -85,6 +87,8 @@ static const struct option options_tab[] = {
 	{ "matchPosThr", required_argument, 0, 'T'},
 	{ "matchOverlapThr", required_argument, 0, 'A'},	
 	{ "matchSourceComponent", no_argument, 0, 'c'},	
+	{ "matchComponentByPos", no_argument, 0, 'p'},
+	{ "matchComponentByOverlap", no_argument, 0, 'b'},	
 	{ "compMatchPosThr", required_argument, 0, 't'},
 	{ "compMatchOverlapThr", required_argument, 0, 'a'},	
 	{ "output", required_argument, 0, 'o' },
@@ -106,6 +110,8 @@ std::vector<int> stypes;
 bool matchSourcesByPos= false;
 bool matchSourcesByOverlap= false;
 bool matchSourceComponent= false;
+bool matchSourceComponentsByPos= false;
+bool matchSourceComponentsByOverlap= false;
 float matchPosThr= 2.5;//dist in arcsec below which source island and region can be matched
 float matchOverlapThr= 0.5;//fraction of overlap above which source island-region are matched
 float compMatchPosThr= 2.5;//dist in arcsec below which source fit component and region can be matched
@@ -447,7 +453,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:r:s:n:m:cPOT:A:t:a:o:R:C:v:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:r:s:n:m:cPOpbT:A:t:a:o:R:C:v:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -504,6 +510,16 @@ int ParseOptions(int argc, char *argv[])
 			case 'O':
 			{
 				matchSourcesByOverlap= true;
+				break;
+			}	
+			case 'p':
+			{
+				matchSourceComponentsByPos= true;
+				break;
+			}
+			case 'b':
+			{
+				matchSourceComponentsByOverlap= true;
 				break;
 			}	
 			case 'T':
@@ -564,9 +580,11 @@ int ParseOptions(int argc, char *argv[])
 	//== Print options
 	//=======================
 	#ifdef LOGGING_ENABLED
+		INFO_LOG("matchSourcesByPos? "<<matchSourcesByPos<<", matchPosThr(arcsec)="<<matchPosThr);
+		INFO_LOG("matchSourcesByOverlap? "<<matchSourcesByOverlap<<", matchOverlapThr="<<matchOverlapThr);
 		INFO_LOG("matchSourceComponent? "<<matchSourceComponent);
-		INFO_LOG("matchSourcesByPos? "<<matchSourcesByPos<<", matchPosThr(arcsec)="<<matchPosThr<<", compMatchPosThr(arcsec)="<<compMatchPosThr);
-		INFO_LOG("matchSourcesByOverlap? "<<matchSourcesByOverlap<<", matchOverlapThr="<<matchOverlapThr<<", compMatchOverlapThr="<<compMatchOverlapThr);
+		INFO_LOG("matchSourceComponentsByPos? "<<matchSourceComponentsByPos<<", compMatchPosThr(arcsec)="<<compMatchPosThr);
+		INFO_LOG("matchSourceComponentsByOverlap? "<<matchSourceComponentsByOverlap<<", compMatchOverlapThr="<<compMatchOverlapThr);
 	#endif
 
 	//=======================
@@ -1231,20 +1249,20 @@ bool HaveSourceIslandMatch(SourcePars* sourcePars,RegionPars* regionPars)
 		}
 		else if(overlapFlag==eCONT1_INSIDE_CONT2 && overlapAreaFraction_2<matchOverlapThr){
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("CONT1 INSIDE CONT2 (OVERLAP BELOW THR): Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+				DEBUG_LOG("CONT1 INSIDE CONT2 (OVERLAP BELOW THR): Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
 			#endif
 			return false;
 		}
 		else if(overlapFlag==eCONT2_INSIDE_CONT1 && overlapAreaFraction_1<matchOverlapThr){
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("CONT2 INSIDE CONT1 (OVERLAP BELOW THR): Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+				DEBUG_LOG("CONT2 INSIDE CONT1 (OVERLAP BELOW THR): Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
 			#endif
 			return false;
 		}
 		else if(overlapFlag==eCONT_OVERLAPPING){
 			if(overlapAreaFraction_1<matchOverlapThr || overlapAreaFraction_2<matchOverlapThr){
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("CONT OVERLAP BELOW THR: Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+					DEBUG_LOG("CONT OVERLAP BELOW THR: Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
 				#endif
 				return false;
 			}
@@ -1283,7 +1301,7 @@ bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPar
 
 	//## Check ellipse centroid sky distance (if requested)
 	double posThr= compMatchPosThr/3600.;//convert in deg as ellipse coords are in deg
-	if(matchSourcesByPos){
+	if(matchSourceComponentsByPos){
 		double Xc_1= ellipse1->GetX1();
 		double Yc_1= ellipse1->GetY1();
 		double Xc_2= ellipse2->GetX1();
@@ -1301,7 +1319,7 @@ bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPar
 	}
 
 	//## Check ellipse overlap (if requested)
-	if(matchSourcesByOverlap){
+	if(matchSourceComponentsByOverlap){
 		double ellipseArea_1= MathUtils::ComputeEllipseArea(ellipse1);
 		double ellipseArea_2= MathUtils::ComputeEllipseArea(ellipse2);
 		double ellipseOverlapArea= -1;
@@ -1367,7 +1385,12 @@ int FindSourceMatchesInTiles()
 	//2) Compare source component ellipses (centroid, overlap)
 	//####################################
 
-	//Loop over tiles and find matches with regions in the same tile and in neighbor tiles	
+	//Loop over tiles and find matches with regions in the same tile and in neighbor tiles
+	long int nTotSources= 0;
+	long int nMatchedSources= 0;
+	long int nTotSourceComponents= 0;
+	long int nMatchedSourceComponents= 0;
+
 	for(size_t i=0;i<tileDataList.size();i++)
 	{
 		long int NSourcePars= tileDataList[i]->GetNSourcePars();
@@ -1378,7 +1401,9 @@ int FindSourceMatchesInTiles()
 			INFO_LOG("#"<<NSourcePars<<" sources to be cross-matched against #"<<NRegionPars<<" regions in tile no. "<<i+1<<" ...");
 		#endif
 
-		for(long int j=0;j<NSourcePars;j++){
+		for(long int j=0;j<NSourcePars;j++)
+		{
+			//Get source info
 			SourcePars* sourcePars= (tileDataList[i]->sourcePars)[j];
 			std::vector<ComponentPars*> componentPars= sourcePars->componentPars;
 			long int sourceIndex= sourcePars->sourceIndex;
@@ -1391,9 +1416,22 @@ int FindSourceMatchesInTiles()
 				#ifdef LOGGING_ENABLED
 					WARN_LOG("No source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<") found, this should not occur, skip source!");
 				#endif
+				continue;
 			}
+			
 
-
+			//Get source fit info
+			bool hasFitInfo= source->HasFitInfo();
+			int nFitComponents= 0;
+			if(hasFitInfo) {
+				SourceFitPars fitPars= source->GetFitPars();
+				nFitComponents= fitPars.GetNComponents();
+			}
+			
+			//Count total number of sources
+			nTotSources++;
+			nTotSourceComponents+= nFitComponents;
+	
 			int nMatches= 0;
 
 			//Loop over regions in the same tile
@@ -1434,10 +1472,8 @@ int FindSourceMatchesInTiles()
 			//## Set to unknown flag if not assigned to any region
 			if(nMatches<=0){
 				source->SetFlag(eFake);
-				bool hasFitInfo= source->HasFitInfo();
 				if(hasFitInfo){
 					SourceFitPars fitPars= source->GetFitPars();
-					int nFitComponents= fitPars.GetNComponents();
 					for(int l=0;l<nFitComponents;l++) fitPars.SetComponentFlag(l,eFake);
 					source->SetFitPars(fitPars);
 				}
@@ -1450,6 +1486,7 @@ int FindSourceMatchesInTiles()
 				continue;
 			}
 			else if(nMatches==1){
+				nMatchedSources++;
 				source->SetFlag(eReal);
 				source->SetType(ePointLike);
 				#ifdef LOGGING_ENABLED
@@ -1457,6 +1494,7 @@ int FindSourceMatchesInTiles()
 				#endif
 			}
 			else if(nMatches>1){
+				nMatchedSources++;
 				source->SetFlag(eReal);
 				source->SetType(eCompact);
 				#ifdef LOGGING_ENABLED
@@ -1466,6 +1504,8 @@ int FindSourceMatchesInTiles()
 
 			//Match source components
 			if(matchSourceComponent){
+				
+
 				for(size_t l=0;l<componentPars.size();l++){
 					ComponentPars* cpars= componentPars[l];
 					int nComponentMatches= 0;
@@ -1492,6 +1532,7 @@ int FindSourceMatchesInTiles()
 						#endif
 					}
 					else if(nComponentMatches==1){
+						nMatchedSourceComponents++;
 						fitPars.SetComponentFlag(l,eReal);
 						fitPars.SetComponentType(l,ePointLike);
 						#ifdef LOGGING_ENABLED
@@ -1499,6 +1540,7 @@ int FindSourceMatchesInTiles()
 						#endif
 					}
 					else if(nComponentMatches>1){
+						nMatchedSourceComponents++;
 						fitPars.SetComponentFlag(l,eReal);
 						fitPars.SetComponentType(l,eCompact);
 						#ifdef LOGGING_ENABLED
@@ -1512,6 +1554,11 @@ int FindSourceMatchesInTiles()
 
 		}//end loop sources in this tile
 	}//end loop tiles
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#matched/tot sources: "<<nTotSources<<"/"<<nMatchedSources);
+		INFO_LOG("#matched/tot source fit components: "<<nTotSourceComponents<<"/"<<nMatchedSourceComponents);
+	#endif
 
 	return 0;
 
