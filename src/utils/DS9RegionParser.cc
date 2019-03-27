@@ -393,11 +393,26 @@ DS9CircleRegion* DS9RegionParser::ParseCircleRegion(const std::string& data_str)
 		return nullptr;
 	}
 
+	//Check radius units
+	double convFactor= 1;//conversion factor to degrees
+	bool hasUnits= CodeUtils::HasPatternInString(coords_str[2],"\"");
+	std::string radiusStr= coords_str[2];
+	if(hasUnits) {
+		convFactor= 1./3600.;
+		CodeUtils::RemovePatternInString(radiusStr,"\"");
+		#ifdef LOGGING_ENABLED		
+			DEBUG_LOG("DS9 circle region radius found in arcsec units, will convert to degree...");
+		#endif
+	}
+	#ifdef LOGGING_ENABLED		
+		DEBUG_LOG("DS9 circle region radius parsed: "<<radiusStr);
+	#endif
+		
 	//Extract coordinates and convert to double
 	DS9CircleRegion* region= new DS9CircleRegion();
 	double cx= atof(coords_str[0].c_str());	
 	double cy= atof(coords_str[1].c_str());
-	double r= atof(coords_str[2].c_str());	
+	double r= convFactor*atof(coords_str[2].c_str());	
 	region->cx= cx;
 	region->cy= cy;
 	region->r= r;
