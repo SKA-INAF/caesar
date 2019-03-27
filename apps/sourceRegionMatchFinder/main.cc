@@ -57,10 +57,13 @@ void Usage(char* exeName){
 	cout<<"-s, --stype=[SOURCE_TYPE] \t Source type to be cross-match (-1=all,1=compact,2=point-like,3=extended,4=ext+point) (default=-1)"<<endl;
 	cout<<"-n, --nx=[NX] \t Number of divisions along X (default=4)"<<endl;
 	cout<<"-m, --ny=[NY] \t Number of divisions along Y (default=4)"<<endl;
-	cout<<"-t, --matchSourcesByPos \t Match sources by position (default=false)"<<endl;
-	cout<<"-T, --matchPosThr=[POS_THESHOLD] \t Source centroid distance in arcsec below which two sources are matched (default=2.5)"<<endl;
-	cout<<"-a, --matchSourcesByOverlap \t Match sources by contour/ellipse overlap fraction (NB: skip if below thr) (default=false)"<<endl;
-	cout<<"-A, --matchOverlapThr \t Overlap fraction (wrt to total area) threshold (default=0.5)"<<endl;
+	cout<<"-P, --matchByPos \t Match source island and region by position centroid distance (default=false)"<<endl;
+	cout<<"-O, --matchByOverlap \t Match source island and region by contour overlap fraction (NB: skip if below thr) (default=false)"<<endl;
+	cout<<"-T, --matchPosThr=[POS_THESHOLD] \t Source island-region centroid distance in arcsec below which we have a match (default=2.5)"<<endl;
+	cout<<"-A, --matchOverlapThr \t Source island-region contour overlap fraction (wrt to total area) threshold (default=0.5)"<<endl;
+	cout<<"-c, --matchSourceComponent \t Match source fit component and region by position centroid (if enabled) and ellipse overlap (if enabled) (default=false)"<<endl;
+	cout<<"-t, --compMatchPosThr=[POS_THESHOLD] \t Source fit component-region centroid distance in arcsec below which we have a match (default=2.5)"<<endl;
+	cout<<"-a, --compMatchOverlapThr \t Source fit component-region contour overlap fraction (wrt to total area) threshold (default=0.5)"<<endl;
 	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (ROOT format) where to store matched sources (default=sources.root)"<<endl;
 	cout<<"-R, --region-output=[REGION_OUTPUT_FILE] \t Output DS9 region file name where to store selected sources (default=sources.reg)"<<endl;
 	cout<<"-C, --catalog-output=[CATALOG_OUTPUT_FILE] \t Output catalog file name where to store selected sources (default=catalog.dat)"<<endl;
@@ -77,10 +80,13 @@ static const struct option options_tab[] = {
 	{ "stype", required_argument, 0, 's' },
 	{ "nx", required_argument, 0, 'n' },
 	{ "ny", required_argument, 0, 'm' },
-	{ "matchSourcesByPos", no_argument, 0, 't'},
+	{ "matchByPos", no_argument, 0, 'P'},
+	{ "matchByOverlap", no_argument, 0, 'O'},	
 	{ "matchPosThr", required_argument, 0, 'T'},
-	{ "matchSourcesByOverlap", no_argument, 0, 'a'},	
 	{ "matchOverlapThr", required_argument, 0, 'A'},	
+	{ "matchSourceComponent", no_argument, 0, 'c'},	
+	{ "compMatchPosThr", required_argument, 0, 't'},
+	{ "compMatchOverlapThr", required_argument, 0, 'a'},	
 	{ "output", required_argument, 0, 'o' },
 	{ "region-output", required_argument, 0, 'R' },
 	{ "catalog-output", required_argument, 0, 'C' },
@@ -98,9 +104,12 @@ std::string catalogOutputFileName= "catalog.dat";
 std::string catalogComponentsOutputFileName= "catalog_fitcomp.dat";
 std::vector<int> stypes;
 bool matchSourcesByPos= false;
-float matchPosThr= 2.5;//dist in arcsec below which two sources can be matched
 bool matchSourcesByOverlap= false;
-float matchOverlapThr= 0.5;//fraction of overlap above which two sources are matched
+bool matchSourceComponent= false;
+float matchPosThr= 2.5;//dist in arcsec below which source island and region can be matched
+float matchOverlapThr= 0.5;//fraction of overlap above which source island-region are matched
+float compMatchPosThr= 2.5;//dist in arcsec below which source fit component and region can be matched
+float compMatchOverlapThr= 0.5;//fraction of overlap above which source fit component and region are matched
 int ds9WCSType= 0;//use original WCS type to save catalog
 int verbosity= 4;//INFO level
 TFile* inputFile= 0;
@@ -294,7 +303,7 @@ std::vector<SourcePars*> source_pars;
 std::vector<RegionPars*> region_pars;
 WCS* wcs= 0;
 int wcsType= -1;
-bool computeWCS= false;
+bool useWCS= false;
 float tileXmin= 0;
 float tileXmax= 0;
 float tileXstep= 0;
@@ -314,8 +323,8 @@ int FillTileData();
 int FillSourcePars(Source* aSource,int sourceIndex,int nestedSourceIndex=-1);
 int FillRegionPars(DS9Region* aRegion,int regionIndex);
 int FindSourceMatchesInTiles();
-bool HaveContourMatch(SourcePars* sourcePars,RegionPars* regionPars);
-bool HaveComponentMatch(ComponentPars* componentPars,RegionPars* regionPars);
+bool HaveSourceIslandMatch(SourcePars* sourcePars,RegionPars* regionPars);
+bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPars);
 int CloneObjectsInFile(std::vector<std::string> excludedObjNames);
 void Save();
 int SaveSources();
@@ -438,7 +447,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:r:s:n:m:tT:aA:o:R:C:v:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:r:s:n:m:cPOT:A:t:a:o:R:C:v:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -481,24 +490,40 @@ int ParseOptions(int argc, char *argv[])
 				nTilesY= atol(optarg);
 				break;	
 			}
-			case 't':
+			case 'c':
+			{
+				matchSourceComponent= true;
+				break;
+			}
+			case 'P':
 			{
 				matchSourcesByPos= true;
 				break;
 			}
+			
+			case 'O':
+			{
+				matchSourcesByOverlap= true;
+				break;
+			}	
 			case 'T':
 			{
 				matchPosThr= atof(optarg);
 				break;
 			}	
-			case 'a':
-			{
-				matchSourcesByOverlap= true;
-				break;
-			}	
 			case 'A':
 			{
 				matchOverlapThr= atof(optarg);
+				break;
+			}	
+			case 't':
+			{
+				compMatchPosThr= atof(optarg);
+				break;
+			}	
+			case 'a':
+			{
+				compMatchOverlapThr= atof(optarg);
 				break;
 			}	
 			case 'R':	
@@ -524,7 +549,7 @@ int ParseOptions(int argc, char *argv[])
     }//close switch
 	}//close while
  
-	for(size_t i=0;i<stypes.size();i++) cout<<"stype["<<i<<"]="<<stypes[i]<<endl;	
+	//for(size_t i=0;i<stypes.size();i++) cout<<"stype["<<i<<"]="<<stypes[i]<<endl;	
 
 	//=======================
 	//== Init Logger 
@@ -533,6 +558,15 @@ int ParseOptions(int argc, char *argv[])
 	std::string sloglevel= GetStringLogLevel(verbosity);
 	#ifdef LOGGING_ENABLED
 		LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
+	#endif
+
+	//=======================
+	//== Print options
+	//=======================
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("matchSourceComponent? "<<matchSourceComponent);
+		INFO_LOG("matchSourcesByPos? "<<matchSourcesByPos<<", matchPosThr(arcsec)="<<matchPosThr<<", compMatchPosThr(arcsec)="<<compMatchPosThr);
+		INFO_LOG("matchSourcesByOverlap? "<<matchSourcesByOverlap<<", matchOverlapThr="<<matchOverlapThr<<", compMatchOverlapThr="<<compMatchOverlapThr);
 	#endif
 
 	//=======================
@@ -655,7 +689,7 @@ int InitGrid(float xmin,float xmax,float xstep,float ymin,float ymax,float ystep
 			bool areNeighbors= tileDataList[i]->IsNeighbor(tileDataList[j]);
 			if(areNeighbors){
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Tiles ("<<i<<","<<j<<") are neighbors");
+					DEBUG_LOG("Tiles ("<<i<<","<<j<<") are neighbors");
 				#endif
 				tileDataList[i]->AddNeighbor(j);
 				tileDataList[j]->AddNeighbor(i);		
@@ -745,7 +779,7 @@ int ReadSourceData(std::string filename)
 
 	//Compute WCS?
 	wcsType= m_regions[0]->csType;
-	computeWCS= (wcsType!=eIMG_CS && wcsType!=eUNKNOWN_CS);
+	useWCS= (wcsType!=eIMG_CS && wcsType!=eUNKNOWN_CS);
 	double sourceXmin= 1.e+99;
 	double sourceXmax= -1.e+99;
 	double sourceYmin= 1.e+99;
@@ -754,7 +788,7 @@ int ReadSourceData(std::string filename)
 	
 	//Read sources
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Reading #"<<sourceTree->GetEntries()<<" sources in file "<<filename<<"...");
+		INFO_LOG("Found #"<<sourceTree->GetEntries()<<" sources in file "<<filename<<"...");
 	#endif
 
 	
@@ -783,19 +817,26 @@ int ReadSourceData(std::string filename)
 		double X0= source->X0;
 		double Y0= source->Y0;
 
-		//Compute wcs for this source collection if not done
-		if(!wcs && computeWCS){
-			wcs= source->GetWCS(wcsType);
+		//Convert coordinates to WCS?
+		if(useWCS){
+			//Compute wcs for this source collection if not done
+			if(!wcs){
+				wcs= source->GetWCS(wcsType);
+			}
+			
+			//Check WCS
 			if(!wcs){
 				#ifdef LOGGING_ENABLED
 					ERROR_LOG("Failed to compute WCS from source no. "<<i+1<<" (name="<<source->GetName()<<")!");
 				#endif
 				return -1;
 			}
-	
+
 			//If using WCS for the matching, use WCS centroid to compute source min/max coords
 			source->GetWCSPos(X0,Y0,wcs,wcsType);
-		}
+
+		}//close if
+
 
 		//Find min & max coordinates
 		if(X0>sourceXmax) sourceXmax= X0;
@@ -808,6 +849,10 @@ int ReadSourceData(std::string filename)
 		m_sources.push_back(source);
 		
 	}//end loop sources
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Source min/max coordinate range: (Xmin,Xmax)=("<<sourceXmin<<","<<sourceXmax<<"), (Ymin,Ymax)=("<<sourceYmin<<","<<sourceYmax<<")");
+	#endif
 
 	//Define 2D grid with available sources	
 	double borderTol= 0.1;
@@ -934,7 +979,7 @@ int FillRegionPars(DS9Region* aRegion,int regionIndex)
 	}
 	else{//Add to tile data
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("Adding region no. "<<regionIndex<<" (pos("<<contourCentroid.X()<<","<<contourCentroid.Y()<<") to list...");
+			DEBUG_LOG("Adding region no. "<<regionIndex<<" (pos("<<contourCentroid.X()<<","<<contourCentroid.Y()<<") to list...");
 		#endif
 		tileDataList[tileIndex]->AddRegionPars(regionPars);
 	}
@@ -977,7 +1022,7 @@ int FillSourcePars(Source* aSource,int sourceIndex,int nestedSourceIndex)
 
 	//Fill source pars for fit componentd first
 	bool useFWHM= true;
-	bool convertToWCS= computeWCS;
+	bool convertToWCS= useWCS;
 
 	if(hasFitInfo){	
 		//Get 0th contour converted to WCS
@@ -1062,23 +1107,20 @@ int FillSourcePars(Source* aSource,int sourceIndex,int nestedSourceIndex)
 		);
 		if(tileIndex<0){
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Cannot find tile index of source (name="<<sourceName<<", pos("<<contourCentroid.X()<<","<<contourCentroid.Y()<<")!");
+				WARN_LOG("Cannot find tile index of source (name="<<sourceName<<", pos("<<contourCentroid.X()<<","<<contourCentroid.Y()<<")!");
 			#endif
 		}
 		else if(tileIndex>=(long int)(tileDataList.size())){		
 			#ifdef LOGGING_ENABLED
-				DEBUG_LOG("Invalid tile index found (index="<<tileIndex<<", tilesize="<<tileDataList.size()<<"), check tile index calculation!");
+				WARN_LOG("Invalid tile index found (index="<<tileIndex<<", tilesize="<<tileDataList.size()<<"), check tile index calculation!");
 			#endif
 		}
 		else{//Add to tile data
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Adding source (name="<<sourceName<<", pos("<<contourCentroid.X()<<","<<contourCentroid.Y()<<") to list...");
+				DEBUG_LOG("Adding source (name="<<sourceName<<", pos("<<contourCentroid.X()<<","<<contourCentroid.Y()<<") to list...");
 			#endif
 			tileDataList[tileIndex]->AddSourcePars(sourcePars);
 		}
-
-		//Append this source pars to collection
-		//pars.push_back(sourcePars);
 
 	}//close has fit info
 	else{
@@ -1103,7 +1145,7 @@ int FillSourcePars(Source* aSource,int sourceIndex,int nestedSourceIndex)
 }//close FillSourcePars()
 
 
-bool HaveContourMatch(SourcePars* sourcePars,RegionPars* regionPars)
+bool HaveSourceIslandMatch(SourcePars* sourcePars,RegionPars* regionPars)
 {
 	//## Check input data
 	if(!sourcePars || !regionPars){
@@ -1216,10 +1258,10 @@ bool HaveContourMatch(SourcePars* sourcePars,RegionPars* regionPars)
 
 	return true;
 
-}//close HaveContourMatch()
+}//close HaveSourceIslandMatch()
 
 
-bool HaveComponentMatch(ComponentPars* componentPars,RegionPars* regionPars)
+bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPars)
 {
 	//## Check data
 	if(!componentPars || !regionPars){
@@ -1240,7 +1282,7 @@ bool HaveComponentMatch(ComponentPars* componentPars,RegionPars* regionPars)
 	}
 
 	//## Check ellipse centroid sky distance (if requested)
-	double posThr= matchPosThr/3600.;//convert in deg as ellipse coords are in deg
+	double posThr= compMatchPosThr/3600.;//convert in deg as ellipse coords are in deg
 	if(matchSourcesByPos){
 		double Xc_1= ellipse1->GetX1();
 		double Yc_1= ellipse1->GetY1();
@@ -1282,22 +1324,22 @@ bool HaveComponentMatch(ComponentPars* componentPars,RegionPars* regionPars)
 			#endif
 			return false;
 		}
-		else if(rtn==EllipseUtils::ELLIPSE1_INSIDE_ELLIPSE2 && overlapAreaFraction_2<matchOverlapThr){
+		else if(rtn==EllipseUtils::ELLIPSE1_INSIDE_ELLIPSE2 && overlapAreaFraction_2<compMatchOverlapThr){
 			#ifdef LOGGING_ENABLED
-				DEBUG_LOG("Ellipse 1 inside 2 below overlap thr ("<<overlapAreaFraction_2<<"<"<<matchOverlapThr<<")");
+				DEBUG_LOG("Ellipse 1 inside 2 below overlap thr ("<<overlapAreaFraction_2<<"<"<<compMatchOverlapThr<<")");
 			#endif
 			return false;
 		}
-		else if(rtn==EllipseUtils::ELLIPSE2_INSIDE_ELLIPSE1 && overlapAreaFraction_1<matchOverlapThr){
+		else if(rtn==EllipseUtils::ELLIPSE2_INSIDE_ELLIPSE1 && overlapAreaFraction_1<compMatchOverlapThr){
 			#ifdef LOGGING_ENABLED
-				DEBUG_LOG("Ellipse 2 inside 1 below overlap thr ("<<overlapAreaFraction_1<<"<"<<matchOverlapThr<<")");
+				DEBUG_LOG("Ellipse 2 inside 1 below overlap thr ("<<overlapAreaFraction_1<<"<"<<compMatchOverlapThr<<")");
 			#endif
 			return false;
 		}
 		else {
-			if(overlapAreaFraction_1<matchOverlapThr || overlapAreaFraction_2<matchOverlapThr){	
+			if(overlapAreaFraction_1<compMatchOverlapThr || overlapAreaFraction_2<compMatchOverlapThr){	
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Ellipse overlap below thr ("<<overlapAreaFraction_1<<"<"<<matchOverlapThr<<", "<<overlapAreaFraction_2<<"<"<<matchOverlapThr<<")");
+					INFO_LOG("Ellipse overlap below thr ("<<overlapAreaFraction_1<<"<"<<compMatchOverlapThr<<", "<<overlapAreaFraction_2<<"<"<<compMatchOverlapThr<<")");
 				#endif
 				return false;
 			}
@@ -1306,7 +1348,7 @@ bool HaveComponentMatch(ComponentPars* componentPars,RegionPars* regionPars)
 
 	return true;
 
-}//close HaveComponentMatch()
+}//close HaveSourceComponentMatch()
 
 
 int FindSourceMatchesInTiles()
@@ -1352,7 +1394,7 @@ int FindSourceMatchesInTiles()
 
 			for(long int k=0;k<NRegionPars;k++){
 				RegionPars* regionPars= (tileDataList[i]->regionPars)[k];
-				bool hasMatch= HaveContourMatch(sourcePars,regionPars);
+				bool hasMatch= HaveSourceIslandMatch(sourcePars,regionPars);
 				if(!hasMatch) continue;
 
 				//Record match
@@ -1371,7 +1413,7 @@ int FindSourceMatchesInTiles()
 
 				for(long int k=0;k<NRegionPars_neighbor;k++){
 					RegionPars* regionPars= (tileDataList[neighborIndex]->regionPars)[k];
-					bool hasMatch= HaveContourMatch(sourcePars,regionPars);
+					bool hasMatch= HaveSourceIslandMatch(sourcePars,regionPars);
 					if(!hasMatch) continue;
 
 					//Record match
@@ -1406,39 +1448,41 @@ int FindSourceMatchesInTiles()
 			}
 
 			//Match source components
-			for(size_t l=0;l<componentPars.size();l++){
-				ComponentPars* cpars= componentPars[l];
-				int nComponentMatches= 0;
+			if(matchSourceComponent){
+				for(size_t l=0;l<componentPars.size();l++){
+					ComponentPars* cpars= componentPars[l];
+					int nComponentMatches= 0;
 
-				for(size_t k=0;k<matchedRegionIndexes.size();k++){
-					long int tileIndex= matchedRegionIndexes[k].first;
-					long int regionIndex= matchedRegionIndexes[k].second;
-					RegionPars* regionPars= (tileDataList[tileIndex]->regionPars)[regionIndex];
+					for(size_t k=0;k<matchedRegionIndexes.size();k++){
+						long int tileIndex= matchedRegionIndexes[k].first;
+						long int regionIndex= matchedRegionIndexes[k].second;
+						RegionPars* regionPars= (tileDataList[tileIndex]->regionPars)[regionIndex];
 				
-					bool hasMatch= HaveComponentMatch(cpars,regionPars);
-					if(!hasMatch) continue;
+						bool hasMatch= HaveSourceComponentMatch(cpars,regionPars);
+						if(!hasMatch) continue;
 								
-					nComponentMatches++;
-				}//end loop regions
+						nComponentMatches++;
+					}//end loop regions
 
-				//Tag source component
-				SourceFitPars fitPars= source->GetFitPars();
-				if(nComponentMatches<=0){
-					fitPars.SetComponentFlag(l,eFake);
-					fitPars.SetComponentType(l,eUnknownType);
-				}
-				else if(nComponentMatches==1){
-					fitPars.SetComponentFlag(l,eReal);
-					fitPars.SetComponentType(l,ePointLike);
-				}
-				else if(nComponentMatches>1){
-					fitPars.SetComponentFlag(l,eReal);
-					fitPars.SetComponentType(l,eCompact);
-				}
-				source->SetFitPars(fitPars);
+					//Tag source component
+					SourceFitPars fitPars= source->GetFitPars();
+					if(nComponentMatches<=0){
+						fitPars.SetComponentFlag(l,eFake);
+						fitPars.SetComponentType(l,eUnknownType);
+					}
+					else if(nComponentMatches==1){
+						fitPars.SetComponentFlag(l,eReal);
+						fitPars.SetComponentType(l,ePointLike);
+					}
+					else if(nComponentMatches>1){
+						fitPars.SetComponentFlag(l,eReal);
+						fitPars.SetComponentType(l,eCompact);
+					}
+					source->SetFitPars(fitPars);
 
-			}//end loop component pars
-	
+				}//end loop component pars
+			}//close if matchSourceComponent
+
 		}//end loop sources in this tile
 	}//end loop tiles
 
