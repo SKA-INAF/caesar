@@ -1556,8 +1556,8 @@ int FindSourceMatchesInTiles()
 	}//end loop tiles
 
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("#matched/tot sources: "<<nTotSources<<"/"<<nMatchedSources);
-		INFO_LOG("#matched/tot source fit components: "<<nTotSourceComponents<<"/"<<nMatchedSourceComponents);
+		INFO_LOG("#matched/tot sources: "<<nMatchedSources<<"/"<<nTotSources);
+		INFO_LOG("#matched/tot source fit components: "<<nMatchedSourceComponents<<"/"<<nTotSourceComponents);
 	#endif
 
 	return 0;
