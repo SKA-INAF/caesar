@@ -1324,20 +1324,28 @@ bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPar
 
 	//## Check ellipse centroid sky distance (if requested)
 	double posThr= compMatchPosThr/3600.;//convert in deg as ellipse coords are in deg
-	if(matchSourceComponentsByPos){
-		double Xc_1= ellipse1->GetX1();
-		double Yc_1= ellipse1->GetY1();
-		double Xc_2= ellipse2->GetX1();
-		double Yc_2= ellipse2->GetY1();
+	double Xc_1= ellipse1->GetX1();
+	double Yc_1= ellipse1->GetY1();
+	double R1_1= ellipse1->GetR1();	
+	double R2_1= ellipse1->GetR2();
+	double Theta_1= ellipse1->GetTheta();
+	double Xc_2= ellipse2->GetX1();
+	double Yc_2= ellipse2->GetY1();
+	double R1_2= ellipse2->GetR1();	
+	double R2_2= ellipse2->GetR2();
+	double Theta_2= ellipse2->GetTheta();
+
+	if(matchSourceComponentsByPos)
+	{		
 		double posDist= AstroUtils::GetWCSPointDist_Haversine(Xc_1,Yc_1,Xc_2,Yc_2);
 		if(fabs(posDist)>posThr) {
 			#ifdef LOGGING_ENABLED
-				DEBUG_LOG("NO ELLIPSE POS MATCH: Ellipse pos diff above thr ("<<posDist<<">"<<posThr<<", pos1("<<Xc_1<<","<<Yc_1<<"), pos2("<<Xc_2<<","<<Yc_2<<"))");
+				INFO_LOG("NO ELLIPSE POS MATCH: posDist="<<posDist<<">"<<posThr<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}");
 			#endif
 			return false;
 		}
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("ELLIPSE POS MATCH: Ellipse pos diff below thr ("<<posDist<<"<"<<posThr<<", pos1("<<Xc_1<<","<<Yc_1<<"), pos2("<<Xc_2<<","<<Yc_2<<"))");
+			INFO_LOG("ELLIPSE POS MATCH: posDist="<<posDist<<"<"<<posThr<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}");
 		#endif
 	}
 
@@ -1364,14 +1372,14 @@ bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPar
 		double overlapAreaFraction_2= ellipseOverlapArea/ellipseArea_2;
 		if(rtn==EllipseUtils::DISJOINT_ELLIPSES){
 			#ifdef LOGGING_ENABLED
-				DEBUG_LOG("DISJOINT ELLIPSES");
+				INFO_LOG("DISJOINT ELLIPSES: Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}");
 			#endif
 			return false;
 		}
 		else if(rtn==EllipseUtils::ELLIPSE1_INSIDE_ELLIPSE2 ){
 			if(applySourceComponentAreaRatioThr && overlapAreaFraction_2<compMatchOverlapThr){
 				#ifdef LOGGING_ENABLED
-					DEBUG_LOG("ELLIPSE1 INSIDE ELLIPSE2 (OVERLAP BELOW THR): overlapArea2="<<overlapAreaFraction_2<<"<"<<compMatchOverlapThr);
+					INFO_LOG("ELLIPSE1 INSIDE ELLIPSE2 (OVERLAP BELOW THR): overlapArea2="<<overlapAreaFraction_2<<"<"<<compMatchOverlapThr<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}");
 				#endif
 				return false;
 			}
@@ -1379,7 +1387,7 @@ bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPar
 		else if(rtn==EllipseUtils::ELLIPSE2_INSIDE_ELLIPSE1){
 			if(applySourceComponentAreaRatioThr && overlapAreaFraction_1<compMatchOverlapThr){
 				#ifdef LOGGING_ENABLED
-					DEBUG_LOG("ELLIPSE2 INSIDE ELLIPSE1 (OVERLAP BELOW THR): overlapArea1="<<overlapAreaFraction_1<<"<"<<compMatchOverlapThr);
+					INFO_LOG("ELLIPSE2 INSIDE ELLIPSE1 (OVERLAP BELOW THR): overlapArea1="<<overlapAreaFraction_1<<"<"<<compMatchOverlapThr<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}");
 				#endif
 				return false;
 			}
@@ -1387,19 +1395,19 @@ bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPar
 		else {
 			if(overlapAreaFraction_1<compMatchOverlapThr ){	
 				#ifdef LOGGING_ENABLED
-					DEBUG_LOG("ELLIPSE OVERLAP BELOW THR: overlapArea1="<<overlapAreaFraction_1<<"<"<<compMatchOverlapThr);
+					INFO_LOG("ELLIPSE OVERLAP BELOW THR: overlapArea1="<<overlapAreaFraction_1<<"<"<<compMatchOverlapThr<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}");
 				#endif
 				return false;
 			}
 			if(overlapAreaFraction_2<compMatchOverlapThr){	
 				#ifdef LOGGING_ENABLED
-					DEBUG_LOG("ELLIPSE OVERLAP BELOW THR: overlap2="<<overlapAreaFraction_2<<"<"<<compMatchOverlapThr);
+					INFO_LOG("ELLIPSE OVERLAP BELOW THR: overlap2="<<overlapAreaFraction_2<<"<"<<compMatchOverlapThr<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}");
 				#endif
 				return false;
 			}
 		}
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("ELLIPSE OVERLAP MATCH: overlapArea1="<<overlapAreaFraction_1<<">"<<compMatchOverlapThr<<", overlapArea2="<<overlapAreaFraction_2<<">"<<compMatchOverlapThr<<")");
+			INFO_LOG("ELLIPSE OVERLAP MATCH: overlapArea1="<<overlapAreaFraction_1<<">"<<compMatchOverlapThr<<", overlapArea2="<<overlapAreaFraction_2<<">"<<compMatchOverlapThr<<"), Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}");
 		#endif
 
 	}//close if matchSourcesByOverlap
