@@ -454,7 +454,6 @@ const std::string Source::GetDS9Region(bool dumpNestedSourceInfo,bool convertToW
 }//close GetDS9Region()
 
 
-//const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNestedSourceInfo,bool convertToWCS,WorldCoor* wcs,int coordSystem)
 const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNestedSourceInfo,bool convertToWCS,WCS* wcs,int coordSystem)
 {
 	//Check WCS & metadata
@@ -1318,7 +1317,6 @@ int Source::Fit(SourceFitOptions& fitOptions)
 }//close Fit()
 
 
-//int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool convertToWCS,WorldCoor* wcs,int coordSystem,int pixOffset)
 int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool convertToWCS,WCS* wcs,int coordSystem,int pixOffset)
 {
 	//Init data 

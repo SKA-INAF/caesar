@@ -791,8 +791,10 @@ std::string AstroUtils::EllipseToDS9Region(TEllipse* ellipse,std::string text,st
 		x0++;
 		y0++;
 	}
-	double R1= ellipse->GetR1()*2;//DS9 wants axis (not semi-axis)
-	double R2= ellipse->GetR2()*2;//DS9 wants axis (not semi-axis)
+	//double R1= ellipse->GetR1()*2;//DS9 wants axis (not semi-axis) NOT TRUE!!!
+	//double R2= ellipse->GetR2()*2;//DS9 wants axis (not semi-axis) NOT TRUE!!!
+	double R1= ellipse->GetR1();
+	double R2= ellipse->GetR2();
 	double theta= ellipse->GetTheta();
 	//theta-= 90;//DS9 format??
 
