@@ -960,7 +960,7 @@ std::string GetStringLogLevel(int verbosity){
 	else if(verbosity==2) slevel= "ERROR";
 	else if(verbosity==3) slevel= "WARN";
 	else if(verbosity==4) slevel= "INFO";
-	else if(verbosity>5) slevel= "DEBUG";
+	else if(verbosity>=5) slevel= "DEBUG";
 	else slevel= "OFF";
 
 	return slevel;

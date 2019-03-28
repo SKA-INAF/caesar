@@ -1205,7 +1205,7 @@ bool HaveSourceIslandMatch(SourcePars* sourcePars,RegionPars* regionPars)
 			return false;
 		}
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("POS MATCH: Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<"), Source (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<"), dist(arcsec)="<<posDist*3600.);
+			DEBUG_LOG("POS MATCH: Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<"), Source (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<"), dist(arcsec)="<<posDist*3600.);
 		#endif
 	}
 
@@ -1269,7 +1269,7 @@ bool HaveSourceIslandMatch(SourcePars* sourcePars,RegionPars* regionPars)
 		}
 	
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("CONTOUR OVERLAP MATCH: Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+			DEBUG_LOG("CONTOUR OVERLAP MATCH: Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
 		#endif
 
 	}//close if
@@ -1366,7 +1366,7 @@ bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPar
 			}
 		}
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("ELLIPSE OVERLAP MATCH: overlapArea1="<<overlapAreaFraction_1<<">"<<compMatchOverlapThr<<", overlapArea2="<<overlapAreaFraction_2<<">"<<compMatchOverlapThr<<")");
+			DEBUG_LOG("ELLIPSE OVERLAP MATCH: overlapArea1="<<overlapAreaFraction_1<<">"<<compMatchOverlapThr<<", overlapArea2="<<overlapAreaFraction_2<<">"<<compMatchOverlapThr<<")");
 		#endif
 
 	}//close if matchSourcesByOverlap
@@ -1766,7 +1766,7 @@ std::string GetStringLogLevel(int verbosity)
 	else if(verbosity==2) slevel= "ERROR";
 	else if(verbosity==3) slevel= "WARN";
 	else if(verbosity==4) slevel= "INFO";
-	else if(verbosity>5) slevel= "DEBUG";
+	else if(verbosity>=5) slevel= "DEBUG";
 	else slevel= "OFF";
 
 	return slevel;

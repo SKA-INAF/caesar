@@ -47,7 +47,8 @@
 using namespace std;
 using namespace Caesar;
 
-void Usage(char* exeName){
+void Usage(char* exeName)
+{
 	cout<<"=========== USAGE ==========="<<endl;
 	cout<<"Usage: "<<exeName<<" [options]"<<endl;
 	cout<<endl;
@@ -61,6 +62,7 @@ void Usage(char* exeName){
 	cout<<"-v, --verbosity=[LEVEL] \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	
 	cout<<"=============================="<<endl;
+
 }//close Usage()
 
 static const struct option options_tab[] = {
@@ -112,6 +114,7 @@ int SaveSources();
 int SaveDS9Regions();
 int SaveCatalog();
 int Init();
+void ClearData();
 
 int main(int argc, char *argv[])
 {
@@ -135,6 +138,7 @@ int main(int argc, char *argv[])
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to initialize data!");
 		#endif
+		ClearData();
 		return -1;
 	}
 
@@ -148,6 +152,7 @@ int main(int argc, char *argv[])
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Reading of DS9 region failed!");
 		#endif
+		ClearData();
 		return -1;
 	}
 
@@ -161,6 +166,7 @@ int main(int argc, char *argv[])
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Reading of source data failed!");
 		#endif
+		ClearData();
 		return -1;
 	}
 
@@ -174,6 +180,7 @@ int main(int argc, char *argv[])
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Source selection failed!");
 		#endif
+		ClearData();
 		return -1;
 	}
 
@@ -341,6 +348,21 @@ int Init(){
 }//close Init()
 
 
+void ClearData()
+{
+	//Delete TTree
+	if(outputTree){
+		delete outputTree;
+		outputTree= 0;
+	}
+
+	//Close file
+	if(outputFile && outputFile->IsOpen()){
+		outputFile->Close();
+	}
+
+}//close ClearData()
+
 int SelectSources()
 {
 	#ifdef LOGGING_ENABLED
@@ -473,7 +495,7 @@ int ReadRegionData(std::string filename)
 
 	return 0;
 
-}//close ReadData()
+}//close ReadRegionData()
 
 
 int CloneObjectsInFile(std::vector<std::string> excludedObjNames)
@@ -726,7 +748,7 @@ std::string GetStringLogLevel(int verbosity)
 	else if(verbosity==2) slevel= "ERROR";
 	else if(verbosity==3) slevel= "WARN";
 	else if(verbosity==4) slevel= "INFO";
-	else if(verbosity>5) slevel= "DEBUG";
+	else if(verbosity>=5) slevel= "DEBUG";
 	else slevel= "OFF";
 
 	return slevel;
