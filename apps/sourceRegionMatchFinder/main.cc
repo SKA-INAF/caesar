@@ -67,7 +67,9 @@ void Usage(char* exeName){
 	cout<<"-A, --matchOverlapThr \t Source island-region contour overlap fraction (wrt to total area) threshold (default=0.5)"<<endl;
 	cout<<"-c, --matchSourceComponent \t Match source fit component and region by position centroid (if enabled) and ellipse overlap (if enabled) (default=false)"<<endl;
 	cout<<"-t, --compMatchPosThr=[POS_THESHOLD] \t Source fit component-region centroid distance in arcsec below which we have a match (default=2.5)"<<endl;
-	cout<<"-a, --compMatchOverlapThr \t Source fit component-region contour overlap fraction (wrt to total area) threshold (default=0.5)"<<endl;
+	cout<<"-e, --compMatchPosHighThr=[POS_THESHOLD] \t Source fit component-region centroid distance in arcsec below which we have a match (default=5)"<<endl;
+	cout<<"-a, --compMatchOverlapThr \t Source fit component-region contour overlap fraction (wrt to total area) threshold (default=0.8)"<<endl;
+	cout<<"-d, --compMatchOverlapLowThr \t Source fit component-region contour overlap fraction (wrt to total area) low threshold (default=0.2)"<<endl;
 	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (ROOT format) where to store matched sources (default=sources.root)"<<endl;
 	cout<<"-R, --region-output=[REGION_OUTPUT_FILE] \t Output DS9 region file name where to store selected sources (default=sources.reg)"<<endl;
 	cout<<"-C, --catalog-output=[CATALOG_OUTPUT_FILE] \t Output catalog file name where to store selected sources (default=catalog.dat)"<<endl;
@@ -94,7 +96,9 @@ static const struct option options_tab[] = {
 	{ "matchComponentByOverlap", no_argument, 0, 'b'},
 	{ "applyComponentAreaRatioThr", no_argument, 0, 'l'},		
 	{ "compMatchPosThr", required_argument, 0, 't'},
-	{ "compMatchOverlapThr", required_argument, 0, 'a'},	
+	{ "compMatchPosHighThr", required_argument, 0, 'e'},
+	{ "compMatchOverlapThr", required_argument, 0, 'a'},
+	{ "compMatchOverlapLowThr", required_argument, 0, 'd'},
 	{ "output", required_argument, 0, 'o' },
 	{ "region-output", required_argument, 0, 'R' },
 	{ "catalog-output", required_argument, 0, 'C' },
@@ -121,8 +125,11 @@ bool applySourceComponentAreaRatioThr= false;
 float matchPosThr= 2.5;//dist in arcsec below which source island and region can be matched
 float matchOverlapThr= 0.5;//fraction of overlap above which source island-region are matched
 float compMatchPosThr= 2.5;//dist in arcsec below which source fit component and region can be matched
-float compMatchOverlapThr= 0.5;//fraction of overlap above which source fit component and region are matched
+float compMatchPosHighThr= 5;//dist in arcsec below which source fit component and region can be matched
+float compMatchOverlapThr= 0.8;//fraction of overlap above which source fit component and region are matched
+float compMatchOverlapLowThr= 0.2;//fraction of overlap above which source fit component and region are matched
 int ds9WCSType= 0;//use original WCS type to save catalog
+bool useWCSSimpleGeometry= true;
 int verbosity= 4;//INFO level
 TFile* inputFile= 0;
 TTree* sourceTree= 0;
@@ -459,7 +466,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:r:s:n:m:cPOLpblT:A:t:a:o:R:C:v:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:r:s:n:m:cPOLpblT:A:t:a:e:d:o:R:C:v:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -552,10 +559,20 @@ int ParseOptions(int argc, char *argv[])
 			{
 				compMatchPosThr= atof(optarg);
 				break;
+			}
+			case 'e':
+			{
+				compMatchPosHighThr= atof(optarg);
+				break;
 			}	
 			case 'a':
 			{
 				compMatchOverlapThr= atof(optarg);
+				break;
+			}	
+			case 'd':
+			{
+				compMatchOverlapLowThr= atof(optarg);
 				break;
 			}	
 			case 'R':	
@@ -600,8 +617,8 @@ int ParseOptions(int argc, char *argv[])
 		INFO_LOG("matchSourcesByOverlap? "<<matchSourcesByOverlap<<", matchOverlapThr="<<matchOverlapThr);
 		INFO_LOG("applySourceAreaRatioThr? "<<applySourceAreaRatioThr);
 		INFO_LOG("matchSourceComponent? "<<matchSourceComponent);
-		INFO_LOG("matchSourceComponentsByPos? "<<matchSourceComponentsByPos<<", compMatchPosThr(arcsec)="<<compMatchPosThr);
-		INFO_LOG("matchSourceComponentsByOverlap? "<<matchSourceComponentsByOverlap<<", compMatchOverlapThr="<<compMatchOverlapThr);
+		INFO_LOG("matchSourceComponentsByPos? "<<matchSourceComponentsByPos<<", compMatchPosThr(arcsec)="<<compMatchPosThr<<", compMatchPosHighThr(arcsec)="<<compMatchPosHighThr);
+		INFO_LOG("matchSourceComponentsByOverlap? "<<matchSourceComponentsByOverlap<<", compMatchOverlapThr="<<compMatchOverlapThr<<", compMatchOverlapLowThr="<<compMatchOverlapLowThr);
 		INFO_LOG("applySourceComponentAreaRatioThr? "<<applySourceComponentAreaRatioThr);
 	#endif
 
@@ -1079,7 +1096,7 @@ int FillSourcePars(Source* aSource,int sourceIndex,int nestedSourceIndex)
 		SourceFitPars fitPars= aSource->GetFitPars();
 		int nComponents= fitPars.GetNComponents();
 		std::vector<TEllipse*> fitEllipses;
-		if(aSource->GetFitEllipses(fitEllipses,useFWHM,convertToWCS,wcs,wcsType)<0){
+		if(aSource->GetFitEllipses(fitEllipses,useFWHM,convertToWCS,wcs,wcsType,pixOffset,useWCSSimpleGeometry)<0){
 			#ifdef LOGGING_ENABLED
 				ERROR_LOG("Failed to compute WCS ellipse for fitted components of source "<<sourceName<<"!");
 			#endif
@@ -1212,18 +1229,25 @@ bool HaveSourceIslandMatch(SourcePars* sourcePars,RegionPars* regionPars)
 	//## Compare contour centroids 
 	TVector2 centroid_1= cont1->Centroid;
 	TVector2 centroid_2= cont2->Centroid;
+	double posX_1= centroid_1.X();
+	double posX_2= centroid_2.X();
+	double posY_1= centroid_1.Y();
+	double posY_2= centroid_2.Y();
 	double posThr= matchPosThr/3600.;//convert threshold in deg (contour are given in deg)
+
 	if(matchSourcesByPos){	
-		double posDist= AstroUtils::GetWCSPointDist_Haversine(centroid_1.X(),centroid_1.Y(),centroid_2.X(),centroid_2.Y());
+		double posDist= 0;
+		if(useWCSSimpleGeometry) posDist= MathUtils::GetEuclideanDist(posX_1,posY_1,posX_2,posY_2);
+		else posDist= AstroUtils::GetWCSPointDist_Haversine(posX_1,posY_1,posX_2,posY_2);
 		
 		if(fabs(posDist)>posThr) {	
 			#ifdef LOGGING_ENABLED
-				DEBUG_LOG("NO POS MATCH: Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<"), Region (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<"), dist(arcsec)="<<posDist*3600.);
+				DEBUG_LOG("NO POS MATCH: Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<posX_1<<","<<posY_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<posX_2<<","<<posY_2<<"), dist(arcsec)="<<posDist*3600.);
 			#endif
 			return false;
 		}
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("POS MATCH: Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<"), Source (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<"), dist(arcsec)="<<posDist*3600.);
+			INFO_LOG("POS MATCH: Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<posX_1<<","<<posY_1<<"), Source (index="<<regionPars->regionIndex<<", pos("<<posX_2<<","<<posY_2<<"), dist(arcsec)="<<posDist*3600.);
 		#endif
 	}
 
@@ -1261,14 +1285,14 @@ bool HaveSourceIslandMatch(SourcePars* sourcePars,RegionPars* regionPars)
 		double overlapAreaFraction_2= overlapArea/contArea_2;
 		if(overlapFlag==eCONT_NOT_OVERLAPPING){
 			#ifdef LOGGING_ENABLED	
-				DEBUG_LOG("NO CONTOUR OVERLAP: Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+				DEBUG_LOG("NO CONTOUR OVERLAP: Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<posX_1<<","<<posY_1<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<posX_2<<","<<posY_2<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
 			#endif
 			return false;
 		}
 		else if(overlapFlag==eCONT1_INSIDE_CONT2){
 			if(applySourceAreaRatioThr && overlapAreaFraction_2<matchOverlapThr){
 				#ifdef LOGGING_ENABLED
-					DEBUG_LOG("CONT1 INSIDE CONT2 (OVERLAP BELOW THR): Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+					DEBUG_LOG("CONT1 INSIDE CONT2 (OVERLAP BELOW THR): Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<posX_1<<","<<posY_1<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<posX_2<<","<<posY_2<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
 				#endif
 				return false;
 			}
@@ -1277,7 +1301,7 @@ bool HaveSourceIslandMatch(SourcePars* sourcePars,RegionPars* regionPars)
 		else if(overlapFlag==eCONT2_INSIDE_CONT1){
 			if(applySourceAreaRatioThr && overlapAreaFraction_1<matchOverlapThr){
 				#ifdef LOGGING_ENABLED
-					DEBUG_LOG("CONT2 INSIDE CONT1 (OVERLAP BELOW THR): Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+					DEBUG_LOG("CONT2 INSIDE CONT1 (OVERLAP BELOW THR): Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<posX_1<<","<<posY_1<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<posX_2<<","<<posY_2<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
 				#endif
 				return false;
 			}
@@ -1285,14 +1309,14 @@ bool HaveSourceIslandMatch(SourcePars* sourcePars,RegionPars* regionPars)
 		else if(overlapFlag==eCONT_OVERLAPPING){
 			if(overlapAreaFraction_1<matchOverlapThr || overlapAreaFraction_2<matchOverlapThr){
 				#ifdef LOGGING_ENABLED
-					DEBUG_LOG("CONT OVERLAP BELOW THR: Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+					DEBUG_LOG("CONT OVERLAP BELOW THR: Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<posX_1<<","<<posY_1<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<posX_2<<","<<posY_2<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
 				#endif
 				return false;
 			}
 		}
 	
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("CONTOUR OVERLAP MATCH: Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<centroid_1.X()<<","<<centroid_1.Y()<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<centroid_2.X()<<","<<centroid_2.Y()<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+			INFO_LOG("CONTOUR OVERLAP MATCH: Source (index="<<sourcePars->sourceIndex<<", nestedIndex="<<sourcePars->nestedSourceIndex<<", name="<<sourcePars->sname<<", pos="<<posX_1<<","<<posY_1<<", area="<<contArea_1<<"), Region (index="<<regionPars->regionIndex<<", pos("<<posX_2<<","<<posY_2<<", area="<<contArea_2<<"), overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
 		#endif
 
 	}//close if
@@ -1304,6 +1328,19 @@ bool HaveSourceIslandMatch(SourcePars* sourcePars,RegionPars* regionPars)
 
 bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPars)
 {
+	//################################################	
+	//##        METHOD 
+	//################################################
+	//1) Check overlap first.
+	//      - No overlap --> no match	
+	//      - Complete overlap (e.g. one inside the other) --> check pos match	
+	//          - Small pos match (e.g. within high pos thr) --> match
+	//      - Small overlap (e.g. above low overlap thr) --> check pos match
+	//           - High pos match (e.g. within low pos thr) --> match 	
+	//      - Large overlap (e.g. above high overlap thr) --> check pos match	
+	//           - Small pos match (e.g. within high pos thr) --> match
+	//################################################
+
 	//## Check data
 	if(!componentPars || !regionPars){
 		#ifdef LOGGING_ENABLED
@@ -1322,8 +1359,9 @@ bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPar
 		return false;
 	}
 
-	//## Check ellipse centroid sky distance (if requested)
+	//## Get ellipse pars
 	double posThr= compMatchPosThr/3600.;//convert in deg as ellipse coords are in deg
+	double posHighThr= compMatchPosHighThr/3600.;//convert in deg as ellipse coords are in deg
 	double Xc_1= ellipse1->GetX1();
 	double Yc_1= ellipse1->GetY1();
 	double R1_1= ellipse1->GetR1();	
@@ -1335,6 +1373,154 @@ bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPar
 	double R2_2= ellipse2->GetR2();
 	double Theta_2= ellipse2->GetTheta();
 
+	//## Compute ellipse area, distance and overlap
+	double posDist= 0.;
+	if(useWCSSimpleGeometry) posDist= MathUtils::GetEuclideanDist(Xc_1,Yc_1,Xc_2,Yc_2);
+	else posDist= AstroUtils::GetWCSPointDist_Haversine(Xc_1,Yc_1,Xc_2,Yc_2);
+
+	double ellipseArea_1= MathUtils::ComputeEllipseArea(ellipse1);
+	double ellipseArea_2= MathUtils::ComputeEllipseArea(ellipse2);
+	double ellipseOverlapArea= -1;
+	double err= 0;
+	int rtn= 0;
+	if(MathUtils::ComputeEllipseOverlapArea(ellipseOverlapArea,err,rtn,ellipse1,ellipse2)<0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to compute ellipse overlap area (err status="<<rtn<<"), return no match!");
+		#endif
+		return false;
+	}	
+	double overlapAreaFraction_1= ellipseOverlapArea/ellipseArea_1;
+	double overlapAreaFraction_2= ellipseOverlapArea/ellipseArea_2;
+
+	//## Check overlap
+	bool hasPosLargeMatch= (fabs(posDist)<=posThr);
+	bool hasPosSmallMatch= (fabs(posDist)<=posHighThr);
+	bool noPosMatch= (hasPosSmallMatch || hasPosLargeMatch);
+	bool noOverlap= (rtn==EllipseUtils::DISJOINT_ELLIPSES);
+	bool hasOverlapCompleteMatch= (
+		rtn==EllipseUtils::ELLIPSE1_INSIDE_ELLIPSE2 || rtn==EllipseUtils::ELLIPSE2_INSIDE_ELLIPSE1
+	);
+	bool hasOverlapLargeMatch= (
+		(!noOverlap && !hasOverlapCompleteMatch && overlapAreaFraction_1>=compMatchOverlapThr && overlapAreaFraction_2>=compMatchOverlapThr)
+	);
+	bool hasOverlapSmallMatch= (
+		(!noOverlap && !hasOverlapCompleteMatch && overlapAreaFraction_1>=compMatchOverlapLowThr && overlapAreaFraction_2>=compMatchOverlapLowThr)
+	);
+	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}, hasPosLargeMatch? "<<hasPosLargeMatch<<", hasPosSmallMatch? "<<hasPosSmallMatch<<", hasOverlapCompleteMatch? "<<hasOverlapCompleteMatch<<", hasOverlapLargeMatch? "<<hasOverlapLargeMatch<<", hasOverlapSmallMatch? "<<hasOverlapSmallMatch<<", rtn="<<rtn);
+	#endif
+	
+	if(matchSourceComponentsByOverlap)
+	{
+		//- No overlap: Disjoint ellipses
+		if(rtn==EllipseUtils::DISJOINT_ELLIPSES){
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("DISJOINT ELLIPSES: Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}, rtn="<<rtn);
+			#endif
+			return false;
+		}
+
+		//- Full overlap: Ellipse 1 inside ellipse 2 (overlap=Area1)
+		else if(rtn==EllipseUtils::ELLIPSE1_INSIDE_ELLIPSE2 ){
+			//Check area overlap ratio
+			if(applySourceComponentAreaRatioThr && overlapAreaFraction_2<compMatchOverlapThr){
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("ELLIPSE1 INSIDE ELLIPSE2 (OVERLAP BELOW THR): overlapArea2="<<overlapAreaFraction_2<<"<"<<compMatchOverlapThr<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}, rtn="<<rtn);
+				#endif
+				return false;
+			}
+
+			//Check small pos match
+			if(matchSourceComponentsByPos && !hasPosSmallMatch){
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("NO ELLIPSE POS SMALL MATCH: posDist(arcsec)="<<posDist*3600<<">"<<posHighThr*3600<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}, rtn="<<rtn);
+				#endif
+				return false;
+			}
+		}
+
+		//- Full overlap: Ellipse 2 inside ellipse 1 (overlap=Area2)
+		else if(rtn==EllipseUtils::ELLIPSE2_INSIDE_ELLIPSE1){
+			//Check area overlap ratio
+			if(applySourceComponentAreaRatioThr && overlapAreaFraction_1<compMatchOverlapThr){
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("ELLIPSE2 INSIDE ELLIPSE1 (OVERLAP BELOW THR): overlapArea1="<<overlapAreaFraction_1<<"<"<<compMatchOverlapThr<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}, rtn="<<rtn);
+				#endif
+				return false;
+			}
+
+			//Check small pos match
+			if(matchSourceComponentsByPos && !hasPosSmallMatch){
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("NO ELLIPSE POS SMALL MATCH: posDist(arcsec)="<<posDist*3600<<">"<<posHighThr*3600<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}, rtn="<<rtn);
+				#endif
+				return false;
+			}
+		}
+
+		//- Partial overlap
+		else {
+			//- Large overlap
+			if(hasOverlapLargeMatch){	
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("ELLIPSE LARGE OVERLAP: overlapArea1="<<overlapAreaFraction_1<<">="<<compMatchOverlapThr<<", overlapArea2="<<overlapAreaFraction_2<<">="<<compMatchOverlapThr<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}, rtn="<<rtn);
+				#endif
+				
+				//Check small pos match
+				if(matchSourceComponentsByPos && !hasPosSmallMatch){
+					#ifdef LOGGING_ENABLED
+						INFO_LOG("NO ELLIPSE POS SMALL MATCH: posDist(arcsec)="<<posDist*3600<<">"<<posHighThr*3600<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}, rtn="<<rtn);
+					#endif
+					return false;
+				}
+			}//close if
+
+			//- Small overlap
+			else if(hasOverlapSmallMatch){
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("ELLIPSE SMALL OVERLAP: overlapArea1="<<overlapAreaFraction_1<<">="<<compMatchOverlapLowThr<<", overlapArea2="<<overlapAreaFraction_2<<">="<<compMatchOverlapLowThr<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}, rtn="<<rtn);
+				#endif
+
+				//Check large pos match
+				if(matchSourceComponentsByPos && !hasPosLargeMatch){
+					#ifdef LOGGING_ENABLED
+						INFO_LOG("NO ELLIPSE POS LARGE MATCH: posDist(arcsec)="<<posDist*3600<<">"<<posThr*3600<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}, rtn="<<rtn);
+					#endif
+					return false;
+				}
+			}//close else if
+			
+			//- Partial overlap not sufficient
+			else {
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("ELLIPSE OVERLAP BELOW SMALL & HIGH THR: overlapArea1="<<overlapAreaFraction_1<<">="<<compMatchOverlapThr<<", overlapArea2="<<overlapAreaFraction_2<<">="<<compMatchOverlapThr<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}, rtn="<<rtn);
+				#endif
+				return false;
+			}
+
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("ELLIPSE OVERLAP MATCH: overlapArea1="<<overlapAreaFraction_1<<", overlapArea2="<<overlapAreaFraction_2<<", compMatchOverlapThr="<<compMatchOverlapThr<<", compMatchOverlapLowThr="<<compMatchOverlapLowThr<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}, rtn="<<rtn);
+			#endif
+		}//close else
+
+	}//close if check overlap
+	else{
+		//## Check ellipse centroid sky distance (if requested)
+		if(matchSourceComponentsByPos && !hasPosLargeMatch){
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("NO ELLIPSE POS MATCH: posDist(arcsec)="<<posDist*3600<<">"<<posThr*3600<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}");
+			#endif
+			return false;
+		}
+
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("ELLIPSE POS MATCH: posDist(arcsec)="<<posDist*3600<<"<"<<posThr*3600<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}");
+		#endif
+	}
+	
+	/*
+	//## Check ellipse centroid sky distance (if requested)
 	if(matchSourceComponentsByPos)
 	{		
 		double posDist= AstroUtils::GetWCSPointDist_Haversine(Xc_1,Yc_1,Xc_2,Yc_2);
@@ -1395,13 +1581,13 @@ bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPar
 		else {
 			if(overlapAreaFraction_1<compMatchOverlapThr ){	
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("ELLIPSE OVERLAP BELOW THR: overlapArea1="<<overlapAreaFraction_1<<"<"<<compMatchOverlapThr<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}");
+					INFO_LOG("ELLIPSE OVERLAP BELOW THR: overlapArea1="<<overlapAreaFraction_1<<"<"<<compMatchOverlapThr<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}, rtn="<<rtn);
 				#endif
 				return false;
 			}
 			if(overlapAreaFraction_2<compMatchOverlapThr){	
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("ELLIPSE OVERLAP BELOW THR: overlap2="<<overlapAreaFraction_2<<"<"<<compMatchOverlapThr<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}");
+					INFO_LOG("ELLIPSE OVERLAP BELOW THR: overlapArea2="<<overlapAreaFraction_2<<"<"<<compMatchOverlapThr<<", Source {name="<<componentPars->sname<<", ellipse("<<Xc_1<<","<<Yc_1<<","<<R1_1<<","<<R2_1<<","<<Theta_1<<")}, Region {index="<<regionPars->regionIndex<<", ellipse("<<Xc_2<<","<<Yc_2<<","<<R1_2<<","<<R2_2<<","<<Theta_2<<")}, rtn="<<rtn);
 				#endif
 				return false;
 			}
@@ -1411,6 +1597,8 @@ bool HaveSourceComponentMatch(ComponentPars* componentPars,RegionPars* regionPar
 		#endif
 
 	}//close if matchSourcesByOverlap
+	*/
+
 
 	return true;
 
