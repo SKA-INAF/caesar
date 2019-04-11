@@ -574,11 +574,17 @@ TEllipse* AstroUtils::PixelToWCSEllipse(TEllipse* ellipse,WCS* wcs,int pixOffset
 	theta2_wcs+= 90.;
 	double dtheta_wcs= theta_wcs-theta2_wcs; 
 
+	//NB: theta_wcs is changed here to 180-theta_wcs because x (RA) increases in the opposite X direction
+	theta_wcs= 180.-theta_wcs;
+	theta2_wcs= 180.-theta2_wcs;
+	dtheta_wcs= theta_wcs-theta2_wcs;
+
 	//Correct ellipse minor axis
-	semiminor_wcs*= fabs(cos(dtheta_wcs*TMath::DegToRad()));
+	double corrFactor= fabs(cos(dtheta_wcs*TMath::DegToRad()));
+	semiminor_wcs*= corrFactor;
 
 	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("(x,y,sx,sy,theta)=("<<std::setprecision(8)<<x<<","<<y<<","<<sx<<","<<sy<<","<<theta<<"), (x1,y1)=("<<x1<<","<<y1<<"), (x2,y2)=("<<x2<<","<<y2<<"), (x1_wcs,y1_wcs)=("<<x1_wcs<<","<<y1_wcs<<"), (x2_wcs,y2_wcs)=("<<x2_wcs<<","<<y2_wcs<<"), (x_wcs,y_wcs,a,b,theta)=("<<x_wcs<<","<<y_wcs<<","<<semimajor_wcs<<","<<semiminor_wcs<<","<<theta_wcs<<"), theta2_wcs="<<theta2_wcs<<", dtheta_wcs="<<dtheta_wcs);
+		INFO_LOG("(x,y,sx,sy,theta)=("<<std::setprecision(8)<<x<<","<<y<<","<<sx<<","<<sy<<","<<theta<<"), (x1,y1)=("<<x1<<","<<y1<<"), (x2,y2)=("<<x2<<","<<y2<<"), (x1_wcs,y1_wcs)=("<<x1_wcs<<","<<y1_wcs<<"), (x2_wcs,y2_wcs)=("<<x2_wcs<<","<<y2_wcs<<"), (x_wcs,y_wcs,a,b,theta)=("<<x_wcs<<","<<y_wcs<<","<<semimajor_wcs<<","<<semiminor_wcs<<","<<theta_wcs<<"), theta2_wcs="<<theta2_wcs<<", dtheta_wcs="<<dtheta_wcs<<", corrFactor="<<corrFactor);
 	#endif
 
 	TEllipse* ellipse_wcs= new TEllipse(x_wcs,y_wcs,semimajor_wcs,semiminor_wcs,0.,360.,theta_wcs);
@@ -589,6 +595,75 @@ TEllipse* AstroUtils::PixelToWCSEllipse(TEllipse* ellipse,WCS* wcs,int pixOffset
 	return ellipse_wcs;
 
 }//close PixelToWCSEllipse()
+
+
+TEllipse* AstroUtils::PixelToWCSEllipseSimple(TEllipse* ellipse,WCS* wcs,int pixOffset)
+{
+	//Check input data
+	if(!ellipse){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null ptr to input contour given, returning nullptr!");
+		#endif
+		return nullptr;
+	}
+	if(!wcs){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null ptr to input coord system given, nothing can be done!");
+		#endif
+		return nullptr;
+	}
+
+	//Get ellipse pars
+	double x= ellipse->GetX1();//ellipse centroid x
+	double y= ellipse->GetY1();//ellipse centroid y
+	x+= pixOffset;
+	y+= pixOffset;
+	double sx= ellipse->GetR1();//ellipse semi-major axis
+	double sy= ellipse->GetR2();//ellipse semi-minor axis
+	double theta= ellipse->GetTheta();//rotation angle (wrt x axis)
+	double theta_rad= theta*TMath::DegToRad();
+
+	//Compute ellipse axis coordinates
+	double x1= x + sx * cos(theta_rad);
+	double y1= y + sx * sin(theta_rad);
+	double x2= x + sy * cos(theta_rad - TMath::Pi()/2.);
+	double y2= y + sy * sin(theta_rad - TMath::Pi()/2.);
+
+	//Convert ellipse centroid in sky coords
+	double x_wcs= 0;
+	double y_wcs= 0;
+	WCSUtils::pix2wcs (wcs,x,y,&x_wcs, &y_wcs);
+
+	//Convert ellipse axis coord in sky coords
+	double x1_wcs= 0;
+	double y1_wcs= 0;
+	double x2_wcs= 0;
+	double y2_wcs= 0;
+	WCSUtils::pix2wcs (wcs,x1,y1,&x1_wcs, &y1_wcs);
+	WCSUtils::pix2wcs (wcs,x2,y2,&x2_wcs, &y2_wcs);
+
+	//Compute ellipse axis points
+	//NB: We are assuming Euclidean distance (in PixelToWCSEllipse() more refined method we use Haversine distance)
+	double semimajor_wcs= sqrt( (x_wcs-x1_wcs)*(x_wcs-x1_wcs) + (y_wcs-y1_wcs)*(y_wcs-y1_wcs) );
+	double semiminor_wcs= sqrt( (x_wcs-x2_wcs)*(x_wcs-x2_wcs) + (y_wcs-y2_wcs)*(y_wcs-y2_wcs) );
+
+	//Compute ellipse angle
+	//NB: We are considering the same angle used in pixel coordinates (in PixelToWCSEllipse() more refined method we use bearing)
+	//    theta_wcs is changed here to 180-theta_wcs because x (RA) increases in the opposite X direction
+	double theta_wcs= 180.-theta;
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("(x,y,sx,sy,theta)=("<<std::setprecision(8)<<x<<","<<y<<","<<sx<<","<<sy<<","<<theta<<"), (x1,y1)=("<<x1<<","<<y1<<"), (x2,y2)=("<<x2<<","<<y2<<"), (x1_wcs,y1_wcs)=("<<x1_wcs<<","<<y1_wcs<<"), (x2_wcs,y2_wcs)=("<<x2_wcs<<","<<y2_wcs<<"), (x_wcs,y_wcs,a,b,theta)=("<<x_wcs<<","<<y_wcs<<","<<semimajor_wcs<<","<<semiminor_wcs<<","<<theta_wcs);
+	#endif
+
+	TEllipse* ellipse_wcs= new TEllipse(x_wcs,y_wcs,semimajor_wcs,semiminor_wcs,0.,360.,theta_wcs);
+	ellipse_wcs->SetLineWidth(2);
+	ellipse_wcs->SetFillColor(0);
+	ellipse_wcs->SetFillStyle(0);
+
+	return ellipse_wcs;
+
+}//close PixelToWCSEllipseSimple()
 
 
 int AstroUtils::GetBeamDeconvolvedEllipsePars (

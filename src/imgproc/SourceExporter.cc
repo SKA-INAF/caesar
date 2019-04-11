@@ -1015,7 +1015,6 @@ const std::string SourceExporter::SourceToDS9EllipseRegion(Source* source,bool d
 }//close SourceToDS9EllipseRegion()
 
 
-//const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,bool useFWHM,bool dumpNestedSourceInfo,bool convertToWCS,WorldCoor* wcs,int coordSystem)
 const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,bool useFWHM,bool dumpNestedSourceInfo,bool convertToWCS,WCS* wcs,int coordSystem)
 {
 	//Check source
@@ -1082,7 +1081,7 @@ const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,
 			std::string regionText(Form("%s_fitcomp%d",source->GetName(),(int)(i+1)));
 			std::string regionColor= "red";
 			
-			std::vector<std::string> regionTags {"point-like","fit-component",fitComponentFlagStr,fitComponentTypeStr,fitQualityFlagStr};
+			std::vector<std::string> regionTags {fitComponentTypeStr,"fit-component",fitComponentFlagStr,fitQualityFlagStr};
 			std::string region= AstroUtils::EllipseToDS9Region(ellipses[i],regionText,regionColor,regionTags,useImageCoords);
 			sstream<<region;
 

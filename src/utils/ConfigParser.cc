@@ -147,6 +147,7 @@ int ConfigParser::RegisterPredefinedOptions()
 		REGISTER_OPTION(ds9FitRegionFile,std::string,"ds9_fitcomp.reg","","");
 		REGISTER_OPTION(convertDS9RegionsToWCS,bool,false,false,true);
 		REGISTER_OPTION(ds9WCSType,int,0,-0.001,3);
+		REGISTER_OPTION(useSimpleWCSEllipseConversion,bool,true,false,true);
 		REGISTER_OPTION(outputCatalogFile,std::string,"catalog.dat","","");
 		REGISTER_OPTION(outputComponentCatalogFile,std::string,"catalog_fitcomp.dat","","");
 		

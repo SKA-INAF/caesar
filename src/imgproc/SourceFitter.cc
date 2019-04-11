@@ -1634,10 +1634,19 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	//Compute WCS ellipse pars
 	if(wcs){
 		//Compute WCS ellipse pars
-		if(m_sourceFitPars.ComputeComponentWCSEllipsePars(wcs)<0){
-			#ifdef LOGGING_ENABLED
-				WARN_LOG("Failed to compute WCS fit component ellipse pars!");
-			#endif
+		if(fitOptions.useSimpleWCSEllipseConversion){
+			if(m_sourceFitPars.ComputeComponentWCSEllipseParsSimple(wcs)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to compute WCS fit component ellipse pars with simple method!");
+				#endif
+			}
+		}
+		else {
+			if(m_sourceFitPars.ComputeComponentWCSEllipsePars(wcs)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to compute WCS fit component ellipse pars!");
+				#endif
+			}
 		}
 
 		//Compute deconvolved WCS ellipse pars

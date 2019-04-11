@@ -454,7 +454,7 @@ const std::string Source::GetDS9Region(bool dumpNestedSourceInfo,bool convertToW
 }//close GetDS9Region()
 
 
-const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNestedSourceInfo,bool convertToWCS,WCS* wcs,int coordSystem)
+const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNestedSourceInfo,bool convertToWCS,WCS* wcs,int coordSystem,bool useWCSSimpleConversion)
 {
 	//Check WCS & metadata
 	if(convertToWCS && !wcs && !m_imgMetaData){
@@ -478,7 +478,7 @@ const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNested
 		//Get fit ellipses
 		std::vector<TEllipse*> ellipses;
 		
-		if(GetFitEllipses(ellipses,useFWHM,convertToWCS,wcs,coordSystem,pixOffset)<0){
+		if(GetFitEllipses(ellipses,useFWHM,convertToWCS,wcs,coordSystem,pixOffset,useWCSSimpleConversion)<0){
 			#ifdef LOGGING_ENABLED
 				ERROR_LOG("Failed to get WorldCoord system from metadata!");
 			#endif
@@ -499,10 +499,15 @@ const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNested
 			m_fitPars.GetComponentFlag(fitComponentFlag,i);
 			std::string fitComponentFlagStr= GetSourceFlagStr(fitComponentFlag);
 
+			//Get fit component type
+			int fitComponentType= -1;
+			m_fitPars.GetComponentType(fitComponentType,i);
+			std::string fitComponentTypeStr= GetSourceTypeStr(fitComponentType);
+
 			//Get encoded string region
 			std::string regionText(Form("%s_fitcomp%d",this->GetName(),(int)(i+1)));
 			std::string regionColor= "red";
-			std::vector<std::string> regionTags {"point-like","fit-component",fitComponentFlagStr,fitQualityFlagStr};
+			std::vector<std::string> regionTags {fitComponentTypeStr,"fit-component",fitComponentFlagStr,fitQualityFlagStr};
 			std::string region= AstroUtils::EllipseToDS9Region(ellipses[i],regionText,regionColor,regionTags,useImageCoords);
 			sstream<<region;
 
@@ -1317,7 +1322,7 @@ int Source::Fit(SourceFitOptions& fitOptions)
 }//close Fit()
 
 
-int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool convertToWCS,WCS* wcs,int coordSystem,int pixOffset)
+int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool convertToWCS,WCS* wcs,int coordSystem,int pixOffset,bool useWCSSimpleConversion)
 {
 	//Init data 
 	fitEllipses.clear();
@@ -1352,7 +1357,6 @@ int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool
 		//Build the WCS with metadata if not given
 		bool deleteWCS= false;
 		if(!wcs){
-			//wcs= m_imgMetaData->GetWorldCoord(coordSystem);
 			wcs= m_imgMetaData->GetWCS(coordSystem);
 			if(!wcs){
 				#ifdef LOGGING_ENABLED
@@ -1367,13 +1371,15 @@ int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool
 		//Convert ellipses to WCS
 		std::vector<TEllipse*> fitEllipses_wcs;
 		for(size_t i=0;i<fitEllipses.size();i++){
-			TEllipse* fitEllipse_wcs= AstroUtils::PixelToWCSEllipse(fitEllipses[i],wcs,pixOffset);
+			TEllipse* fitEllipse_wcs= 0;
+			if(useWCSSimpleConversion) fitEllipse_wcs= AstroUtils::PixelToWCSEllipseSimple(fitEllipses[i],wcs,pixOffset);
+			else fitEllipse_wcs= AstroUtils::PixelToWCSEllipse(fitEllipses[i],wcs,pixOffset);
+
 			if(!fitEllipse_wcs){
 				#ifdef LOGGING_ENABLED
 					ERROR_LOG("Failed to convert fit ellipse no. "<<i+1<<" to WCS!");
 				#endif
 				CodeUtils::DeletePtrCollection<TEllipse>(fitEllipses);
-				//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);	
 				if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 				return -1;
 			}
@@ -1385,7 +1391,6 @@ int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool
 		fitEllipses.insert(fitEllipses.end(),fitEllipses_wcs.begin(),fitEllipses_wcs.end());
 	
 		//Delete wcs (if allocated)
-		//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 		if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	}//close if convert to WCS

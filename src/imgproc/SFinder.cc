@@ -633,6 +633,7 @@ int SFinder::Configure()
 	GET_OPTION_VALUE(ds9RegionFormat,m_DS9RegionFormat);
 	GET_OPTION_VALUE(convertDS9RegionsToWCS,m_convertDS9RegionsToWCS);
 	GET_OPTION_VALUE(ds9WCSType,m_ds9WCSType);
+	GET_OPTION_VALUE(useSimpleWCSEllipseConversion,m_useSimpleWCSEllipseConversion);
 	GET_OPTION_VALUE(saveSources,m_saveSources);
 	GET_OPTION_VALUE(isInteractiveRun,m_IsInteractiveRun);
 	GET_OPTION_VALUE(saveResidualMap,m_saveResidualMap);
@@ -3502,6 +3503,7 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	fitOptions.fitParBoundIncreaseStepSize= m_fitParBoundIncreaseStepSize;
 	fitOptions.fitScaleDataToMax= m_fitScaleDataToMax;
 	fitOptions.wcsType= m_ds9WCSType;
+	fitOptions.useSimpleWCSEllipseConversion= m_useSimpleWCSEllipseConversion;
 
 	//## Check minimizer support
 	if(fitOptions.fitMinimizer=="Minuit2" || fitOptions.fitMinimizer=="minuit2"){
@@ -4025,7 +4027,7 @@ int SFinder::SaveDS9RegionFile()
 			}
 
 			//Get DS9 regions for fitted components
-			std::string regionInfo= m_SourceCollection[k]->GetDS9FittedEllipseRegion(useFWHM,true,m_convertDS9RegionsToWCS,wcs,m_ds9WCSType);
+			std::string regionInfo= m_SourceCollection[k]->GetDS9FittedEllipseRegion(useFWHM,true,m_convertDS9RegionsToWCS,wcs,m_ds9WCSType,m_useSimpleWCSEllipseConversion);
 
 			fprintf(fout_fit,"%s\n",regionInfo.c_str());
 		}//end loop sources

@@ -315,7 +315,6 @@ class Source : public Blob {
 		/**
 		* \brief Get DS9 region info
 		*/
-		//const std::string GetDS9Region(bool dumpNestedSourceInfo=false,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1);
 		const std::string GetDS9Region(bool dumpNestedSourceInfo=false,bool convertToWCS=false,WCS* wcs=0,int coordSystem=-1);
 		/**
 		* \brief Get DS9 ellipse info
@@ -324,8 +323,7 @@ class Source : public Blob {
 		/**
 		* \brief Get DS9 fitted ellipse info
 		*/
-		//const std::string GetDS9FittedEllipseRegion(bool useFWHM=true,bool dumpNestedSourceInfo=false,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1);
-		const std::string GetDS9FittedEllipseRegion(bool useFWHM=true,bool dumpNestedSourceInfo=false,bool convertToWCS=false,WCS* wcs=0,int coordSystem=-1);
+		const std::string GetDS9FittedEllipseRegion(bool useFWHM=true,bool dumpNestedSourceInfo=false,bool convertToWCS=false,WCS* wcs=0,int coordSystem=-1,bool useWCSSimpleConversion=true);
 
 		/**
 		* \brief Get DS9 region color according to source type
@@ -568,8 +566,7 @@ class Source : public Blob {
 		/**
 		* \brief Get fit ellipses
 		*/
-		//int GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM=true,bool convertToWCS=false,WorldCoor* wcs=0,int coordSystem=-1,int pixOffset=0);
-		int GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM=true,bool convertToWCS=false,WCS* wcs=0,int coordSystem=-1,int pixOffset=0);
+		int GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM=true,bool convertToWCS=false,WCS* wcs=0,int coordSystem=-1,int pixOffset=0,bool useWCSSimpleConversion=true);
 	
 		
 		/**
@@ -625,7 +622,6 @@ class Source : public Blob {
 		/**
 		* \brief Return source name following IAU convention
 		*/
-		//std::string GetIAUName(bool useWeightedPos=false,WorldCoor* wcs=0,int coordSystem=eJ2000);
 		std::string GetIAUName(bool useWeightedPos=false,WCS* wcs=0,int coordSystem=eJ2000);
 		
 		/**
@@ -643,7 +639,6 @@ class Source : public Blob {
 		/**
 		* \brief Return centroid in WCS coordinates
 		*/
-		//int GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WorldCoor* wcs=0,int coordSystem=eJ2000);
 		int GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WCS* wcs=0,int coordSystem=eJ2000);
 
 
@@ -686,7 +681,7 @@ class Source : public Blob {
 		SourceFitPars m_fitPars;
 		int m_fitStatus;
 
-		ClassDef(Source,2)
+		ClassDef(Source,3)
 
 	public:
 		

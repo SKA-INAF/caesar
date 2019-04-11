@@ -156,7 +156,8 @@ struct SourceFitOptions {
 		fitEllipseAreaRatioMaxCut= 10;
 		fitEllipseRotAngleCut= 45;
 		
-		
+		useSimpleWCSEllipseConversion= true;
+
 	}//close constructor
 
 	public:
@@ -256,6 +257,9 @@ struct SourceFitOptions {
 		double fitEllipseAreaRatioMinCut;
 		double fitEllipseAreaRatioMaxCut;
 		double fitEllipseRotAngleCut;
+
+		//- Use simple WCS ellipse conversion
+		bool useSimpleWCSEllipseConversion;
 		
 };//close SourceFitOptions
 
@@ -383,14 +387,13 @@ class SourceComponentPars : public TObject {
 				sigmaY*= GausSigma2FWHM/2.;
 			}
 		
-			//return StatsUtils::GetFitEllipse(x0,y0,sigmaX,sigmaY,theta,useFWHM);
-
 			TEllipse* ellipse= new TEllipse(x0,y0,sigmaX,sigmaY,0.,360.,theta);
 			ellipse->SetLineWidth(2);
 			ellipse->SetFillColor(0);
 			ellipse->SetFillStyle(0);
 
 			return ellipse;
+
 		}//close GetFitEllipse()
 
 		/** 
@@ -635,7 +638,6 @@ class SourceComponentPars : public TObject {
 			//Compute ellipse centroid coords in WCS coords
 			double x_wcs= 0;
 			double y_wcs= 0;
-			//pix2wcs (wcs,x,y,&x_wcs, &y_wcs);
 			WCSUtils::pix2wcs (wcs,x,y,&x_wcs, &y_wcs);
 			m_x0_wcs= x_wcs;
 			m_y0_wcs= y_wcs;
@@ -643,7 +645,6 @@ class SourceComponentPars : public TObject {
 			//Compute ellipse centroid errors in WCS coords
 			double dx_wcs= 0;
 			double dy_wcs= 0;
-			//pix2wcs (wcs,x + x_err,y + y_err,&dx_wcs,&dy_wcs);
 			WCSUtils::pix2wcs (wcs,x + x_err,y + y_err,&dx_wcs,&dy_wcs); 
 			m_x0_err_wcs= AstroUtils::GetWCSPointDist_Haversine(x_wcs,y_wcs,dx_wcs,y_wcs);
 			m_y0_err_wcs= AstroUtils::GetWCSPointDist_Haversine(x_wcs,y_wcs,x_wcs,dy_wcs);
@@ -661,8 +662,6 @@ class SourceComponentPars : public TObject {
 			double y1_wcs= 0;
 			double x2_wcs= 0;
 			double y2_wcs= 0;
-			//pix2wcs (wcs,x1,y1,&x1_wcs, &y1_wcs);
-			//pix2wcs (wcs,x2,y2,&x2_wcs, &y2_wcs);
 			WCSUtils::pix2wcs (wcs,x1,y1,&x1_wcs, &y1_wcs);
 			WCSUtils::pix2wcs (wcs,x2,y2,&x2_wcs, &y2_wcs);
 
@@ -692,8 +691,6 @@ class SourceComponentPars : public TObject {
 			double y1_ref_wcs= 0;
 			double x1_err_wcs= 0;
 			double y1_err_wcs= 0;
-			//pix2wcs (wcs,x1_ref,y1_ref,&x1_ref_wcs, &y1_ref_wcs);
-			//pix2wcs (wcs,x1_err,y1_err,&x1_err_wcs, &y1_err_wcs);
 			WCSUtils::pix2wcs (wcs,x1_ref,y1_ref,&x1_ref_wcs, &y1_ref_wcs);
 			WCSUtils::pix2wcs (wcs,x1_err,y1_err,&x1_err_wcs, &y1_err_wcs);
 			double a_err_wcs= AstroUtils::GetWCSPointDist_Haversine(x1_ref_wcs,y1_ref_wcs,x1_err_wcs,y1_err_wcs);
@@ -707,8 +704,6 @@ class SourceComponentPars : public TObject {
 			double y2_ref_wcs= 0;			
 			double x2_err_wcs= 0;
 			double y2_err_wcs= 0;
-			//pix2wcs (wcs,x2_ref,y2_ref,&x2_ref_wcs, &y2_ref_wcs);
-			//pix2wcs (wcs,x2_err,y2_err,&x2_err_wcs, &y2_err_wcs);
 			WCSUtils::pix2wcs (wcs,x2_ref,y2_ref,&x2_ref_wcs, &y2_ref_wcs);
 			WCSUtils::pix2wcs (wcs,x2_err,y2_err,&x2_err_wcs, &y2_err_wcs);
 			double b_err_wcs= AstroUtils::GetWCSPointDist_Haversine(x2_ref_wcs,y2_ref_wcs,x2_err_wcs,y2_err_wcs);
@@ -718,10 +713,8 @@ class SourceComponentPars : public TObject {
 			double y1_thetaerr= y + sy * sin(theta_rad + theta_err_rad);
 			double x1_thetaerr_wcs= 0;
 			double y1_thetaerr_wcs= 0;
-			//pix2wcs (wcs,x1_thetaerr,y1_thetaerr,&x1_thetaerr_wcs, &y1_thetaerr_wcs);
 			WCSUtils::pix2wcs (wcs,x1_thetaerr,y1_thetaerr,&x1_thetaerr_wcs, &y1_thetaerr_wcs);
 			double pa_err_wcs= fabs(AstroUtils::GetWCSPointBearing(x_wcs,y_wcs,x1_wcs,y1_wcs) - AstroUtils::GetWCSPointBearing(x_wcs,y_wcs,x1_thetaerr_wcs,y1_thetaerr_wcs));
-
 
 			//Set bmaj/bmin (check at the end for shape)
 			double bmaj= a_wcs*2;//x 2 to get axis 
@@ -779,6 +772,151 @@ class SourceComponentPars : public TObject {
 			return 0;
 
 		}//close ComputeWCSEllipsePars()
+
+		/**
+		* \brief Compute ellipse pars in WCS coordinates, neglecting sky projection and assuming Euclidean distances
+		*/
+		int ComputeWCSEllipseParsSimple(WCS* wcs)
+		{
+			//Check given WCS	
+			if(!wcs){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Null ptr to WCS given!");	
+				#endif
+				return -1;
+			}
+
+			//Check if has fit pars
+			if(FitPars.empty() || FitParsErr.empty()) {
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No fitted pars stored!");
+				#endif
+				return -1;
+			}
+
+			//Get fitted pars in pixel coordinates
+			double x= FitPars["x0"];
+			double y= FitPars["y0"];
+			double sx= FitPars["sigmaX"];
+			double sy= FitPars["sigmaY"];
+			double theta= FitPars["theta"];	
+			double theta_rad= theta*TMath::DegToRad();
+
+			//Get fitted pars errors in pixel coordinates
+			double x_err= FitParsErr["x0"];
+			double y_err= FitParsErr["y0"]; 
+			double sx_err= FitParsErr["sigmaX"];
+			double sy_err= FitParsErr["sigmaY"];
+			double theta_err= FitParsErr["theta"];
+			double theta_err_rad= theta_err*TMath::DegToRad();
+
+			//Compute ellipse centroid coords in WCS coords
+			double x_wcs= 0;
+			double y_wcs= 0;
+			WCSUtils::pix2wcs (wcs,x,y,&x_wcs, &y_wcs);
+			m_x0_wcs= x_wcs;
+			m_y0_wcs= y_wcs;
+
+			//Compute ellipse centroid errors in WCS coords
+			double dx_wcs= 0;
+			double dy_wcs= 0;
+			WCSUtils::pix2wcs (wcs,x + x_err,y + y_err,&dx_wcs,&dy_wcs); 
+			m_x0_err_wcs= fabs(x_wcs-dx_wcs);
+			m_y0_err_wcs= fabs(y_wcs-dy_wcs);
+
+
+			//Compute ellipse axis corner pixel coords
+			double x1= x + sx * cos(theta_rad);
+			double y1= y + sx * sin(theta_rad);
+			double x2= x + sy * cos(theta_rad - TMath::Pi()/2.);
+			double y2= y + sy * sin(theta_rad - TMath::Pi()/2.);
+
+
+			//Convert ellipse axis corner WCS coords
+			double x1_wcs= 0;
+			double y1_wcs= 0;
+			double x2_wcs= 0;
+			double y2_wcs= 0;
+			WCSUtils::pix2wcs (wcs,x1,y1,&x1_wcs, &y1_wcs);
+			WCSUtils::pix2wcs (wcs,x2,y2,&x2_wcs, &y2_wcs);
+
+			//Compute semi-axis in WCS coords
+			double a_wcs= sqrt( (x_wcs-x1_wcs)*(x_wcs-x1_wcs) + (y_wcs-y1_wcs)*(y_wcs-y1_wcs) );//semi-major axis
+			double b_wcs= sqrt( (x_wcs-x2_wcs)*(x_wcs-x2_wcs) + (y_wcs-y2_wcs)*(y_wcs-y2_wcs) );//semi-major axis		
+
+			//Compute ellipse rot angle
+			double pa_wcs= theta-90.;//convention is to measure bpa from North CCW (theta is measured from x axis)
+
+			
+			//Compute axis errors
+			//- Major axis
+			double x1_ref= x + sx * cos(theta_rad); 
+			double y1_ref= y + sy * sin(theta_rad); 
+			double x1_err= x + (sx + sx_err) * cos(theta_rad);
+			double y1_err= y + sy * sin(theta_rad);	
+			double x1_ref_wcs= 0;
+			double y1_ref_wcs= 0;
+			double x1_err_wcs= 0;
+			double y1_err_wcs= 0;
+			WCSUtils::pix2wcs (wcs,x1_ref,y1_ref,&x1_ref_wcs, &y1_ref_wcs);
+			WCSUtils::pix2wcs (wcs,x1_err,y1_err,&x1_err_wcs, &y1_err_wcs);
+			double a_err_wcs= sqrt( (x1_ref_wcs-x1_err_wcs)*(x1_ref_wcs-x1_err_wcs) + (y1_ref_wcs-y1_err_wcs)*(y1_ref_wcs-y1_err_wcs) );
+
+			//- Minor axis
+			double x2_ref= x + sx * cos(theta_rad + TMath::Pi()/2.);
+			double y2_ref= y + sy * sin(theta_rad + TMath::Pi()/2.);
+			double x2_err= x + sx * cos(theta_rad + TMath::Pi()/2.);
+			double y2_err= y + (sy + sy_err) * sin(theta_rad + TMath::Pi()/2.);
+			double x2_ref_wcs= 0;
+			double y2_ref_wcs= 0;			
+			double x2_err_wcs= 0;
+			double y2_err_wcs= 0;
+			WCSUtils::pix2wcs (wcs,x2_ref,y2_ref,&x2_ref_wcs, &y2_ref_wcs);
+			WCSUtils::pix2wcs (wcs,x2_err,y2_err,&x2_err_wcs, &y2_err_wcs);
+			//double b_err_wcs= AstroUtils::GetWCSPointDist_Haversine(x2_ref_wcs,y2_ref_wcs,x2_err_wcs,y2_err_wcs);
+			double b_err_wcs= sqrt( (x2_ref_wcs-x2_err_wcs)*(x2_ref_wcs-x2_err_wcs) + (y2_ref_wcs-y2_err_wcs)*(y2_ref_wcs-y2_err_wcs) );
+
+			//Compute pos angle error
+			double pa_err_wcs= theta_err;
+
+			//Set bmaj/bmin (check at the end for shape)
+			double bmaj= a_wcs*2;//x 2 to get axis 
+			double bmin= b_wcs*2; 
+			double pa= pa_wcs;
+			double bmaj_err= a_err_wcs*2;
+			double bmin_err= b_err_wcs*2;
+			double pa_err= pa_err_wcs;
+			m_bmaj_wcs= bmaj;
+			m_bmin_wcs= bmin;	
+			m_pa_wcs= pa;
+			m_bmaj_err_wcs= bmaj_err;
+			m_bmin_err_wcs= bmin_err;
+			m_pa_err_wcs= pa_err;
+
+			//Force bmaj>bmin (if bmaj<bmin, swap bmaj/bmin and increment pa by 90 deg)
+			if(bmaj<bmin){
+				m_bmaj_wcs= bmin;
+				m_bmin_wcs= bmaj;
+				m_pa_wcs+= 90.;
+				m_bmaj_err_wcs= bmin_err;
+				m_bmin_err_wcs= bmaj_err;
+			}			
+
+			//Convert in arcsec
+			m_bmaj_wcs*= 3600;
+			m_bmin_wcs*= 3600;
+			m_bmaj_err_wcs*= 3600;
+			m_bmin_err_wcs*= 3600;
+
+			//Limit pa in [-90,90]
+			m_pa_wcs= GetPosAngleInRange(m_pa_wcs);
+
+			//Set has WCS ellipse par flag
+			m_hasWCSEllipsePars= true;
+
+			return 0;
+
+		}//close ComputeWCSEllipseParsSimple()
 
 
 		/** 
@@ -1027,6 +1165,7 @@ class SourceComponentPars : public TObject {
 			m_pa_deconv_wcs= 0.5*atan(arg)*TMath::RadToDeg();
 
 			//Compute deconvolved ellipse par errors by error propagation
+			//... WRITE ME ...
 			//...
 			//...
 	
@@ -1213,7 +1352,7 @@ class SourceComponentPars : public TObject {
 		//- Source component type
 		int m_type;
 
-	ClassDef(SourceComponentPars,5)
+	ClassDef(SourceComponentPars,6)
 
 };//close SourceComponentPars()
 
@@ -1997,7 +2136,6 @@ class SourceFitPars : public TObject {
 		/**
 		* \brief Compute component WCS ellipse pars
 		*/
-		//int ComputeComponentWCSEllipsePars(WorldCoor* wcs)
 		int ComputeComponentWCSEllipsePars(WCS* wcs)
 		{
 			int status= 0;
@@ -2012,6 +2150,24 @@ class SourceFitPars : public TObject {
 			return status;
 
 		}//close ComputeComponentWCSEllipsePars()
+
+		/**
+		* \brief Compute component WCS ellipse pars
+		*/
+		int ComputeComponentWCSEllipseParsSimple(WCS* wcs)
+		{
+			int status= 0;
+			for(size_t i=0;i<pars.size();i++){
+				if(pars[i].ComputeWCSEllipseParsSimple(wcs)<0){
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Failed to compute WCS ellipse pars for fit component no. "<<i+1);
+					#endif
+					status= -1;
+				}
+			}
+			return status;
+
+		}//close ComputeComponentWCSEllipseParsSimple()
 
 		
 		/**
@@ -2294,7 +2450,7 @@ class SourceFitPars : public TObject {
 
 		int fitQuality;
 
-	ClassDef(SourceFitPars,4)
+	ClassDef(SourceFitPars,5)
 
 };
 

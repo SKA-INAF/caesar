@@ -284,7 +284,6 @@ class SFinder : public TObject {
 		/**
 		* \brief Fit all task sources not found at tile edge (for MPI run)
 		*/
-		//int FitTaskSources();
 		int FitTaskSources(TaskData* taskData);
 
 		/**
@@ -321,6 +320,7 @@ class SFinder : public TObject {
 		bool m_saveDS9Region;
 		bool m_convertDS9RegionsToWCS;
 		int m_ds9WCSType;
+		bool m_useSimpleWCSEllipseConversion;
 		std::string m_DS9CatalogFileName;
 		int m_DS9RegionFormat;
 		std::string m_DS9FitCatalogFileName;			

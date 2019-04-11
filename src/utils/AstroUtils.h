@@ -88,17 +88,9 @@ class AstroUtils : public TObject {
 		
 
 		/**
-		* \brief Get WCS coordinates corresponding to image coordinates (TO BE DEPRECATED)
-		*/
-		//static int PixelToWCSCoords(double& xpos, double& ypos,WorldCoor* wcs,double ix,double iy);
-		/**
 		* \brief Get WCS coordinates corresponding to image coordinates
 		*/
 		static int PixelToWCSCoords(double& xpos, double& ypos,WCS* wcs,double ix,double iy);
-		/**
-		* \brief Get WCS coordinates in string format corresponding to image coordinates (TO BE DEPRECATED)
-		*/
-		//static int PixelToWCSStrCoords(std::string& wcs_str,WorldCoor* wcs,double ix,double iy,int max_str_length=4096);
 		/**
 		* \brief Get WCS coordinates in string format corresponding to image coordinates 
 		*/
@@ -106,17 +98,9 @@ class AstroUtils : public TObject {
 
 
 		/**
-		* \brief Get WCS coordinates corresponding to image coordinates (TO BE DEPRECATED)
-		*/
-		//static int PixelToWCSCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,double& xpos, double& ypos,bool useImageCoords=true);
-		/**
 		* \brief Get WCS coordinates corresponding to image coordinates
 		*/
 		static int PixelToWCSCoords(Caesar::Image* image,WCS* wcs,double ix,double iy,double& xpos, double& ypos,bool useImageCoords=true);
-		/**
-		* \brief Get WCS coordinates in string format corresponding to image coordinates (TO BE DEPRECATED)
-		*/
-		//static int PixelToWCSStrCoords(Caesar::Image* image,WorldCoor* wcs,double ix,double iy,std::string& wcs_str,bool useImageCoords=true,int max_str_length=4096); 
 		/**
 		* \brief Get WCS coordinates in string format corresponding to image coordinates
 		*/
@@ -161,34 +145,27 @@ class AstroUtils : public TObject {
 			return beamWidthInPixel;
 		}
 
-		/**
-		* \brief Convert contour from pixel coordinates to sky coordinates (TO BE DEPRECATED)
-		*/
-		//static Contour* PixelToWCSContour(Contour* contour,WorldCoor* wcs,int pixOffset=0);
+		
 		/**
 		* \brief Convert contour from pixel coordinates to sky coordinates
 		*/
 		static Contour* PixelToWCSContour(Contour* contour,WCS* wcs,int pixOffset=0);
 
 		/**
-		* \brief Convert contour list from pixel coordinates to sky coordinates (TO BE DEPRECATED)
-		*/
-		//static int PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vector<Contour*>const& contours,WorldCoor* wcs,int pixOffset=0);
-		/**
 		* \brief Convert contour list from pixel coordinates to sky coordinates
 		*/
 		static int PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vector<Contour*>const& contours,WCS* wcs,int pixOffset=0);
 	
 		/**
-		* \brief Convert ellipse from pixel coordinates to sky coordinates (TO BE DEPRECATED)
-		*/
-		//static TEllipse* PixelToWCSEllipse(TEllipse* ellipse,WorldCoor* wcs,int pixOffset=0);
-		/**
 		* \brief Convert ellipse from pixel coordinates to sky coordinates
 		*/
 		static TEllipse* PixelToWCSEllipse(TEllipse* ellipse,WCS* wcs,int pixOffset=0);
 	
-
+		/**
+		* \brief Convert ellipse from pixel coordinates to sky coordinates neglecting sky projection and assuming Euclidean distances
+		*/
+		static TEllipse* PixelToWCSEllipseSimple(TEllipse* ellipse,WCS* wcs,int pixOffset=0);
+	
 		/**
 		* \brief Compute ellipse deconvolved from ellipse beam
 		*/
@@ -203,6 +180,8 @@ class AstroUtils : public TObject {
 		* \brief Compute WCS beam ellipse pars from pixel ellipse pars
 		*/
 		//static int GetBeamEllipsePars(double& x0_wcs,double& y0_wcs,double& bmaj_wcs,double& bmin_wcs,double& bpa_wcs,double x0,double y0,double bmaj,double bmin,double bpa);
+
+		
 
 		/**
 		* \brief Get distance (in degrees) between two points on the sky using Haversine formula

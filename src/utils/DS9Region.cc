@@ -156,6 +156,11 @@ TEllipse* DS9PolygonRegion::GetEllipse()
 		BoundingBoxAngle+= 90;  
 	}
 
+	//If coord system is WCS modify theta to 180-theta as x-axis (RA) increases in the opposite direction
+	if(csType!=eUNKNOWN_CS && csType!=eIMG_CS){
+		BoundingBoxAngle= 180.-BoundingBoxAngle;
+	}
+
 	//Return the ellipse
 	TEllipse* ellipse= new TEllipse;
 	ellipse->SetX1(BoundingBoxCenter.X());
@@ -307,6 +312,11 @@ TEllipse* DS9BoxRegion::GetEllipse()
   }
 	else{
 		angle+= 90;  
+	}
+
+	//If coord system is WCS modify theta to 180-theta as x-axis (RA) increases in the opposite direction
+	if(csType!=eUNKNOWN_CS && csType!=eIMG_CS){
+		angle= 180.-angle;
 	}
 
 	//Return the ellipse

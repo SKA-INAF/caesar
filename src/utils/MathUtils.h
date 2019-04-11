@@ -379,6 +379,14 @@ class MathUtils : public TObject {
 		*/
 		static void ComputeRotatedCoords(double& xrot,double& yrot,double x,double y,double cx,double cy,double theta);
 		
+		/**
+		* \brief Compute Euclidean distance between two points
+		*/
+		static double GetEuclideanDist(double x1,double y1,double x2,double y2)
+		{
+			double d= sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) );
+			return d;
+		}
 
 	private:
 	
