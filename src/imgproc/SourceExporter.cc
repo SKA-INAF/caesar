@@ -74,7 +74,6 @@ SourceExporter::~SourceExporter()
 //=================================================
 //==        ASCII EXPORTER
 //=================================================
-//int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WorldCoor* wcs)
 int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
 {
 	//Open output file
@@ -332,6 +331,11 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 }//close SourceToAscii()
 
 
+
+
+
+
+
 int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
 {
 	//Open output file
@@ -433,7 +437,6 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 	}//end loop sources
 
 	//Delete WCS
-	//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	//Close file
@@ -721,6 +724,575 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 	return fitComponentStrList;
 
 }//close SourceComponentsToAscii()
+
+
+//=================================================
+//==        ROOT EXPORTER
+//=================================================
+int SourceExporter::WriteToROOT(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
+{
+	//Open output file
+	TFile* fout= new TFile(filename.c_str(),"RECREATE");
+	if(!fout || !fout->IsOpen()) {
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to create out ROOT file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+
+	//Create TTree
+	SourceTreeData sourceTreeData;
+	
+	TTree* dataTree= new TTree("data","data");
+	dataTree->Branch("name",&sourceTreeData.name);//source name
+	dataTree->Branch("iau",&sourceTreeData.iau);//source iau name
+	dataTree->Branch("nPix",&sourceTreeData.nPix);//number of pixels
+	dataTree->Branch("nFitComponents",&sourceTreeData.nFitComponents);//number of fit components
+	dataTree->Branch("nNestedSources",&sourceTreeData.nNestedSources);//number of nested sources
+	dataTree->Branch("X0",&sourceTreeData.X0);//pos X0 in image coords
+	dataTree->Branch("Y0",&sourceTreeData.Y0);//pos Y0 in image coords
+	dataTree->Branch("X0w",&sourceTreeData.X0w);//signal-weighted pos X0 in image coords
+	dataTree->Branch("Y0w",&sourceTreeData.Y0w);//signal-weighted pos Y0 in image coords
+	dataTree->Branch("X0_wcs",&sourceTreeData.X0_wcs);//pos X0 in WCS coords
+	dataTree->Branch("Y0_wcs",&sourceTreeData.Y0_wcs);//pos Y0 in WCS coords
+	dataTree->Branch("X0w_wcs",&sourceTreeData.X0w_wcs);//signal-weighted pos X0 in WCS coords
+	dataTree->Branch("Y0w_wcs",&sourceTreeData.Y0w_wcs);//signal-weighted pos Y0 in WCS coords
+	dataTree->Branch("Xmin",&sourceTreeData.Xmin);//bounding box Xmin
+	dataTree->Branch("Xmax",&sourceTreeData.Xmax);//bounding box Xmax
+	dataTree->Branch("Ymin",&sourceTreeData.Ymin);//bounding box Ymin
+	dataTree->Branch("Ymax",&sourceTreeData.Ymax);//bounding box Ymax
+	dataTree->Branch("Xmin_wcs",&sourceTreeData.Xmin_wcs);//bounding box Xmin in WCS coords
+	dataTree->Branch("Xmax_wcs",&sourceTreeData.Xmax_wcs);//bounding box Xmax in WCS coords
+	dataTree->Branch("Ymin_wcs",&sourceTreeData.Ymin_wcs);//bounding box Ymin in WCS coords
+	dataTree->Branch("Ymax_wcs",&sourceTreeData.Ymax_wcs);//bounding box Ymax in WCS coords
+	dataTree->Branch("Nu",&sourceTreeData.Nu);//frequency
+	dataTree->Branch("S",&sourceTreeData.S);//flux sum over pixels
+	dataTree->Branch("Smax",&sourceTreeData.Smax);//flux max
+	dataTree->Branch("fittedFlux",&sourceTreeData.fittedFlux);//flux density
+	dataTree->Branch("fittedFluxErr",&sourceTreeData.fittedFluxErr);//flux density err
+	dataTree->Branch("beamArea",&sourceTreeData.beamArea);//beamArea
+	dataTree->Branch("bkgSum",&sourceTreeData.bkgSum);//bkg sum over pixels
+	dataTree->Branch("rmsSum",&sourceTreeData.rmsSum);//noise rms sum over pixels
+	dataTree->Branch("type",&sourceTreeData.type);//source type
+	dataTree->Branch("flag",&sourceTreeData.flag);//source flag
+	dataTree->Branch("good",&sourceTreeData.good);//source isGoodFlag
+	dataTree->Branch("depthLevel",&sourceTreeData.depthLevel);//source depth level
+	
+	//Loop sources
+	bool deleteWCS= false;
+	
+	for(size_t k=0;k<sources.size();k++)
+	{
+		//If wcs is not given, retrieve it from metadata
+		if(!wcs){
+			ImgMetaData* metadata= sources[k]->GetImageMetaData();
+			if(!metadata){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No metadata are available to retrieve WCS!");
+				#endif
+				return -1;
+			}
+			wcs= metadata->GetWCS(wcsType);
+			if(!wcs){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to get WCS from metadata!");
+				#endif
+				return -1;
+			}
+			deleteWCS= true;
+		}
+
+		//Get source data and fill TTree
+		FillSourceTTree(dataTree,sourceTreeData,sources[k],dumpNestedSourceInfo,wcsType,wcs);
+		
+	}//end loop sources
+
+	//Delete WCS
+	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
+
+	//Write TTree to file
+	fout->cd();
+	dataTree->Write();
+	fout->Close();
+
+	return 0;
+
+}//close WriteToROOT()
+
+int SourceExporter::FillSourceTTree(TTree* dataTree,SourceTreeData& sourceTreeData,Source* source,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
+{
+	//Check source
+	if(!source){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null input source ptr given!");
+		#endif
+		return -1;
+	}
+
+	//Get metadata
+	ImgMetaData* metadata= source->GetImageMetaData();
+		
+	//If wcs is not given, retrieve it from metadata
+	bool deleteWCS= false;
+	if(!wcs){
+		if(metadata){
+			wcs= metadata->GetWCS(wcsType);
+			if(wcs) deleteWCS= true;
+			else {
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to get WCS from metadata!");
+				#endif
+			}
+		}
+		else {
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("No metadata are available to retrieve WCS!");
+			#endif
+		}		
+	}
+
+	//## Fill source data struct
+	//Get source name	
+	sourceTreeData.name= source->GetName();
+
+	//Compute IAU name
+	bool useWeightedPos= false;
+	sourceTreeData.iau= source->GetName();
+	if(wcs) sourceTreeData.iau= source->GetIAUName(useWeightedPos,wcs,wcsType);
+
+	//Get number of pixels
+	sourceTreeData.nPix= source->NPix;
+
+	//GEt number of nested sources & fit components
+	sourceTreeData.nFitComponents= source->GetNFitComponents();
+	sourceTreeData.nNestedSources= source->GetNestedSourceNumber();
+
+	//Get source centroid
+	sourceTreeData.X0= source->X0;
+	sourceTreeData.Y0= source->Y0;
+	sourceTreeData.X0w= source->GetSx();
+	sourceTreeData.Y0w= source->GetSy();
+
+	//Compute WCS centroid
+	sourceTreeData.X0_wcs= 0;
+	sourceTreeData.Y0_wcs= 0;
+	sourceTreeData.X0w_wcs= 0;
+	sourceTreeData.Y0w_wcs= 0;
+	if(wcs){
+		source->GetWCSPos(sourceTreeData.X0_wcs,sourceTreeData.Y0_wcs,wcs,wcsType);
+		source->GetWCSWeightedPos(sourceTreeData.X0w_wcs,sourceTreeData.Y0w_wcs,wcs,wcsType);
+	}
+
+	//Get spectral axis info
+	sourceTreeData.Nu= -999;
+	double dNu= -999;
+	std::string units= "";
+	source->GetSpectralAxisInfo(sourceTreeData.Nu,dNu,units);
+	CodeUtils::StripBlankSpaces(units);
+	if(metadata && units=="Hz") {//convert to GHz
+		sourceTreeData.Nu/= 1.e+9;
+		dNu/= 1.e+9;
+	}
+	
+	sourceTreeData.fittedFlux= 0;
+	sourceTreeData.fittedFluxErr= 0;
+	if(source->HasFitInfo()){
+		source->GetFluxDensity(sourceTreeData.fittedFlux);
+		source->GetFluxDensityErr(sourceTreeData.fittedFluxErr);
+	}
+
+	//Get WCS bounding box
+	float xmin, xmax, ymin, ymax;
+	source->GetSourceRange(xmin,xmax,ymin,ymax);
+	sourceTreeData.Xmin= xmin;
+	sourceTreeData.Xmax= xmax;
+	sourceTreeData.Ymin= ymin;
+	sourceTreeData.Ymax= ymax;
+	
+	double xmin_wcs, xmax_wcs, ymin_wcs, ymax_wcs;
+	source->GetWCSSourceRange(xmin_wcs,xmax_wcs,ymin_wcs,ymax_wcs,wcs,wcsType);
+	sourceTreeData.Xmin_wcs= xmin_wcs;	
+	sourceTreeData.Xmax_wcs= xmax_wcs;	
+	sourceTreeData.Ymin_wcs= ymin_wcs;	
+	sourceTreeData.Ymax_wcs= ymax_wcs;	
+	
+	//Get flux 
+	sourceTreeData.S= source->GetS();
+	sourceTreeData.Smax= source->GetSmax();
+	sourceTreeData.beamArea= source->GetBeamFluxIntegral();
+
+	//Bkg/noise estimators
+	sourceTreeData.bkgSum= source->GetBkgSum();
+	sourceTreeData.rmsSum= source->GetBkgRMSSum();
+
+	//Flags	
+	sourceTreeData.type= source->Type;
+	sourceTreeData.flag= source->Flag;
+	sourceTreeData.good= static_cast<int>(source->IsGoodSource());
+	sourceTreeData.depthLevel= source->GetDepthLevel();
+
+
+	//## Fill Tree
+	dataTree->Fill();
+
+	//## Store nested sources
+	bool hasNestedSources= source->HasNestedSources();
+	if(hasNestedSources && dumpNestedSourceInfo){
+		std::vector<Source*> nestedSources= source->GetNestedSources();
+		for(size_t k=0;k<nestedSources.size();k++)
+		{			
+			FillSourceTTree(dataTree,sourceTreeData,nestedSources[k],dumpNestedSourceInfo,wcsType,wcs);		
+		}
+	}//close if has nested sources 
+		
+
+	//Delete WCS
+	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
+
+	return 0;
+
+}//close FillSourceTTree()
+
+
+
+
+
+int SourceExporter::WriteComponentsToROOT(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
+{
+	//Open output file
+	TFile* fout= new TFile(filename.c_str(),"RECREATE");
+	if(!fout || !fout->IsOpen()) {
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to create out ROOT file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+
+	//Create TTree
+	SourceComponentTreeData sourceTreeData;
+	
+	TTree* dataTree= new TTree("data","data");
+	dataTree->Branch("name",&sourceTreeData.name);
+	dataTree->Branch("nPix",&sourceTreeData.nPix);
+	dataTree->Branch("componentId",&sourceTreeData.componentId);
+	dataTree->Branch("iau",&sourceTreeData.iau);	
+	dataTree->Branch("X0",&sourceTreeData.X0);
+	dataTree->Branch("Y0",&sourceTreeData.Y0);
+	dataTree->Branch("X0_err",&sourceTreeData.X0_err);
+	dataTree->Branch("Y0_err",&sourceTreeData.Y0_err);
+	dataTree->Branch("X0_wcs",&sourceTreeData.X0_wcs);
+	dataTree->Branch("Y0_wcs",&sourceTreeData.Y0_wcs);
+	dataTree->Branch("X0_err_wcs",&sourceTreeData.X0_err_wcs);
+	dataTree->Branch("Y0_err_wcs",&sourceTreeData.Y0_err_wcs);	
+	dataTree->Branch("Nu",&sourceTreeData.Nu);
+	dataTree->Branch("A",&sourceTreeData.A);
+	dataTree->Branch("A_err",&sourceTreeData.A_err);
+	dataTree->Branch("fittedFlux",&sourceTreeData.fittedFlux);
+	dataTree->Branch("fittedFlux_err",&sourceTreeData.fittedFlux_err);
+	dataTree->Branch("fittedIslandFlux",&sourceTreeData.fittedIslandFlux);
+	dataTree->Branch("fittedIslandFlux_err",&sourceTreeData.fittedIslandFlux_err);
+	dataTree->Branch("beamArea",&sourceTreeData.beamArea);
+	dataTree->Branch("Bmaj",&sourceTreeData.Bmaj);
+	dataTree->Branch("Bmin",&sourceTreeData.Bmin);
+	dataTree->Branch("Pa",&sourceTreeData.Pa);
+	dataTree->Branch("Bmaj_err",&sourceTreeData.Bmaj_err);
+	dataTree->Branch("Bmin_err",&sourceTreeData.Bmin_err);
+	dataTree->Branch("Pa_err",&sourceTreeData.Pa_err);
+	dataTree->Branch("Bmaj_wcs",&sourceTreeData.Bmaj_wcs);
+	dataTree->Branch("Bmin_wcs",&sourceTreeData.Bmin_wcs);
+	dataTree->Branch("Pa_wcs",&sourceTreeData.Pa_wcs);
+	dataTree->Branch("Bmaj_err_wcs",&sourceTreeData.Bmaj_err_wcs);
+	dataTree->Branch("Bmin_err_wcs",&sourceTreeData.Bmin_err_wcs);
+	dataTree->Branch("Pa_err_wcs",&sourceTreeData.Pa_err_wcs);
+	dataTree->Branch("Bmaj_beam",&sourceTreeData.Bmaj_beam);
+	dataTree->Branch("Bmin_beam",&sourceTreeData.Bmin_beam);
+	dataTree->Branch("Pa_beam",&sourceTreeData.Pa_beam);
+	dataTree->Branch("Bmaj_deconv_wcs",&sourceTreeData.Bmaj_deconv_wcs);
+	dataTree->Branch("Bmin_deconv_wcs",&sourceTreeData.Bmin_deconv_wcs);
+	dataTree->Branch("Pa_deconv_wcs",&sourceTreeData.Pa_deconv_wcs);
+	dataTree->Branch("eccentricityRatio",&sourceTreeData.eccentricityRatio);
+	dataTree->Branch("areaRatio",&sourceTreeData.areaRatio);
+	dataTree->Branch("fitVSBeamRotAngle",&sourceTreeData.fitVSBeamRotAngle);
+	dataTree->Branch("bkgSum",&sourceTreeData.bkgSum);
+	dataTree->Branch("rmsSum",&sourceTreeData.rmsSum);
+	dataTree->Branch("chi2",&sourceTreeData.chi2);
+	dataTree->Branch("ndf",&sourceTreeData.ndf);
+	dataTree->Branch("fitQuality",&sourceTreeData.fitQuality);
+	dataTree->Branch("type",&sourceTreeData.type);
+	dataTree->Branch("flag",&sourceTreeData.flag);
+	
+	//Loop sources
+	bool deleteWCS= false;
+	
+	for(size_t k=0;k<sources.size();k++)
+	{
+		//If wcs is not given, retrieve it from metadata
+		if(!wcs){
+			ImgMetaData* metadata= sources[k]->GetImageMetaData();
+			if(!metadata){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No metadata are available to retrieve WCS!");
+				#endif
+				return -1;
+			}
+			wcs= metadata->GetWCS(wcsType);
+			if(!wcs){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to get WCS from metadata!");
+				#endif
+				return -1;
+			}
+			deleteWCS= true;
+		}
+
+		//Get source data and fill TTree
+		FillSourceComponentTree(dataTree,sourceTreeData,sources[k],dumpNestedSourceInfo,wcsType,wcs);
+		
+	}//end loop sources
+
+	//Delete WCS
+	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
+
+	//Write TTree to file
+	fout->cd();
+	dataTree->Write();
+	fout->Close();
+
+	return 0;
+
+}//close WriteComponentsToROOT()
+
+
+int SourceExporter::FillSourceComponentTree(TTree* dataTree,SourceComponentTreeData& sourceData,Source* source,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
+{
+	//Check source
+	if(!source){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null input source ptr given!");
+		#endif
+		return -1;
+	}
+
+	//Get metadata
+	ImgMetaData* metadata= source->GetImageMetaData();
+		
+	//If wcs is not given, retrieve it from metadata
+	bool deleteWCS= false;
+	if(!wcs){
+		if(metadata){
+			wcs= metadata->GetWCS(wcsType);
+			if(wcs) deleteWCS= true;
+			else {
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to get WCS from metadata!");
+				#endif
+			}
+		}
+		else {	
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("No metadata are available to retrieve WCS!");
+			#endif
+		}		
+	}
+
+
+	//Check if fit info are available
+	bool hasFitInfo= source->HasFitInfo();
+
+	if(hasFitInfo){
+		//Retrieve fit pars
+		SourceFitPars fitPars= source->GetFitPars();
+		int nComponents= fitPars.GetNComponents();
+	
+		//Get spectral axis info
+		sourceData.Nu= -999;
+		double dNu= -999;
+		std::string units= "";
+		source->GetSpectralAxisInfo(sourceData.Nu,dNu,units);
+		CodeUtils::StripBlankSpaces(units);
+		if(metadata && units=="Hz") {//convert to GHz
+			sourceData.Nu/= 1.e+9;
+			dNu/= 1.e+9;
+		}
+
+		//Get total flux density
+		sourceData.fittedIslandFlux= 0;
+		sourceData.fittedIslandFlux_err= 0;
+		source->GetFluxDensity(sourceData.fittedIslandFlux);
+		source->GetFluxDensityErr(sourceData.fittedIslandFlux_err);
+	
+		//Get source name
+		sourceData.name= source->GetName();
+
+		//Get source nPix
+		sourceData.nPix= source->NPix;
+
+		//- Bkg pars
+		sourceData.bkgSum= source->GetBkgSum();
+		sourceData.rmsSum= source->GetBkgRMSSum();
+	
+		//Loop over fit components
+		for(int k=0;k<nComponents;k++)
+		{
+			//Get component fit pars
+			//- Component id
+			sourceData.componentId= k+1;
+
+			//- Amplitude
+			sourceData.A= fitPars.GetParValue(k,"A");
+			sourceData.A_err= fitPars.GetParError(k,"A");
+
+			//- Flux density
+			sourceData.fittedFlux= fitPars.GetComponentFluxDensity(k);
+			sourceData.fittedFlux_err= fitPars.GetComponentFluxDensityErr(k);
+			sourceData.beamArea= source->GetBeamFluxIntegral();
+
+			//- Fit ellipse pars
+			sourceData.X0= 0;
+			sourceData.Y0= 0;
+			sourceData.Bmaj= 0;
+			sourceData.Bmin= 0;
+			sourceData.Pa= 0;
+			if(fitPars.GetComponentFitEllipsePars(k,sourceData.X0,sourceData.Y0,sourceData.Bmaj,sourceData.Bmin,sourceData.Pa)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
+			}
+		
+			sourceData.X0_err= 0;
+			sourceData.Y0_err= 0;
+			sourceData.Bmaj_err= 0;
+			sourceData.Bmin_err= 0;
+			sourceData.Pa_err= 0;
+			if(fitPars.GetComponentFitEllipseParErrors(k,sourceData.X0_err,sourceData.Y0_err,sourceData.Bmaj_err,sourceData.Bmin_err,sourceData.Pa_err)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve ellipse par errors for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
+			}
+
+			//- Fit ellipse eccentricity, area & rot angle vs beam
+			double E= fitPars.GetComponentFitEllipseEccentricity(k);
+			double Area= fitPars.GetComponentFitEllipseArea(k);
+			
+
+			//- WCS fit ellipse pars
+			sourceData.X0_wcs= 0;
+			sourceData.Y0_wcs= 0;
+			sourceData.Bmaj_wcs= 0;
+			sourceData.Bmin_wcs= 0;
+			sourceData.Pa_wcs= 0;
+			if(fitPars.GetComponentFitWCSEllipsePars(k,sourceData.X0_wcs,sourceData.Y0_wcs,sourceData.Bmaj_wcs,sourceData.Bmin_wcs,sourceData.Pa_wcs)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve WCS ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
+			}
+			
+			sourceData.X0_err_wcs= 0;
+			sourceData.Y0_err_wcs= 0;
+			sourceData.Bmaj_err_wcs= 0;
+			sourceData.Bmin_err_wcs= 0;
+			sourceData.Pa_err_wcs= 0;
+			if(fitPars.GetComponentFitWCSEllipseParErrors(k,sourceData.X0_err_wcs,sourceData.Y0_err_wcs,sourceData.Bmaj_err_wcs,sourceData.Bmin_err_wcs,sourceData.Pa_err_wcs)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve WCS ellipse par errors for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
+			}
+
+			//- Beam ellipse pars
+			sourceData.Bmaj_beam= 0;
+			sourceData.Bmin_beam= 0;
+			sourceData.Pa_beam= 0;
+			if(fitPars.GetComponentBeamEllipsePars(k,sourceData.Bmaj_beam,sourceData.Bmin_beam,sourceData.Pa_beam)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve beam ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
+			}
+
+			//- Beam eccentricity & area
+			double E_beam= fitPars.GetComponentBeamEllipseEccentricity(k);
+			double Area_beam= fitPars.GetComponentBeamEllipseArea(k);
+
+			//- Ratio between fit ellipse pars & beam ellipse pars
+			sourceData.eccentricityRatio= 0;
+			if(E_beam!=0) sourceData.eccentricityRatio= E/E_beam;
+			
+			sourceData.areaRatio= 0;
+			if(Area_beam!=0) sourceData.areaRatio= Area/Area_beam;
+
+			double dtheta= fitPars.GetComponentFitEllipseRotAngleVSBeam(k);
+			sourceData.fitVSBeamRotAngle= MathUtils::GetAngleInRange(dtheta,90.);
+
+			//- WCS beam-deconvolved ellipse pars
+			sourceData.Bmaj_deconv_wcs= 0;
+			sourceData.Bmin_deconv_wcs= 0;
+			sourceData.Pa_deconv_wcs= 0;
+			if(fitPars.GetComponentFitWCSDeconvolvedEllipsePars(k,sourceData.Bmaj_deconv_wcs,sourceData.Bmin_deconv_wcs,sourceData.Pa_deconv_wcs)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve WCS beam-deconvolved ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
+			}
+
+			//- Compute IAU name
+			std::stringstream ssname;
+			ssname<<source->GetName()<<"_fitcomp"<<k+1;
+			std::string iau_default= ssname.str();		
+			sourceData.iau= iau_default;
+			if(wcs){
+				std::string wcspos_str= "";
+				AstroUtils::PixelToWCSStrCoords(wcspos_str,wcs,sourceData.X0,sourceData.Y0);	
+				int status= AstroUtils::GetIAUCoords(sourceData.iau,wcspos_str);
+				if(status<0){
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Failed to compute IAU name for component no. "<<k+1<<", assume default name "<<iau_default<<" ...");
+					#endif
+					sourceData.iau= iau_default;		
+				}
+			}
+
+			//Get component flag
+			sourceData.flag= -1;
+			if(fitPars.GetComponentFlag(sourceData.flag,k)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve flag for component no. "<<k+1<<"!");
+				#endif
+			}
+
+			//Get component type
+			sourceData.type= -1;
+			if(fitPars.GetComponentType(sourceData.type,k)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve type for component no. "<<k+1<<"!");
+				#endif
+			}
+			
+			//- Fit chi2/ndf, quality
+			sourceData.chi2= fitPars.GetChi2();
+			sourceData.ndf= fitPars.GetNDF();
+			sourceData.fitQuality= fitPars.GetFitQuality();			
+	
+			//## Fill TTree
+			dataTree->Fill();
+
+		}//end loop components
+	}//close if has fit
+
+	
+	//Store nested components
+	bool hasNestedSources= source->HasNestedSources();
+	if(hasNestedSources && dumpNestedSourceInfo){
+		std::vector<Source*> nestedSources= source->GetNestedSources();
+		for(size_t k=0;k<nestedSources.size();k++){
+			FillSourceComponentTree(dataTree,sourceData,nestedSources[k],dumpNestedSourceInfo,wcsType,wcs);
+		}
+	}//close if has nested sources 
+	
+	
+	//Delete WCS
+	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
+
+	return 0;
+
+}//close FillSourceComponentTree()
 
 //=================================================
 //==        DS9 EXPORTER

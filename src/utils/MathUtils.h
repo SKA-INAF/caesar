@@ -342,6 +342,16 @@ class MathUtils : public TObject {
  		}//close Mod function
 
 		/**
+		* \brief Limit angle in range [-theta_limit,theta_limit]
+		*/
+		static double GetAngleInRange(double theta,double theta_limit)
+		{
+			while (theta <= -theta_limit) theta+= 2*theta_limit;
+  		while (theta > theta_limit) theta-= 2*theta_limit;
+  		return theta;
+		}
+
+		/**
 		* \brief Evaluate 2d elliptical gaussian at given (x,y) (NB: theta in radians)
 		*/
 		static double EvalGaus2D(double X,double Y,double A,double X0,double Y0,double sigmaX,double sigmaY,double theta)

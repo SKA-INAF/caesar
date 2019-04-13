@@ -629,6 +629,7 @@ class Source : public Blob {
 		*/
 		int GetSpectralAxisInfo(double& val,double& dval,std::string& units);
 
+		
 
 	protected:
 		/**
