@@ -296,6 +296,7 @@
 
 //DS9Region
 #pragma link C++ class Caesar::DS9RegionParser+;
+#pragma link C++ class Caesar::DS9RegionMetaData+;
 #pragma link C++ class Caesar::DS9Region+;
 #pragma link C++ class Caesar::vector<DS9Region>+;
 #pragma link C++ class Caesar::vector<DS9Region*>+;
@@ -308,5 +309,8 @@
 #pragma link C++ class Caesar::DS9CircleRegion+;
 #pragma link C++ class Caesar::vector<DS9CircleRegion>+;
 #pragma link C++ class Caesar::vector<DS9CircleRegion*>+;
+#pragma link C++ class Caesar::DS9EllipseRegion+;
+#pragma link C++ class Caesar::vector<DS9EllipseRegion>+;
+#pragma link C++ class Caesar::vector<DS9EllipseRegion*>+;
 
 #endif

@@ -389,6 +389,10 @@ if(BUILD_APPS)
 	target_link_libraries(SourceRegionMatchFinderExe Caesar ${LINKED_LIBS})
 	set_target_properties(SourceRegionMatchFinderExe PROPERTIES OUTPUT_NAME SourceRegionMatchFinder)
 	
+	add_executable(SourceRegionTaggerExe ${Task_SourceRegionTagger_SRCS})
+	target_link_libraries(SourceRegionTaggerExe Caesar ${LINKED_LIBS})
+	set_target_properties(SourceRegionTaggerExe PROPERTIES OUTPUT_NAME SourceRegionTagger)
+
 	if(ENABLE_MPI AND MPI_FOUND)
 		include_directories(${MPI_CXX_INCLUDE_PATH})
 		add_executable(FindSourceMPIExe ${Task_FindSourceMPI_SRCS})
@@ -583,6 +587,7 @@ if(BUILD_APPS)
 		SourceMatchFinder
 		SourceRegionSelector
 		SourceRegionMatchFinder
+		SourceRegionTagger
 	)
 	if(ENABLE_MPI)
 		list(APPEND EXE_FILES FindSourceMPI)
