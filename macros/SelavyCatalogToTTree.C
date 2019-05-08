@@ -615,7 +615,7 @@ int ParseIslandData(const std::vector<std::string>& fields)
 	//Set var values
 	std::string islandId= std::string(fields[0]);
 	std::string islandName= std::string(fields[1]);
-	int nComponents= atoi(fields[2]);
+	int nComponents= atoi(fields[2].c_str());
 	std::string x_hms= std::string(fields[3]);
 	std::string y_hms= std::string(fields[4]);
 	double x_wcs= atof(fields[5].c_str());
@@ -661,11 +661,11 @@ int ParseIslandData(const std::vector<std::string>& fields)
 	gIslandInfo.nComponents= nComponents;
 	gIslandInfo.x_hms= x_hms;
 	gIslandInfo.y_hms= y_hms;
-	gIslandInfo.x= x;
-	gIslandInfo.y= y;
+	gIslandInfo.x= x_wcs;
+	gIslandInfo.y= y_wcs;
 	gIslandInfo.freq= freq;
-	gIslandInfo.bmaj_wcs= bmaj_wcs
-	gIslandInfo.bmin_wcs= bmin_wcs
+	gIslandInfo.bmaj_wcs= bmaj_wcs;
+	gIslandInfo.bmin_wcs= bmin_wcs;
 	gIslandInfo.pa_wcs= pa_wcs;
 	gIslandInfo.flux= flux;
 	gIslandInfo.flux_err= flux_err;
@@ -684,8 +684,8 @@ int ParseIslandData(const std::vector<std::string>& fields)
 	gIslandInfo.npix= npix;
 	gIslandInfo.solidAngle= solidAngle;
 	gIslandInfo.beamArea= beamArea;
-	gIslandInfo.x_avg= x_avg;
-	gIslandInfo.y_avg= y_avg;
+	gIslandInfo.x_avg= x_ave;
+	gIslandInfo.y_avg= y_ave;
 	gIslandInfo.x_cen= x_cen;
 	gIslandInfo.y_cen= y_cen;
 	gIslandInfo.x_peak= x_peak;
