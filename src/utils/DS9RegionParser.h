@@ -56,10 +56,12 @@
 
 namespace Caesar {
 
+class DS9RegionMetaData;
 class DS9Region;
 class DS9PolygonRegion;
 class DS9BoxRegion;
 class DS9CircleRegion;
+class DS9EllipseRegion;
 
 class DS9RegionParser : public TObject
 {
@@ -85,11 +87,16 @@ class DS9RegionParser : public TObject
 		/**
 		* \brief Read DS9 region file and returns list of regions
 		*/
-		static int Read(std::vector<std::vector<std::string>>& data, int& wcsType,std::string filename);
+		static int Read(std::vector<std::vector<std::string>>& data,std::vector<std::vector<std::string>>& metadata, int& wcsType,std::string filename);
 		/**
 		* \brief Parse region from text
 		*/		
 		static DS9Region* ParseRegion(const std::vector<std::string>& fields);
+		/**
+		* \brief Parse region metadata from text
+		*/		
+		static int ParseRegionMetaData(DS9RegionMetaData& metadata,const std::vector<std::string>& fields);
+		
 		/**
 		* \brief Parse polygon region from text
 		*/
@@ -102,6 +109,10 @@ class DS9RegionParser : public TObject
 		* \brief Parse circle region from text
 		*/
 		static DS9CircleRegion* ParseCircleRegion(const std::string& data_str);
+		/**
+		* \brief Parse ellipse region from text
+		*/
+		static DS9EllipseRegion* ParseEllipseRegion(const std::string& data_str);
 
 	ClassDef(DS9RegionParser,1)
 

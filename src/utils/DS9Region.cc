@@ -57,10 +57,12 @@
 
 using namespace std;
 
+ClassImp(Caesar::DS9RegionMetaData)
 ClassImp(Caesar::DS9Region)
 ClassImp(Caesar::DS9PolygonRegion)
 ClassImp(Caesar::DS9BoxRegion)
 ClassImp(Caesar::DS9CircleRegion)
+ClassImp(Caesar::DS9EllipseRegion)
 
 namespace Caesar {
 
@@ -71,13 +73,15 @@ DS9Region::DS9Region()
 {
 	shapeType= eUNKNOWN_SHAPE;
 	csType= eUNKNOWN_CS;
+	hasMetaDataSet= false;
 
 }//close constructor
 
 DS9Region::DS9Region(int shape,int cs)
 	: shapeType(shape), csType(cs)
 {
-			
+	hasMetaDataSet= false;
+
 }//close constrcutor
 
 DS9Region::~DS9Region()
@@ -423,16 +427,113 @@ Contour* DS9CircleRegion::GetContour(bool computePars)
 	Contour* contour= new Contour;
 
 	//Fill contour
-	double theta= 0;
-	double theta_step= 2;
-	double theta_max= 360;
+	double t= 0;
+	double t_step= 2;
+	double t_max= 360;
 	while(true){
-		if(theta>=theta_max) break;	
-		double theta_rad= theta*TMath::DegToRad();
-		double x= cx + r*cos(theta_rad);
-		double y= cy + r*sin(theta_rad);
+		if(t>=t_max) break;	
+		double t_rad= t*TMath::DegToRad();
+		double x= cx + r*cos(t_rad);
+		double y= cy + r*sin(t_rad);
 		contour->AddPoint(TVector2(x,y));
-		theta+= theta_step;		
+		t+= t_step;		
+	}//end loop 
+	
+	//Compute contour parameters
+	if(computePars && contour->ComputeParameters()<0){	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("One/more failures occurred while computing contour parameters!");
+		#endif
+	}
+
+	return contour;
+
+}//close GetContour()
+
+
+//================================
+//==    DS9 ELLIPSE REGION CLASS
+//================================
+DS9EllipseRegion::DS9EllipseRegion(int cs)
+	: DS9Region(eELLIPSE_SHAPE,cs)
+{
+	cx= 0;
+	cy= 0;
+	a= 0;
+	b= 0;
+	theta= 0;
+
+}//close constructor
+
+DS9EllipseRegion::~DS9EllipseRegion()
+{
+
+}//close destructor
+
+void DS9EllipseRegion::Print()
+{
+	cout<<std::setprecision(12)<<"ELLIPSE REGION: C("<<cx<<","<<cy<<"), a="<<a<<", b="<<b<<", theta="<<theta<<endl;
+
+}//close Print()
+
+
+bool DS9EllipseRegion::IsPointInsideRegion(double x,double y)
+{
+	double xdiff= x-cx;
+	double ydiff= y-cy;
+	double theta_rad= theta*TMath::DegToRad();
+	double dx= cos(theta_rad)*xdiff + sin(theta_rad)*ydiff;
+	double dy= sin(theta_rad)*xdiff - cos(theta_rad)*ydiff;
+	double dx2= dx*dx;
+	double dy2= dy*dy;
+	double a2= a*a;
+	double b2= b*b;
+	
+	double d= dx2/a2 + dy2/b2;
+	bool isInside= (d<1);
+	
+	return isInside;
+
+}//close IsPointInsideRegion()
+
+
+bool DS9EllipseRegion::IsPointInsideRegion(TVector2 p)
+{
+	return this->IsPointInsideRegion(p.X(),p.Y());
+
+}//close IsPointInsideRegion()
+
+TEllipse* DS9EllipseRegion::GetEllipse()
+{
+	//Return the ellipse
+	TEllipse* ellipse= new TEllipse;
+	ellipse->SetX1(cx);
+	ellipse->SetY1(cy);
+	ellipse->SetTheta(theta);
+	ellipse->SetR1(a);
+	ellipse->SetR2(b);
+
+	return ellipse;
+
+}//close GetEllipse()
+
+Contour* DS9EllipseRegion::GetContour(bool computePars)
+{
+	//Create contour
+	Contour* contour= new Contour;
+
+	//Fill contour
+	double t= 0;
+	double t_step= 2;
+	double t_max= 360;
+	double theta_rad= theta*TMath::DegToRad();
+	while(true){
+		if(t>=t_max) break;	
+		double t_rad= t*TMath::DegToRad();
+		double x= cx + a*cos(t_rad)*cos(theta_rad) - b*sin(t_rad)*sin(theta_rad);
+		double y= cy + a*cos(t_rad)*sin(theta_rad) + b*sin(t_rad)*cos(theta_rad);
+		contour->AddPoint(TVector2(x,y));
+		t+= t_step;		
 	}//end loop 
 	
 	//Compute contour parameters

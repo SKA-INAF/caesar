@@ -61,6 +61,54 @@ namespace Caesar {
 
 class Contour;
 
+
+//================================
+//==    DS9REGION METADATA CLASS
+//================================
+class DS9RegionMetaData : public TObject
+{
+	public:
+		/**
+		* \brief Standard constructor
+		*/
+		DS9RegionMetaData()
+		{
+			Init();			
+		}
+		/**
+		* \brief Destructor
+		*/
+		virtual ~DS9RegionMetaData(){}
+
+  private:
+
+		void Init(){
+			sourceName= "";
+			sourceFitQuality= eUnknownFitQuality;
+			sourceType= eUnknownType;
+			sourceFlag= eUnknownSourceFlag;
+			hasSourceName= false;
+			hasSourceType= false;
+			hasSourceFitQuality= false;
+			hasSourceFlag= false;
+		}
+
+	public:
+		bool hasSourceName;
+		std::string sourceName;
+		bool hasSourceType;
+		int sourceType;
+		bool hasSourceFitQuality;
+		int sourceFitQuality;
+		bool hasSourceFlag;
+		int sourceFlag;
+		
+
+	ClassDef(DS9RegionMetaData,1)
+
+};//close DS9RegionMetaData()
+
+
 //===========================
 //==    DS9REGION CLASS
 //===========================
@@ -88,7 +136,8 @@ class DS9Region : public TObject
 			eUNKNOWN_SHAPE=0,
 			eCIRCLE_SHAPE=1,
 			eBOX_SHAPE=2,
-			ePOLYGON_SHAPE=3
+			ePOLYGON_SHAPE=3,
+			eELLIPSE_SHAPE=4
 		};
 
 
@@ -115,10 +164,32 @@ class DS9Region : public TObject
 		*/
 		virtual Contour* GetContour(bool computePars=true){return nullptr;}
 		
+		/**
+		* \brief Set region metadata
+		*/
+		virtual void SetMetaData(const DS9RegionMetaData& m)
+		{
+			metadata= m;
+			hasMetaDataSet= true;			
+		}
+
+		/**
+		* \brief Get region metadata
+		*/
+		DS9RegionMetaData& GetMetaData() {return metadata;}
+
+		/**
+		* \brief Has region metadata filled
+		*/
+		bool HasMetaDataSet() {return hasMetaDataSet;}
 
 	public:
 		int shapeType;
 		int csType;
+
+	protected:
+		DS9RegionMetaData metadata;
+		bool hasMetaDataSet;
 		
 
 	ClassDef(DS9Region,1)
@@ -279,7 +350,58 @@ class DS9CircleRegion : public DS9Region
 };//close class DS9CircleRegion
 
 
+//=================================
+//==    DS9 ELLIPSE REGION CLASS
+//=================================
+class DS9EllipseRegion : public DS9Region
+{
+	public:
+		/**
+		* \brief Parametric constructor
+		*/
+		DS9EllipseRegion(int cs=eUNKNOWN_CS);
+		/**
+		* \brief Destructor
+		*/
+		virtual ~DS9EllipseRegion();
+
+	public:
+		/**
+		* \brief Print region info
+		*/
+		virtual void Print();
+		/**
+		* \brief Is point inside region
+		*/
+		virtual bool IsPointInsideRegion(double x,double y);
+		/**
+		* \brief Is point inside region
+		*/
+		virtual bool IsPointInsideRegion(TVector2 p);
+		/**
+		* \brief Compute enclosed ellipse from region
+		*/
+		virtual TEllipse* GetEllipse();
+		/**
+		* \brief Compute contour from region
+		*/
+		virtual Contour* GetContour(bool computePars=true);
+
+	public:
+
+		double cx;
+		double cy;
+		double a;//semi-axis
+		double b;//semi-axis
+		double theta;
+		
+	ClassDef(DS9EllipseRegion,1)
+
+};//close class DS9EllipseRegion
+
+
 #ifdef __MAKECINT__
+#pragma link C++ class DS9RegionMetaData+;
 #pragma link C++ class DS9Region+;
 #pragma link C++ class vector<DS9Region>+;
 #pragma link C++ class vector<DS9Region*>+;
@@ -292,6 +414,9 @@ class DS9CircleRegion : public DS9Region
 #pragma link C++ class DS9CircleRegion+;
 #pragma link C++ class vector<DS9CircleRegion>+;
 #pragma link C++ class vector<DS9CircleRegion*>+;
+#pragma link C++ class DS9EllipseRegion+;
+#pragma link C++ class vector<DS9EllipseRegion>+;
+#pragma link C++ class vector<DS9EllipseRegion*>+;
 #endif
 
 }//close namespace
