@@ -342,12 +342,12 @@ class Source : public Blob {
 		* \brief Get DS9 region tag according to source type
 		*/
 		std::string GetDS9RegionTag(){
-			std::string tagStr= "unknown";
+			std::string tagStr= "unknown-type";
 			if(Type==eExtended) tagStr= "extended";
 			else if(Type==eCompactPlusExtended) tagStr= "extended-compact";
 			else if(Type==ePointLike) tagStr= "point-like";
 			else if(Type==eCompact) tagStr= "compact";
-			else tagStr= "unknown";
+			else tagStr= "unknown-type";
 			return tagStr;
 		}//close GetDS9RegionTag()
 

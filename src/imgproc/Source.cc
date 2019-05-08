@@ -364,7 +364,6 @@ void Source::Draw(bool drawBoundingBox,bool drawEllipse,bool drawNested,int line
 }//close Draw()
 
 
-//const std::string Source::GetDS9Region(bool dumpNestedSourceInfo,bool convertToWCS,WorldCoor* wcs,int coordSystem)
 const std::string Source::GetDS9Region(bool dumpNestedSourceInfo,bool convertToWCS,WCS* wcs,int coordSystem)
 {
 	//Check if has pixels
@@ -373,9 +372,24 @@ const std::string Source::GetDS9Region(bool dumpNestedSourceInfo,bool convertToW
 
 	//Convert contours to WCS?
 	std::stringstream sstream;
+	
+	//Define source tags
+	//- source name
 	std::string regionText= this->GetName();
+
+	//- source color
 	std::string regionColor= this->GetDS9RegionColor();
-	std::vector<std::string> regionTags {this->GetDS9RegionTag()};
+
+	//- source type
+	std::string sourceTypeStr= GetSourceTypeStr(this->Type);
+
+	//- source flag
+	std::string sourceFlagStr= GetSourceFlagStr(this->Flag);
+
+	//std::vector<std::string> regionTags {this->GetDS9RegionTag()};
+	std::vector<std::string> regionTags {sourceTypeStr,sourceFlagStr};
+
+
 	std::string region= "";
 	bool useImageCoords= true;
 	if(convertToWCS) useImageCoords= false;
@@ -415,7 +429,11 @@ const std::string Source::GetDS9Region(bool dumpNestedSourceInfo,bool convertToW
 
 			std::string regionText_nested= m_NestedSources[k]->GetName();
 			std::string regionColor_nested= m_NestedSources[k]->GetDS9RegionColor();
-			std::vector<std::string> regionTags_nested {m_NestedSources[k]->GetDS9RegionTag()};
+			std::string sourceTypeStr_nested= GetSourceTypeStr(m_NestedSources[k]->Type);	
+			std::string sourceFlagStr_nested= GetSourceFlagStr(m_NestedSources[k]->Flag);
+			//std::vector<std::string> regionTags_nested {m_NestedSources[k]->GetDS9RegionTag()};
+			std::vector<std::string> regionTags_nested {sourceTypeStr_nested,sourceFlagStr_nested};
+
 			std::string region_nested= "";
 			if(convertToWCS){
 				int pixOffset= 1;
