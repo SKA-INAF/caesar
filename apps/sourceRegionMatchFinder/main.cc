@@ -938,7 +938,7 @@ int FillTileData()
 {
 	//Compute source pars and add to tile data
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Computing source pars and adding to tile data...");
+		INFO_LOG("Computing source pars for #"<<m_sources.size()<<" sources and adding to tile data...");
 	#endif
 
 	for(size_t i=0;i<m_sources.size();i++)
@@ -953,7 +953,7 @@ int FillTileData()
 
 	//Compute region pars and add to tile data
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Computing region pars and adding to tile data...");
+		INFO_LOG("Computing region pars for #"<<m_regions.size()<<" regions and adding to tile data...");
 	#endif
 
 	for(size_t i=0;i<m_regions.size();i++)
@@ -1071,13 +1071,110 @@ int FillSourcePars(Source* aSource,int sourceIndex,int nestedSourceIndex)
 	bool hasFitInfo= aSource->HasFitInfo();
 	bool hasNestedSources= aSource->HasNestedSources();
 	double beamArea= aSource->GetBeamFluxIntegral();
-		
+	double S= aSource->GetS();	
+	if(correctFlux) S/= beamArea;
 
-	//Fill source pars for fit componentd first
+	//Get 0th contour converted to WCS & relative centroid
 	bool useFWHM= true;
 	bool convertToWCS= useWCS;
+	int pixOffset= 0;
+	bool computeContourPars= true;
+	Contour* contour= aSource->GetWCSContour(0,wcs,wcsType,pixOffset,computeContourPars);
+	if(!contour){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute WCS contour for source "<<sourceName<<"!");
+		#endif
+		return -1;
+	}
+	TVector2 contourCentroid= contour->Centroid;
 
-	if(hasFitInfo){	
+	//## Fill source pars for island first
+	SourcePars* sourcePars= new SourcePars(sourceIndex,nestedSourceIndex);
+	sourcePars->sname= sourceName;
+	sourcePars->contour= contour;
+	sourcePars->S= S;
+	
+	//## Fill source fit components
+	if(hasFitInfo)
+	{
+		//Get fitted pars & ellipse converted to WCS
+		SourceFitPars fitPars= aSource->GetFitPars();
+		int nComponents= fitPars.GetNComponents();
+		std::vector<TEllipse*> fitEllipses;
+		if(aSource->GetFitEllipses(fitEllipses,useFWHM,convertToWCS,wcs,wcsType,pixOffset,useWCSSimpleGeometry)<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute WCS ellipse for fitted components of source "<<sourceName<<"!");
+			#endif
+			CodeUtils::DeletePtr<Contour>(contour);
+			CodeUtils::DeletePtr<SourcePars>(sourcePars);
+			return -1;
+		}
+
+		//Check ellipses and pars size
+		if(nComponents!=(int)(fitEllipses.size())){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Number of fit components shall be equal to fitted ellipses (this should not occur)!");
+			#endif
+			CodeUtils::DeletePtr<Contour>(contour);
+			CodeUtils::DeletePtrCollection<TEllipse>(fitEllipses);
+			CodeUtils::DeletePtr<SourcePars>(sourcePars);
+			return -1;
+		}
+
+		//Set fitted flux density
+		double fluxDensity= 0;
+		aSource->GetFluxDensity(fluxDensity);
+		if(correctFlux) fluxDensity/= beamArea;
+		sourcePars->fluxDensity= fluxDensity;
+		
+		//Fill component pars & ellipse
+		ComponentPars* thisComponentPars= 0;
+		for(int k=0;k<nComponents;k++){
+			std::string sname= sourceName + std::string(Form("_fitcomp%d",k+1));
+			double A= fitPars.GetParValue(k,"A");
+			double fluxDensity= fitPars.GetComponentFluxDensity(k);
+			if(correctFlux) fluxDensity/= beamArea;
+
+			//Fill component par
+			thisComponentPars= new ComponentPars;
+			thisComponentPars->sname= sname;
+			thisComponentPars->fitComponentIndex= k;
+			thisComponentPars->fitEllipse= fitEllipses[k];
+			thisComponentPars->A= A;
+			thisComponentPars->fluxDensity= fluxDensity;
+
+			//Add component to source pars
+			sourcePars->AddComponentPars(thisComponentPars);	
+		}//close if	
+	}//close if has fit info
+
+	//## Add source data to tile
+	//Compute tile data index on the basis of contour centroid
+	//If index is found, add to corresponding tile data
+	long int tileIndex= MathUtils::FindGrid2DBin(
+		contourCentroid.X(),contourCentroid.Y(),
+		nTilesX,tileXmin,tileXmax,tileXstep,
+		nTilesY,tileYmin,tileYmax,tileYstep
+	);
+
+	if(tileIndex>=0 || tileIndex<(long int)(tileDataList.size())){//Add to tile data
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Adding source (name="<<sourceName<<", pos("<<contourCentroid.X()<<","<<contourCentroid.Y()<<") to list...");
+		#endif
+		tileDataList[tileIndex]->AddSourcePars(sourcePars);
+	}
+	else{
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Cannot find tile index or invalid tile index found (index="<<tileIndex<<", tilesize="<<tileDataList.size()<<"), check tile index calculation!");
+		#endif
+		CodeUtils::DeletePtr<SourcePars>(sourcePars);
+	}
+
+	
+	/*
+	//Fill source pars for fit components first
+	if(hasFitInfo)
+	{	
 		//Get 0th contour converted to WCS
 		int pixOffset= 0;
 		bool computeContourPars= true;
@@ -1174,10 +1271,10 @@ int FillSourcePars(Source* aSource,int sourceIndex,int nestedSourceIndex)
 			#endif
 			tileDataList[tileIndex]->AddSourcePars(sourcePars);
 		}
-
 	}//close has fit info
-	else{
-	
+
+	else
+	{
 		//## Fill pars for nested sources (if any)
 		if(hasNestedSources){
 			std::vector<Source*> nestedSources= aSource->GetNestedSources();
@@ -1190,8 +1287,21 @@ int FillSourcePars(Source* aSource,int sourceIndex,int nestedSourceIndex)
 				}
 			}//end loop sources
 		}//close if nested sources
-
 	}//close else no fit info
+	*/
+
+	//## Fill pars for nested sources (if any)
+	if(hasNestedSources){
+		std::vector<Source*> nestedSources= aSource->GetNestedSources();
+		for(size_t j=0;j<nestedSources.size();j++){
+			if(FillSourcePars(nestedSources[j],sourceIndex,j)<0){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to get nested source pars for source "<<sourceName<<"!");
+				#endif
+				return -1;
+			}
+		}//end loop sources
+	}//close if nested sources
 
 	return 0;
 
@@ -1841,6 +1951,7 @@ int SaveSources()
 	return 0;
 
 }//close SaveSources()
+
 
 
 int SaveCatalog()
