@@ -1157,7 +1157,7 @@ int FillSourcePars(Source* aSource,int sourceIndex,int nestedSourceIndex)
 		nTilesY,tileYmin,tileYmax,tileYstep
 	);
 
-	if(tileIndex>=0 || tileIndex<(long int)(tileDataList.size())){//Add to tile data
+	if(tileIndex>=0 && tileIndex<(long int)(tileDataList.size())){//Add to tile data
 		#ifdef LOGGING_ENABLED
 			DEBUG_LOG("Adding source (name="<<sourceName<<", pos("<<contourCentroid.X()<<","<<contourCentroid.Y()<<") to list...");
 		#endif

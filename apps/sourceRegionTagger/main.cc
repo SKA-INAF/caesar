@@ -173,6 +173,7 @@ struct TileData {
 	{
 		neighborTileIndexes.clear();
 		sourcePars.clear();
+		sourceComponentPars.clear();
 		regionPars.clear();
 	}
 
@@ -775,7 +776,7 @@ int FillTileData()
 {
 	//Compute source pars and add to tile data
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Computing source pars and adding to tile data...");
+		INFO_LOG("Computing source pars from #"<<m_sources.size()<<" sources and adding to tile data...");
 	#endif
 
 	for(size_t i=0;i<m_sources.size();i++)
@@ -790,7 +791,7 @@ int FillTileData()
 
 	//Compute region pars and add to tile data
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Computing region pars and adding to tile data...");
+		INFO_LOG("Computing region pars from #"<<m_regions.size()<<" regions and adding to tile data...");
 	#endif
 
 	for(size_t i=0;i<m_regions.size();i++)
@@ -913,7 +914,7 @@ int FillSourcePars(Source* aSource,int sourceIndex,int nestedSourceIndex)
 		nTilesX,tileXmin,tileXmax,tileXstep,
 		nTilesY,tileYmin,tileYmax,tileYstep
 	);
-	if(tileIndex>=0 || tileIndex<(long int)(tileDataList.size())){
+	if(tileIndex>=0 && tileIndex<(long int)(tileDataList.size())){
 		SourcePars* sourcePars= new SourcePars(sourceIndex,nestedSourceIndex);
 		sourcePars->sname= sourceName;
 
@@ -933,17 +934,20 @@ int FillSourcePars(Source* aSource,int sourceIndex,int nestedSourceIndex)
 		for(int k=0;k<nComponents;k++)
 		{
 			std::string sname= sourceName + std::string(Form("_fitcomp%d",k+1));
-			double sourceCompPosX= fitPars.GetParValue(k,"X0");
-			double sourceCompPosY= fitPars.GetParValue(k,"Y0");
+			double sourceCompPosX= fitPars.GetParValue(k,"x0");
+			double sourceCompPosY= fitPars.GetParValue(k,"y0");
 			
 			tileIndex= MathUtils::FindGrid2DBin(
 				sourceCompPosX,sourceCompPosY,
 				nTilesX,tileXmin,tileXmax,tileXstep,
 				nTilesY,tileYmin,tileYmax,tileYstep
 			);
-			if(tileIndex>=0 || tileIndex<(long int)(tileDataList.size())){
+			if(tileIndex>=0 && tileIndex<(long int)(tileDataList.size())){
 				ComponentPars* componentPars= new ComponentPars(k,sourceIndex,nestedSourceIndex);
-				componentPars->sname= sourceName;
+				componentPars->sname= sname;
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Adding source component (name="<<sname<<", pos("<<sourceCompPosX<<","<<sourceCompPosY<<") to list...");
+				#endif
 				tileDataList[tileIndex]->AddSourceComponentPars(componentPars);
 			}
 
@@ -1136,11 +1140,12 @@ int TagSourceComponents()
 				if(sourceTagged) {
 					nTaggedSourceComponents++;	
 					source->SetFitPars(fitPars);
-				}
 
-				#ifdef LOGGING_ENABLED
-					INFO_LOG("Tagged source component (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<", componentId="<<componentIndex<<") ("<<nMatches<<" match found)");
-				#endif
+					#ifdef LOGGING_ENABLED
+						INFO_LOG("Tagged source component (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<", componentId="<<componentIndex<<") ("<<nMatches<<" match found)");
+					#endif
+				}
+	
 			}//close else
 			
 		}//end loop sources in this tile
@@ -1278,195 +1283,6 @@ int TagSources()
 
 }//close TagSources()
 
-/*
-int FindSourceMatchesInTiles()
-{
-	//####################################
-	//##     METHOD
-	//####################################
-	//1) Compare source by contour (centroid, overlap area)
-	//2) Compare source component ellipses (centroid, overlap)
-	//####################################
-
-	//Loop over tiles and find matches with regions in the same tile and in neighbor tiles
-	long int nTotSources= 0;
-	long int nMatchedSources= 0;
-	long int nTotSourceComponents= 0;
-	long int nMatchedSourceComponents= 0;
-
-	for(size_t i=0;i<tileDataList.size();i++)
-	{
-		long int NSourcePars= tileDataList[i]->GetNSourcePars();
-		long int NRegionPars= tileDataList[i]->GetNRegionPars();
-		std::vector<size_t> neighbors= tileDataList[i]->neighborTileIndexes;
-
-		#ifdef LOGGING_ENABLED
-			INFO_LOG("#"<<NSourcePars<<" sources to be cross-matched against #"<<NRegionPars<<" regions in tile no. "<<i+1<<" ...");
-		#endif
-
-		for(long int j=0;j<NSourcePars;j++)
-		{
-			//Get source info
-			SourcePars* sourcePars= (tileDataList[i]->sourcePars)[j];
-			std::vector<ComponentPars*> componentPars= sourcePars->componentPars;
-			long int sourceIndex= sourcePars->sourceIndex;
-			long int nestedSourceIndex= sourcePars->nestedSourceIndex;
-			Source* source= 0;
-			if(nestedSourceIndex==-1) source= m_sources[sourceIndex];
-			else source= m_sources[sourceIndex]->GetNestedSource(nestedSourceIndex);
-			
-			if(!source){
-				#ifdef LOGGING_ENABLED
-					WARN_LOG("No source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<") found, this should not occur, skip source!");
-				#endif
-				continue;
-			}
-			
-
-			//Get source fit info
-			bool hasFitInfo= source->HasFitInfo();
-			int nFitComponents= 0;
-			if(hasFitInfo) {
-				SourceFitPars fitPars= source->GetFitPars();
-				nFitComponents= fitPars.GetNComponents();
-			}
-			
-			//Count total number of sources
-			nTotSources++;
-			nTotSourceComponents+= nFitComponents;
-	
-			int nMatches= 0;
-
-			//Loop over regions in the same tile
-			std::vector<std::pair<long int,long int>> matchedRegionIndexes;
-
-			for(long int k=0;k<NRegionPars;k++){
-				RegionPars* regionPars= (tileDataList[i]->regionPars)[k];
-				bool hasMatch= HaveSourceIslandMatch(sourcePars,regionPars);
-				if(!hasMatch) continue;
-
-				//Record match
-				nMatches++;
-				matchedRegionIndexes.push_back(std::make_pair(i,k));
-			}//end loop regions in this tile
-
-			
-
-			//Loop over regions in neighbor tiles
-			for(size_t l=0;l<neighbors.size();l++){
-				size_t neighborIndex= neighbors[l];
-				if(i==neighborIndex) continue;//skip same tile
-
-				long int NRegionPars_neighbor= tileDataList[neighborIndex]->GetNRegionPars();
-
-				for(long int k=0;k<NRegionPars_neighbor;k++){
-					RegionPars* regionPars= (tileDataList[neighborIndex]->regionPars)[k];
-					bool hasMatch= HaveSourceIslandMatch(sourcePars,regionPars);
-					if(!hasMatch) continue;
-
-					//Record match
-					nMatches++;
-					matchedRegionIndexes.push_back(std::make_pair(neighborIndex,k));
-				}//end loop regions in this neighbor tile
-
-			}//end loop neighbor tiles
-
-			//## Tag source according to match results
-			//## Set to unknown flag if not assigned to any region
-			if(nMatches<=0){
-				source->SetFlag(eFake);
-				if(hasFitInfo){
-					SourceFitPars fitPars= source->GetFitPars();
-					for(int l=0;l<nFitComponents;l++) fitPars.SetComponentFlag(l,eFake);
-					source->SetFitPars(fitPars);
-				}
-
-				#ifdef LOGGING_ENABLED
-					INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") and its component as fake (no match found)");
-				#endif
-
-				//Skip further processing
-				continue;
-			}
-			else if(nMatches==1){
-				nMatchedSources++;
-				source->SetFlag(eReal);
-				source->SetType(ePointLike);
-				#ifdef LOGGING_ENABLED
-					INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and point-like (1 match found)");
-				#endif
-			}
-			else if(nMatches>1){
-				nMatchedSources++;
-				source->SetFlag(eReal);
-				source->SetType(eCompact);
-				#ifdef LOGGING_ENABLED
-					INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and compact ("<<nMatches<<" match found)");
-				#endif
-			}
-
-			//Match source components
-			if(matchSourceComponent){
-				
-
-				for(size_t l=0;l<componentPars.size();l++){
-					ComponentPars* cpars= componentPars[l];
-					int nComponentMatches= 0;
-
-					for(size_t k=0;k<matchedRegionIndexes.size();k++){
-						long int tileIndex= matchedRegionIndexes[k].first;
-						long int regionIndex= matchedRegionIndexes[k].second;
-						RegionPars* regionPars= (tileDataList[tileIndex]->regionPars)[regionIndex];
-				
-						bool hasMatch= HaveSourceComponentMatch(cpars,regionPars);
-						if(!hasMatch) continue;
-								
-						nComponentMatches++;
-					}//end loop regions
-
-					//Tag source component
-					SourceFitPars fitPars= source->GetFitPars();
-					if(nComponentMatches<=0){
-						fitPars.SetComponentFlag(l,eFake);
-						fitPars.SetComponentType(l,eUnknownType);
-
-						#ifdef LOGGING_ENABLED
-							INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as fake (no match found)");
-						#endif
-					}
-					else if(nComponentMatches==1){
-						nMatchedSourceComponents++;
-						fitPars.SetComponentFlag(l,eReal);
-						fitPars.SetComponentType(l,ePointLike);
-						#ifdef LOGGING_ENABLED
-							INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and point-like (1 match found)");
-						#endif
-					}
-					else if(nComponentMatches>1){
-						nMatchedSourceComponents++;
-						fitPars.SetComponentFlag(l,eReal);
-						fitPars.SetComponentType(l,eCompact);
-						#ifdef LOGGING_ENABLED
-							INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and compact ("<<nComponentMatches<<" match found)");
-						#endif
-					}
-					source->SetFitPars(fitPars);
-
-				}//end loop component pars
-			}//close if matchSourceComponent
-
-		}//end loop sources in this tile
-	}//end loop tiles
-
-	#ifdef LOGGING_ENABLED
-		INFO_LOG("#matched/tot sources: "<<nMatchedSources<<"/"<<nTotSources);
-		INFO_LOG("#matched/tot source fit components: "<<nMatchedSourceComponents<<"/"<<nTotSourceComponents);
-	#endif
-
-	return 0;
-
-}//close FindSourceMatchesInTiles()
-*/
 
 int SaveDS9Regions()
 {
