@@ -153,16 +153,28 @@ int DS9RegionParser::Parse(std::vector<DS9Region*>& regions,std::string filename
 
 DS9Region* DS9RegionParser::ParseRegion(const std::vector<std::string>& fields)
 {
-	//If parsing is correct there should be only one entry in fields
-	if(fields.size()!=1){
+	//Check if empty fields
+	if(fields.empty()){
 		#ifdef LOGGING_ENABLED
-			WARN_LOG("Empty or invalid number of fields found (1 expected)!");
+			WARN_LOG("Empty number of fields given!");
 		#endif
 		return nullptr;
 	}
 
+	/*
+	//If parsing is correct there should be only one entry in fields
+	if(fields.size()!=1){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Empty or invalid number of fields found (1 expected, "<<fields.size()<<" found)!");
+		#endif
+		return nullptr;
+	}
+	*/
+
 	//Detect type of region
-	std::string data_str= fields[0];
+	//std::string data_str= fields[0];
+	std::string data_str= CodeUtils::JoinVec(fields," ");
+
 	DS9Region* region= 0;
 
 	if(CodeUtils::HasPatternInString(data_str,"polygon")){
@@ -723,13 +735,22 @@ int DS9RegionParser::Read(std::vector<std::vector<std::string>>& data,std::vecto
 				readMetadata= true;
 				break;
 			}
-			if(first_char=='\n') break;
+			if(first_char=='\n') {
+				break;
+			}
 
 			//Save data
 			fields.push_back(field);
 
 		}//end loop data
-
+	
+		
+		for(size_t k=0;k<fields.size();k++){
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("--> fields["<<k<<"]="<<fields[k]);
+			#endif
+		}
+		
 		//Parse metadata
 		if(readMetadata){	
 			while(ss >> field)
