@@ -684,7 +684,26 @@ class CodeUtils : public TObject {
 			return 0;
 		}//close StripBlankSpaces()
 
-		
+		/**
+		* \brief Collapse a collection in a string (equivalent of python join)
+		*/
+		template <typename Iter>
+		static std::string JoinCollection(Iter begin, Iter end, std::string separator="")
+		{
+  		std::ostringstream result;
+  		if (begin != end) result << *begin++;
+  		while (begin != end) result << separator << *begin++;
+  		return result.str();
+		}
+
+		/**
+		* \brief Join vectors
+		*/
+		template <typename T>
+		static std::string JoinVec(const std::vector<T>& data,std::string separator="")
+		{
+			return JoinCollection(data.begin(),data.end(),separator);
+		}
 
 		/**
 		* \brief Compare string case insensitive 
