@@ -120,6 +120,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo ""
 	
 	echo "=== SFINDER SOURCE RESIDUAL OPTIONS ==="
+	echo "--computeresiduals - Compute compact source residual map (after compact source search)"
 	echo "--res-removenested - When a source has nested sources remove only on nested (default=false)"
 	echo "--res-zthr=[RESIDUAL_ZTHR] - Seed threshold (in nsigmas) used to dilate sources (default=5 sigmas)"	
 	echo "--res-zhighthr=[RESIDUAL_ZHIGHTHR] - Seed threshold (in nsigmas) used to dilate sources (even if they have nested components or different dilation type) (default=10 sigmas)"		
@@ -305,6 +306,7 @@ SEARCH_COMPACT_SOURCES="true"
 COMPACT_SOURCE_SEARCH_NITERS="5"
 SEED_THR_STEP="1"
 
+COMPUTE_RESIDUAL_MAP="false"
 ##DILATE_NESTED="false"
 RESIDUAL_REMOVE_NESTED="false"
 ##DILATE_BRIGHT_THR="10"
@@ -733,6 +735,9 @@ do
 		;;
 
 		## RESIDUAL OPTIONS
+		--computeresiduals*)
+    	COMPUTE_RESIDUAL_MAP="true"
+    ;;
 		--res-zthr=*)
     	RESIDUAL_ZTHR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
@@ -1447,8 +1452,9 @@ generate_config(){
 		echo '//================================'
 		echo '//==  SOURCE RESIDUAL OPTIONS   =='
 		echo '//================================'
+		echo "computeResidualMap = $COMPUTE_RESIDUAL_MAP          | Compute compact source residual map (after compact source search) (T/F)"
 		echo "removeNestedSources = $RESIDUAL_REMOVE_NESTED				| Dilate sources nested inside bright sources (T/F)"
-		echo "residualZThr = $RESIDUAL_ZTHR                      | Significance threshold (in sigmas) above which sources of selected type are dilated"
+		echo "residualZThr = $RESIDUAL_ZTHR                       | Significance threshold (in sigmas) above which sources of selected type are dilated"
 		echo "residualZHighThr = $RESIDUAL_ZHIGHTHR               | Significance threshold (in sigmas) above which sources are always dilated (even if they have nested or different type)"
 		echo "dilateKernelSize = $DILATE_KERNEL_SIZE							| Size of kernel (odd) to be used in dilation operation"
 		echo "removedSourceType = $RESIDUAL_REMOVED_SOURCE_TYPE   | Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"
