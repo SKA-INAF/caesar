@@ -758,6 +758,10 @@ on nested sources and not on parent source pixels. On the contrary, sources are 
 +----------------------------+----------------------------------+-----------+------------------------+
 |       Option               |             Description          |  Default  |   Values               |
 +============================+==================================+===========+========================+
+| ``computeResidualMap``     | | Compute compact source         |   false   | | true                 |
+|                            | | residual map (after compact    |           | | false                |
+|                            | | source search)                 |           |                        |
++----------------------------+----------------------------------+-----------+------------------------+
 | ``residualZHighThr``       | | High source significance       |    10     |                        |
 |                            | | threshold (in nsigmas wrt bkg) |           |                        |
 |                            | | used to remove sources         |           |                        |
