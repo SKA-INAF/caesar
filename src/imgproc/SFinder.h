@@ -463,6 +463,7 @@ class SFinder : public TObject {
 		//Residual map
 		Image* m_ResidualImg;
 		ImgBkgData* m_ResidualBkgData;
+		bool m_computeResidualMap;
 		//double m_DilateZBrightThr;
 		double m_residualZHighThr;
 		//double m_DilateZThr;

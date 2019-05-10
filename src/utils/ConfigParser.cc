@@ -306,6 +306,7 @@ int ConfigParser::RegisterPredefinedOptions()
 		//================================
 		//==  Source residual options   ==
 		//================================
+		REGISTER_OPTION(computeResidualMap,bool,false,false,true);
 		REGISTER_OPTION(residualZHighThr,double,10,0,10000);
 		REGISTER_OPTION(residualZThr,double,5,0,10000);
 		REGISTER_OPTION(removeNestedSources,bool,true,false,true);

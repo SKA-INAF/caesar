@@ -715,6 +715,7 @@ int SFinder::Configure()
 	GET_OPTION_VALUE(psNBeamsThr,m_psNBeamsThr);
 	
 	//Get source residual options
+	GET_OPTION_VALUE(computeResidualMap,m_computeResidualMap);
 	GET_OPTION_VALUE(residualZHighThr,m_residualZHighThr);	
 	GET_OPTION_VALUE(residualZThr,m_residualZThr);
 	GET_OPTION_VALUE(removeNestedSources,m_removeNestedSources);
@@ -920,6 +921,7 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 	ImgBkgData* bkgData= 0;
 	Image* significanceMap= 0;
 	Image* segmentedImg= 0;
+	Image* residualImg= 0;
 	bool stopTask= false;
 	int status= 0;
 
@@ -970,7 +972,7 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 	}
 
 	//================================
-	//== FIND TASK EXTENDED SOURCES
+	//== FIND TASK COMPACT SOURCES
 	//================================
 	if(!stopTask && m_SearchCompactSources ){ 	
 		#ifdef LOGGING_ENABLED
@@ -988,6 +990,48 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 		auto t1_sfinder = chrono::steady_clock::now();	
 		compactSourceTime+= chrono::duration <double, milli> (t1_sfinder-t0_sfinder).count();
 	}
+
+
+	//====================================
+	//== FIT TASK SOURCES (NOT AT EDGE)
+	//====================================
+	if(!stopTask){
+		auto t0_sfit = chrono::steady_clock::now();
+		if(m_fitSources){
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Fitting task sources not located at tile edge ...");
+			#endif
+			if(FitTaskSources(taskData)<0){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Fitting sources not at tile edges failed!");
+				#endif
+				status= -1;
+			}
+		}
+		auto t1_sfit = chrono::steady_clock::now();	
+		sourceFitTime+= chrono::duration <double, milli> (t1_sfit-t0_sfit).count();
+	}
+
+	//====================================
+	//== COMPUTE RESIDUAL MAP
+	//====================================
+	if(!stopTask && m_computeResidualMap){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Computing compact-source residual map ...");
+		#endif
+		auto t0_resmap = chrono::steady_clock::now();	
+
+		residualImg= FindResidualMap(taskImg,bkgData,taskData->sources);
+		if(!residualImg){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Residual map computation failed!");
+			#endif
+			status= -1;	
+		}
+		auto t1_resmap = chrono::steady_clock::now();	
+		imgResidualTime+= chrono::duration <double, milli> (t1_resmap-t0_resmap).count();
+
+	}//close if compute residual image
 
 	//================================
 	//== FIND TASK EXTENDED SOURCES
@@ -1036,7 +1080,6 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 		#ifdef LOGGING_ENABLED	
 			INFO_LOG("Finding sources at tile edges ...");
 		#endif
-		//if(FindSourcesAtEdge()<0){
 		if(FindTaskSourcesAtEdge(taskData)<0){
 			#ifdef LOGGING_ENABLED
 				ERROR_LOG("Finding sources at tile edges failed!");
@@ -1045,19 +1088,18 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 		}
 	}
 
-	//====================================
-	//== FIT TASK SOURCES (NOT AT EDGE)
-	//====================================
+	//======================================================================
+	//== FIT TASK SOURCES (NOT AT EDGE) NB: Re-done only for merged sources
+	//======================================================================
 	if(!stopTask){
 		auto t0_sfit = chrono::steady_clock::now();
 		if(m_fitSources){
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Fitting task sources not located at tile edge ...");
+				INFO_LOG("Fitting task sources not located at tile edge after merging (if enabled) ...");
 			#endif
-			//if(FitTaskSources()<0){
 			if(FitTaskSources(taskData)<0){
 				#ifdef LOGGING_ENABLED
-					ERROR_LOG("Fitting sources not at tile edges failed!");
+					ERROR_LOG("Fitting sources not at tile edges after merging failed!");
 				#endif
 				status= -1;
 			}
@@ -1074,6 +1116,7 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 		if(taskImg) m_InputImg= taskImg;
 		if(bkgData) m_BkgData= bkgData;
 		if(significanceMap) m_SignificanceMap= significanceMap;
+		if(residualImg) m_ResidualImg= residualImg;
 		if(segmentedImg) m_SegmImg= segmentedImg;
 	}
 	else{//clear all data
@@ -1088,6 +1131,10 @@ int SFinder::RunTask(TaskData* taskData,bool storeData)
 		if(significanceMap){
 			delete significanceMap;
 			significanceMap= 0;
+		}
+		if(residualImg){
+			delete residualImg;
+			residualImg= 0;
 		}
 		if(segmentedImg){
 			delete segmentedImg;
@@ -1941,14 +1988,6 @@ Image* SFinder::FindResidualMap(Image* inputImg,ImgBkgData* bkgData,std::vector<
 			m_residualModelRandomize,m_residualZThr,m_residualZHighThr,m_psSubtractionMethod
 		);
 
-		/*
-		residualImg= inputImg->GetSourceResidual(
-			sources,
-			m_dilateKernelSize,m_DilateSourceModel,m_DilatedSourceType,m_DilateNestedSources,	
-			bkgData,m_UseLocalBkg,
-			m_DilateRandomize,m_DilateZThr,m_DilateZBrightThr,m_psSubtractionMethod
-		);
-		*/
 	}//close if
 	else{
 		#ifdef LOGGING_ENABLED	
@@ -2038,18 +2077,23 @@ Image* SFinder::FindExtendedSources(Image* inputImg,ImgBkgData* bkgData,TaskData
 	//****************************
 	//** Find residual map
 	//****************************
-	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("Computing residual image ...");
-	#endif
-	Image* residualImg= FindResidualMap(inputImg,bkgData,taskData->sources);
+	//NB: Compute residual map if not already computed
+	Image* residualImg= m_ResidualImg;
 	if(!residualImg){
 		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Residual map computation failed!");
+			DEBUG_LOG("Computing residual image (was not computed before) ...");
 		#endif
-		return nullptr;
+		residualImg= FindResidualMap(inputImg,bkgData,taskData->sources);
+		if(!residualImg){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Residual map computation failed!");
+			#endif
+			return nullptr;
+		}
+		if(storeData) m_ResidualImg= residualImg;
+		searchImg= residualImg;
 	}
-	if(storeData) m_ResidualImg= residualImg;
-	searchImg= residualImg;
+	
 
 	
 	//Compute bkg & noise map for residual img
