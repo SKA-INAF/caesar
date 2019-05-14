@@ -781,7 +781,7 @@ class SkyMapSimulator(object):
 		## Convert data from Jy/pixel to Jy/beam
 		## Jy/pixel= Jy/beam / beamArea(pixels)
 		scaleFactor= self.beam_area
-		self.model_data_ext*= scaleFactor
+		self.model_data_ext[:,:,0,0]*= scaleFactor
 
 		## Create image with ext sources
 		self.model_ext_im= ia.newimagefromarray(pixels=self.model_data_ext, csys=self.mosaic_cs.torecord())  
