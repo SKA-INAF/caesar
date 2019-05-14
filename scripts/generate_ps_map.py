@@ -674,6 +674,7 @@ class SkyMapSimulator(object):
 		# Generate empty image
 		#self.model_data_ext = Box2D(amplitude=0,x_0=0,y_0=0,x_width=2*self.nx, y_width=2*self.ny)(self.gridx, self.gridy)
 		self.model_data_ext= ia.makearray(0,[self.nx,self.ny,1,1])
+		data_size= np.shape(self.model_data_ext)
 
 		# Get mosaic pixels with non-nan values
 		mask= ~np.isnan(self.mosaic_data)
@@ -761,6 +762,9 @@ class SkyMapSimulator(object):
 				continue
 
 			## Add generated source to image and list
+			source_data_size= np.shape(source_data)
+			print ('DEBUG: model_data_ext shape=(%s,%s,%s,%s), data shape=(%s,%s)' % (data_size[0],data_size[1],data_size[2],data_size[3],source_data_size[0],source_data_size[1]) )
+
 			index+= 1
 			source_name= 'Sext' + str(index)
 			#self.model_data_ext+= source_data
@@ -771,7 +775,7 @@ class SkyMapSimulator(object):
 
 		## Set nan pixels when mosaic is nan
 		print ('INFO: Set nan pixels when mosaic is nan...')
-		data_size= np.shape(self.model_data_ext)
+		
 		for ix,iy in np.ndindex(data_size[0],data_size[1]):
 			mosaic_value= mask[ix][iy][0][0]
 			if np.isnan(data_value):
