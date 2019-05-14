@@ -23,7 +23,7 @@ import math
 #from astropy.units import Quantity
 #from astropy.modeling.parameters import Parameter
 #from astropy.modeling.core import Fittable2DModel
-#from astropy.modeling.models import Box2D, Gaussian2D, Ring2D, Ellipse2D, TrapezoidDisk2D, Disk2D, AiryDisk2D, Sersic2D
+from astropy.modeling.models import Box2D, Gaussian2D, Ring2D, Ellipse2D, TrapezoidDisk2D, Disk2D, AiryDisk2D, Sersic2D
 #from astropy import wcs
 
 ## ROOT
