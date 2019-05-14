@@ -25,16 +25,16 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--nsources=[NSOURCES] - Number of compact sources generated in mosaic (if >0 override source density options) (default: 0)"
 	echo "--sourcedensity=[SOURCE_DENSITY] - Compact source density in sources/deg^2 (default: 1000)"
 	echo "--genextsources - Generate extended sources (default=no)"
-	echo "--smin_ext=[SMIN_EXT] - Min generated extended source flux density in Jy (default: 1.e-4)"
-	echo "--smax_ext=[SMAX_EXT] - Max generated extended source flux density in Jy (default: 1)"
-	echo "--nsources_ext=[NSOURCES_EXT] - Number of extended sources generated in mosaic (if >0 override source density options) (default: 0)"
-	echo "--sourcedensity_ext=[SOURCE_DENSITY_EXT] - Extended source density in sources/deg^2 (default: 50)"
-	echo "--bmaj_min=[BMAJ_MIN] - Min bmaj for extended source generation (default: 4)"
-	echo "--bmaj_max=[BMAJ_MAX] - Max bmaj for extended source generation (default: 10)"
-	echo "--bmin_min=[BMIN_MIN] - Min bmin for extended source generation (default: 4)"
-	echo "--bmin_max=[BMIN_MAX] - Max bmin for extended source generation (default: 10)"
-	echo "--pa_min=[BMIN_MIN] - Min pos angle for extended source generation (default: -90)"
-	echo "--pa_max=[BMIN_MAX] - Max pos angle extended source generation (default: 90)"
+	echo "--smin-ext=[SMIN_EXT] - Min generated extended source flux density in Jy (default: 1.e-4)"
+	echo "--smax-ext=[SMAX_EXT] - Max generated extended source flux density in Jy (default: 1)"
+	echo "--nsources-ext=[NSOURCES_EXT] - Number of extended sources generated in mosaic (if >0 override source density options) (default: 0)"
+	echo "--sourcedensity-ext=[SOURCE_DENSITY_EXT] - Extended source density in sources/deg^2 (default: 50)"
+	echo "--bmaj-min=[BMAJ_MIN] - Min bmaj for extended source generation (default: 4)"
+	echo "--bmaj-max=[BMAJ_MAX] - Max bmaj for extended source generation (default: 10)"
+	echo "--bmin-min=[BMIN_MIN] - Min bmin for extended source generation (default: 4)"
+	echo "--bmin-max=[BMIN_MAX] - Max bmin for extended source generation (default: 10)"
+	echo "--pa-min=[BMIN_MIN] - Min pos angle for extended source generation (default: -90)"
+	echo "--pa-max=[BMIN_MAX] - Max pos angle extended source generation (default: 90)"
 	echo ""
 
 	echo "=== RUN OPTIONS ==="	
@@ -125,34 +125,34 @@ do
 		--genextsources*)
     	GEN_EXT_SOURCES="--extsources"
     ;;
-		--nsources_ext=*)
+		--nsources-ext=*)
 			NSOURCES_EXT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
 		;;
-		--sourcedensity_ext=*)
+		--sourcedensity-ext=*)
     	SOURCE_DENSITY_EXT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
-		--smin_ext=*)
+		--smin-ext=*)
     	SMIN_EXT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
-		--smax_ext=*)
+		--smax-ext=*)
     	SMAX_EXT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
-		--bmaj_min=*)
+		--bmaj-min=*)
     	BMAJ_MIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
-		--bmaj_max=*)
+		--bmaj-max=*)
     	BMAJ_MAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
-		--bmin_min=*)
+		--bmin-min=*)
     	BMIN_MIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
-		--bmin_max=*)
+		--bmin-max=*)
     	BMIN_MAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
-		--pa_min=*)
+		--pa-min=*)
     	PA_MIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
-		--pa_max=*)
+		--pa-max=*)
     	PA_MAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
 			
