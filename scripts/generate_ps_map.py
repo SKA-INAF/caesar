@@ -671,6 +671,9 @@ class SkyMapSimulator(object):
 	def generate_ext_sources(self):
 		""" Add extended gaus components to convolved map """
 
+		# Generate empty image
+		self.model_data_ext = Box2D(amplitude=0,x_0=0,y_0=0,x_width=2*self.nx, y_width=2*self.ny)(self.gridx, self.gridy)
+
 		# Get mosaic pixels with non-nan values
 		mask= ~np.isnan(self.mosaic_data)
 		npix_good= np.count_nonzero(mask)
