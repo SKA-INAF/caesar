@@ -692,7 +692,7 @@ class SkyMapSimulator(object):
 		randomize_flux= False
 		if self.Smin_ext<self.Smax_ext:
 			randomize_flux= True
-		print ('INFO: Ext source gen range S(%s,%s), lgS(%s,%s), fluxScaleFactor=%s' % (str(S_min),str(S_max),str(lgS_min),str(lgS_max),str(fluxScaleFactor))
+		print ('INFO: Ext source gen range S(%s,%s), lgS(%s,%s), fluxScaleFactor=%s' % (S_min,S_max,lgS_min,lgS_max,fluxScaleFactor))
 
 
 		## Set gaus pars generation
