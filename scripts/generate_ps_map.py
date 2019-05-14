@@ -672,7 +672,8 @@ class SkyMapSimulator(object):
 		""" Add extended gaus components to convolved map """
 
 		# Generate empty image
-		self.model_data_ext = Box2D(amplitude=0,x_0=0,y_0=0,x_width=2*self.nx, y_width=2*self.ny)(self.gridx, self.gridy)
+		#self.model_data_ext = Box2D(amplitude=0,x_0=0,y_0=0,x_width=2*self.nx, y_width=2*self.ny)(self.gridx, self.gridy)
+		self.model_data_ext= ia.makearray(0,[self.nx,self.ny,1,1])
 
 		# Get mosaic pixels with non-nan values
 		mask= ~np.isnan(self.mosaic_data)
@@ -762,9 +763,20 @@ class SkyMapSimulator(object):
 			## Add generated source to image and list
 			index+= 1
 			source_name= 'Sext' + str(index)
-			self.model_data_ext+= source_data
+			#self.model_data_ext+= source_data
+			self.model_data_ext[:,:,0,0]+= source_data
 			self.exts_list.append([source_name,x0,y0,S,sigmax,sigmay,theta])
 			print ('INFO: Ext source %s: Pos(%s,%s), ix=%s, iy=%s, S=%s' % (source_name,str(x0),str(y0),str(ix),str(iy),str(S)))
+
+
+		## Set nan pixels when mosaic is nan
+		print ('INFO: Set nan pixels when mosaic is nan...')
+		data_size= np.shape(self.model_data_ext)
+		for ix,iy in np.ndindex(data_size[0],data_size[1]):
+			mosaic_value= mask[ix][iy][0][0]
+			if np.isnan(data_value):
+				self.model_data_ext[ix,iy,0,0]= np.nan
+									
 
 		## Convert data from Jy/pixel to Jy/beam
 		## Jy/pixel= Jy/beam / beamArea(pixels)
