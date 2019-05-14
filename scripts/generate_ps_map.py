@@ -170,7 +170,7 @@ class SkyMapSimulator(object):
 		self.Smax= 1 # in Jy
 
 		## Extended source parameters
-		self.generate_ext_sources= False
+		self.add_ext_sources= False
 		self.truncate_models= False
 		self.exts_list= []
 		self.trunc_thr= 0.01 # 1% flux truncation at maximum
@@ -289,7 +289,7 @@ class SkyMapSimulator(object):
 
 	def add_ext_sources(self,choice):
 		""" Set beam randomization """
-		self.generate_ext_sources= choice
+		self.add_ext_sources= choice
 
 	def write_source_list(self):
 		""" Write source list to file """
@@ -783,13 +783,13 @@ class SkyMapSimulator(object):
 		self.convolve_skymodel()
 
 		## == ADD EXTENDED SOURCES ==
-		if self.generate_ext_sources:
+		if self.add_ext_sources:
 			print ('INFO: Generating extended sources...')
 			self.generate_ext_sources()	
 
 		## == CREATE FINAL MAP = MOSAIC + CONVOLVED SKY MODEL + EXT SOURCE (IF ENABLED) ===
 		data= self.mosaic_data + self.model_conv_data
-		if self.generate_ext_sources:
+		if self.add_ext_sources:
 			data+= self.model_data_ext			
 
 		cs = self.mosaic_im.coordsys()
