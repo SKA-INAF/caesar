@@ -1102,7 +1102,7 @@ def main():
 	pa= args.pa
 
 	# - Extended source args
-	generate_ext_sources= args.extsources
+	add_ext_sources= args.extsources
 	nsources_ext= args.nsources_ext
 	source_density_ext= args.source_density_ext
 	Smin_ext= args.Smin_ext
@@ -1159,7 +1159,7 @@ def main():
 		simulator.set_source_flux_range(Smin,Smax)
 		simulator.set_source_density(source_density)
 		simulator.set_beam(bmaj,bmin,pa)
-		simulator.add_ext_sources(generate_ext_sources)
+		simulator.add_ext_sources(add_ext_sources)
 		simulator.set_nsources_ext(nsources_ext)
 		simulator.set_ext_source_flux_range(Smin_ext,Smax_ext)
 		simulator.set_beam_bmaj_range(bmaj_min,bmaj_max)
