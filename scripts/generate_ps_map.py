@@ -1162,9 +1162,9 @@ def main():
 		simulator.add_ext_sources(generate_ext_sources)
 		simulator.set_nsources_ext(nsources_ext)
 		simulator.set_ext_source_flux_range(Smin_ext,Smax_ext)
-		simulator.set_bmaj_range(bmaj_min,bmaj_max)
-		simulator.set_bmin_range(bmin_min,bmin_max)
-		simulator.set_pa_range(pa_min,pa_max)
+		simulator.set_beam_bmaj_range(bmaj_min,bmaj_max)
+		simulator.set_beam_bmin_range(bmin_min,bmin_max)
+		simulator.set_beam_pa_range(pa_min,pa_max)
 		simulator.run()
 
 	## Generate restored image by convolving model with restored beam
