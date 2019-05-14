@@ -287,7 +287,7 @@ class SkyMapSimulator(object):
 		self.beam_bpa_min= pa_min
 		self.beam_bpa_max= pa_max	
 
-	def add_ext_sources(self,choice):
+	def enable_ext_sources(self,choice):
 		""" Set beam randomization """
 		self.add_ext_sources= choice
 
@@ -1102,7 +1102,7 @@ def main():
 	pa= args.pa
 
 	# - Extended source args
-	add_ext_sources= args.extsources
+	extsources= args.extsources
 	nsources_ext= args.nsources_ext
 	source_density_ext= args.source_density_ext
 	Smin_ext= args.Smin_ext
@@ -1159,7 +1159,7 @@ def main():
 		simulator.set_source_flux_range(Smin,Smax)
 		simulator.set_source_density(source_density)
 		simulator.set_beam(bmaj,bmin,pa)
-		simulator.add_ext_sources(add_ext_sources)
+		simulator.enable_ext_sources(extsources)
 		simulator.set_nsources_ext(nsources_ext)
 		simulator.set_ext_source_flux_range(Smin_ext,Smax_ext)
 		simulator.set_beam_bmaj_range(bmaj_min,bmaj_max)
