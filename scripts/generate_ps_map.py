@@ -773,19 +773,19 @@ class SkyMapSimulator(object):
 			print ('INFO: Ext source %s: Pos(%s,%s), ix=%s, iy=%s, S=%s' % (source_name,str(x0),str(y0),str(ix),str(iy),str(S)))
 
 
-		## Set nan pixels when mosaic is nan
-		print ('INFO: Set nan pixels when mosaic is nan...')
-		
-		for ix,iy in np.ndindex(data_size[0],data_size[1]):
-			mosaic_value= mask[ix][iy][0][0]
-			if np.isnan(mosaic_value):
-				self.model_data_ext[ix,iy,0,0]= np.nan
-									
-
 		## Convert data from Jy/pixel to Jy/beam
 		## Jy/pixel= Jy/beam / beamArea(pixels)
 		scaleFactor= self.beam_area
 		self.model_data_ext[:,:,0,0]*= scaleFactor
+
+		## Set nan pixels when mosaic is nan
+		print ('INFO: Set nan pixels when mosaic is nan...')
+		
+		for ix,iy in np.ndindex(data_size[0],data_size[1]):
+			mosaic_value= self.mosaic_data[ix][iy][0][0]
+			if np.isnan(mosaic_value):
+				self.model_data_ext[ix,iy,0,0]= np.nan
+									
 
 		## Create image with ext sources
 		self.model_ext_im= ia.newimagefromarray(pixels=self.model_data_ext, csys=self.mosaic_cs.torecord())  
