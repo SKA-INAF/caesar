@@ -528,9 +528,10 @@ class SkyMapSimulator(object):
 		beam= self.mosaic_im.restoringbeam()
 		self.beam_bmaj= beam['major']['value'] # in arcsec
 		self.beam_bmin= beam['minor']['value'] # in arcsec
-		self.beam_bpa= beam['positionangle']['value'] # in deg	
+		self.beam_bpa= beam['positionangle']['value'] # in deg
+		self.beam_area= self.compute_beam_area(self.beam_bmaj,self.beam_bmin) # in pixels
 		print 'INFO: Mosaic image shape=', data_shape
-		print ('INFO: Restored image beam= (%s,%s,%s)') % (self.beam_bmaj,self.beam_bmin,self.beam_bpa)
+		print ('INFO: Restored image beam= (%s,%s,%s), beamArea=%s') % (self.beam_bmaj,self.beam_bmin,self.beam_bpa,self.beam_area)
 					
 		## Check margins
 		if (self.marginx<0 or self.marginy<0 or self.marginx>=self.nx/2 or self.marginy>=self.ny/2) :
@@ -691,6 +692,8 @@ class SkyMapSimulator(object):
 		randomize_flux= False
 		if self.Smin_ext<self.Smax_ext:
 			randomize_flux= True
+		print ('INFO: Ext source gen range S(%s,%s), lgS(%s,%s), fluxScaleFactor=%s' % (str(S_min),str(S_max),str(lgS_min),str(lgS_max),str(fluxScaleFactor))
+
 
 		## Set gaus pars generation
 		randomize_gaus= False
