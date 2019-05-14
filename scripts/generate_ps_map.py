@@ -783,13 +783,13 @@ class SkyMapSimulator(object):
 		self.convolve_skymodel()
 
 		## == ADD EXTENDED SOURCES ==
-		if self.add_gaus:
+		if self.generate_ext_sources:
 			print ('INFO: Generating extended sources...')
 			self.generate_ext_sources()	
 
 		## == CREATE FINAL MAP = MOSAIC + CONVOLVED SKY MODEL + EXT SOURCE (IF ENABLED) ===
 		data= self.mosaic_data + self.model_conv_data
-		if self.add_gaus:
+		if self.generate_ext_sources:
 			data+= self.model_data_ext			
 
 		cs = self.mosaic_im.coordsys()
