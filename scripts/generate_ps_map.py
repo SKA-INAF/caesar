@@ -731,9 +731,15 @@ class SkyMapSimulator(object):
 				S= S_min
 
 			## Generate gaus pars
-			bmin= random.uniform(Bmin_min,Bmin_max)
-			bmaj= random.uniform(bmin,Bmaj_max)
-			pa= random.uniform(Pa_min,Pa_max)
+			if randomize_gaus:
+				bmin= random.uniform(Bmin_min,Bmin_max)
+				bmaj= random.uniform(bmin,Bmaj_max)
+				pa= random.uniform(Pa_min,Pa_max)
+			else:
+				bmin= self.beam_bmin_min
+				bmaj= self.beam_bmaj_min
+				pa= self.beam_bpa_min
+
 			sigmax= bmaj/(self.pixsize * SIGMA_TO_FWHM)
 			sigmay= bmaj/(self.pixsize * SIGMA_TO_FWHM)
 			theta = 90 + pa							
