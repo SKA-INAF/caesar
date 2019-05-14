@@ -684,15 +684,14 @@ class SkyMapSimulator(object):
 			nsources= int(round(self.source_density_ext*area))
 
 		## Set flux generation range
-		fluxScaleFactor= self.beam_area
-		S_min= self.Smin_ext * fluxScaleFactor # set flux in Jy/beam units
-		S_max= self.Smax_ext * fluxScaleFactor # set flux in Jy/beam units
+		S_min= self.Smin_ext 
+		S_max= self.Smax_ext
 		lgS_min= np.log(S_min)
 		lgS_max= np.log(S_max)
 		randomize_flux= False
 		if self.Smin_ext<self.Smax_ext:
 			randomize_flux= True
-		print ('INFO: Ext source gen range S(%s,%s), lgS(%s,%s), fluxScaleFactor=%s' % (S_min,S_max,lgS_min,lgS_max,fluxScaleFactor))
+		print ('INFO: Ext source gen range S(%s,%s), lgS(%s,%s)' % (S_min,S_max,lgS_min,lgS_max))
 
 
 		## Set gaus pars generation
@@ -763,6 +762,11 @@ class SkyMapSimulator(object):
 			self.model_data_ext+= source_data
 			self.exts_list.append([source_name,x0,y0,S,sigmax,sigmay,theta])
 			print ('INFO: Ext source %s: Pos(%s,%s), ix=%s, iy=%s, S=%s' % (source_name,str(x0),str(y0),str(ix),str(iy),str(S)))
+
+		## Convert data from Jy/pixel to Jy/beam
+		## Jy/pixel= Jy/beam / beamArea(pixels)
+		scaleFactor= self.beam_area
+		self.model_data_ext*= scaleFactor
 
 		## Create image with ext sources
 		self.model_ext_im= ia.newimagefromarray(pixels=self.model_data_ext, csys=self.mosaic_cs.torecord())  
