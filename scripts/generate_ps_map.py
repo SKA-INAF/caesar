@@ -763,7 +763,7 @@ class SkyMapSimulator(object):
 
 			## Add generated source to image and list
 			source_data_size= np.shape(source_data)
-			print ('DEBUG: model_data_ext shape=(%s,%s,%s,%s), data shape=(%s,%s)' % (data_size[0],data_size[1],data_size[2],data_size[3],source_data_size[0],source_data_size[1]) )
+			#print ('DEBUG: model_data_ext shape=(%s,%s,%s,%s), data shape=(%s,%s)' % (data_size[0],data_size[1],data_size[2],data_size[3],source_data_size[0],source_data_size[1]) )
 
 			index+= 1
 			source_name= 'Sext' + str(index)
@@ -849,6 +849,9 @@ class SkyMapSimulator(object):
 
 		print ('INFO: Writing source list ...')
 		self.write_source_list()
+
+		print ('INFO: Writing source par list ...')
+		self.write_source_par_list()
 
 		## Close open CASA images	
 		print ('INFO: Closing CASA images ...')
