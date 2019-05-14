@@ -538,7 +538,7 @@ class SkyMapSimulator(object):
 			raise ValueError('Invalid margin specified (<0 or larger than image half size!')
 					
 		## Initialize grid
-		self.gridy, self.gridx = np.mgrid[0:self.ny, 0:self.nx]
+		self.gridy, self.gridx = np.mgrid[0:self.nx, 0:self.ny]
 
 
 	def generate_compact_sources(self):
