@@ -778,7 +778,7 @@ class SkyMapSimulator(object):
 		
 		for ix,iy in np.ndindex(data_size[0],data_size[1]):
 			mosaic_value= mask[ix][iy][0][0]
-			if np.isnan(data_value):
+			if np.isnan(mosaic_value):
 				self.model_data_ext[ix,iy,0,0]= np.nan
 									
 
