@@ -24,6 +24,17 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--smax=[SMAX] - Max generated compact source flux density in Jy (default: 1)"
 	echo "--nsources=[NSOURCES] - Number of compact sources generated in mosaic (if >0 override source density options) (default: 0)"
 	echo "--sourcedensity=[SOURCE_DENSITY] - Compact source density in sources/deg^2 (default: 1000)"
+	echo "--genextsources - Generate extended sources (default=no)"
+	echo "--smin_ext=[SMIN_EXT] - Min generated extended source flux density in Jy (default: 1.e-4)"
+	echo "--smax_ext=[SMAX_EXT] - Max generated extended source flux density in Jy (default: 1)"
+	echo "--nsources_ext=[NSOURCES_EXT] - Number of extended sources generated in mosaic (if >0 override source density options) (default: 0)"
+	echo "--sourcedensity_ext=[SOURCE_DENSITY_EXT] - Extended source density in sources/deg^2 (default: 50)"
+	echo "--bmaj_min=[BMAJ_MIN] - Min bmaj for extended source generation (default: 4)"
+	echo "--bmaj_max=[BMAJ_MAX] - Max bmaj for extended source generation (default: 10)"
+	echo "--bmin_min=[BMIN_MIN] - Min bmin for extended source generation (default: 4)"
+	echo "--bmin_max=[BMIN_MAX] - Max bmin for extended source generation (default: 10)"
+	echo "--pa_min=[BMIN_MIN] - Min pos angle for extended source generation (default: -90)"
+	echo "--pa_max=[BMIN_MAX] - Max pos angle extended source generation (default: 90)"
 	echo ""
 
 	echo "=== RUN OPTIONS ==="	
@@ -59,6 +70,17 @@ SMIN=1.e-4
 SMAX=1
 SOURCE_DENSITY=1000
 NSOURCES=0
+GEN_EXT_SOURCES=" "
+SMIN_EXT=1.e-4
+SMAX_EXT=1
+SOURCE_DENSITY_EXT=1000
+NSOURCES_EXT=0
+BMAJ_MIN="4"
+BMAJ_MAX="10"
+BMIN_MIN="4"
+BMIN_MAX="10"
+PA_MIN="-90"
+PA_MAX="90"
 
 ## RUN DEFAULT OPTIONS
 ENV_FILE=""
@@ -99,6 +121,39 @@ do
     ;;
 		--smax=*)
     	SMAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    ;;
+		--genextsources*)
+    	GEN_EXT_SOURCES="--extsources"
+    ;;
+		--nsources_ext=*)
+			NSOURCES_EXT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+		;;
+		--sourcedensity_ext=*)
+    	SOURCE_DENSITY_EXT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    ;;
+		--smin_ext=*)
+    	SMIN_EXT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    ;;
+		--smax_ext=*)
+    	SMAX_EXT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    ;;
+		--bmaj_min=*)
+    	BMAJ_MIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    ;;
+		--bmaj_max=*)
+    	BMAJ_MAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    ;;
+		--bmin_min=*)
+    	BMIN_MIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    ;;
+		--bmin_max=*)
+    	BMIN_MAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    ;;
+		--pa_min=*)
+    	PA_MIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    ;;
+		--pa_max=*)
+    	PA_MAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
 			
 		## RUN OPTIONS	
@@ -185,7 +240,8 @@ do
 	ds9_file="ds9-RUN$RUN_ID.reg"
 	source_file="sources-RUN$RUN_ID.dat"
 	img_fits="simmap-RUN$RUN_ID.fits"
-	
+	sourcepar_file="sourcepars-RUN$RUN_ID.dat"
+	extsourcemodel_file="extsourcemap-RUN$RUN_ID.fits"
 	
 	## Define run script
 	shfile="Sim-RUN$RUN_ID.sh"
@@ -233,7 +289,7 @@ do
 		
 		echo " "
 		echo 'EXE="'"$CASAPATH/bin/casa --nologger --log2term --nogui -c $CAESAR_SCRIPTS_DIR/generate_ps_map.py"'"'
-		echo 'EXE_ARGS="'"--no-convolve --mosaic=$MOSAIC_FILE --outfile_img=$JOB_DIR/$img_fits --outfile_model=$JOB_DIR/$skymodel_file --outfile_sources=$JOB_DIR/$source_file --outfile_ds9region=$JOB_DIR/$ds9_file --source_density=$SOURCE_DENSITY --nsources=$NSOURCES --Smin=$SMIN --Smax=$SMAX "'"'
+		echo 'EXE_ARGS="'"--no-convolve --mosaic=$MOSAIC_FILE --outfile_img=$JOB_DIR/$img_fits --outfile_model=$JOB_DIR/$skymodel_file --outfile_model_ext=$JOB_DIR/$extsourcemodel_file --outfile_sources=$JOB_DIR/$source_file --outfile_sourcepars=$JOB_DIR/$sourcepar_file --outfile_ds9region=$JOB_DIR/$ds9_file --source_density=$SOURCE_DENSITY --nsources=$NSOURCES --Smin=$SMIN --Smax=$SMAX $GEN_EXT_SOURCES --source_density_ext=$SOURCE_DENSITY_EXT --nsources_ext=$NSOURCES_EXT --Smin_ext=$SMIN_EXT --Smax_ext=$SMAX_EXT --bmaj_min=$BMAJ_MIN --bmaj_max=$BMAJ_MAX --bmin_min=$BMIN_MIN --bmin_max=$BMIN_MAX --pa_min=$PA_MIN --pa_max=$PA_MAX "'"'
 		
 		echo " "
 
