@@ -575,8 +575,10 @@ class SkyMapSimulator(object):
 			nsources= int(round(self.source_density*area))
 		S_min= self.Smin # Jy/pixel
 		S_max= self.Smax # Jy/pixel
-		lgS_min= np.log(S_min)
-		lgS_max= np.log(S_max)
+		#lgS_min= np.log(S_min)
+		#lgS_max= np.log(S_max)
+		lgS_min= np.log10(S_min)
+		lgS_max= np.log10(S_max)
 		randomize_flux= False
 		if self.Smin<self.Smax:
 			randomize_flux= True
@@ -611,7 +613,8 @@ class SkyMapSimulator(object):
 						continue
 				else:
 					lgS= np.random.uniform(lgS_min,lgS_max)
-				S= np.exp(lgS)
+				#S= np.exp(lgS)
+				S= np.power(10,lgS)
 			else:
 				S= S_min
 				
@@ -710,8 +713,10 @@ class SkyMapSimulator(object):
 		## Set flux generation range
 		S_min= self.Smin_ext 
 		S_max= self.Smax_ext
-		lgS_min= np.log(S_min)
-		lgS_max= np.log(S_max)
+		#lgS_min= np.log(S_min)
+		#lgS_max= np.log(S_max)
+		lgS_min= np.log10(S_min)
+		lgS_max= np.log10(S_max)
 		randomize_flux= False
 		if self.Smin_ext<self.Smax_ext:
 			randomize_flux= True
@@ -757,7 +762,8 @@ class SkyMapSimulator(object):
 						continue
 				else:
 					lgS= np.random.uniform(lgS_min,lgS_max)
-				S= np.exp(lgS)
+				#S= np.exp(lgS)	
+				S= np.power(10,lgS)
 			else:
 				S= S_min
 
