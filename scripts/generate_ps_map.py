@@ -605,7 +605,10 @@ class SkyMapSimulator(object):
 				if self.Smodel=='uniform':
 					lgS= np.random.uniform(lgS_min,lgS_max)
 				elif self.Smodel=='exp':
-					lgS= np.random.exponential(scale=1./self.Sslope)
+					x= np.random.exponential(scale=1./self.Sslope)
+					lgS= x + lgS_min
+					if lgS>lgS_max:
+						continue
 				else:
 					lgS= np.random.uniform(lgS_min,lgS_max)
 				S= np.exp(lgS)
@@ -748,7 +751,10 @@ class SkyMapSimulator(object):
 				if self.Smodel=='uniform':
 					lgS= np.random.uniform(lgS_min,lgS_max)
 				elif self.Smodel=='exp':
-					lgS= np.random.exponential(scale=1./self.Sslope)
+					x= np.random.exponential(scale=1./self.Sslope)
+					lgS= x + lgS_min
+					if lgS>lgS_max:
+						continue
 				else:
 					lgS= np.random.uniform(lgS_min,lgS_max)
 				S= np.exp(lgS)
