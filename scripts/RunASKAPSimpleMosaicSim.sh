@@ -27,6 +27,8 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--genextsources - Generate extended sources (default=no)"
 	echo "--smin-ext=[SMIN_EXT] - Min generated extended source flux density in Jy (default: 1.e-4)"
 	echo "--smax-ext=[SMAX_EXT] - Max generated extended source flux density in Jy (default: 1)"
+	echo "--smodel=[SMODEL] - Source flux random model (uniform, exp) (default: uniform)"
+	echo "--sslope=[SSLOPE] - Source flux random exp model slope (default: 1.6)"
 	echo "--nsources-ext=[NSOURCES_EXT] - Number of extended sources generated in mosaic (if >0 override source density options) (default: 0)"
 	echo "--sourcedensity-ext=[SOURCE_DENSITY_EXT] - Extended source density in sources/deg^2 (default: 50)"
 	echo "--bmaj-min=[BMAJ_MIN] - Min bmaj for extended source generation (default: 4)"
@@ -70,6 +72,8 @@ SMIN=1.e-4
 SMAX=1
 SOURCE_DENSITY=1000
 NSOURCES=0
+SMODEL="uniform"
+SSLOPE="1.6"
 GEN_EXT_SOURCES=" "
 SMIN_EXT=1.e-4
 SMAX_EXT=1
@@ -121,6 +125,12 @@ do
     ;;
 		--smax=*)
     	SMAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    ;;
+		--smodel=*)
+    	SMODEL=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    ;;
+		--sslope=*)
+    	SSLOPE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
 		--genextsources*)
     	GEN_EXT_SOURCES="--extsources"
@@ -289,7 +299,7 @@ do
 		
 		echo " "
 		echo 'EXE="'"$CASAPATH/bin/casa --nologger --log2term --nogui -c $CAESAR_SCRIPTS_DIR/generate_ps_map.py"'"'
-		echo 'EXE_ARGS="'"--no-convolve --mosaic=$MOSAIC_FILE --outfile_img=$JOB_DIR/$img_fits --outfile_model=$JOB_DIR/$skymodel_file --outfile_model_ext=$JOB_DIR/$extsourcemodel_file --outfile_sources=$JOB_DIR/$source_file --outfile_sourcepars=$JOB_DIR/$sourcepar_file --outfile_ds9region=$JOB_DIR/$ds9_file --source_density=$SOURCE_DENSITY --nsources=$NSOURCES --Smin=$SMIN --Smax=$SMAX $GEN_EXT_SOURCES --source_density_ext=$SOURCE_DENSITY_EXT --nsources_ext=$NSOURCES_EXT --Smin_ext=$SMIN_EXT --Smax_ext=$SMAX_EXT --bmaj_min=$BMAJ_MIN --bmaj_max=$BMAJ_MAX --bmin_min=$BMIN_MIN --bmin_max=$BMIN_MAX --pa_min=$PA_MIN --pa_max=$PA_MAX "'"'
+		echo 'EXE_ARGS="'"--no-convolve --mosaic=$MOSAIC_FILE --outfile_img=$JOB_DIR/$img_fits --outfile_model=$JOB_DIR/$skymodel_file --outfile_model_ext=$JOB_DIR/$extsourcemodel_file --outfile_sources=$JOB_DIR/$source_file --outfile_sourcepars=$JOB_DIR/$sourcepar_file --outfile_ds9region=$JOB_DIR/$ds9_file --source_density=$SOURCE_DENSITY --nsources=$NSOURCES --Smin=$SMIN --Smax=$SMAX $GEN_EXT_SOURCES --Smodel=$SMODEL --Sslope=$SSLOPE --source_density_ext=$SOURCE_DENSITY_EXT --nsources_ext=$NSOURCES_EXT --Smin_ext=$SMIN_EXT --Smax_ext=$SMAX_EXT --bmaj_min=$BMAJ_MIN --bmaj_max=$BMAJ_MAX --bmin_min=$BMIN_MIN --bmin_max=$BMIN_MAX --pa_min=$PA_MIN --pa_max=$PA_MAX "'"'
 		
 		echo " "
 

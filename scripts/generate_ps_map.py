@@ -81,6 +81,9 @@ def get_args():
 	parser.add_argument('-source_density', '--source_density', dest='source_density', required=False, type=float, default=1000, action='store',help='Compact source density (default=1000)')
 	parser.add_argument('-Smin', '--Smin', dest='Smin', required=False, type=float, default=1.e-6, action='store',help='Minimum source flux in Jy (default=1.e-6)')
 	parser.add_argument('-Smax', '--Smax', dest='Smax', required=False, type=float, default=1, action='store',help='Maximum source flux in Jy (default=1)')
+	parser.add_argument('-Smodel', '--Smodel', dest='Smodel', required=False, type=str, default='uniform', action='store',help='Source flux generation model (default=uniform)')
+	parser.add_argument('-Sslope', '--Sslope', dest='Sslope', required=False, type=float, default=1.6, action='store',help='Slope par in expo source flux generation model (default=1.6)')
+	
 	parser.add_argument('-bmaj', '--bmaj', dest='bmaj', required=False, type=float, default=6.5, action='store',help='Beam bmaj in arcsec (default=6.5)')
 	parser.add_argument('-bmin', '--bmin', dest='bmin', required=False, type=float, default=6.5, action='store',help='Beam bmin in arcsec (default=6.5)')
 	parser.add_argument('-pa', '--pa', dest='pa', required=False, type=float, default=0, action='store',help='Beam position angle in deg (default=0)')
@@ -168,6 +171,8 @@ class SkyMapSimulator(object):
 		self.source_density= 2000. # in sources/deg^2
 		self.Smin= 1.e-6 # in Jy 
 		self.Smax= 1 # in Jy
+		self.Smodel= 'uniform'
+		self.Sslope= 1.6
 
 		## Extended source parameters
 		self.add_ext_sources= False
@@ -227,6 +232,13 @@ class SkyMapSimulator(object):
 		""" Set the output image filename """
 		self.img_outfile= filename
 
+	def set_source_flux_rand_model(self,model):
+		""" Set the source flux random model """
+		self.Smodel= model
+
+	def set_source_flux_rand_exp_slope(self,slope):
+		""" Set the source flux expo model slope par """
+		self.Sslope= slope	
 	
 	def set_source_flux_range(self,Smin,Smax):
 		""" Set source flux range """
@@ -340,7 +352,7 @@ class SkyMapSimulator(object):
 		## Write header
 		header= ("# name x(pix) y(pix) S(Jy/beam) sigmax(pix) sigmay(pix) theta(deg)")
 		fout.write(header)
-		fout.write('\n')	
+		fout.write('\n')
 
 		## Write point-source pars
 		sigmax= self.beam_bmaj/(self.pixsize*SIGMA_TO_FWHM) # in pixels
@@ -352,8 +364,8 @@ class SkyMapSimulator(object):
 			name= self.ps_list[i][0]
 			x= self.ps_list[i][1]
 			y= self.ps_list[i][2]
-			S= self.ps_list[i][3]*scaleFactor # Convert from Jy/pixel to Jy/beam
-			
+			##S= self.ps_list[i][3]*scaleFactor # Convert from Jy/pixel to Jy/beam
+			S= self.ps_list[i][3] # No need to convert peak flux
 			data= (("%s %s %s %s %s %s %s") % (name,x,y,S,sigmax,sigmay,theta) )
 
 			fout.write(data)
@@ -561,8 +573,8 @@ class SkyMapSimulator(object):
 			nsources= self.nsources
 		else: # density generator
 			nsources= int(round(self.source_density*area))
-		S_min= self.Smin
-		S_max= self.Smax
+		S_min= self.Smin # Jy/pixel
+		S_max= self.Smax # Jy/pixel
 		lgS_min= np.log(S_min)
 		lgS_max= np.log(S_max)
 		randomize_flux= False
@@ -574,7 +586,6 @@ class SkyMapSimulator(object):
 		
 		## Start generation loop
 		self.model_data= ia.makearray(0,[self.nx,self.ny,1,1])
-		##self.model_data= Box2D(amplitude=0,x_0=0,y_0=0,x_width=2*self.nx, y_width=2*self.ny)(self.gridx, self.gridy)
 		self.ps_list= []
 		index= 0
 
@@ -588,9 +599,15 @@ class SkyMapSimulator(object):
 			y0= np.random.uniform(self.marginy,self.ny-self.marginy-1)
 
 			## Compute amplitude given significance level and bkg
-			## Generate flux uniform in log
+			## Generate flux uniform or expo in log
+			## Flux are in Jy/pixel
 			if randomize_flux:
-				lgS= np.random.uniform(lgS_min,lgS_max)
+				if self.Smodel=='uniform':
+					lgS= np.random.uniform(lgS_min,lgS_max)
+				elif self.Smodel=='exp':
+					lgS= np.random.exponential(scale=1./self.Sslope)
+				else:
+					lgS= np.random.uniform(lgS_min,lgS_max)
 				S= np.exp(lgS)
 			else:
 				S= S_min
@@ -672,7 +689,6 @@ class SkyMapSimulator(object):
 		""" Add extended gaus components to convolved map """
 
 		# Generate empty image
-		#self.model_data_ext = Box2D(amplitude=0,x_0=0,y_0=0,x_width=2*self.nx, y_width=2*self.ny)(self.gridx, self.gridy)
 		self.model_data_ext= ia.makearray(0,[self.nx,self.ny,1,1])
 		data_size= np.shape(self.model_data_ext)
 
@@ -729,7 +745,12 @@ class SkyMapSimulator(object):
 			## Compute amplitude given significance level and bkg
 			## Generate flux uniform in log
 			if randomize_flux:
-				lgS= np.random.uniform(lgS_min,lgS_max)
+				if self.Smodel=='uniform':
+					lgS= np.random.uniform(lgS_min,lgS_max)
+				elif self.Smodel=='exp':
+					lgS= np.random.exponential(scale=1./self.Sslope)
+				else:
+					lgS= np.random.uniform(lgS_min,lgS_max)
 				S= np.exp(lgS)
 			else:
 				S= S_min
@@ -775,8 +796,8 @@ class SkyMapSimulator(object):
 
 		## Convert data from Jy/pixel to Jy/beam
 		## Jy/pixel= Jy/beam / beamArea(pixels)
-		scaleFactor= self.beam_area
-		self.model_data_ext[:,:,0,0]*= scaleFactor
+		#scaleFactor= self.beam_area
+		#self.model_data_ext[:,:,0,0]*= scaleFactor
 
 		## Set nan pixels when mosaic is nan
 		print ('INFO: Set nan pixels when mosaic is nan...')
@@ -1131,7 +1152,8 @@ def main():
 	Smax= args.Smax
 	source_density= args.source_density
 	nsources= args.nsources
-
+	Smodel= args.Smodel
+	Sslope= args.Sslope
 	bmaj= args.bmaj
 	bmin= args.bmin
 	pa= args.pa
@@ -1162,6 +1184,8 @@ def main():
 	print("Margin X: %s" % marginX)
 	print("Margin Y: %s" % marginY)
 	print("Source flux range: (%s,%s)" % (Smin, Smax))
+	print("Source flux random model: %s" % (Smodel))
+	print("Source flux random expo slope: %s" % (Sslope))
 	print("Source density (deg^-2): %s" % source_density)	
 	print("Image output filename : %s " % outfile_img)
 	print("Beam (%s,%s,%s)" % (str(bmaj),str(bmin),str(pa)))
@@ -1193,6 +1217,8 @@ def main():
 		simulator.set_nsources(nsources)
 		simulator.set_source_flux_range(Smin,Smax)
 		simulator.set_source_density(source_density)
+		simulator.set_source_flux_rand_model(Smodel)
+		simulator.set_source_flux_rand_exp_slope(Sslope)
 		simulator.set_beam(bmaj,bmin,pa)
 		simulator.enable_ext_sources(extsources)
 		simulator.set_nsources_ext(nsources_ext)
@@ -1201,6 +1227,7 @@ def main():
 		simulator.set_beam_bmin_range(bmin_min,bmin_max)
 		simulator.set_beam_pa_range(pa_min,pa_max)
 		simulator.run()
+
 
 	## Generate restored image by convolving model with restored beam
 	if do_convolve:
