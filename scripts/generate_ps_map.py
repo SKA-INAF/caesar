@@ -335,7 +335,7 @@ class SkyMapSimulator(object):
 	def write_source_par_list(self):
 		""" Write source par list to file """
 		## Open file	
-		fout = open(self.self.source_par_outfile, 'wb')
+		fout = open(self.source_par_outfile, 'wb')
 	
 		## Write header
 		header= ("# name x(pix) y(pix) S(Jy/beam) sigmax(pix) sigmay(pix) theta(deg)")
