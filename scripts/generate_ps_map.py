@@ -1244,6 +1244,7 @@ def main():
 		simulator.set_source_flux_rand_model(Smodel)
 		simulator.set_source_flux_rand_exp_slope(Sslope)
 		simulator.set_beam(bmaj,bmin,pa)
+		simulator.enable_ps_sources(source_gen_enabled)
 		simulator.enable_ext_sources(extsources)
 		simulator.set_nsources_ext(nsources_ext)
 		simulator.set_ext_source_flux_range(Smin_ext,Smax_ext)
