@@ -851,9 +851,9 @@ class SkyMapSimulator(object):
 			print ('INFO: Generating compact sources...')
 			self.generate_compact_sources()
 
-		## == CONVOLVE SKY MODEL WITH BEAM ==
-		print ('INFO: Convolving skymodel with beam ...')
-		self.convolve_skymodel()
+			## == CONVOLVE SKY MODEL WITH BEAM ==
+			print ('INFO: Convolving skymodel with beam ...')
+			self.convolve_skymodel()
 
 		## == ADD EXTENDED SOURCES ==
 		if self.add_ext_sources:
