@@ -557,6 +557,7 @@ class SkyMapSimulator(object):
 			raise ValueError('Invalid margin specified (<0 or larger than image half size!')
 					
 		## Initialize grid
+		print("INFO: Initializing grid for blov generation...")
 		self.gridy, self.gridx = np.mgrid[0:self.nx, 0:self.ny]
 
 
@@ -711,6 +712,7 @@ class SkyMapSimulator(object):
 
 		# Compute number of sources to be generated given map area in pixels
 		area= ((self.nx-2*self.marginx)*(self.ny-2*self.marginy))*self.pixsize/(3600.*3600.) # in deg^2
+		print("INFO: Mosaic area(deg^2)=%s (marginx=%s, marginy=%s, pixsize=%s)" % (str(area),str(self.marginx),str(self.marginy),str(self.pixsize)) )
 		 
 		if self.nsources_ext>0:
 			nsources= self.nsources_ext
@@ -1249,6 +1251,7 @@ def main():
 		simulator.enable_ps_sources(source_gen_enabled)
 		simulator.enable_ext_sources(extsources)
 		simulator.set_nsources_ext(nsources_ext)
+		simulator.set_ext_source_density(source_density_ext)
 		simulator.set_ext_source_flux_range(Smin_ext,Smax_ext)
 		simulator.set_beam_bmaj_range(bmaj_min,bmaj_max)
 		simulator.set_beam_bmin_range(bmin_min,bmin_max)
