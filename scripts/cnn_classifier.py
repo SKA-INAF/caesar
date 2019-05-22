@@ -92,6 +92,8 @@ def get_args():
 	parser.add_argument('-outfile_loss', '--outfile_loss', dest='outfile_loss', required=False, type=str, default='nn_loss.png', action='store',help='Name of NN loss plot file (default=nn_loss.png)')
 	parser.add_argument('-outfile_accuracy', '--outfile_accuracy', dest='outfile_accuracy', required=False, type=str, default='nn_accuracy.png', action='store',help='Name of NN accuracy plot file (default=nn_accuracy.png)')
 	parser.add_argument('-outfile_model', '--outfile_model', dest='outfile_model', required=False, type=str, default='nn_model.png', action='store',help='Name of NN model plot file (default=nn_model.png)')
+	parser.add_argument('-outfile_posaccuracy', '--outfile_posaccuracy', dest='outfile_posaccuracy', required=False, type=str, default='nn_posaccuracy.png', action='store',help='Name of NN source position accuracy plot file (default=nn_posaccuracy.png)')
+	parser.add_argument('-outfile_fluxaccuracy', '--outfile_fluxaccuracy', dest='outfile_fluxaccuracy', required=False, type=str, default='nn_fluxaccuracy.png', action='store',help='Name of NN source flux accuracy plot file (default=nn_fluxaccuracy.png)')
 
 	args = parser.parse_args()	
 
@@ -493,7 +495,7 @@ def make_source_train_data(filelist,nsamples,imgsizex,imgsizey,nmaxobjects,ntarg
 				S= float(sources_in_field[k][3])
 				sigmaX= float(sources_in_field[k][4])
 				sigmaY= float(sources_in_field[k][5])
-				theta= float(sources_in_field[k][6])	
+				theta= np.radians(float(sources_in_field[k][6]))	
 				targets[0,par_counter+0]= x0 - xmin
 				targets[0,par_counter+1]= y0 - ymin
 				targets[0,par_counter+2]= S
@@ -576,8 +578,8 @@ def build_network(img_height, img_width, nmaxobjects, ntargetpars, conv_nfilt_mi
 	x = layers.Flatten()(x)
 	x = layers.Dense(dense_size_max, activation=dense_act)(x)
 	x = layers.Dropout(dropout_dense)(x)
-	#x = layers.Dense(dense_size_min, activation=dense_act)(x)
-	#x = layers.Dropout(dropout_dense)(x)
+	x = layers.Dense(dense_size_min, activation=dense_act)(x)
+	x = layers.Dropout(dropout_dense)(x)
 
 	# - Output layers
 	type_prediction = layers.Dense(nmaxobjects, activation='sigmoid', name='type')(x)
@@ -628,6 +630,7 @@ def f1_score(y_true, y_pred):
 	r = recall(y_true, y_pred)
 	return (2 * p * r) / (p + r + keras.backend.epsilon())
 
+
 	
 ##############
 ##   MAIN   ##
@@ -667,6 +670,8 @@ def main():
 	outfile_loss= args.outfile_loss
 	outfile_accuracy= args.outfile_accuracy
 	outfile_model= args.outfile_model
+	outfile_posaccuracy= args.outfile_posaccuracy
+	outfile_fluxaccuracy= args.outfile_fluxaccuracy
 
 	#===========================
 	#==   READ BKG/SOURCE DATA
@@ -799,40 +804,353 @@ def main():
 		"pars": spars_loss_weight
 	}
 
-	model.compile(optimizer=opt,loss=losses, loss_weights=lossWeights, metrics=['accuracy',precision,recall,f1_score])
+	##model.compile(optimizer=opt,loss=losses, loss_weights=lossWeights, metrics=['accuracy',precision,recall,f1_score])
+	model.compile(optimizer=opt,loss=losses, loss_weights=lossWeights, metrics=['accuracy'])
 
 	#===========================
 	#==   TRAIN NN
 	#===========================
 	print ('INFO: Training network...')
-	fitout= model.fit(
-		x=inputs_train, 
-		y={"type": outputs_labels_train,"pars": outputs_train},
-		validation_data=(inputs_test,{"type": outputs_labels_test,"pars": outputs_test}),
-		#batch_size=64
-		epochs=nepochs,
-		verbose=1
-	)
+	#fitout= model.fit(
+	#	x=inputs_train, 
+	#	y={"type": outputs_labels_train,"pars": outputs_train},
+	#	validation_data=(inputs_test,{"type": outputs_labels_test,"pars": outputs_test}),
+	#	##batch_size=64
+	#	epochs=nepochs,
+	#	verbose=1
+	#)
+
+	flipped_outputs_labels_train= outputs_labels_train
+	flipped_outputs_train= outputs_train
+	flipped_outputs_labels_test= outputs_labels_test
+	flipped_outputs_test= outputs_test
+
+	train_loss_vs_epoch= np.zeros((3,nepochs))	
+	test_loss_vs_epoch= np.zeros((3,nepochs))
+	train_accuracy_vs_epoch= np.zeros((2,nepochs))
+	test_accuracy_vs_epoch= np.zeros((2,nepochs))	
+
+	flip_test_data= True
+
+	for epoch in range(nepochs):
+		
+		
+		# - Train for 1 epoch
+		fitout= model.fit(
+			x=inputs_train, 
+			y={"type": flipped_outputs_labels_train,"pars": flipped_outputs_train},
+			validation_data=(inputs_test,{"type": outputs_labels_test,"pars": outputs_test}),
+			#batch_size=64
+			epochs=1,
+			verbose=1
+		)
+
+		# - Save epoch loss
+		print ('== EPOCH %d ==' % epoch)
+		print fitout.history
+		train_loss_vs_epoch[0,epoch]= fitout.history['loss'][0]
+		train_loss_vs_epoch[1,epoch]= fitout.history['type_loss'][0]
+		train_loss_vs_epoch[2,epoch]= fitout.history['pars_loss'][0]
+		test_loss_vs_epoch[0,epoch]= fitout.history['val_loss'][0]
+		test_loss_vs_epoch[1,epoch]= fitout.history['val_type_loss'][0]
+		test_loss_vs_epoch[2,epoch]= fitout.history['val_pars_loss'][0]
+		train_accuracy_vs_epoch[0,epoch]= fitout.history['type_acc'][0]
+		train_accuracy_vs_epoch[1,epoch]= fitout.history['pars_acc'][0]
+		test_accuracy_vs_epoch[0,epoch]= fitout.history['val_type_acc'][0]
+		test_accuracy_vs_epoch[1,epoch]= fitout.history['val_pars_acc'][0]
+
+		# - Get predictions for train data and flip targets according to smallest MSE match
+		(outputs_labels_pred, outputs_pred)= model.predict(inputs_train)
+		nsamples= outputs_pred.shape[0]
+		npars= 2 # only (x,y) pars used for flipping
+		#npars= ntargetpars
+		
+		for sample in range(nsamples):
+			
+			mses= np.zeros((nmaxobjects,nmaxobjects))
+			predout_mse= np.zeros((nmaxobjects,npars))
+			expout_mse= np.zeros((nmaxobjects,npars))
+			predout= np.zeros((nmaxobjects,ntargetpars))
+			expout= np.zeros((nmaxobjects,ntargetpars))
+			expout_labels= np.zeros((nmaxobjects,1))
+			
+			for i in range(nmaxobjects):
+				expout_labels[i,0]= flipped_outputs_labels_train[sample,i]
+				for j in range(ntargetpars):
+					predout[i,j]= outputs_pred[sample,j+i*ntargetpars]
+					expout[i,j]= flipped_outputs_train[sample,j+i*ntargetpars]
+				for j in range(npars):
+					predout_mse[i,j]= outputs_pred[sample,j+i*ntargetpars]
+					expout_mse[i,j]= flipped_outputs_train[sample,j+i*ntargetpars]
+					
+			for i in range(nmaxobjects):
+				for j in range(nmaxobjects):
+					mse= np.mean(np.square(expout_mse[i,:]-predout_mse[j,:]))	
+					mses[i,j]= mse
 	
+			
+			# - Find new ordering according to smallest MSE
+			mses_copy= mses
+			reorder_indexes= np.zeros(nmaxobjects,dtype=int)
+			for i in range(nmaxobjects):
+				ind_exp, ind_pred= np.unravel_index(mses.argmin(),mses.shape) # Find index of smallest mse
+				mses[ind_exp]= np.Inf # Set mse to largest value so that it is not re-assigned anymore
+				mses[:,ind_pred]= np.Inf 
+				reorder_indexes[ind_pred]= ind_exp	
+				
+			#- Save before flipping
+			target= ','.join(map(str, flipped_outputs_train[sample,:]))
+			target_labels= ','.join(map(str, flipped_outputs_labels_train[sample,:]))
+
+			#- Flip target
+			flipped_outputs_train[sample]= expout[reorder_indexes].flatten() 
+			flipped_outputs_labels_train[sample]= expout_labels[reorder_indexes].flatten() 
+			
+			#- Print
+			#flipped_target= ','.join(map(str, flipped_outputs_train[sample,:]))
+			#flipped_target_labels= ','.join(map(str, flipped_outputs_labels_train[sample,:]))
+			#pred= ','.join(map(str, outputs_pred[sample,:]))
+			#pred_labels= ','.join(map(str, outputs_labels_pred[sample,:]))
+			#mse= ','.join(map(str, mses_copy[:,:]))
+			#print("DEBUG: Entry no. %d: reorder_indexes=[%s], target_labels=[%s], flipped_target_labels=[%s]" % (sample+1,reorder_indexes,target_labels,flipped_target_labels) )
+			#print("DEBUG: Entry no. %d: pred_labels=[%s], target_labels=[%s], flipped_target_labels=[%s], pred=[%s], target=[%s], flipped_target=[%s], mse=[%s], reorder_indexes=[%s]" % (sample+1,pred_labels,target_labels,flipped_target_labels,pred,target,flipped_target,mse,reorder_indexes) )
+		
+		# - Get predictions for test sample and flip according to smallest MSE match
+		if flip_test_data:
+			(outputs_labels_pred, outputs_pred)= model.predict(inputs_test)
+			nsamples= outputs_pred.shape[0]
+		
+			for sample in range(nsamples):
+			
+				mses= np.zeros((nmaxobjects,nmaxobjects))
+				predout_mse= np.zeros((nmaxobjects,npars))
+				expout_mse= np.zeros((nmaxobjects,npars))
+				predout= np.zeros((nmaxobjects,ntargetpars))
+				expout= np.zeros((nmaxobjects,ntargetpars))
+				expout_labels= np.zeros((nmaxobjects,1))
+			
+				for i in range(nmaxobjects):
+					expout_labels[i,0]= flipped_outputs_labels_test[sample,i]
+					for j in range(ntargetpars):
+						predout[i,j]= outputs_pred[sample,j+i*ntargetpars]
+						expout[i,j]= flipped_outputs_test[sample,j+i*ntargetpars]
+					for j in range(npars):
+						predout_mse[i,j]= outputs_pred[sample,j+i*ntargetpars]
+						expout_mse[i,j]= flipped_outputs_test[sample,j+i*ntargetpars]
+					
+				for i in range(nmaxobjects):
+					for j in range(nmaxobjects):
+						mse= np.mean(np.square(expout_mse[i,:]-predout_mse[j,:]))	
+						mses[i,j]= mse
+	
+				# - Find new ordering according to smallest MSE
+				mses_copy= mses
+				reorder_indexes= np.zeros(nmaxobjects,dtype=int)
+				for i in range(nmaxobjects):
+					ind_exp, ind_pred= np.unravel_index(mses.argmin(),mses.shape) # Find index of smallest mse
+					mses[ind_exp]= np.Inf # Set mse to largest value so that it is not re-assigned anymore
+					mses[:,ind_pred]= np.Inf 
+					reorder_indexes[ind_pred]= ind_exp	
+				
+				#- Save before flipping
+				target= ','.join(map(str, flipped_outputs_test[sample,:]))
+				target_labels= ','.join(map(str, flipped_outputs_labels_test[sample,:]))
+
+				#- Flip target
+				flipped_outputs_test[sample]= expout[reorder_indexes].flatten() 
+				flipped_outputs_labels_test[sample]= expout_labels[reorder_indexes].flatten() 
+			
+				#- Print
+				#flipped_target= ','.join(map(str, flipped_outputs_test[sample,:]))
+				#flipped_target_labels= ','.join(map(str, flipped_outputs_labels_test[sample,:]))
+				#pred= ','.join(map(str, outputs_pred[sample,:]))
+				#pred_labels= ','.join(map(str, outputs_labels_pred[sample,:]))
+				#mse= ','.join(map(str, mses_copy[:,:]))
+
+	#===========================
+	#==   SAVE NN
+	#===========================
+	#- Save the model weights
+	print("INFO: Saving model weights ...")
+	model.save_weights('model_weights.h5')
+
+	#- Save the model
+	print("INFO: Saving model ...")
+	model.save('model.h5')
+	
+	#===========================
+	#==   EVALUATE NN
+	#===========================
+	print("INFO: Classifying train data ...")
+	(predictions_labels_train, predictions_train)= model.predict(inputs_train)
+
+	#- Computing true & false detections
+	nsamples_train= outputs_labels_train.shape[0]
+	detThr= 0.5
+	nobjs_tot= 0
+	nobjs_true= 0
+	nobjs_rec= 0
+	nobjs_rec_true= 0
+	nobjs_rec_false= 0
+	s_list= []
+	xpull_list= []
+	ypull_list= []
+	spull_list= []
+	
+	for i in range(nsamples_train):
+		#target= outputs_labels_train[i,:]
+		target= flipped_outputs_labels_train[i,:]
+		pred= predictions_labels_train[i,:]	
+		#target_pars= outputs_train[i,:]
+		target_pars= flipped_outputs_train[i,:]
+		pred_pars= predictions_train[i,:]
+
+		true_obj_indexes= np.argwhere(target==1).flatten()
+		rec_obj_indexes= np.argwhere(pred>detThr).flatten()
+		n= len(true_obj_indexes)
+		nrec= len(rec_obj_indexes)
+		ntrue= 0
+		nrec_true= 0
+		nrec_false= 0
+				
+		for index in true_obj_indexes:
+			x0_true= target_pars[0 + index*ntargetpars]
+			y0_true= target_pars[1 + index*ntargetpars]
+			S_true= target_pars[2 + index*ntargetpars]
+			if pred[index]>detThr:
+				ntrue+= 1
+				x0_rec= pred_pars[0 + index*ntargetpars]
+				y0_rec= pred_pars[1 + index*ntargetpars]
+				S_rec= pred_pars[2 + index*ntargetpars]
+				s_list.append(np.log10(S_true))
+				spull_list.append(S_rec/S_true-1)
+				xpull_list.append(x0_rec-x0_true)
+				ypull_list.append(y0_rec-y0_true)
+
+		for index in rec_obj_indexes:
+			if target[index]==1:
+				nrec_true+= 1
+			else:
+				nrec_false+= 1
+	
+		nobjs_tot+= n
+		nobjs_rec+= nrec
+		nobjs_true+= ntrue
+		nobjs_rec_true+= nrec_true 
+		nobjs_rec_false+= nrec_false
+
+	completeness_train= float(nobjs_true)/float(nobjs_tot)
+	reliability_train= float(nobjs_rec_true)/float(nobjs_rec)
+
+	print("INFO: NN Train Results: Completeness(det/tot=%d/%d)=%s, Reliability(true/rec=%d/%d)=%s" % (nobjs_true,nobjs_tot,str(completeness_train),nobjs_rec_true,nobjs_rec,str(reliability_train)))
+		
+
+	#for i in range(predictions_labels_train.shape[0]):
+	#	target= ','.join(map(str, outputs_labels_train[i,:]))
+	#	pred= ','.join(map(str, predictions_labels_train[i,:]))
+	#	print("INFO: Train labels entry no. %d: target=[%s], pred=[%s]" % (i+1,target,pred) )
+
+	#for i in range(predictions_train.shape[0]):
+	#	target= ','.join(map(str, outputs_train[i,:]))
+	#	pred= ','.join(map(str, predictions_train[i,:]))
+	#	print("INFO: Train spars entry no. %d: target=[%s], pred=[%s]" % (i+1,target,pred) )
+
+
+	print("INFO: Classifying test data ...")
+	(predictions_labels_test, predictions_test)= model.predict(inputs_test)
+
+	nsamples_test= outputs_labels_test.shape[0]
+	detThr= 0.5
+	nobjs_tot= 0
+	nobjs_true= 0
+	nobjs_rec= 0
+	nobjs_rec_true= 0
+	nobjs_rec_false= 0
+	s_list_test= []
+	xpull_list_test= []
+	ypull_list_test= []
+	spull_list_test= []
+	
+	for i in range(nsamples_test):
+		#target= outputs_labels_test[i,:]
+		target= flipped_outputs_labels_test[i,:]
+		pred= predictions_labels_test[i,:]	
+		#target_pars= outputs_test[i,:]
+		target_pars= flipped_outputs_test[i,:]
+		pred_pars= predictions_test[i,:]
+
+		true_obj_indexes= np.argwhere(target==1).flatten()
+		rec_obj_indexes= np.argwhere(pred>detThr).flatten()
+		n= len(true_obj_indexes)
+		nrec= len(rec_obj_indexes)
+		ntrue= 0
+		nrec_true= 0
+		nrec_false= 0
+		
+		for index in true_obj_indexes:
+			x0_true= target_pars[0 + index*ntargetpars]
+			y0_true= target_pars[1 + index*ntargetpars]
+			S_true= target_pars[2 + index*ntargetpars]
+			if pred[index]>detThr:
+				ntrue+= 1
+				x0_rec= pred_pars[0 + index*ntargetpars]
+				y0_rec= pred_pars[1 + index*ntargetpars]
+				S_rec= pred_pars[2 + index*ntargetpars]
+				s_list_test.append(np.log10(S_true))
+				spull_list_test.append(S_rec/S_true-1)
+				xpull_list_test.append(x0_rec-x0_true)
+				ypull_list_test.append(y0_rec-y0_true)
+
+		for index in rec_obj_indexes:
+			if target[index]==1:
+				nrec_true+= 1
+			else:
+				nrec_false+= 1
+
+		nobjs_tot+= n
+		nobjs_rec+= nrec
+		nobjs_true+= ntrue
+		nobjs_rec_true+= nrec_true 
+		nobjs_rec_false+= nrec_false
+
+	completeness_test= float(nobjs_true)/float(nobjs_tot)
+	reliability_test= float(nobjs_rec_true)/float(nobjs_rec)
+
+	print("INFO: NN Test Results: Completeness(det/tot=%d/%d)=%s, Reliability(true/rec=%d/%d)=%s" % (nobjs_true,nobjs_tot,str(completeness_test),nobjs_rec_true,nobjs_rec,str(reliability_test)))
+
+	#for i in range(predictions_labels_test.shape[0]):
+	#	target= ','.join(map(str, outputs_labels_test[i,:]))
+	#	pred= ','.join(map(str, predictions_labels_test[i,:]))
+	#	print("INFO: Test labels entry no. %d: target=[%s], pred=[%s]" % (i+1,target,pred) )
+
+	#for i in range(predictions_test.shape[0]):
+	#	target= ','.join(map(str, outputs_test[i,:]))
+	#	pred= ','.join(map(str, predictions_test[i,:]))
+	#	print("INFO: Test spars entry no. %d: target=[%s], pred=[%s]" % (i+1,target,pred) )
+
 	#===========================
 	#==   PLOT NN RESULTS
 	#===========================
 	# - Plot the network	
+	print("INFO: Printing network model architecture to file ...")
 	plot_model(model, to_file=outfile_model)
 
 	# - Plot the total loss, type loss, spars loss
+	print("INFO: Plot the network loss to file ...")
 	lossNames = ["loss", "type_loss", "pars_loss"]
 	plt.style.use("ggplot")
 	(fig, ax) = plt.subplots(3, 1, figsize=(13, 13))
 
-	for (i, l) in enumerate(lossNames):
+	for (i, lossName) in enumerate(lossNames):
 		# Plot the loss for both the training and validation data
-		title = "Loss for {}".format(l) if l != "loss" else "Total loss"
+		title = "Loss for {}".format(lossName) if lossName != "loss" else "Total loss"
 		ax[i].set_title(title)
 		ax[i].set_xlabel("Epoch #")
 		ax[i].set_ylabel("Loss")
-		ax[i].plot(np.arange(0, nepochs), fitout.history[l], label="TRAIN SAMPLE - " + l)
-		ax[i].plot(np.arange(0, nepochs), fitout.history["val_" + l], label="TEST SAMPLE - " + l)
+		#ax[i].plot(np.arange(0, nepochs), fitout.history[lossName], label="TRAIN SAMPLE - " + lossName)
+		#ax[i].plot(np.arange(0, nepochs), fitout.history["val_" + lossName], label="TEST SAMPLE - " + lossName)
+		ax[i].plot(np.arange(0, nepochs), train_loss_vs_epoch[i], label="TRAIN SAMPLE - " + lossName)
+		ax[i].plot(np.arange(0, nepochs), test_loss_vs_epoch[i], label="TEST SAMPLE - " + lossName)
 		ax[i].legend()
 
 	plt.tight_layout()
@@ -840,21 +1158,78 @@ def main():
 	plt.close()
 
 	# - Plot the accuracy
+	print("INFO: Plot the network accuracy metric to file ...")
 	accuracyNames = ["type_acc", "pars_acc"]
 	plt.style.use("ggplot")
 	(fig, ax) = plt.subplots(2, 1, figsize=(8, 8))
 
-	for (i, l) in enumerate(accuracyNames):
+	for (i, accuracyName) in enumerate(accuracyNames):
 		# Plot the loss for both the training and validation data
-		ax[i].set_title("Accuracy for {}".format(l))
+		ax[i].set_title("Accuracy for {}".format(accuracyName))
 		ax[i].set_xlabel("Epoch #")
 		ax[i].set_ylabel("Accuracy")
-		ax[i].plot(np.arange(0, nepochs), fitout.history[l], label="TRAIN SAMPLE - " + l)
-		ax[i].plot(np.arange(0, nepochs), fitout.history["val_" + l], label="TEST SAMPLE - " + l)
+		#ax[i].plot(np.arange(0, nepochs), fitout.history[accuracyName], label="TRAIN SAMPLE - " + accuracyName)
+		#ax[i].plot(np.arange(0, nepochs), fitout.history["val_" + accuracyName], label="TEST SAMPLE - " + accuracyName)
+		ax[i].plot(np.arange(0, nepochs), train_accuracy_vs_epoch[i], label="TRAIN SAMPLE - " + accuracyName)
+		ax[i].plot(np.arange(0, nepochs), test_accuracy_vs_epoch[i], label="TEST SAMPLE - " + accuracyName)
 		ax[i].legend()
 
 	plt.tight_layout()
 	plt.savefig(outfile_accuracy)
+	plt.close()
+
+	# - Plot x, y position reco accuracy for detected sources
+	print("INFO: Plot the source (x, y) position accuracy ...")
+	plt.style.use("ggplot")
+	(fig, ax) = plt.subplots(2, 2, figsize=(8, 8))
+
+	ax[0,0].set_title("x Position Accuracy")
+	ax[0,0].set_xlabel("logS (Jy/beam)")
+	ax[0,0].set_ylabel("dx")
+	ax[0,0].scatter(np.array(s_list),np.array(xpull_list),label="TRAIN SAMPLE")
+	ax[0,0].legend()
+
+	ax[0,1].set_title("y Position Accuracy")
+	ax[0,1].set_xlabel("logS (Jy/beam)")
+	ax[0,1].set_ylabel("dy")
+	ax[0,1].scatter(np.array(s_list),np.array(ypull_list),label="TRAIN SAMPLE")
+	ax[0,1].legend()
+
+	ax[1,0].set_title("x Position Accuracy")
+	ax[1,0].set_xlabel("logS (Jy/beam)")
+	ax[1,0].set_ylabel("dx")
+	ax[1,0].scatter(np.array(s_list_test),np.array(xpull_list_test),label="TEST SAMPLE")
+	ax[1,0].legend()
+
+	ax[1,1].set_title("y Position Accuracy")
+	ax[1,1].set_xlabel("logS (Jy/beam)")
+	ax[1,1].set_ylabel("dy")
+	ax[1,1].scatter(np.array(s_list_test),np.array(ypull_list_test),label="TEST SAMPLE")
+	ax[1,1].legend()
+
+	plt.tight_layout()
+	plt.savefig(outfile_posaccuracy)
+	plt.close()
+
+	# - Plot flux reco accuracy for detected sources
+	print("INFO: Plot the source flux accuracy ...")
+	plt.style.use("ggplot")
+	(fig, ax) = plt.subplots(2, 1, figsize=(8, 8))
+
+	ax[0].set_title("Flux Accuracy")
+	ax[0].set_xlabel("logS (Jy/beam)")
+	ax[0].set_ylabel("dS")
+	ax[0].scatter(np.array(s_list),np.array(spull_list),label="TRAIN SAMPLE")
+	ax[0].legend()
+
+	ax[1].set_title("Flux Accuracy")
+	ax[1].set_xlabel("logS (Jy/beam)")
+	ax[1].set_ylabel("dS")
+	ax[1].scatter(np.array(s_list_test),np.array(spull_list_test),label="TEST SAMPLE")
+	ax[1].legend()
+
+	plt.tight_layout()
+	plt.savefig(outfile_fluxaccuracy)
 	plt.close()
 
 ###################
