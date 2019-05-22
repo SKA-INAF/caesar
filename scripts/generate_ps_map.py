@@ -791,7 +791,7 @@ class SkyMapSimulator(object):
 			## Fill sky model map
 			ix= int(np.round(x0))
 			iy= int(np.round(y0))
-			if self.model_data[ix][iy][0][0]>0 or not mask[ix][iy][0][0]:
+			if self.model_data_ext[ix][iy][0][0]>0 or not mask[ix][iy][0][0]:
 				print ("INFO: Skip ext source generated @ pixel (%s,%s) as already filled or corresponding to nan value in mosaic ..." % (ix,iy) ) 
 				continue
 
