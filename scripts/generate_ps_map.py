@@ -77,6 +77,8 @@ def get_args():
 	# - POINT SOURCE GENERATION OPTIONS
 	parser.add_argument('-marginx', '--marginx', dest='marginx', required=False, type=int, default=0,action='store',help='Image x margin in pixels')
 	parser.add_argument('-marginy', '--marginy', dest='marginy', required=False, type=int, default=0,action='store',help='Image y margin in pixels')
+	parser.add_argument('--no-sources', dest='no_sources', action='store_true')	
+	parser.set_defaults(no_sources=False)
 	parser.add_argument('-nsources', '--nsources', dest='nsources', required=False, type=int, default=0, action='store',help='Number of point-source to be generated (if >0 overrides the density generation) (default=0)')
 	parser.add_argument('-source_density', '--source_density', dest='source_density', required=False, type=float, default=1000, action='store',help='Compact source density (default=1000)')
 	parser.add_argument('-Smin', '--Smin', dest='Smin', required=False, type=float, default=1.e-6, action='store',help='Minimum source flux in Jy (default=1.e-6)')
@@ -167,6 +169,7 @@ class SkyMapSimulator(object):
 		## Compact source parameters
 		self.generate_skymodel= True
 		self.ps_list= []
+		self.add_ps_sources= True
 		self.nsources= 0 # default is density generator
 		self.source_density= 2000. # in sources/deg^2
 		self.Smin= 1.e-6 # in Jy 
@@ -300,8 +303,12 @@ class SkyMapSimulator(object):
 		self.beam_bpa_max= pa_max	
 
 	def enable_ext_sources(self,choice):
-		""" Set beam randomization """
+		""" Turn on/off extended source generation """
 		self.add_ext_sources= choice
+
+	def enable_ps_sources(self,choice):
+		""" Turn on/off ps source generation """
+		self.add_ps_sources= choice
 
 	def write_source_list(self):
 		""" Write source list to file """
@@ -840,8 +847,9 @@ class SkyMapSimulator(object):
 		self.init()
 
 		## == GENERATE SKYMODEL WITH POINT SOURCES ==
-		print ('INFO: Generating compact sources...')
-		self.generate_compact_sources()
+		if self.add_ps_sources:
+			print ('INFO: Generating compact sources...')
+			self.generate_compact_sources()
 
 		## == CONVOLVE SKY MODEL WITH BEAM ==
 		print ('INFO: Convolving skymodel with beam ...')
@@ -853,7 +861,10 @@ class SkyMapSimulator(object):
 			self.generate_ext_sources()	
 
 		## == CREATE FINAL MAP = MOSAIC + CONVOLVED SKY MODEL + EXT SOURCE (IF ENABLED) ===
-		data= self.mosaic_data + self.model_conv_data
+		#data= self.mosaic_data + self.model_conv_data
+		data= self.mosaic_data
+		if self.add_ps_sources:
+			data+= self.model_conv_data
 		if self.add_ext_sources:
 			data+= self.model_data_ext			
 
@@ -1158,6 +1169,7 @@ def main():
 	model_file= args.model
 	
 	# - Compact source args
+	source_gen_enabled= args.no_sources
 	marginX= args.marginx
 	marginY= args.marginy
 	Smin= args.Smin

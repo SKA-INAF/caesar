@@ -20,6 +20,7 @@ if [ "$NARGS" -lt 2 ]; then
 
 	echo "*** OPTIONAL ARGS ***"
 	echo "=== SKYMODEL SIM OPTIONS ==="	
+	echo "--no-gensources - Turn off point source generation (default=no)"
 	echo "--smin=[SMIN] - Min generated compact source flux density in Jy (default: 1.e-4)"
 	echo "--smax=[SMAX] - Max generated compact source flux density in Jy (default: 1)"
 	echo "--nsources=[NSOURCES] - Number of compact sources generated in mosaic (if >0 override source density options) (default: 0)"
@@ -74,6 +75,7 @@ SOURCE_DENSITY=1000
 NSOURCES=0
 SMODEL="uniform"
 SSLOPE="1.6"
+GEN_PS_SOURCES=" "
 GEN_EXT_SOURCES=" "
 SMIN_EXT=1.e-4
 SMAX_EXT=1
@@ -113,7 +115,10 @@ do
 		;;
 
 
-		## SKY MODEL SIM ##		
+		## SKY MODEL SIM ##	
+		--no-gensources*)
+    	GEN_PS_SOURCES="--no-sources"
+    ;;	
 		--nsources=*)
 			NSOURCES=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
 		;;
@@ -299,7 +304,7 @@ do
 		
 		echo " "
 		echo 'EXE="'"$CASAPATH/bin/casa --nologger --log2term --nogui -c $CAESAR_SCRIPTS_DIR/generate_ps_map.py"'"'
-		echo 'EXE_ARGS="'"--no-convolve --mosaic=$MOSAIC_FILE --outfile_img=$JOB_DIR/$img_fits --outfile_model=$JOB_DIR/$skymodel_file --outfile_model_ext=$JOB_DIR/$extsourcemodel_file --outfile_sources=$JOB_DIR/$source_file --outfile_sourcepars=$JOB_DIR/$sourcepar_file --outfile_ds9region=$JOB_DIR/$ds9_file --source_density=$SOURCE_DENSITY --nsources=$NSOURCES --Smin=$SMIN --Smax=$SMAX $GEN_EXT_SOURCES --Smodel=$SMODEL --Sslope=$SSLOPE --source_density_ext=$SOURCE_DENSITY_EXT --nsources_ext=$NSOURCES_EXT --Smin_ext=$SMIN_EXT --Smax_ext=$SMAX_EXT --bmaj_min=$BMAJ_MIN --bmaj_max=$BMAJ_MAX --bmin_min=$BMIN_MIN --bmin_max=$BMIN_MAX --pa_min=$PA_MIN --pa_max=$PA_MAX "'"'
+		echo 'EXE_ARGS="'"--no-convolve --mosaic=$MOSAIC_FILE --outfile_img=$JOB_DIR/$img_fits --outfile_model=$JOB_DIR/$skymodel_file --outfile_model_ext=$JOB_DIR/$extsourcemodel_file --outfile_sources=$JOB_DIR/$source_file --outfile_sourcepars=$JOB_DIR/$sourcepar_file --outfile_ds9region=$JOB_DIR/$ds9_file $GEN_PS_SOURCES --source_density=$SOURCE_DENSITY --nsources=$NSOURCES --Smin=$SMIN --Smax=$SMAX $GEN_EXT_SOURCES --Smodel=$SMODEL --Sslope=$SSLOPE --source_density_ext=$SOURCE_DENSITY_EXT --nsources_ext=$NSOURCES_EXT --Smin_ext=$SMIN_EXT --Smax_ext=$SMAX_EXT --bmaj_min=$BMAJ_MIN --bmaj_max=$BMAJ_MAX --bmin_min=$BMIN_MIN --bmin_max=$BMIN_MAX --pa_min=$PA_MIN --pa_max=$PA_MAX "'"'
 		
 		echo " "
 
