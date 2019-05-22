@@ -1169,7 +1169,9 @@ def main():
 	model_file= args.model
 	
 	# - Compact source args
-	source_gen_enabled= args.no_sources
+	source_gen_enabled= True
+	if args.no_sources:
+		source_gen_enabled= False
 	marginX= args.marginx
 	marginY= args.marginy
 	Smin= args.Smin
