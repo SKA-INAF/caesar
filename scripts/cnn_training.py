@@ -514,7 +514,7 @@ class CNNTrainer(object):
 		""" Read FITS image and return data """
 
 		try:
-			hdu= fits.open(filename)
+			hdu= fits.open(filename,memmap=False)
 		except Exception as ex:
 			errmsg= 'Cannot read image file: ' + filename
 			print "ERROR: " + errmsg
@@ -544,7 +544,7 @@ class CNNTrainer(object):
 
 		# - Read FITS image
 		try:
-			hdu= fits.open(self.img_file)
+			hdu= fits.open(self.img_file,memmap=False)
 		except Exception as ex:
 			errmsg= 'Cannot read image file: ' + self.img_file
 			print "ERROR: " + errmsg
