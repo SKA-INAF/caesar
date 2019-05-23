@@ -70,7 +70,12 @@ def get_args():
 	parser = argparse.ArgumentParser(description="Parse args.")
 
 	## INPUT DATA
-	parser.add_argument('-inputimg', '--inputimg', dest='inputimg', required=True, type=str,action='store',help='Mosaic residual image from which to extract train data')
+	parser.add_argument('-inputimg', '--inputimg', dest='inputimg', required=False, type=str,action='store',help='Mosaic residual image from which to extract train data')
+	parser.add_argument('-filelist_bkg', '--filelist_bkg', dest='filelist_bkg', required=False, type=str,action='store',help='List of files with bkg train images')
+	parser.add_argument('-filelist_source', '--filelist_source', dest='filelist_source', required=False, type=str,action='store',help='List of files with source train images')	
+	parser.add_argument('--generate_train_data', dest='generate_train_data', action='store_true')	
+	parser.set_defaults(generate_train_data=False)	
+	parser.add_argument('-filelist_sourcepars', '--filelist_sourcepars', dest='filelist_sourcepars', required=False, type=str,action='store',help='List of files with source target pars')
 	parser.add_argument('-marginx', '--marginx', dest='marginx', required=False, type=int, default=0,action='store',help='Image x margin in pixels used in source generation')
 	parser.add_argument('-marginy', '--marginy', dest='marginy', required=False, type=int, default=0,action='store',help='Image y margin in pixels used in source generation')
 	parser.add_argument('-Smin', '--Smin', dest='Smin', required=False, type=float, default=1.e-6, action='store',help='Minimum source flux in Jy (default=1.e-6)')
@@ -94,10 +99,29 @@ def get_args():
 	parser.add_argument('-nsamples_source', '--nsamples_source', dest='nsamples_source', required=False, type=int, default=-1, action='store',help='Number of train images extracted around sources from input maps (default=-1)')	
 	parser.add_argument('-nmaxobjects', '--nmaxobjects', dest='nmaxobjects', required=False, type=int, default=5, action='store',help='Max number of predicted objects in target (default=5)')
 	parser.add_argument('-ntargetpars', '--ntargetpars', dest='ntargetpars', required=False, type=int, default=6, action='store',help='Nmber of pars per objects in target (default=6)')	
+
+	parser.add_argument('-conv_kern_size_min', '--conv_kern_size_min', dest='conv_kern_size_min', required=False, type=int, default=3, action='store',help='Min size of conv kernel (default=3)')	
+	parser.add_argument('-conv_kern_size_max', '--conv_kern_size_max', dest='conv_kern_size_max', required=False, type=int, default=7, action='store',help='Max size of conv kernel (default=3)')	
+
 	parser.add_argument('-conv_nfilt_min', '--conv_nfilt_min', dest='conv_nfilt_min', required=False, type=int, default=16, action='store',help='Number of min convolution filters used (default=16)')	
 	parser.add_argument('-conv_nfilt_max', '--conv_nfilt_max', dest='conv_nfilt_max', required=False, type=int, default=32, action='store',help='Number of max convolution filters used (default=32)')
+	parser.add_argument('-conv_pool_kernel_size', '--conv_pool_kernel_size', dest='conv_pool_kernel_size', required=False, type=int, default=2, action='store',help='Size of max pool kernel in conv layers (default=2)')
+
 	parser.add_argument('-dense_size_min', '--dense_size_min', dest='dense_size_min', required=False, type=int, default=16, action='store',help='Number of min neurons used in dense layer(default=16)')
 	parser.add_argument('-dense_size_max', '--dense_size_max', dest='dense_size_max', required=False, type=int, default=32, action='store',help='Number of max neurons used in dense layer(default=32)')
+
+	parser.add_argument('-conv_activation', '--conv_activation', dest='conv_activation', required=False, type=str, default='relu', action='store',help='Activation used in convolution layers (default=relu)')
+	parser.add_argument('-dense_activation', '--dense_activation', dest='dense_activation', required=False, type=str, default='relu', action='store',help='Activation used in dense layers (default=relu)')
+
+	parser.add_argument('--no-conv', dest='no_conv', action='store_true')	
+	parser.set_defaults(no_conv=False)	
+	parser.add_argument('--no-dropout', dest='no_dropout', action='store_true')	
+	parser.set_defaults(no_dropout=False)	
+	parser.add_argument('--no-maxpool', dest='no_maxpool', action='store_true')	
+	parser.set_defaults(no_maxpool=False)
+	parser.add_argument('--no-batchnorm', dest='no_batchnorm', action='store_true')	
+	parser.set_defaults(no_batchnorm=False)
+
 	parser.add_argument('-test_size', '--test_size', dest='test_size', required=False, type=float, default=0.2, action='store',help='Fraction of input data used for testing the network (default=0.2)')
 	parser.add_argument('-spars_loss_weight', '--spars_loss_weight', dest='spars_loss_weight', required=False, type=float, default=1, action='store',help='Loss weight to be given to source pars learning (default=1)')
 	parser.add_argument('-labels_loss_weight', '--labels_loss_weight', dest='labels_loss_weight', required=False, type=float, default=1, action='store',help='Loss weight to be given to source labels learning (default=1)')
@@ -137,15 +161,18 @@ class CNNTrainer(object):
 				img_file: beam restored image (.fits)
 	"""
 
-	def __init__(self, img_file):
+	def __init__(self):
 		""" Return a CNNTrainer object """
 
 		# - Input file
-		self.img_file= img_file
+		self.img_file= None 
 		self.img_data= None
 		self.img_sizex= 0
 		self.img_sizey= 0
 		self.pixsize= 0 # in arcsec
+		self.img_bkg_filelist= ''
+		self.img_source_filelist= ''
+		self.sourcepars_filelist= ''
 		
 		# - Source generation
 		self.gridx= None
@@ -191,7 +218,6 @@ class CNNTrainer(object):
 		self.flipped_outputs_labels_test= None
 		self.flipped_outputs_test= None
 		
-
 		# - Network architecture & train options
 		self.model= None
 		self.fitsout= None
@@ -213,6 +239,10 @@ class CNNTrainer(object):
 		self.flip_train_data= True
 		self.spars_loss_weight= 1
 		self.labels_loss_weight= 1
+		self.conv_enabled= True
+		self.dropout_enabled= True
+		self.maxpool_enabled= True
+		self.batchnorm_enabled= True
 		
 		self.train_loss_vs_epoch= None
 		self.test_loss_vs_epoch= None
@@ -226,6 +256,22 @@ class CNNTrainer(object):
 		self.outfile_model= 'nn_model.png'
 		self.outfile_posaccuracy= 'nn_posaccuracy.png'
 		self.outfile_fluxaccuracy= 'nn_fluxaccuracy.png'
+
+	def set_img_filename(self,filename):
+		""" Set the input residual image used to generate train data """
+		self.img_file= filename
+
+	def set_img_bkg_filelist(self,filename):
+		""" Set the name of filelist with bkg train images """
+		self.img_bkg_filelist= filename
+
+	def set_img_source_filelist(self,filename):
+		""" Set the name of filelist with source train images """
+		self.img_source_filelist= filename
+	
+	def set_sourcepars_filelist(self,filename):
+		""" Set the name of filelist with source target pars """
+		self.sourcepars_filelist= filename
 
 	def set_outfile_loss(self,filename):
 		""" Set output file name for loss plot """
@@ -283,6 +329,26 @@ class CNNTrainer(object):
 		self.train_img_sizex= nx
 		self.train_img_sizey= ny
 
+	def set_dense_activation(self,act):
+		""" Set dense layer activation fucntion """
+		self.dense_act= act
+
+	def set_conv_activation(self,act):
+		""" Set convolution layer activation fucntion """
+		self.conv_act= act
+
+	def set_conv_pool_kernel_size(self,n):
+		""" Set size of max pool kernel in conv layer """
+		self.pool_size= n	
+
+	def set_conv_kern_size_min(self,n):
+		""" Set min size of conv kernel in conv layer """
+		self.conv_kern_size_min= n		
+	
+	def set_conv_kern_size_max(self,n):
+		""" Set max size of conv kernel in conv layer """
+		self.conv_kern_size_max= n	
+
 	def set_conv_nfilt_min(self,n):
 		""" Set min number of filters in conv layer """
 		self.conv_nfilt_min= n		
@@ -298,6 +364,23 @@ class CNNTrainer(object):
 	def set_dense_size_max(self,n):
 		""" Set max number of neurons in dense layer """
 		self.dense_size_max= n
+
+	def enable_conv(self,choice):
+		""" Turn on/off convolution layers """
+		self.conv_enabled= choice		
+
+	def enable_dropout(self,choice):
+		""" Turn on/off dropout layers """
+		self.dropout_enabled= choice	
+
+	def enable_maxpool(self,choice):
+		""" Turn on/off maxpool layers """
+		self.maxpool_enabled= choice		
+
+	def enable_batchnorm(self,choice):
+		""" Turn on/off batch normalization layers """
+		self.batchnorm_enabled= choice		
+
 
 	def set_spars_loss_weight(self,w):
 		""" Set source par loss weight """
@@ -365,6 +448,94 @@ class CNNTrainer(object):
 		hdul= fits.HDUList([hdu])
 		hdul.writeto(filename,overwrite=True)
 
+	def write_ascii(self,data,filename,header=''):
+		""" Write data to ascii file """
+		fout = open(filename, 'wb')
+		if header:
+			fout.write(header)
+			fout.write('\n')	
+			fout.flush()	
+		
+		nrows= data.shape[0]
+		ncols= data.shape[1]
+		for i in range(nrows):
+			fields= '  '.join(map(str, data[i,:]))
+			fout.write(fields)
+			fout.write('\n')	
+			fout.flush()	
+
+		fout.close();
+
+	
+	def has_patterns_in_string(self,s,patterns):
+		""" Return true if patterns are found in string """
+		if not patterns:		
+			return False
+
+		found= False
+		for pattern in patterns:
+			found= pattern in s
+			if found:
+				break
+
+		return found
+
+
+	def read_list(self,filename,skip_patterns=[]):
+		""" Read a file list line by line """
+	
+		try:
+			f = open(filename, 'r')
+		except IOError:
+			errmsg= 'Could not read file: ' + filename
+			print "ERROR: " + errmsg
+			raise IOError(errmsg)
+
+		fields= []
+		for line in f:
+			line = line.strip()
+			line_fields = line.split()
+			if not line_fields:
+				continue
+
+			# Skip pattern
+			skipline= self.has_patterns_in_string(line_fields[0],skip_patterns)
+			if skipline:
+				continue 		
+
+			fields.append(line_fields)
+
+		f.close()	
+
+		return fields
+
+
+	def read_fits(self,filename):
+		""" Read FITS image and return data """
+
+		try:
+			hdu= fits.open(filename)
+		except Exception as ex:
+			errmsg= 'Cannot read image file: ' + filename
+			print "ERROR: " + errmsg
+			raise IOError(errmsg)
+
+		data= hdu[0].data
+		data_size= np.shape(data)
+		nchan= len(data.shape)
+		if nchan==4:
+			output_data= data[0,0,:,:]
+		elif nchan==2:
+			output_data= data	
+		else:
+			errmsg= 'Invalid/unsupported number of channels found in file ' + filename + ' (nchan=' + str(nchan) + ')!'
+			print "ERROR: " + errmsg
+			raise IOError(errmsg)
+
+		return output_data
+
+
+
 	def read_img(self):
 		""" Read FITS image and set image data """
 
@@ -398,7 +569,6 @@ class CNNTrainer(object):
 		dy= np.abs(header['CDELT2']*3600.) # in arcsec
 		self.pixsize= min(dx,dy)
 
-		
 		return 0
 
 	def crop_img(self,x0,y0,dx,dy):
@@ -417,6 +587,225 @@ class CNNTrainer(object):
 		return crop_data
 
 
+	#################################
+	##     READ BKG TRAIN DATA
+	#################################
+	def read_bkg_train_data(self,filelist):
+		""" Read background train data """
+		
+		# - Init data
+		input_data= []	
+		output_size= self.nobjects*self.npars
+		output_data= []  
+		output_label_size= self.nobjects
+		output_label_data= []
+		nchannels= 1
+		filelist_data= []
+
+		# - Read list with files		
+		try:
+			filelist_data= self.read_list(filelist,['#'])
+		except IOError:
+			errmsg= 'Cannot read file: ' + filelist
+			print "ERROR: " + errmsg
+			return -1
+
+		# - Read image files in list	
+		imgcounter= 0
+		for item in filelist_data:
+			imgcounter+= 1
+			filename= item[0]
+			print("INFO: Reading file %s ..." % filename) 
+
+			data= None
+			try:
+				data= self.read_fits(filename)
+			except Exception as ex:
+				errmsg= 'Failed to read bkg image data (err=' + str(ex) + ')'
+				print "ERROR: " + errmsg
+				return -1
+	
+			imgsize= np.shape(data)
+			nx= imgsize[1]
+			ny= imgsize[0]	
+			print("INFO: Bkg image no. %d has size (%d,%d)" % (imgcounter,nx,ny) )	
+
+			# - Check bkg image size is equal to desired train image
+			if nx!=self.train_img_sizex or ny!=self.train_img_sizey:
+				errmsg= 'Bkg image no. ' + str(imgcounter) + ' has size different from desired train image!'
+				print "ERROR: " + errmsg
+				return -1
+
+			# - Set train data as a tensor of size [Nsamples,Nx,Ny,Nchan] Nchan=1
+			data= data.reshape(imgsize[0],imgsize[1],nchannels)
+			input_data.append(data)
+
+			# - Set train target & labels
+			output_data.append( np.zeros((1,output_size)) )
+			output_label_data.append( np.zeros((1,output_label_size)) )
+
+		#- Convert list to array
+		self.inputs_bkg= np.array(input_data)
+		self.inputs_bkg= self.inputs_bkg.astype('float32')
+	
+		self.outputs_bkg= np.array(output_data)
+		self.outputs_bkg= self.outputs_bkg.astype('float32')
+
+		outputs_shape= self.outputs_bkg.shape
+		N= outputs_shape[0]
+		self.outputs_bkg= self.outputs_bkg.reshape((N,output_size))
+
+		self.outputs_labels_bkg= np.array(output_label_data)
+		self.outputs_labels_bkg= self.outputs_labels_bkg.astype('float32')
+		self.outputs_labels_bkg= self.outputs_labels_bkg.reshape((N,output_label_size))
+
+		# - Normalize to [0,1]
+		if self.normalize_inputs:
+			self.inputs_bkg= (self.inputs_bkg - self.normmin)/(self.normmax-self.normmin)
+
+		print 'DEBUG: inputs_bkg size=', np.shape(self.inputs_bkg)
+		print 'DEBUG: outputs_bkg size=', np.shape(self.outputs_bkg)
+		print 'DEBUG: outputs_labels_bkg size', np.shape(self.outputs_labels_bkg)
+		print 'DEBUG: outputs_bkg=',self.outputs_bkg
+		print 'DEBUG: outputs_labels_bkg=',self.outputs_labels_bkg
+
+		return 0
+
+
+	#################################
+	##     READ SOURCE TRAIN DATA
+	#################################
+	def read_source_train_data(self,filelist,filelist_pars):
+		""" Read source train data """
+				
+		# - Init data
+		input_data= []
+		output_size= self.nobjects*self.npars
+		output_data= []  
+		output_label_size= self.nobjects
+		output_label_data= []
+		nchannels= 1
+		filelist_data= []
+		filelist_pars_data= []
+
+		# - Read list with image files		
+		try:
+			filelist_data= self.read_list(filelist,['#'])
+		except IOError:
+			errmsg= 'Cannot read file: ' + filelist
+			print "ERROR: " + errmsg
+			return -1
+
+		# - Read list with source pars files		
+		try:
+			filelist_pars_data= self.read_list(filelist_pars,['#'])
+		except IOError:
+			errmsg= 'Cannot read file: ' + filelist_pars
+			print "ERROR: " + errmsg
+			return -1
+
+		# - Check lists have the same number of entries
+		if len(filelist_data)!=len(filelist_pars_data):
+			print("ERROR: Source img and pars filelist have different number of entries (%s!=%s)" % (len(filelist_data),len(filelist_pars_data)))
+			return -1
+
+		# - Read source images & pars
+		imgcounter= 0
+
+		for item, item_pars in zip(filelist_data,filelist_pars_data):
+			imgcounter+= 1
+			filename= item[0]
+			filename_pars= item_pars[0]
+			print("INFO: Reading files: %s, %s ..." % (filename,filename_pars) )
+
+			# - Read source img
+			try:
+				data= self.read_fits(filename)
+			except Exception as ex:
+				errmsg= 'Failed to read source image data (err=' + str(ex) + ')'
+				print "ERROR: " + errmsg
+				return -1
+	
+			imgsize= np.shape(data)
+			nx= imgsize[1]
+			ny= imgsize[0]
+			print("INFO: Source image no. %d has size (%d,%d)" % (imgcounter,nx,ny) )
+
+			# - Check source image size is equal to desired train image
+			if nx!=self.train_img_sizex or ny!=self.train_img_sizey:
+				errmsg= 'Source image no. ' + str(imgcounter) + ' has size different from desired train image!'
+				print "ERROR: " + errmsg
+				return -1
+
+			# - Set train data as a tensor of size [Nsamples,Nx,Ny,Nchan] Nchan=1
+			data= data.reshape(imgsize[0],imgsize[1],nchannels)
+			input_data.append(data)
+
+			# - Read source pars
+			source_pars= []
+			skip_patterns= ['#']
+			try:
+				source_pars= self.read_list(filename_pars,skip_patterns)
+			except IOError:
+				errmsg= 'Cannot read file: ' + filename_spar
+				print "ERROR: " + errmsg
+				return -1
+
+			source_pars_size= np.shape(source_pars)
+			nsources= source_pars_size[0]
+			npars= source_pars_size[1]
+
+			# - Check source pars number is >= desired pars
+			if npars<self.npars:
+				print("ERROR: Source pars read from file no. %s (%d) smaller than desired number of source pars (%d)" % (str(imgcounter),npars,self.npars) )
+				return -1
+
+			# - Set train targets
+			targets= np.zeros((1,output_size))
+			target_labels= np.zeros((1,output_label_size))
+			par_counter= 0
+
+			for k in range(nsources):
+				target_labels[0,k]= 1
+				for l in range(self.npars):			
+					targets[0,par_counter+l]= source_pars[k][1+l]	
+				par_counter+= self.npars
+
+			output_data.append(targets)
+			output_label_data.append(target_labels)
+
+
+		#- Convert list to array
+		self.inputs_source= np.array(input_data)
+		self.inputs_source= self.inputs_source.astype('float32')
+
+		self.outputs_source= np.array(output_data)
+		self.outputs_source= self.outputs_source.astype('float32')
+
+		outputs_shape= self.outputs_source.shape
+		N= outputs_shape[0]
+		self.outputs_source= self.outputs_source.reshape((N,output_size))
+
+		self.outputs_labels_source= np.array(output_label_data)
+		self.outputs_labels_source= self.outputs_labels_source.astype('float32')
+		self.outputs_labels_source= self.outputs_labels_source.reshape((N,output_label_size))
+
+		# - Normalize to [0,1]
+		if self.normalize_inputs:
+			self.inputs_source= (self.inputs_source - self.normmin)/(self.normmax-self.normmin)
+
+		print 'DEBUG: inputs_source size=', np.shape(self.inputs_source)
+		print 'DEBUG: outputs_source size=', np.shape(self.outputs_source)
+		print 'DEBUG: outputs_labels_source size=', np.shape(self.outputs_labels_source)
+		print 'DEBUG: outputs_source=',self.outputs_source
+		print 'DEBUG: outputs_labels_source=',self.outputs_labels_source
+
+
+		return 0
+
+	#################################
+	##     MAKE BKG TRAIN DATA
+	#################################
 	def make_bkg_train_data(self,writeimg=False):
 		""" Prepare bkg train data """
 
@@ -499,7 +888,9 @@ class CNNTrainer(object):
 
 		return 0
 
-
+	#################################
+	##     GENERATE BLOB
+	#################################
 	def generate_blob(self,ampl,x0,y0,sigmax,sigmay,theta,trunc_thr=0.01):
 		""" Generate a blob 
 				Arguments: 
@@ -523,6 +914,9 @@ class CNNTrainer(object):
 
 		return data
 
+	#################################
+	##     MAKE SOURCE TRAIN DATA
+	#################################
 	def make_source_train_data(self,writeimg=False):
 		""" Prepare source train data """
 
@@ -648,6 +1042,7 @@ class CNNTrainer(object):
 				sigmax= bmaj/(self.pixsize * SIGMA_TO_FWHM)
 				sigmay= bmaj/(self.pixsize * SIGMA_TO_FWHM)
 				theta = 90 + pa
+				theta_rad= np.radians(theta)
 
 				## Generate gaus 2D data
 				blob_data= self.generate_blob(ampl=S,x0=x0_source,y0=y0_source,sigmax=sigmax,sigmay=sigmay,theta=theta,trunc_thr=self.trunc_thr)
@@ -660,21 +1055,20 @@ class CNNTrainer(object):
 				mask_data[iy,ix]+= S
 				nsources+= 1
 				sname= 'S' + str(nsources)
-				source_pars.append([sname,x0_source,y0_source,S,sigmax,sigmay,theta])
+				source_pars.append([sname,x0_source,y0_source,S,sigmax,sigmay,theta_rad])
 				
-				
-
+			
 			# - Add generated sources to train image
 			data_crop+= sources_data
 
-			# - Save crop img to file?
+			# - Save crop img and source pars to file?
 			outfilename= 'train_source-RUN' + str(index+1) + '.fits'
+			outfilename_pars= 'train_source_pars-RUN' + str(index+1) + '.dat'
 			if writeimg:
 				self.write_fits(data_crop,outfilename)
+				self.write_ascii(np.array(source_pars),outfilename_pars,'# sname x0(pix) y0(pix) S(Jy/beam) sigmaX(pix) sigmaY(pix) theta(rad)')
 	
-			# - Dump sources to ascii file
-			# ...
-
+			
 			# - Set train data as a tensor of size [Nsamples,Nx,Ny,Nchan] Nchan=1
 			data_crop= data_crop.reshape(imgcropsize[0],imgcropsize[1],nchannels)
 			input_data.append(data_crop)
@@ -739,6 +1133,61 @@ class CNNTrainer(object):
 		print 'DEBUG: outputs_labels_source=',self.outputs_labels_source
 
 		return 0
+
+	#############################
+	##     READ TRAIN DATA
+	#############################
+	def read_train_data(self):	
+		""" Read train data from disk using input filelists """
+		
+		# - Read train data for bkg
+		print("INFO: Reading train data for bkg ...")
+		status= self.read_bkg_train_data(self.img_bkg_filelist)
+		if status<0:
+			return -1
+
+		# - Read train data for source
+		print("INFO: Reading train data for source ...")
+		status= self.read_source_train_data(self.img_source_filelist,self.sourcepars_filelist)
+		if status<0:
+			return -1
+
+		# - Merge data for bkg & sources
+		print("INFO: Merging train data for bkg & sources ...")
+		inputs= np.concatenate((self.inputs_bkg,self.inputs_source))
+		outputs= np.concatenate((self.outputs_bkg,self.outputs_source))
+		outputs_labels= np.concatenate((self.outputs_labels_bkg,self.outputs_labels_source))
+
+		# - Shuffle data before splitting in test & validation sample
+		print("INFO: Shuffling train data ...")
+		indices= np.arange(inputs.shape[0])
+		np.random.shuffle(indices)
+		inputs= inputs[indices]
+		outputs= outputs[indices]
+		outputs_labels= outputs_labels[indices]
+	
+		print 'DEBUG: inputs size=', np.shape(inputs)
+		print 'DEBUG: outputs size=', np.shape(outputs)
+		print 'DEBUG: outputs_labels size=', np.shape(outputs_labels)
+
+		# - Partition the data into training and cross-validation splits
+		print("INFO: Splitting data into train & test samples ...")
+		split= train_test_split(
+			inputs,outputs,outputs_labels, 
+			test_size=self.test_size, 
+			random_state=None
+		)
+		(self.inputs_train, self.inputs_test, self.outputs_train, self.outputs_test, self.outputs_labels_train, self.outputs_labels_test) = split
+
+		print 'DEBUG: inputs_train size=', np.shape(self.inputs_train)
+		print 'DEBUG: inputs_test size=', np.shape(self.inputs_test)
+		print 'DEBUG: outputs_train size=', np.shape(self.outputs_train)
+		print 'DEBUG: outputs_test size=', np.shape(self.outputs_test)
+		print 'DEBUG: outputs_labels_train size=', np.shape(self.outputs_labels_train)
+		print 'DEBUG: outputs_labels_test size=', np.shape(self.outputs_labels_test)
+
+		return 0
+
 
 	#############################
 	##     GENERATE TRAIN DATA
@@ -813,24 +1262,49 @@ class CNNTrainer(object):
 		inputs= Input(shape=inputShape,dtype='float', name='input')
 
 		# - Convolutional layers
-		x = layers.Conv2D(filters=self.conv_nfilt_min, kernel_size=(self.conv_kern_size_min,self.conv_kern_size_min), activation=self.conv_act, padding=self.padding)(inputs)
-		x = layers.MaxPooling2D(pool_size=(self.pool_size,self.pool_size),strides=None,padding='valid')(x)
-		x = layers.Dropout(self.dropout)(x)
+		x= inputs
 
-		x = layers.Conv2D(filters=self.conv_nfilt_max, kernel_size=(self.conv_kern_size_min,self.conv_kern_size_min), activation=self.conv_act, padding=self.padding)(x)
-		x = layers.MaxPooling2D(pool_size=(self.pool_size,self.pool_size),strides=None,padding='valid')(x)
-		x = layers.Dropout(self.dropout)(x)
+		if self.conv_enabled:
+			# - CONV LAYER 1
+			x = layers.Conv2D(filters=self.conv_nfilt_min, kernel_size=(self.conv_kern_size_min,self.conv_kern_size_min), activation=self.conv_act, padding=self.padding)(inputs)
+			if self.maxpool_enabled:
+				x = layers.MaxPooling2D(pool_size=(self.pool_size,self.pool_size),strides=None,padding='valid')(x)
+			if self.dropout_enabled:
+				x = layers.Dropout(self.dropout)(x)
 
-		x = layers.Conv2D(filters=self.conv_nfilt_max, kernel_size=(self.conv_kern_size_max,self.conv_kern_size_max), activation=self.conv_act, padding=self.padding)(x)
-		x = layers.MaxPooling2D(pool_size=(self.pool_size,self.pool_size),strides=None,padding='valid')(x)
-		x = layers.Dropout(self.dropout)(x)
+			# - CONV LAYER 2
+			x = layers.Conv2D(filters=self.conv_nfilt_max, kernel_size=(self.conv_kern_size_min,self.conv_kern_size_min), activation=self.conv_act, padding=self.padding)(x)
+			if self.maxpool_enabled:
+				x = layers.MaxPooling2D(pool_size=(self.pool_size,self.pool_size),strides=None,padding='valid')(x)
+			if self.dropout_enabled:
+				x = layers.Dropout(self.dropout)(x)
+
+			# - CONV LAYER 3
+			x = layers.Conv2D(filters=self.conv_nfilt_max, kernel_size=(self.conv_kern_size_max,self.conv_kern_size_max), activation=self.conv_act, padding=self.padding)(x)
+			if self.maxpool_enabled:	
+				x = layers.MaxPooling2D(pool_size=(self.pool_size,self.pool_size),strides=None,padding='valid')(x)
+			if self.dropout_enabled:
+				x = layers.Dropout(self.dropout)(x)
+
+			# - Batch normalization
+			if self.batchnorm_enabled:
+				x = layers.BatchNormalization()(x)
+		
 
 		# - Fully connected layers
 		x = layers.Flatten()(x)
 		x = layers.Dense(self.dense_size_max, activation=self.dense_act)(x)
-		x = layers.Dropout(self.dropout_dense)(x)
+		if self.dropout_enabled:
+			x = layers.Dropout(self.dropout_dense)(x)
 		x = layers.Dense(self.dense_size_min, activation=self.dense_act)(x)
-		x = layers.Dropout(self.dropout_dense)(x)
+		if self.dropout_enabled:
+			x = layers.Dropout(self.dropout_dense)(x)
+
+		
+
+		# - Batch normalization
+		if self.batchnorm_enabled:
+			x = layers.BatchNormalization()(x)
 
 		# - Output layers
 		type_prediction = layers.Dense(self.nobjects, activation='sigmoid', name='type')(x)
@@ -1323,10 +1797,9 @@ class CNNTrainer(object):
 				return -1		
 		else:
 			print("INFO: Reading training data from disk ...")
-			# ...
-			# ...
-			print("ERROR: Reading training data from disk NOT IMPLEMENTED YET!")
-			return -1
+			status= self.read_train_data()
+			if status<0:
+				return -1
 			
 		#===========================
 		#==   BUILD NN
@@ -1368,11 +1841,31 @@ def main():
 	try:
 		args= get_args()
 	except Exception as ex:
-		print("Failed to get and parse options (err=%s)",str(ex))
+		print("ERROR: Failed to get and parse options (err=%s)",str(ex))
 		return 1
 
 	# - Input file
 	inputimg= args.inputimg
+	filelist_bkg= args.filelist_bkg
+	filelist_source= args.filelist_source
+	filelist_sourcepars= args.filelist_sourcepars
+
+	enable_train_data_generation= False
+	if args.generate_train_data:
+		enable_train_data_generation= True
+		if not inputimg:
+			print("ERROR: Missing input file argument (needed to generate train data)!")
+			return 1
+	else:
+		if not filelist_bkg:
+			print("ERROR: Missing input filelist_bkg argument (needed to read bkg train data)!")
+			return 1			
+		if not filelist_source:
+			print("ERROR: Missing input filelist_source argument (needed to read source train data)!")
+			return 1	
+		if not filelist_sourcepars:
+			print("ERROR: Missing input filelist_sourcepars argument (needed to read source target pars data)!")
+			return 1
 
 	# - Source generation
 	marginX= args.marginx
@@ -1403,13 +1896,35 @@ def main():
 	# - Network architecture
 	normdatamin= args.normdatamin
 	normdatamax= args.normdatamax
+	conv_kern_size_min= args.conv_kern_size_min
+	conv_kern_size_max= args.conv_kern_size_max
 	conv_nfilt_min= args.conv_nfilt_min
 	conv_nfilt_max= args.conv_nfilt_max
+	conv_pool_kernel_size= args.conv_pool_kernel_size
 	dense_size_min= args.dense_size_min
 	dense_size_max= args.dense_size_max
 	spars_loss_weight= args.spars_loss_weight
 	labels_loss_weight= args.labels_loss_weight
 	nepochs= args.nepochs
+
+	dropout_enabled= True
+	if args.no_dropout:
+		dropout_enabled= False
+
+	maxpool_enabled= True
+	if args.no_maxpool:
+		maxpool_enabled= False
+
+	batchnorm_enabled= True
+	if args.no_batchnorm:
+		batchnorm_enabled= False
+
+	conv_enabled= True
+	if args.no_conv:
+		conv_enabled= False
+
+	conv_activation= args.conv_activation
+	dense_activation= args.dense_activation
 	
 	# - Output file
 	saveimg= args.saveimg
@@ -1425,10 +1940,15 @@ def main():
 	#==   RUN NN TRAINING
 	#===========================
 	print("INFO: Creating and running CNN network ...")
-	cnn= CNNTrainer(inputimg)
+	cnn= CNNTrainer()
 
 	# - Set train data options
-	#cnn.enable_train_data_generation(True)
+	cnn.set_img_filename(inputimg)
+	cnn.set_img_bkg_filelist(filelist_bkg)
+	cnn.set_img_source_filelist(filelist_source)
+	cnn.set_sourcepars_filelist(filelist_sourcepars)
+
+	cnn.enable_train_data_generation(enable_train_data_generation)
 	cnn.set_margins(marginX,marginY)
 	cnn.set_nsources_max(nsources_max)
 	cnn.set_source_flux_range(Smin,Smax)
@@ -1449,13 +1969,23 @@ def main():
 	cnn.enable_train_data_flip(flip_train)
 	cnn.enable_test_data_flip(flip_test)
 	
+	cnn.set_conv_kern_size_min(conv_kern_size_min)
+	cnn.set_conv_kern_size_max(conv_kern_size_max)
 	cnn.set_conv_nfilt_min(conv_nfilt_min)
 	cnn.set_conv_nfilt_max(conv_nfilt_max)
+	cnn.set_conv_pool_kernel_size(conv_pool_kernel_size)
+	cnn.set_conv_activation(conv_activation)
 	cnn.set_dense_size_min(dense_size_min)
 	cnn.set_dense_size_max(dense_size_max)
+	cnn.set_dense_activation(dense_activation)
 	cnn.set_spars_loss_weight(spars_loss_weight)
 	cnn.set_labels_loss_weight(labels_loss_weight)
 	cnn.set_nepochs(nepochs)
+
+	cnn.enable_conv(conv_enabled)
+	cnn.enable_dropout(dropout_enabled)
+	cnn.enable_maxpool(maxpool_enabled)
+	cnn.enable_batchnorm(batchnorm_enabled)
 	
 	# - Set output options
 	cnn.save_train_img_to_disk(saveimg)
