@@ -530,7 +530,10 @@ class CNNTrainer(object):
 		else:
 			errmsg= 'Invalid/unsupported number of channels found in file ' + filename + ' (nchan=' + str(nchan) + ')!'
 			print "ERROR: " + errmsg
+			hdu.close()
 			raise IOError(errmsg)
+
+		hdu.close()
 
 		return output_data
 
@@ -557,6 +560,7 @@ class CNNTrainer(object):
 		else:
 			errmsg= 'Invalid/unsupported number of channels found in file ' + self.img_file + ' (nchan=' + str(nchan) + ')!'
 			print "ERROR: " + errmsg
+			hdu.close()
 			return -1
 
 		imgsize= np.shape(self.img_data)
@@ -568,6 +572,8 @@ class CNNTrainer(object):
 		dx= np.abs(header['CDELT1']*3600.) # in arcsec
 		dy= np.abs(header['CDELT2']*3600.) # in arcsec
 		self.pixsize= min(dx,dy)
+			
+		hdu.close()
 
 		return 0
 
