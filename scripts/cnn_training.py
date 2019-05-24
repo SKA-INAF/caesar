@@ -2155,7 +2155,7 @@ def main():
 	outfile_nnout_train= args.outfile_nnout_train
 	outfile_nnout_test= args.outfile_nnout_test
 
-	print "DEBUG: flip_train? ", flip_train
+	print("DEBUG: flip_train? ", flip_train)
 	
 	#===========================
 	#==   RUN NN TRAINING
