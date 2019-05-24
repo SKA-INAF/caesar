@@ -76,6 +76,10 @@ def get_args():
 	parser.add_argument('-nnarcfile', '--nnarcfile', dest='nnarcfile', required=False, type=str,action='store',help='Name of file with NN architecture')	
 	parser.add_argument('--generate_train_data', dest='generate_train_data', action='store_true')	
 	parser.set_defaults(generate_train_data=False)	
+	
+	parser.add_argument('--no-training', dest='no_training', action='store_true')	
+	parser.set_defaults(no_training=False)	
+
 	parser.add_argument('-filelist_sourcepars', '--filelist_sourcepars', dest='filelist_sourcepars', required=False, type=str,action='store',help='List of files with source target pars')
 	parser.add_argument('-marginx', '--marginx', dest='marginx', required=False, type=int, default=0,action='store',help='Image x margin in pixels used in source generation')
 	parser.add_argument('-marginy', '--marginy', dest='marginy', required=False, type=int, default=0,action='store',help='Image y margin in pixels used in source generation')
@@ -227,6 +231,7 @@ class CNNTrainer(object):
 		self.flipped_outputs_test= None
 		
 		# - Network architecture & train options
+		self.do_training= True
 		self.model= None
 		self.fitsout= None
 		self.standard_nn_build_enabled= False
@@ -315,6 +320,10 @@ class CNNTrainer(object):
 	def set_outfile_nnout_test(self,filename):	
 		""" Set output file name where to store NN output for test data"""	
 		self.outfile_nnout_test= filename
+
+	def enable_training(self,choice):
+		""" Enable/disable training step"""
+		self.do_training= choice
 
 	def set_margins(self,marginx,marginy):
 		""" Set margin in X & Y """
@@ -2012,18 +2021,20 @@ class CNNTrainer(object):
 		#===========================
 		#==   TRAIN NN
 		#===========================
-		print("INFO: Training network ...")
-		status= self.train_network()
-		if status<0:
-			return -1
+		if self.do_training:
+			print("INFO: Training network ...")
+			status= self.train_network()
+			if status<0:
+				return -1
 
-		#===========================
-		#==   EVALUATE NN
-		#===========================
-		print("INFO: Evaluating network results ...")
-		status= self.evaluate_network()
-		if status<0:
-			return -1
+			#===========================
+			#==   EVALUATE NN
+			#===========================
+			print("INFO: Evaluating network results ...")
+			status= self.evaluate_network()
+			if status<0:
+				return -1
+
 
 		return 0
 	
@@ -2094,6 +2105,9 @@ def main():
 	flip_test= args.flip_test
 
 	# - Network architecture
+	do_training= True
+	if args.no_training:
+		do_training= False
 	normdatamin= args.normdatamin
 	normdatamax= args.normdatamax
 	conv_kern_size_min= args.conv_kern_size_min
@@ -2167,6 +2181,7 @@ def main():
 	cnn.set_beam_pa_range(pa_min,pa_max)
 
 	# - Set NN architecture & train options
+	cnn.enable_training(do_training)
 	cnn.use_standard_nn(use_standard_nn)
 	
 	cnn.set_input_data_norm_range(normdatamin,normdatamax)
