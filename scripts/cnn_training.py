@@ -1553,7 +1553,7 @@ class CNNTrainer(object):
 
 			# - Save epoch loss
 			print ('== EPOCH %d ==' % epoch)
-			print self.fitout.history
+			print (self.fitout.history)
 			self.train_loss_vs_epoch[0,epoch]= self.fitout.history['loss'][0]
 			self.train_loss_vs_epoch[1,epoch]= self.fitout.history['type_loss'][0]
 			self.train_loss_vs_epoch[2,epoch]= self.fitout.history['pars_loss'][0]
