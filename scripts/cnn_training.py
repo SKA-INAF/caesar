@@ -704,11 +704,11 @@ class CNNTrainer(object):
 		if self.normalize_inputs:
 			self.inputs_bkg= (self.inputs_bkg - self.normmin)/(self.normmax-self.normmin)
 
-		print 'DEBUG: inputs_bkg size=', np.shape(self.inputs_bkg)
-		print 'DEBUG: outputs_bkg size=', np.shape(self.outputs_bkg)
-		print 'DEBUG: outputs_labels_bkg size', np.shape(self.outputs_labels_bkg)
-		print 'DEBUG: outputs_bkg=',self.outputs_bkg
-		print 'DEBUG: outputs_labels_bkg=',self.outputs_labels_bkg
+		print("DEBUG: inputs_bkg size=", np.shape(self.inputs_bkg))
+		print("DEBUG: outputs_bkg size=", np.shape(self.outputs_bkg))
+		print("DEBUG: outputs_labels_bkg size=", np.shape(self.outputs_labels_bkg))
+		print("DEBUG: outputs_bkg=",self.outputs_bkg)
+		print("DEBUG: outputs_labels_bkg=",self.outputs_labels_bkg)
 
 		return 0
 
@@ -835,11 +835,11 @@ class CNNTrainer(object):
 		if self.normalize_inputs:
 			self.inputs_source= (self.inputs_source - self.normmin)/(self.normmax-self.normmin)
 
-		print 'DEBUG: inputs_source size=', np.shape(self.inputs_source)
-		print 'DEBUG: outputs_source size=', np.shape(self.outputs_source)
-		print 'DEBUG: outputs_labels_source size=', np.shape(self.outputs_labels_source)
-		print 'DEBUG: outputs_source=',self.outputs_source
-		print 'DEBUG: outputs_labels_source=',self.outputs_labels_source
+		print("DEBUG: inputs_source size=", np.shape(self.inputs_source))
+		print("DEBUG: outputs_source size=", np.shape(self.outputs_source))
+		print("DEBUG: outputs_labels_source size=", np.shape(self.outputs_labels_source))
+		print("DEBUG: outputs_source=",self.outputs_source)
+		print("DEBUG: outputs_labels_source=",self.outputs_labels_source)
 
 
 		return 0
@@ -921,11 +921,11 @@ class CNNTrainer(object):
 		if self.normalize_inputs:
 			self.inputs_bkg= (self.inputs_bkg - self.normmin)/(self.normmax-self.normmin)
 
-		print 'DEBUG: inputs_bkg size=', np.shape(self.inputs_bkg)
-		print 'DEBUG: outputs_bkg size=', np.shape(self.outputs_bkg)
-		print 'DEBUG: outputs_labels_bkg size', np.shape(self.outputs_labels_bkg)
-		print 'DEBUG: outputs_bkg=',self.outputs_bkg
-		print 'DEBUG: outputs_labels_bkg=',self.outputs_labels_bkg
+		print("DEBUG: inputs_bkg size=", np.shape(self.inputs_bkg))
+		print("DEBUG: outputs_bkg size=", np.shape(self.outputs_bkg))
+		print("DEBUG: outputs_labels_bkg size=", np.shape(self.outputs_labels_bkg))
+		print("DEBUG: outputs_bkg=",self.outputs_bkg)
+		print("DEBUG: outputs_labels_bkg=",self.outputs_labels_bkg)
 
 		return 0
 
@@ -1167,11 +1167,11 @@ class CNNTrainer(object):
 		if self.normalize_inputs:
 			self.inputs_source= (self.inputs_source - self.normmin)/(self.normmax-self.normmin)
 
-		print 'DEBUG: inputs_source size=', np.shape(self.inputs_source)
-		print 'DEBUG: outputs_source size=', np.shape(self.outputs_source)
-		print 'DEBUG: outputs_labels_source size=', np.shape(self.outputs_labels_source)
-		print 'DEBUG: outputs_source=',self.outputs_source
-		print 'DEBUG: outputs_labels_source=',self.outputs_labels_source
+		print("DEBUG: inputs_source size=", np.shape(self.inputs_source))
+		print("DEBUG: outputs_source size=", np.shape(self.outputs_source))
+		print("DEBUG: outputs_labels_source size=", np.shape(self.outputs_labels_source))
+		print("DEBUG: outputs_source=",self.outputs_source)
+		print("DEBUG: outputs_labels_source=",self.outputs_labels_source)
 
 		return 0
 
@@ -1207,9 +1207,9 @@ class CNNTrainer(object):
 		outputs= outputs[indices]
 		outputs_labels= outputs_labels[indices]
 	
-		print 'DEBUG: inputs size=', np.shape(inputs)
-		print 'DEBUG: outputs size=', np.shape(outputs)
-		print 'DEBUG: outputs_labels size=', np.shape(outputs_labels)
+		print("DEBUG: inputs size=", np.shape(inputs))
+		print("DEBUG: outputs size=", np.shape(outputs))
+		print("DEBUG: outputs_labels size=", np.shape(outputs_labels))
 
 		# - Partition the data into training and cross-validation splits
 		print("INFO: Splitting data into train & test samples ...")
@@ -1220,12 +1220,12 @@ class CNNTrainer(object):
 		)
 		(self.inputs_train, self.inputs_test, self.outputs_train, self.outputs_test, self.outputs_labels_train, self.outputs_labels_test) = split
 
-		print 'DEBUG: inputs_train size=', np.shape(self.inputs_train)
-		print 'DEBUG: inputs_test size=', np.shape(self.inputs_test)
-		print 'DEBUG: outputs_train size=', np.shape(self.outputs_train)
-		print 'DEBUG: outputs_test size=', np.shape(self.outputs_test)
-		print 'DEBUG: outputs_labels_train size=', np.shape(self.outputs_labels_train)
-		print 'DEBUG: outputs_labels_test size=', np.shape(self.outputs_labels_test)
+		print("DEBUG: inputs_train size=", np.shape(self.inputs_train))
+		print("DEBUG: inputs_test size=", np.shape(self.inputs_test))
+		print("DEBUG: outputs_train size=", np.shape(self.outputs_train))
+		print("DEBUG: outputs_test size=", np.shape(self.outputs_test))
+		print("DEBUG: outputs_labels_train size=", np.shape(self.outputs_labels_train))
+		print("DEBUG: outputs_labels_test size=", np.shape(self.outputs_labels_test))
 
 		return 0
 
@@ -1268,9 +1268,9 @@ class CNNTrainer(object):
 		outputs= outputs[indices]
 		outputs_labels= outputs_labels[indices]
 	
-		print 'DEBUG: inputs size=', np.shape(inputs)
-		print 'DEBUG: outputs size=', np.shape(outputs)
-		print 'DEBUG: outputs_labels size=', np.shape(outputs_labels)
+		print("DEBUG: inputs size=", np.shape(inputs))
+		print("DEBUG: outputs size=", np.shape(outputs))
+		print("DEBUG: outputs_labels size=", np.shape(outputs_labels))
 
 		# - Partition the data into training and cross-validation splits
 		print("INFO: Splitting data into train & test samples ...")
@@ -1281,12 +1281,12 @@ class CNNTrainer(object):
 		)
 		(self.inputs_train, self.inputs_test, self.outputs_train, self.outputs_test, self.outputs_labels_train, self.outputs_labels_test) = split
 
-		print 'DEBUG: inputs_train size=', np.shape(self.inputs_train)
-		print 'DEBUG: inputs_test size=', np.shape(self.inputs_test)
-		print 'DEBUG: outputs_train size=', np.shape(self.outputs_train)
-		print 'DEBUG: outputs_test size=', np.shape(self.outputs_test)
-		print 'DEBUG: outputs_labels_train size=', np.shape(self.outputs_labels_train)
-		print 'DEBUG: outputs_labels_test size=', np.shape(self.outputs_labels_test)
+		print("DEBUG: inputs_train size=", np.shape(self.inputs_train))
+		print("DEBUG: inputs_test size=", np.shape(self.inputs_test))
+		print("DEBUG: outputs_train size=", np.shape(self.outputs_train))
+		print("DEBUG: outputs_test size=", np.shape(self.outputs_test))
+		print("DEBUG: outputs_labels_train size=", np.shape(self.outputs_labels_train))
+		print("DEBUG: outputs_labels_test size=", np.shape(self.outputs_labels_test))
 
 		return 0
 
