@@ -523,7 +523,7 @@ class CNNTrainer(object):
 			f = open(filename, 'r')
 		except IOError:
 			errmsg= 'Could not read file: ' + filename
-			print "ERROR: " + errmsg
+			print ("ERROR: " + errmsg)
 			raise IOError(errmsg)
 
 		fields= []
