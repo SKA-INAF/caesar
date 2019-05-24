@@ -552,7 +552,7 @@ class CNNTrainer(object):
 			hdu= fits.open(filename,memmap=False)
 		except Exception as ex:
 			errmsg= 'Cannot read image file: ' + filename
-			print "ERROR: " + errmsg
+			print ("ERROR: " + errmsg)
 			raise IOError(errmsg)
 
 		data= hdu[0].data
@@ -564,7 +564,7 @@ class CNNTrainer(object):
 			output_data= data	
 		else:
 			errmsg= 'Invalid/unsupported number of channels found in file ' + filename + ' (nchan=' + str(nchan) + ')!'
-			print "ERROR: " + errmsg
+			print ("ERROR: " + errmsg)
 			hdu.close()
 			raise IOError(errmsg)
 
@@ -582,7 +582,7 @@ class CNNTrainer(object):
 			hdu= fits.open(self.img_file,memmap=False)
 		except Exception as ex:
 			errmsg= 'Cannot read image file: ' + self.img_file
-			print "ERROR: " + errmsg
+			print ("ERROR: " + errmsg)
 			return -1
 
 		data= hdu[0].data
@@ -594,7 +594,7 @@ class CNNTrainer(object):
 			self.img_data= data	
 		else:
 			errmsg= 'Invalid/unsupported number of channels found in file ' + self.img_file + ' (nchan=' + str(nchan) + ')!'
-			print "ERROR: " + errmsg
+			print ("ERROR: " + errmsg)
 			hdu.close()
 			return -1
 
@@ -648,7 +648,7 @@ class CNNTrainer(object):
 			filelist_data= self.read_list(filelist,['#'])
 		except IOError:
 			errmsg= 'Cannot read file: ' + filelist
-			print "ERROR: " + errmsg
+			print ("ERROR: " + errmsg)
 			return -1
 
 		# - Read image files in list	
@@ -663,7 +663,7 @@ class CNNTrainer(object):
 				data= self.read_fits(filename)
 			except Exception as ex:
 				errmsg= 'Failed to read bkg image data (err=' + str(ex) + ')'
-				print "ERROR: " + errmsg
+				print ("ERROR: " + errmsg)
 				return -1
 	
 			imgsize= np.shape(data)
@@ -674,7 +674,7 @@ class CNNTrainer(object):
 			# - Check bkg image size is equal to desired train image
 			if nx!=self.train_img_sizex or ny!=self.train_img_sizey:
 				errmsg= 'Bkg image no. ' + str(imgcounter) + ' has size different from desired train image!'
-				print "ERROR: " + errmsg
+				print ("ERROR: " + errmsg)
 				return -1
 
 			# - Set train data as a tensor of size [Nsamples,Nx,Ny,Nchan] Nchan=1
@@ -734,7 +734,7 @@ class CNNTrainer(object):
 			filelist_data= self.read_list(filelist,['#'])
 		except IOError:
 			errmsg= 'Cannot read file: ' + filelist
-			print "ERROR: " + errmsg
+			print ("ERROR: " + errmsg)
 			return -1
 
 		# - Read list with source pars files		
@@ -742,7 +742,7 @@ class CNNTrainer(object):
 			filelist_pars_data= self.read_list(filelist_pars,['#'])
 		except IOError:
 			errmsg= 'Cannot read file: ' + filelist_pars
-			print "ERROR: " + errmsg
+			print ("ERROR: " + errmsg)
 			return -1
 
 		# - Check lists have the same number of entries
@@ -764,7 +764,7 @@ class CNNTrainer(object):
 				data= self.read_fits(filename)
 			except Exception as ex:
 				errmsg= 'Failed to read source image data (err=' + str(ex) + ')'
-				print "ERROR: " + errmsg
+				print ("ERROR: " + errmsg)
 				return -1
 	
 			imgsize= np.shape(data)
@@ -775,7 +775,7 @@ class CNNTrainer(object):
 			# - Check source image size is equal to desired train image
 			if nx!=self.train_img_sizex or ny!=self.train_img_sizey:
 				errmsg= 'Source image no. ' + str(imgcounter) + ' has size different from desired train image!'
-				print "ERROR: " + errmsg
+				print ("ERROR: " + errmsg)
 				return -1
 
 			# - Set train data as a tensor of size [Nsamples,Nx,Ny,Nchan] Nchan=1
@@ -789,7 +789,7 @@ class CNNTrainer(object):
 				source_pars= self.read_list(filename_pars,skip_patterns)
 			except IOError:
 				errmsg= 'Cannot read file: ' + filename_spar
-				print "ERROR: " + errmsg
+				print ("ERROR: " + errmsg)
 				return -1
 
 			source_pars_size= np.shape(source_pars)
