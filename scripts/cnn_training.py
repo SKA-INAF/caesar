@@ -73,6 +73,7 @@ def get_args():
 	parser.add_argument('-inputimg', '--inputimg', dest='inputimg', required=False, type=str,action='store',help='Mosaic residual image from which to extract train data')
 	parser.add_argument('-filelist_bkg', '--filelist_bkg', dest='filelist_bkg', required=False, type=str,action='store',help='List of files with bkg train images')
 	parser.add_argument('-filelist_source', '--filelist_source', dest='filelist_source', required=False, type=str,action='store',help='List of files with source train images')	
+	parser.add_argument('-nnarcfile', '--nnarcfile', dest='nnarcfile', required=False, type=str,action='store',help='Name of file with NN architecture')	
 	parser.add_argument('--generate_train_data', dest='generate_train_data', action='store_true')	
 	parser.set_defaults(generate_train_data=False)	
 	parser.add_argument('-filelist_sourcepars', '--filelist_sourcepars', dest='filelist_sourcepars', required=False, type=str,action='store',help='List of files with source target pars')
@@ -112,6 +113,9 @@ def get_args():
 
 	parser.add_argument('-conv_activation', '--conv_activation', dest='conv_activation', required=False, type=str, default='relu', action='store',help='Activation used in convolution layers (default=relu)')
 	parser.add_argument('-dense_activation', '--dense_activation', dest='dense_activation', required=False, type=str, default='relu', action='store',help='Activation used in dense layers (default=relu)')
+	
+	parser.add_argument('--use_standard_nn', dest='use_standard_nn', action='store_true')	
+	parser.set_defaults(use_standard_nn=False)	
 
 	parser.add_argument('--no-conv', dest='no_conv', action='store_true')	
 	parser.set_defaults(no_conv=False)	
@@ -139,6 +143,9 @@ def get_args():
 	parser.add_argument('-outfile_model', '--outfile_model', dest='outfile_model', required=False, type=str, default='nn_model.png', action='store',help='Name of NN model plot file (default=nn_model.png)')
 	parser.add_argument('-outfile_posaccuracy', '--outfile_posaccuracy', dest='outfile_posaccuracy', required=False, type=str, default='nn_posaccuracy.png', action='store',help='Name of NN source position accuracy plot file (default=nn_posaccuracy.png)')
 	parser.add_argument('-outfile_fluxaccuracy', '--outfile_fluxaccuracy', dest='outfile_fluxaccuracy', required=False, type=str, default='nn_fluxaccuracy.png', action='store',help='Name of NN source flux accuracy plot file (default=nn_fluxaccuracy.png)')
+
+	parser.add_argument('-outfile_nnout_train', '--outfile_nnout_train', dest='outfile_nnout_train', required=False, type=str, default='train_nnout.dat', action='store',help='Name of output file with NN output for train data (default=train_nnout.dat)')
+	parser.add_argument('-outfile_nnout_test', '--outfile_nnout_test', dest='outfile_nnout_test', required=False, type=str, default='test_nnout.dat', action='store',help='Name of output file with NN output for test data (default=test_nnout.dat)')
 
 	args = parser.parse_args()	
 
@@ -173,6 +180,7 @@ class CNNTrainer(object):
 		self.img_bkg_filelist= ''
 		self.img_source_filelist= ''
 		self.sourcepars_filelist= ''
+		self.nnarc_file= ''
 		
 		# - Source generation
 		self.gridx= None
@@ -221,6 +229,7 @@ class CNNTrainer(object):
 		# - Network architecture & train options
 		self.model= None
 		self.fitsout= None
+		self.standard_nn_build_enabled= False
 		self.nepochs= 10
 		self.dropout= 0.25
 		self.dropout_dense= 0.5
@@ -256,6 +265,8 @@ class CNNTrainer(object):
 		self.outfile_model= 'nn_model.png'
 		self.outfile_posaccuracy= 'nn_posaccuracy.png'
 		self.outfile_fluxaccuracy= 'nn_fluxaccuracy.png'
+		self.outfile_nnout_train= 'train_nnout.dat'
+		self.outfile_nnout_test= 'test_nnout.dat'
 
 	def set_img_filename(self,filename):
 		""" Set the input residual image used to generate train data """
@@ -272,6 +283,10 @@ class CNNTrainer(object):
 	def set_sourcepars_filelist(self,filename):
 		""" Set the name of filelist with source target pars """
 		self.sourcepars_filelist= filename
+
+	def set_nnarc_filename(self,filename):
+		""" Set NN architecture filename """
+		self.nnarc_file= filename
 
 	def set_outfile_loss(self,filename):
 		""" Set output file name for loss plot """
@@ -293,7 +308,14 @@ class CNNTrainer(object):
 		""" Set output file name for flux accuracy plot """
 		self.outfile_fluxaccuracy= filename
 
-	
+	def set_outfile_nnout_train(self,filename):	
+		""" Set output file name where to store NN output for train data"""
+		self.outfile_nnout_train= filename
+
+	def set_outfile_nnout_test(self,filename):	
+		""" Set output file name where to store NN output for test data"""	
+		self.outfile_nnout_test= filename
+
 	def set_margins(self,marginx,marginy):
 		""" Set margin in X & Y """
 		self.marginx= marginx
@@ -328,6 +350,10 @@ class CNNTrainer(object):
 		""" Set size of input image given to the network for training """
 		self.train_img_sizex= nx
 		self.train_img_sizey= ny
+
+	def use_standard_nn(self,choice):	
+		""" Use standard nn architecture instead of reading from file """
+		self.standard_nn_build_enabled= choice
 
 	def set_dense_activation(self,act):
 		""" Set dense layer activation fucntion """
@@ -634,7 +660,7 @@ class CNNTrainer(object):
 			imgsize= np.shape(data)
 			nx= imgsize[1]
 			ny= imgsize[0]	
-			print("INFO: Bkg image no. %d has size (%d,%d)" % (imgcounter,nx,ny) )	
+			#print("INFO: Bkg image no. %d has size (%d,%d)" % (imgcounter,nx,ny) )	
 
 			# - Check bkg image size is equal to desired train image
 			if nx!=self.train_img_sizex or ny!=self.train_img_sizey:
@@ -735,7 +761,7 @@ class CNNTrainer(object):
 			imgsize= np.shape(data)
 			nx= imgsize[1]
 			ny= imgsize[0]
-			print("INFO: Source image no. %d has size (%d,%d)" % (imgcounter,nx,ny) )
+			#print("INFO: Source image no. %d has size (%d,%d)" % (imgcounter,nx,ny) )
 
 			# - Check source image size is equal to desired train image
 			if nx!=self.train_img_sizex or ny!=self.train_img_sizey:
@@ -1256,11 +1282,143 @@ class CNNTrainer(object):
 		return 0
 
 
+	#####################################
+	##     BUILD NETWORK
+	#####################################
+	def build_network(self):
+
+		if self.standard_nn_build_enabled:
+			#- Create a standard network
+			print("INFO: Building standard network architecture ...")
+			status= self.build_standard_network()
+			if status<0:
+				return -1
+		else:
+			#- Create the network from file
+			print("INFO: Building network architecture from file %s ..." % self.nnarc_file)
+			status= self.build_network_from_file(self.nnarc_file)
+			if status<0:
+				return -1
+
+		return 0
+
+	#####################################
+	##     BUILD NETWORK FROM SPEC FILE
+	#####################################
+	def build_network_from_file(self,filename):
+		""" Building deep network from file """
+
+		# - Read NN architecture file
+		nn_data= []
+		skip_patterns= ['#']
+		try:
+			nn_data= self.read_list(filename,skip_patterns)
+		except IOError:
+			print("ERROR: Failed to read nn arc file %d!" % filename)
+			return -1
+
+		nlayers= np.shape(nn_data)[0]
+		
+		# - Input layer
+		nchan= 1	
+		inputShape = (self.train_img_sizey, self.train_img_sizex, nchan)
+		inputs= Input(shape=inputShape,dtype='float', name='input')
+		x= inputs
+
+		# - Parse NN architecture file and create intermediate layers
+		for index in range(nlayers):
+			layer_info= nn_data[index]
+			print("Layer no. %d: %s" % (index,layer_info))
+
+			layer_type= layer_info[0]
+
+			# - Add Conv2D layer?
+			if layer_type=='Conv2D':
+				nfields= len(layer_info)
+				if nfields!=5:
+					print("ERROR: Invalid number of fields (n=%d) given in Conv2D layer specification (5 expected)" % nfields)
+				nfilters= int(layer_info[1])
+				kernSize= int(layer_info[2])
+				activation= str(layer_info[3])
+				padding= str(layer_info[4])
+				x = layers.Conv2D(filters=nfilters, kernel_size=(kernSize,kernSize), activation=activation, padding=padding)(x)			
+	
+			# - Add MaxPooling2D layer?
+			elif layer_type=='MaxPooling2D':
+				nfields= len(layer_info)
+				if nfields!=3:
+					print("ERROR: Invalid number of fields (n=%d) given in MaxPooling2D layer specification (3 expected)" % nfields)
+				poolSize= int(layer_info[1])
+				padding= str(layer_info[2])
+				x = layers.MaxPooling2D(pool_size=(poolSize,poolSize),strides=None,padding=padding)(x)
+
+			# - Add Dropout layer?
+			elif layer_type=='Dropout':
+				nfields= len(layer_info)
+				if nfields!=2:
+					print("ERROR: Invalid number of fields (n=%d) given in Dropout layer specification (2 expected)" % nfields)
+				dropout= float(layer_info[1])
+				x = layers.Dropout(dropout)(x)
+
+			# - Add BatchNormalization layer?
+			elif layer_type=='BatchNormalization':
+				x = layers.BatchNormalization()(x)
+	
+			# - Add Flatten layer?
+			elif layer_type=='Flatten':
+				x = layers.Flatten()(x)
+
+			# - Add Dense layer?
+			elif layer_type=='Dense':
+				nfields= len(layer_info)
+				if nfields!=3:
+					print("ERROR: Invalid number of fields (n=%d) given in Dense layer specification (3 expected)" % nfields)
+				nNeurons= int(layer_info[1])
+				activation= str(layer_info[2])
+				x = layers.Dense(nNeurons, activation=activation)(x)
+
+			else:
+				print("ERROR: Invalid/unknown layer type parsed (%s)!" % layer_type)
+				return -1
+			
+		# - Output layers
+		type_prediction = layers.Dense(self.nobjects, activation='sigmoid', name='type')(x)
+		pars_prediction = layers.Dense(self.nobjects*self.npars, activation='linear', name='pars')(x)
+
+		# - Create NN model
+		self.model = Model(
+				inputs=inputs,
+				outputs=[type_prediction, pars_prediction],
+				name="SourceNet"
+		)
+
+		# - Print network architecture
+		self.model.summary()
+
+		#- Set optimizer & loss function per each output
+		print("INFO: Compiling network ...")
+		opt= optimizers.RMSprop(lr=1.e-4)
+		#opt= Adam(lr=INIT_LR, decay=INIT_LR / nepochs)
+	
+		losses = {
+			"type": "binary_crossentropy",
+			"pars": "mse"
+		}
+		lossWeights = {
+			"type": self.labels_loss_weight,
+			"pars": self.spars_loss_weight
+		}
+
+		##self.model.compile(optimizer=opt,loss=losses, loss_weights=lossWeights, metrics=['accuracy',precision,recall,f1_score])
+		self.model.compile(optimizer=opt,loss=losses, loss_weights=lossWeights, metrics=['accuracy'])
+
+		return 0
+
 	###########################
 	##     BUILD NETWORK
 	###########################
-	def build_network(self):
-		""" Building deep network """
+	def build_standard_network(self):
+		""" Building a standard deep network """
 		
 		# - Input layer
 		nchan= 1	
@@ -1515,6 +1673,10 @@ class CNNTrainer(object):
 		print("INFO: Saving model weights ...")
 		self.model.save_weights('model_weights.h5')
 
+		# -Save the model architecture in json format
+		with open('model_architecture.json', 'w') as f:
+			f.write(self.model.to_json())
+		
 		#- Save the model
 		print("INFO: Saving model ...")
 		self.model.save('model.h5')
@@ -1558,6 +1720,8 @@ class CNNTrainer(object):
 		xpull_list= []
 		ypull_list= []
 		spull_list= []
+
+		nnout_train= []
 	
 		for i in range(nsamples_train):
 			#target= self.outputs_labels_train[i,:]
@@ -1574,7 +1738,19 @@ class CNNTrainer(object):
 			ntrue= 0
 			nrec_true= 0
 			nrec_false= 0
+
+			
+			for index in range(self.nobjects):
+				obj_data= []
+				obj_data.append(target[index])
+				obj_data.append(pred[index])
+				for k in range(self.npars):
+					obj_data.append(target_pars[k+index*self.npars])
+					obj_data.append(pred_pars[k+index*self.npars])
 				
+				nnout_train.append(obj_data)
+			
+	
 			for index in true_obj_indexes:
 				x0_true= target_pars[0 + index*self.npars]
 				y0_true= target_pars[1 + index*self.npars]
@@ -1605,7 +1781,9 @@ class CNNTrainer(object):
 		reliability_train= float(nobjs_rec_true)/float(nobjs_rec)
 
 		print("INFO: NN Train Results: Completeness(det/tot=%d/%d)=%s, Reliability(true/rec=%d/%d)=%s" % (nobjs_true,nobjs_tot,str(completeness_train),nobjs_rec_true,nobjs_rec,str(reliability_train)))
-		
+
+		# - Write ascii file with results
+		self.write_ascii(np.array(nnout_train),self.outfile_nnout_train,'# target label - predicted label - target pars - predicted pars')	
 
 		#================================
 		#==   EVALUATE NN ON TEST DATA
@@ -1624,7 +1802,8 @@ class CNNTrainer(object):
 		xpull_list_test= []
 		ypull_list_test= []
 		spull_list_test= []
-	
+		nnout_test= []
+
 		for i in range(nsamples_test):
 			#target= self.outputs_labels_test[i,:]
 			target= self.flipped_outputs_labels_test[i,:]
@@ -1641,6 +1820,16 @@ class CNNTrainer(object):
 			nrec_true= 0
 			nrec_false= 0
 		
+			for index in range(self.nobjects):
+				obj_data= []
+				obj_data.append(target[index])
+				obj_data.append(pred[index])
+				for k in range(self.npars):
+					obj_data.append(target_pars[k+index*self.npars])
+					obj_data.append(pred_pars[k+index*self.npars])
+				
+				nnout_test.append(obj_data)
+
 			for index in true_obj_indexes:
 				x0_true= target_pars[0 + index*self.npars]
 				y0_true= target_pars[1 + index*self.npars]
@@ -1681,6 +1870,9 @@ class CNNTrainer(object):
 		#	target= ','.join(map(str, self.outputs_test[i,:]))
 		#	pred= ','.join(map(str, predictions_test[i,:]))
 		#	print("INFO: Test spars entry no. %d: target=[%s], pred=[%s]" % (i+1,target,pred) )
+
+		# - Write ascii file with results
+		self.write_ascii(np.array(nnout_test),self.outfile_nnout_test,'# target label - predicted label - target pars - predicted pars')	
 
 
 		#===========================
@@ -1816,6 +2008,7 @@ class CNNTrainer(object):
 		if status<0:
 			return -1
 
+
 		#===========================
 		#==   TRAIN NN
 		#===========================
@@ -1855,6 +2048,7 @@ def main():
 	filelist_bkg= args.filelist_bkg
 	filelist_source= args.filelist_source
 	filelist_sourcepars= args.filelist_sourcepars
+	nnarcfile= args.nnarcfile
 
 	enable_train_data_generation= False
 	if args.generate_train_data:
@@ -1913,6 +2107,11 @@ def main():
 	labels_loss_weight= args.labels_loss_weight
 	nepochs= args.nepochs
 
+	use_standard_nn= args.use_standard_nn
+	if not use_standard_nn and not nnarcfile:
+		print("ERROR: No nn architecture file given in input (needed to build the net)!")
+		return 1
+
 	dropout_enabled= True
 	if args.no_dropout:
 		dropout_enabled= False
@@ -1939,6 +2138,8 @@ def main():
 	outfile_model= args.outfile_model
 	outfile_posaccuracy= args.outfile_posaccuracy
 	outfile_fluxaccuracy= args.outfile_fluxaccuracy
+	outfile_nnout_train= args.outfile_nnout_train
+	outfile_nnout_test= args.outfile_nnout_test
 
 	print "DEBUG: flip_train? ", flip_train
 	
@@ -1953,6 +2154,7 @@ def main():
 	cnn.set_img_bkg_filelist(filelist_bkg)
 	cnn.set_img_source_filelist(filelist_source)
 	cnn.set_sourcepars_filelist(filelist_sourcepars)
+	cnn.set_nnarc_filename(nnarcfile)
 
 	cnn.enable_train_data_generation(enable_train_data_generation)
 	cnn.set_margins(marginX,marginY)
@@ -1965,6 +2167,8 @@ def main():
 	cnn.set_beam_pa_range(pa_min,pa_max)
 
 	# - Set NN architecture & train options
+	cnn.use_standard_nn(use_standard_nn)
+	
 	cnn.set_input_data_norm_range(normdatamin,normdatamax)
 	cnn.set_nobjects(nmaxobjects)
 	cnn.set_npars(ntargetpars)
@@ -2000,6 +2204,8 @@ def main():
 	cnn.set_outfile_model(outfile_model)
 	cnn.set_outfile_posaccuracy(outfile_posaccuracy)
 	cnn.set_outfile_fluxaccuracy(outfile_fluxaccuracy)
+	cnn.set_outfile_nnout_train(outfile_nnout_train)
+	cnn.set_outfile_nnout_test(outfile_nnout_test)
 	
 	# - Run network train
 	cnn.run()
