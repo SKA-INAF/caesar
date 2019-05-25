@@ -879,6 +879,7 @@ class CNNTrainer(object):
 			# - Extract crop img data
 			data_crop= self.crop_img(x0,y0,self.train_img_sizex,self.train_img_sizey)
 			imgcropsize= np.shape(data_crop)
+			print("INFO: img crop shape=",imgcropsize)
 			
 			# - Check data integrity (skip if all zeros or nan/inf)
 			n_nonzero= np.count_nonzero(data_crop)
