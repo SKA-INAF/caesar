@@ -485,7 +485,7 @@ class CNNTrainer(object):
 
 	def write_ascii(self,data,filename,header=''):
 		""" Write data to ascii file """
-		fout = open(filename, 'wb')
+		fout = open(filename, 'wt')
 		if header:
 			fout.write(header)
 			fout.write('\n')	
