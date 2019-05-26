@@ -121,7 +121,10 @@ def get_args():
 
 	parser.add_argument('-conv_activation', '--conv_activation', dest='conv_activation', required=False, type=str, default='relu', action='store',help='Activation used in convolution layers (default=relu)')
 	parser.add_argument('-dense_activation', '--dense_activation', dest='dense_activation', required=False, type=str, default='relu', action='store',help='Activation used in dense layers (default=relu)')
-	
+
+	parser.add_argument('-optimizer', '--optimizer', dest='optimizer', required=False, type=str, default='rmsprop', action='store',help='Optimizer used (default=rmsprop)')
+	parser.add_argument('-learning_rate', '--learning_rate', dest='learning_rate', required=False, type=float, default=1.e-4, action='store',help='Learning rate (default=1.e-4)')
+
 	parser.add_argument('--use_standard_nn', dest='use_standard_nn', action='store_true')	
 	parser.set_defaults(use_standard_nn=False)	
 
@@ -273,6 +276,8 @@ class CNNTrainer(object):
 		self.test_loss_vs_epoch= None
 		self.train_accuracy_vs_epoch= None
 		self.test_accuracy_vs_epoch= None	
+		self.optimizer= 'rmsprop'
+		self.learning_rate= 1.e-4
 
 		# - Output file options
 		self.writeimg= False
@@ -446,6 +451,14 @@ class CNNTrainer(object):
 	def set_nepochs(self,w):
 		""" Set number of train epochs """
 		self.nepochs= w
+
+	def set_optimizer(self,opt):
+		""" Set optimizer """
+		self.optimizer= opt
+
+	def set_learning_rate(self,lr):
+		""" Set learning rate """
+		self.learning_rate= lr
 
 	def save_train_img_to_disk(self,choice):
 		""" Turn on/off writing to disk of train images for bkg and source """
@@ -726,24 +739,24 @@ class CNNTrainer(object):
 		
 
 		# - Normalize targets to [0,1]
-		if self.normalize_targets:
-			
-			targets_normmin= np.zeros(self.nobjects*self.npars)
-			targets_normmax= np.zeros(self.nobjects*self.npars)
-			par_counter= 0
-			for k in range(self.nobjects):
-				for l in range(self.npars):
-					targets_normmin[par_counter]= self.normmin_pars[l]
-					targets_normmax[par_counter]= self.normmax_pars[l]
-					par_counter+= 1
+		#if self.normalize_targets:	
+		#	targets_normmin= np.zeros(self.nobjects*self.npars)
+		#	targets_normmax= np.zeros(self.nobjects*self.npars)
+		#	par_counter= 0
+		#	for k in range(self.nobjects):
+		#		for l in range(self.npars):
+		#			targets_normmin[par_counter]= self.normmin_pars[l]
+		#			targets_normmax[par_counter]= self.normmax_pars[l]
+		#			par_counter+= 1
 
-			print("DEBUG: targets_normmin=", targets_normmin)
-			print("DEBUG: targets_normmax=", targets_normmax)
-			print("DEBUG: outputs_bkg (BEFORE NORMALIZATION): min/max=%s/%s" % (str(np.min(self.outputs_bkg)),str(np.max(self.outputs_bkg))))
-			self.outputs_bkg= (self.outputs_bkg - targets_normmin)/(targets_normmax-targets_normmin)
-			print("DEBUG: outputs_bkg (AFTER NORMALIZATION): min/max=%s/%s" % (str(np.min(self.outputs_bkg)),str(np.max(self.outputs_bkg))))
+		#	print("DEBUG: targets_normmin=", targets_normmin)
+		#	print("DEBUG: targets_normmax=", targets_normmax)
+		#	print("DEBUG: outputs_bkg (BEFORE NORMALIZATION): min/max=%s/%s" % (str(np.min(self.outputs_bkg)),str(np.max(self.outputs_bkg))))
+		#	self.outputs_bkg= (self.outputs_bkg - targets_normmin)/(targets_normmax-targets_normmin)
+		#	print("DEBUG: outputs_bkg (AFTER NORMALIZATION): min/max=%s/%s" % (str(np.min(self.outputs_bkg)),str(np.max(self.outputs_bkg))))
+
+		print("DEBUG: outputs_bkg: min/max=%s/%s" % (str(np.min(self.outputs_bkg)),str(np.max(self.outputs_bkg))))
 		
-
 		print("DEBUG: inputs_bkg size=", np.shape(self.inputs_bkg))
 		print("DEBUG: outputs_bkg size=", np.shape(self.outputs_bkg))
 		print("DEBUG: outputs_labels_bkg size=", np.shape(self.outputs_labels_bkg))
@@ -1467,7 +1480,16 @@ class CNNTrainer(object):
 
 		#- Set optimizer & loss function per each output
 		print("INFO: Compiling network ...")
-		opt= optimizers.RMSprop(lr=1.e-4)
+		if self.optimizer=='rmsprop':
+			opt= optimizers.RMSprop(lr=self.learning_rate)
+		elif self.optimizer=='sgd':
+			#opt= optimizers.SGD(lr=self.learning_rate, decay=1e-6, momentum=0.9, nesterov=True)
+			opt= optimizers.SGD(lr=self.learning_rate, nesterov=False)
+		elif self.optimizer=='sgdn':
+			opt= optimizers.SGD(lr=self.learning_rate, nesterov=True)
+		else:
+			opt= optimizers.RMSprop(lr=self.learning_rate)
+		
 		#opt= Adam(lr=INIT_LR, decay=INIT_LR / nepochs)
 	
 		losses = {
@@ -2183,6 +2205,8 @@ def main():
 	nepochs= args.nepochs
 	
 	normalize_targets= args.normalize_targets
+	optimizer= args.optimizer
+	learning_rate= args.learning_rate
 
 	use_standard_nn= args.use_standard_nn
 	if not use_standard_nn and not nnarcfile:
@@ -2271,6 +2295,8 @@ def main():
 	cnn.set_labels_loss_weight(labels_loss_weight)
 	cnn.set_nepochs(nepochs)
 
+	cnn.set_optimizer(optimizer)
+	cnn.set_learning_rate(learning_rate)
 	cnn.enable_conv(conv_enabled)
 	cnn.enable_dropout(dropout_enabled)
 	cnn.enable_maxpool(maxpool_enabled)
