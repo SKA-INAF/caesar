@@ -225,8 +225,8 @@ class CNNTrainer(object):
 		self.theta_max= 90
 		self.sigma_min= 0
 		self.sigma_max= 20
-		self.normmin_pars= np.array(0,0,self.normmin,self.sigma_min,self.sigma_min,np.radians(self.theta_min))
-		self.normmax_pars= np.array(self.train_img_sizex,self.train_img_sizey,self.normmax,self.sigma_max,self.sigma_max,np.radians(self.theta_max))
+		self.normmin_pars= np.array([0,0,self.normmin,self.sigma_min,self.sigma_min,np.radians(self.theta_min)])
+		self.normmax_pars= np.array([self.train_img_sizex,self.train_img_sizey,self.normmax,self.sigma_max,self.sigma_max,np.radians(self.theta_max)])
 		
 		self.test_size= 0.2
 		self.inputs_train= None
@@ -345,8 +345,8 @@ class CNNTrainer(object):
 		""" Set input data normalization range """
 		self.normmin= datamin
 		self.normmax= datamax
-		self.normmin_pars= np.array(0,0,self.normmin,self.sigma_min,self.sigma_min,np.radians(self.theta_min))
-		self.normmax_pars= np.array(self.train_img_sizex,self.train_img_sizey,self.normmax,self.sigma_max,self.sigma_max,np.radians(self.theta_max))
+		self.normmin_pars= np.array([0,0,self.normmin,self.sigma_min,self.sigma_min,np.radians(self.theta_min)])
+		self.normmax_pars= np.array([self.train_img_sizex,self.train_img_sizey,self.normmax,self.sigma_max,self.sigma_max,np.radians(self.theta_max)])
 
 	def set_nobjects(self,n):
 		""" Set maximum number of detected object in image """
@@ -372,8 +372,8 @@ class CNNTrainer(object):
 		""" Set size of input image given to the network for training """
 		self.train_img_sizex= nx
 		self.train_img_sizey= ny
-		self.normmin_pars= np.array(0,0,self.normmin,self.sigma_min,self.sigma_min,np.radians(self.theta_min))
-		self.normmax_pars= np.array(self.train_img_sizex,self.train_img_sizey,self.normmax,self.sigma_max,self.sigma_max,np.radians(self.theta_max))
+		self.normmin_pars= np.array([0,0,self.normmin,self.sigma_min,self.sigma_min,np.radians(self.theta_min)])
+		self.normmax_pars= np.array([self.train_img_sizex,self.train_img_sizey,self.normmax,self.sigma_max,self.sigma_max,np.radians(self.theta_max)])
 
 	def use_standard_nn(self,choice):	
 		""" Use standard nn architecture instead of reading from file """
