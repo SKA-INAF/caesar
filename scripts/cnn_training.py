@@ -97,7 +97,11 @@ def get_args():
 	
 
 	parser.add_argument('-normdatamin', '--normdatamin', dest='normdatamin', required=False, type=float, default=-0.0100, action='store',help='Normalization min used to scale data in (0,1) range (default=-100 mJy/beam)')	
-	parser.add_argument('-normdatamax', '--normdatamax', dest='normdatamax', required=False, type=float, default=10, action='store',help='Normalization max used to scale data in (0,1) range (default=10 Jy/beam)')	
+	parser.add_argument('-normdatamax', '--normdatamax', dest='normdatamax', required=False, type=float, default=10, action='store',help='Normalization max used to scale data in (0,1) range (default=10 Jy/beam)')
+
+	parser.add_argument('--normalize_targets', dest='normalize_targets', action='store_true')	
+	parser.set_defaults(normalize_targets=False)
+	
 	parser.add_argument('-nx', '--nx', dest='nx', required=False, type=int, default=101, action='store',help='Image width in pixels (default=101)')
 	parser.add_argument('-ny', '--ny', dest='ny', required=False, type=int, default=101, action='store',help='Image height in pixels (default=101)')	
 	parser.add_argument('-nsamples_bkg', '--nsamples_bkg', dest='nsamples_bkg', required=False, type=int, default=10, action='store',help='Number of train images for bkg extracted from input maps (default=10)')
@@ -216,7 +220,14 @@ class CNNTrainer(object):
 		self.inputs_source= None		
 		self.outputs_source= None
 		self.outputs_labels_source= None
-
+		self.normalize_targets= False
+		self.theta_min= -90
+		self.theta_max= 90
+		self.sigma_min= 0
+		self.sigma_max= 20
+		self.normmin_pars= np.array(0,0,self.normmin,self.sigma_min,self.sigma_min,np.radians(self.theta_min))
+		self.normmax_pars= np.array(self.train_img_sizex,self.train_img_sizey,self.normmax,self.sigma_max,self.sigma_max,np.radians(self.theta_max))
+		
 		self.test_size= 0.2
 		self.inputs_train= None
 		self.inputs_test= None 
@@ -334,6 +345,8 @@ class CNNTrainer(object):
 		""" Set input data normalization range """
 		self.normmin= datamin
 		self.normmax= datamax
+		self.normmin_pars= np.array(0,0,self.normmin,self.sigma_min,self.sigma_min,np.radians(self.theta_min))
+		self.normmax_pars= np.array(self.train_img_sizex,self.train_img_sizey,self.normmax,self.sigma_max,self.sigma_max,np.radians(self.theta_max))
 
 	def set_nobjects(self,n):
 		""" Set maximum number of detected object in image """
@@ -359,6 +372,8 @@ class CNNTrainer(object):
 		""" Set size of input image given to the network for training """
 		self.train_img_sizex= nx
 		self.train_img_sizey= ny
+		self.normmin_pars= np.array(0,0,self.normmin,self.sigma_min,self.sigma_min,np.radians(self.theta_min))
+		self.normmax_pars= np.array(self.train_img_sizex,self.train_img_sizey,self.normmax,self.sigma_max,self.sigma_max,np.radians(self.theta_max))
 
 	def use_standard_nn(self,choice):	
 		""" Use standard nn architecture instead of reading from file """
@@ -416,6 +431,9 @@ class CNNTrainer(object):
 		""" Turn on/off batch normalization layers """
 		self.batchnorm_enabled= choice		
 
+	def enable_target_normalization(self,choice):
+		""" Turn on/off target normalization """
+		self.normalize_targets= choice
 
 	def set_spars_loss_weight(self,w):
 		""" Set source par loss weight """
@@ -704,9 +722,28 @@ class CNNTrainer(object):
 		if self.normalize_inputs:
 			self.inputs_bkg= (self.inputs_bkg - self.normmin)/(self.normmax-self.normmin)
 
+		# - Normalize targets to [0,1]
+		if self.normalize_targets:
+			
+			targets_normmin= np.array(self.nobjects*self.npars)
+			targets_normmax= np.array(self.nobjects*self.npars)
+			par_counter= 0
+			for k in range(self.nobjects):
+				for l in range(self.npars):
+					targets_normmin[par_counter]= self.normmin_pars[l]
+					targets_normmax[par_counter]= self.normmax_pars[l]
+					par_counter+= 1
+
+			print("DEBUG: targets_normmin=", targets_normmin)
+			print("DEBUG: targets_normmax=", targets_normmax)
+			self.outputs_bkg= (self.outputs_bkg - targets_normmin)/(targets_normmax-targets_normmin)
+
 		print("DEBUG: inputs_bkg size=", np.shape(self.inputs_bkg))
+		print("DEBUG: inputs_bkg min/max=%s/%s" % (str(np.min(self.inputs_bkg)),str(np.max(self.inputs_bkg))))
 		print("DEBUG: outputs_bkg size=", np.shape(self.outputs_bkg))
+		print("DEBUG: outputs_bkg min/max=%s/%s" % (str(np.min(self.outputs_bkg)),str(np.max(self.outputs_bkg))))
 		print("DEBUG: outputs_labels_bkg size=", np.shape(self.outputs_labels_bkg))
+		print("DEBUG: outputs_labels_bkg min/max=%s/%s" % (str(np.min(self.outputs_labels_bkg)),str(np.max(self.outputs_labels_bkg))))
 		print("DEBUG: outputs_bkg=",self.outputs_bkg)
 		print("DEBUG: outputs_labels_bkg=",self.outputs_labels_bkg)
 
@@ -835,9 +872,28 @@ class CNNTrainer(object):
 		if self.normalize_inputs:
 			self.inputs_source= (self.inputs_source - self.normmin)/(self.normmax-self.normmin)
 
+		# - Normalize targets to [0,1]
+		if self.normalize_targets:
+			
+			targets_normmin= np.array(self.nobjects*self.npars)
+			targets_normmax= np.array(self.nobjects*self.npars)
+			par_counter= 0
+			for k in range(self.nobjects):
+				for l in range(self.npars):
+					targets_normmin[par_counter]= self.normmin_pars[l]
+					targets_normmax[par_counter]= self.normmax_pars[l]
+					par_counter+= 1
+
+			print("DEBUG: targets_normmin=", targets_normmin)
+			print("DEBUG: targets_normmax=", targets_normmax)
+			self.outputs_source= (self.outputs_source - targets_normmin)/(targets_normmax-targets_normmin)
+
 		print("DEBUG: inputs_source size=", np.shape(self.inputs_source))
+		print("DEBUG: inputs_source min/max=%s/%s" % (str(np.min(self.inputs_source)),str(np.max(self.inputs_source))))
 		print("DEBUG: outputs_source size=", np.shape(self.outputs_source))
+		print("DEBUG: outputs_source min/max=%s/%s" % (str(np.min(self.outputs_source)),str(np.max(self.outputs_source))))
 		print("DEBUG: outputs_labels_source size=", np.shape(self.outputs_labels_source))
+		print("DEBUG: outputs_labels_source min/max=%s/%s" % (str(np.min(self.outputs_labels_source)),str(np.max(self.outputs_labels_source))))
 		print("DEBUG: outputs_source=",self.outputs_source)
 		print("DEBUG: outputs_labels_source=",self.outputs_labels_source)
 
@@ -2121,6 +2177,8 @@ def main():
 	spars_loss_weight= args.spars_loss_weight
 	labels_loss_weight= args.labels_loss_weight
 	nepochs= args.nepochs
+	
+	normalize_targets= args.normalize_targets
 
 	use_standard_nn= args.use_standard_nn
 	if not use_standard_nn and not nnarcfile:
@@ -2186,6 +2244,7 @@ def main():
 	cnn.use_standard_nn(use_standard_nn)
 	
 	cnn.set_input_data_norm_range(normdatamin,normdatamax)
+	cnn.enable_target_normalization(normalize_targets)
 	cnn.set_nobjects(nmaxobjects)
 	cnn.set_npars(ntargetpars)
 	cnn.set_bkg_sample_size(nsamples_bkg)
