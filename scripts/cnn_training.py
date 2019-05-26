@@ -720,7 +720,10 @@ class CNNTrainer(object):
 
 		# - Normalize to [0,1]
 		if self.normalize_inputs:
+			print("DEBUG: inputs_bkg (BEFORE NORMALIZATION): min/max=%s/%s" % (str(np.min(self.inputs_bkg)),str(np.max(self.inputs_bkg))))
 			self.inputs_bkg= (self.inputs_bkg - self.normmin)/(self.normmax-self.normmin)
+			print("DEBUG: inputs_bkg (AFTER NORMALIZATION): min/max=%s/%s" % (str(np.min(self.inputs_bkg)),str(np.max(self.inputs_bkg))))
+		
 
 		# - Normalize targets to [0,1]
 		if self.normalize_targets:
@@ -736,14 +739,14 @@ class CNNTrainer(object):
 
 			print("DEBUG: targets_normmin=", targets_normmin)
 			print("DEBUG: targets_normmax=", targets_normmax)
+			print("DEBUG: outputs_bkg (BEFORE NORMALIZATION): min/max=%s/%s" % (str(np.min(self.outputs_bkg)),str(np.max(self.outputs_bkg))))
 			self.outputs_bkg= (self.outputs_bkg - targets_normmin)/(targets_normmax-targets_normmin)
+			print("DEBUG: outputs_bkg (AFTER NORMALIZATION): min/max=%s/%s" % (str(np.min(self.outputs_bkg)),str(np.max(self.outputs_bkg))))
+		
 
 		print("DEBUG: inputs_bkg size=", np.shape(self.inputs_bkg))
-		print("DEBUG: inputs_bkg min/max=%s/%s" % (str(np.min(self.inputs_bkg)),str(np.max(self.inputs_bkg))))
 		print("DEBUG: outputs_bkg size=", np.shape(self.outputs_bkg))
-		print("DEBUG: outputs_bkg min/max=%s/%s" % (str(np.min(self.outputs_bkg)),str(np.max(self.outputs_bkg))))
 		print("DEBUG: outputs_labels_bkg size=", np.shape(self.outputs_labels_bkg))
-		print("DEBUG: outputs_labels_bkg min/max=%s/%s" % (str(np.min(self.outputs_labels_bkg)),str(np.max(self.outputs_labels_bkg))))
 		print("DEBUG: outputs_bkg=",self.outputs_bkg)
 		print("DEBUG: outputs_labels_bkg=",self.outputs_labels_bkg)
 
@@ -870,8 +873,10 @@ class CNNTrainer(object):
 
 		# - Normalize to [0,1]
 		if self.normalize_inputs:
+			print("DEBUG: inputs_source (BEFORE NORMALIZATION): min/max=%s/%s" % (str(np.min(self.inputs_source)),str(np.max(self.inputs_source))))
 			self.inputs_source= (self.inputs_source - self.normmin)/(self.normmax-self.normmin)
-
+			print("DEBUG: inputs_source (AFTER NORMALIZATION): min/max=%s/%s" % (str(np.min(self.inputs_source)),str(np.max(self.inputs_source))))
+			
 		# - Normalize targets to [0,1]
 		if self.normalize_targets:
 			
@@ -886,14 +891,13 @@ class CNNTrainer(object):
 
 			print("DEBUG: targets_normmin=", targets_normmin)
 			print("DEBUG: targets_normmax=", targets_normmax)
+			print("DEBUG: outputs_source (BEFORE NORMALIZATION): min/max=%s/%s" % (str(np.min(self.outputs_source)),str(np.max(self.outputs_source))))
 			self.outputs_source= (self.outputs_source - targets_normmin)/(targets_normmax-targets_normmin)
+			print("DEBUG: outputs_source (AFTER NORMALIZATION): min/max=%s/%s" % (str(np.min(self.outputs_source)),str(np.max(self.outputs_source))))
 
 		print("DEBUG: inputs_source size=", np.shape(self.inputs_source))
-		print("DEBUG: inputs_source min/max=%s/%s" % (str(np.min(self.inputs_source)),str(np.max(self.inputs_source))))
 		print("DEBUG: outputs_source size=", np.shape(self.outputs_source))
-		print("DEBUG: outputs_source min/max=%s/%s" % (str(np.min(self.outputs_source)),str(np.max(self.outputs_source))))
 		print("DEBUG: outputs_labels_source size=", np.shape(self.outputs_labels_source))
-		print("DEBUG: outputs_labels_source min/max=%s/%s" % (str(np.min(self.outputs_labels_source)),str(np.max(self.outputs_labels_source))))
 		print("DEBUG: outputs_source=",self.outputs_source)
 		print("DEBUG: outputs_labels_source=",self.outputs_labels_source)
 
