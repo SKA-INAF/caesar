@@ -725,8 +725,8 @@ class CNNTrainer(object):
 		# - Normalize targets to [0,1]
 		if self.normalize_targets:
 			
-			targets_normmin= np.array(self.nobjects*self.npars)
-			targets_normmax= np.array(self.nobjects*self.npars)
+			targets_normmin= np.zeros(self.nobjects*self.npars)
+			targets_normmax= np.zeros(self.nobjects*self.npars)
 			par_counter= 0
 			for k in range(self.nobjects):
 				for l in range(self.npars):
@@ -875,8 +875,8 @@ class CNNTrainer(object):
 		# - Normalize targets to [0,1]
 		if self.normalize_targets:
 			
-			targets_normmin= np.array(self.nobjects*self.npars)
-			targets_normmax= np.array(self.nobjects*self.npars)
+			targets_normmin= np.zeros(self.nobjects*self.npars)
+			targets_normmax= np.zeros(self.nobjects*self.npars)
 			par_counter= 0
 			for k in range(self.nobjects):
 				for l in range(self.npars):
