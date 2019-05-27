@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 ##################################################
 ###          MODULE IMPORT
 ##################################################
@@ -32,7 +34,7 @@ from keras import layers
 from keras import models
 from keras import optimizers
 from keras.utils import plot_model
-from keras import backend
+from keras import backend as K
 from keras.models import Model
 from keras.layers.normalization import BatchNormalization
 from keras.layers.convolutional import Conv2D
@@ -166,6 +168,25 @@ def get_args():
 
 	
 ###########################
+##     NN PRINT CLASS
+###########################
+class NNPrinter(keras.callbacks.Callback):
+
+	def on_train_begin(self, logs={}):
+		self.losses = []
+
+	def on_batch_end(self, batch, logs={}):
+		#y_true= self.model.outputs
+		#print("type(y_true)=",type(y_true))
+		#print("len(y_true)=",len(y_true))
+		#y_true_shape= K.int_shape(y_true)
+		#print("y_true shape=",y_true_shape)
+		
+		loss= logs.get('loss')
+		print("LOSS=", loss)
+		self.losses.append(loss)
+
+###########################
 ##     NN TRAINER CLASS
 ###########################
 SIGMA_TO_FWHM= np.sqrt(8*np.log(2))
@@ -279,6 +300,9 @@ class CNNTrainer(object):
 		self.test_accuracy_vs_epoch= None	
 		self.optimizer= 'rmsprop'
 		self.learning_rate= 1.e-4
+
+		# - NN callback
+		self.nnprinter_cb= NNPrinter()
 
 		# - Output file options
 		self.writeimg= False
@@ -1370,6 +1394,72 @@ class CNNTrainer(object):
 
 		return 0
 
+	#####################################
+	##     NN LOSS FUNCTION FOR PARS
+	#####################################
+	def tot_loss(self,y_true,y_pred):
+
+		####y_true = K.print_tensor(y_true, message='y_true = ')	
+		####y_pred = K.print_tensor(y_pred, message='y_pred = ')
+		####tf.print('y_true = ',y_true,output_stream=sys.stdout)
+		####tf.print('y_pred = ',y_pred,output_stream=sys.stdout)
+		#y_true = tf.Print(input_=y_true,data=[y_true], message='y_true = ',summarize=100)
+		#y_pred = tf.Print(input_=y_pred,data=[y_pred], message='y_pred = ',summarize=100)
+		
+		# - Extract tensors relative to pars
+		y_true_type= y_true[:,:self.nobjects]
+		####y_true_type = K.print_tensor(y_true_type, message='y_true(type) = ')	
+		####tf.print('y_true_type = ',y_true_type,output_stream=sys.stdout)
+		#y_true_type= tf.Print(input_=y_true_type, data=[y_true_type], message='y_true_type = ',summarize=100)
+		
+		y_pred_type= y_pred[:,:self.nobjects]
+		####y_pred_type = K.print_tensor(y_pred_type, message='y_pred(type) = ')		
+		####tf.print('y_pred_type = ',y_pred_type)
+		#y_pred_type= tf.Print(input_=y_pred_type, data=[y_pred_type], message='y_pred_type = ',summarize=100)
+		
+		# - Extract tensors relative to parameters
+		y_true_pars= y_true[:,self.nobjects:]
+		###y_true_pars = K.print_tensor(y_true_pars, message='y_true(pars) = ')
+		###tf.print('y_true_pars = ',y_true_pars)
+		#y_true_pars= tf.Print(input_=y_true_pars, data=[y_true_pars], message='y_true_pars = ',summarize=100)
+		
+		y_pred_pars= y_pred[:,self.nobjects:]
+		####y_pred_pars = K.print_tensor(y_pred_pars, message='y_pred(pars) = ')	
+		####tf.print('y_pred_pars = ',y_pred_pars)
+		#y_pred_pars= tf.Print(input_=y_pred_pars, data=[y_pred_pars], message='y_pred_pars = ',summarize=100)
+		
+
+		# - Replicate true labels to have a tensor of size (N,nobjects*npars)
+		#   This is multiplied by pars so that objects with label=0 are not entering in pars MSE computation (they sum zero)
+		w= K.repeat_elements(y_true_type,self.npars,axis=1)
+		#w= tf.Print(input_=w, data=[w], message='w= ',summarize=100)
+
+		#y_diff= w*(y_pred_pars - y_true_pars)
+		#y_diff= tf.Print(input_=y_diff, data=[y_diff], message='y_diff= ',summarize=100)
+		#y_diff_sqr= K.square(y_diff)
+		#y_diff_sqr= tf.Print(input_=y_diff_sqr, data=[y_diff_sqr], message='y_diff_sqr= ',summarize=100)
+
+		# - Count number of objects
+		N= tf.count_nonzero(y_true_type,dtype=tf.dtypes.float32)
+		#N= tf.Print(input_=N, data=[N], message='N= ',summarize=100)
+
+		# - Compute MSE for pars relative to target objects (not background)
+		#mse= keras.metrics.mean_squared_error(y_pred,y_true)
+		#mse= K.mean(K.square( w*(y_pred_pars - y_true_pars) ), axis=-1)
+		#mse= K.mean(K.square( y_diff ), axis=-1)
+		#mse= K.sum(y_diff_sqr, axis=-1)/N
+		mse= K.sum(K.square( w*(y_pred_pars - y_true_pars) ), axis=-1)/N
+		#tf.Print(input_=mse, data=[mse], message='mse= ',summarize=100)
+
+		# - Compute binary crossentropy for labels
+		binaryCE = keras.metrics.binary_crossentropy(y_true_type,y_pred_type)
+
+		# - Compute total loss as weighted sum of MSE + binaryCE		
+		tot= self.spars_loss_weight*mse + self.labels_loss_weight*binaryCE
+		#tot= mse
+
+	
+		return tot
 
 	#####################################
 	##     BUILD NETWORK
@@ -1474,10 +1564,14 @@ class CNNTrainer(object):
 		type_prediction = layers.Dense(self.nobjects, activation='sigmoid', name='type')(x)
 		pars_prediction = layers.Dense(self.nobjects*self.npars, activation='linear', name='pars')(x)
 
+		# - Concatenate output layers
+		nn_prediction= layers.concatenate([type_prediction,pars_prediction],name='nnout')
+
 		# - Create NN model
 		self.model = Model(
 				inputs=inputs,
-				outputs=[type_prediction, pars_prediction],
+				#outputs=[type_prediction, pars_prediction],
+				outputs=nn_prediction,
 				name="SourceNet"
 		)
 
@@ -1507,9 +1601,9 @@ class CNNTrainer(object):
 			"pars": self.spars_loss_weight
 		}
 
-		##self.model.compile(optimizer=opt,loss=losses, loss_weights=lossWeights, metrics=['accuracy',precision,recall,f1_score])
-		self.model.compile(optimizer=opt,loss=losses, loss_weights=lossWeights, metrics=['accuracy'])
-
+		#self.model.compile(optimizer=opt,loss=losses, loss_weights=lossWeights, metrics=['accuracy'])
+		self.model.compile(optimizer=opt,loss=self.tot_loss, metrics=['accuracy'])
+		
 		return 0
 
 	###########################
@@ -1597,8 +1691,9 @@ class CNNTrainer(object):
 		}
 
 		##self.model.compile(optimizer=opt,loss=losses, loss_weights=lossWeights, metrics=['accuracy',precision,recall,f1_score])
-		self.model.compile(optimizer=opt,loss=losses, loss_weights=lossWeights, metrics=['accuracy'])
-
+		#self.model.compile(optimizer=opt,loss=losses, loss_weights=lossWeights, metrics=['accuracy',my_mse_loss])
+		self.model.compile(optimizer=opt,loss=self.tot_loss, metrics=['accuracy'])
+		
 
 		return 0
 
@@ -1623,43 +1718,56 @@ class CNNTrainer(object):
 		self.flipped_outputs_labels_test= self.outputs_labels_test
 		self.flipped_outputs_test= self.outputs_test
 
-		self.train_loss_vs_epoch= np.zeros((3,self.nepochs))	
-		self.test_loss_vs_epoch= np.zeros((3,self.nepochs))
-		self.train_accuracy_vs_epoch= np.zeros((2,self.nepochs))
-		self.test_accuracy_vs_epoch= np.zeros((2,self.nepochs))	
+		#self.train_loss_vs_epoch= np.zeros((3,self.nepochs))	
+		#self.test_loss_vs_epoch= np.zeros((3,self.nepochs))
+		#self.train_accuracy_vs_epoch= np.zeros((2,self.nepochs))
+		#self.test_accuracy_vs_epoch= np.zeros((2,self.nepochs))	
+		self.train_loss_vs_epoch= np.zeros((1,self.nepochs))	
+		self.test_loss_vs_epoch= np.zeros((1,self.nepochs))
+		self.train_accuracy_vs_epoch= np.zeros((1,self.nepochs))
+		self.test_accuracy_vs_epoch= np.zeros((1,self.nepochs))	
 
 		for epoch in range(self.nepochs):
 		
 			# - Train for 1 epoch
 			self.fitout= self.model.fit(
 				x=self.inputs_train, 
-				y={"type": self.flipped_outputs_labels_train,"pars": self.flipped_outputs_train},
-				validation_data=(self.inputs_test,{"type": self.outputs_labels_test,"pars": self.outputs_test}),
+				#y={"type": self.flipped_outputs_labels_train,"pars": self.flipped_outputs_train},
+				y={"nnout": np.concatenate((self.flipped_outputs_labels_train,self.flipped_outputs_train),axis=1) },
+				#validation_data=(self.inputs_test,{"type": self.outputs_labels_test,"pars": self.outputs_test}),
+				validation_data=(self.inputs_test,{"nnout": np.concatenate((self.outputs_labels_test,self.outputs_test),axis=1) }),
 				#batch_size=64
 				epochs=1,
-				verbose=1
+				verbose=2,
+				#callbacks=[self.nnprinter_cb]
 			)
 
 			# - Save epoch loss
 			print ('== EPOCH %d ==' % epoch)
 			print (self.fitout.history)
 			self.train_loss_vs_epoch[0,epoch]= self.fitout.history['loss'][0]
-			self.train_loss_vs_epoch[1,epoch]= self.fitout.history['type_loss'][0]
-			self.train_loss_vs_epoch[2,epoch]= self.fitout.history['pars_loss'][0]
+			#self.train_loss_vs_epoch[1,epoch]= self.fitout.history['type_loss'][0]
+			#self.train_loss_vs_epoch[2,epoch]= self.fitout.history['pars_loss'][0]
 			self.test_loss_vs_epoch[0,epoch]= self.fitout.history['val_loss'][0]
-			self.test_loss_vs_epoch[1,epoch]= self.fitout.history['val_type_loss'][0]
-			self.test_loss_vs_epoch[2,epoch]= self.fitout.history['val_pars_loss'][0]
-			self.train_accuracy_vs_epoch[0,epoch]= self.fitout.history['type_acc'][0]
-			self.train_accuracy_vs_epoch[1,epoch]= self.fitout.history['pars_acc'][0]
-			self.test_accuracy_vs_epoch[0,epoch]= self.fitout.history['val_type_acc'][0]
-			self.test_accuracy_vs_epoch[1,epoch]= self.fitout.history['val_pars_acc'][0]
+			#self.test_loss_vs_epoch[1,epoch]= self.fitout.history['val_type_loss'][0]
+			#self.test_loss_vs_epoch[2,epoch]= self.fitout.history['val_pars_loss'][0]
+			self.train_accuracy_vs_epoch[0,epoch]= self.fitout.history['acc'][0]
+			#self.train_accuracy_vs_epoch[0,epoch]= self.fitout.history['type_acc'][0]
+			#self.train_accuracy_vs_epoch[1,epoch]= self.fitout.history['pars_acc'][0]
+			self.test_accuracy_vs_epoch[0,epoch]= self.fitout.history['val_acc'][0]
+			#self.test_accuracy_vs_epoch[0,epoch]= self.fitout.history['val_type_acc'][0]
+			#self.test_accuracy_vs_epoch[1,epoch]= self.fitout.history['val_pars_acc'][0]
 
 			# - Get predictions for train data and flip targets according to smallest MSE match
 			npars_flip= 2 # only (x,y) pars used for flipping
 			#npars_flip= self.npars
 
 			if self.flip_train_data:
-				(outputs_labels_pred, outputs_pred)= self.model.predict(self.inputs_train)
+				#(outputs_labels_pred, outputs_pred)= self.model.predict(self.inputs_train)
+				nnout_pred= self.model.predict(self.inputs_train)
+				outputs_labels_pred= nnout_pred[:,:self.nobjects]
+				outputs_pred= nnout_pred[:,self.nobjects:]
+
 				nsamples= outputs_pred.shape[0]
 				
 				for sample in range(nsamples):
@@ -1714,7 +1822,10 @@ class CNNTrainer(object):
 		
 			# - Get predictions for test sample and flip according to smallest MSE match
 			if self.flip_test_data:
-				(outputs_labels_pred, outputs_pred)= self.model.predict(self.inputs_test)
+				#(outputs_labels_pred, outputs_pred)= self.model.predict(self.inputs_test)
+				nnout_pred= self.model.predict(self.inputs_test)
+				outputs_labels_pred= nnout_pred[:,:self.nobjects]
+				outputs_pred= nnout_pred[:,self.nobjects:]
 				nsamples= outputs_pred.shape[0]
 		
 				for sample in range(nsamples):
@@ -1793,10 +1904,14 @@ class CNNTrainer(object):
 		N= self.train_loss_vs_epoch.shape[1]
 		epoch_ids= np.array(range(N))
 		epoch_ids+= 1
-		epoch_ids= epoch_ids.reshape(1,N)
+		epoch_ids= epoch_ids.reshape(N,1)
+
+		#print("DEBUG: train_loss_vs_epoch shape=",self.train_loss_vs_epoch.reshape(N,3).shape)
+		print("DEBUG: epoch_ids shape=",epoch_ids.shape)
 
 		metrics_data= np.concatenate(
-			(epoch_ids,self.train_loss_vs_epoch,self.test_loss_vs_epoch,self.train_accuracy_vs_epoch,self.test_accuracy_vs_epoch),
+			#(epoch_ids,self.train_loss_vs_epoch.reshape(N,3),self.test_loss_vs_epoch.reshape(N,3),self.train_accuracy_vs_epoch.reshape(N,2),self.test_accuracy_vs_epoch.reshape(N,2)),
+			(epoch_ids,self.train_loss_vs_epoch.reshape(N,1),self.test_loss_vs_epoch.reshape(N,1),self.train_accuracy_vs_epoch.reshape(N,1),self.test_accuracy_vs_epoch.reshape(N,1)),
 			axis=1
 		)
 			
@@ -1807,7 +1922,10 @@ class CNNTrainer(object):
 		#==   EVALUATE NN ON TRAIN DATA
 		#================================
 		print("INFO: Classifying train data ...")
-		(predictions_labels_train, predictions_train)= self.model.predict(self.inputs_train)
+		#(predictions_labels_train, predictions_train)= self.model.predict(self.inputs_train)
+		nnout_train= self.model.predict(self.inputs_train)
+		predictions_labels_train= nnout_train[:,:self.nobjects]
+		predictions_train= nnout_train[:,self.nobjects:]
 
 		for i in range(predictions_labels_train.shape[0]):
 			#target= ','.join(map(str, self.outputs_labels_train[i,:]))
@@ -1903,7 +2021,10 @@ class CNNTrainer(object):
 		#==   EVALUATE NN ON TEST DATA
 		#================================
 		print("INFO: Classifying test data ...")
-		(predictions_labels_test, predictions_test)= self.model.predict(self.inputs_test)
+		#(predictions_labels_test, predictions_test)= self.model.predict(self.inputs_test)
+		nnout_test= self.model.predict(self.inputs_test)
+		predictions_labels_test= nnout_test[:,:self.nobjects]
+		predictions_test= nnout_test[:,self.nobjects:]
 
 		nsamples_test= self.outputs_labels_test.shape[0]
 		detThr= 0.5
@@ -1997,20 +2118,29 @@ class CNNTrainer(object):
 		plot_model(self.model, to_file=self.outfile_model)
 
 		# - Plot the total loss, type loss, spars loss
-		print("INFO: Plot the network loss to file ...")
-		lossNames = ["loss", "type_loss", "pars_loss"]
+		#lossNames = ["loss", "type_loss", "pars_loss"]
+		lossNames = ["loss"]
 		plt.style.use("ggplot")
-		(fig, ax) = plt.subplots(3, 1, figsize=(13, 13))
-
+		#(fig, ax) = plt.subplots(3, 1, figsize=(13, 13))
+		(fig, ax) = plt.subplots(3, 1, figsize=(13, 13),squeeze=False)
+		
 		for (i, lossName) in enumerate(lossNames):
 			# Plot the loss for both the training and validation data
+			#title = "Loss for {}".format(lossName) if lossName != "loss" else "Total loss"
+			#ax[i].set_title(title)
+			#ax[i].set_xlabel("Epoch #")
+			#ax[i].set_ylabel("Loss")
+			#ax[i].plot(np.arange(0, self.nepochs), self.train_loss_vs_epoch[i], label="TRAIN SAMPLE - " + lossName)
+			#ax[i].plot(np.arange(0, self.nepochs), self.test_loss_vs_epoch[i], label="TEST SAMPLE - " + lossName)
+			#ax[i].legend()	
+
 			title = "Loss for {}".format(lossName) if lossName != "loss" else "Total loss"
-			ax[i].set_title(title)
-			ax[i].set_xlabel("Epoch #")
-			ax[i].set_ylabel("Loss")
-			ax[i].plot(np.arange(0, self.nepochs), self.train_loss_vs_epoch[i], label="TRAIN SAMPLE - " + lossName)
-			ax[i].plot(np.arange(0, self.nepochs), self.test_loss_vs_epoch[i], label="TEST SAMPLE - " + lossName)
-			ax[i].legend()
+			ax[i,0].set_title(title)
+			ax[i,0].set_xlabel("Epoch #")
+			ax[i,0].set_ylabel("Loss")
+			ax[i,0].plot(np.arange(0, self.nepochs), self.train_loss_vs_epoch[i], label="TRAIN SAMPLE - " + lossName)
+			ax[i,0].plot(np.arange(0, self.nepochs), self.test_loss_vs_epoch[i], label="TEST SAMPLE - " + lossName)
+			ax[i,0].legend()
 
 		plt.tight_layout()
 		plt.savefig(self.outfile_loss)
@@ -2018,18 +2148,27 @@ class CNNTrainer(object):
 
 		# - Plot the accuracy
 		print("INFO: Plot the network accuracy metric to file ...")
-		accuracyNames = ["type_acc", "pars_acc"]
+		#accuracyNames = ["type_acc", "pars_acc"]
+		accuracyNames = ["acc"]
 		plt.style.use("ggplot")
-		(fig, ax) = plt.subplots(2, 1, figsize=(8, 8))
+		#(fig, ax) = plt.subplots(2, 1, figsize=(8, 8))
+		(fig, ax) = plt.subplots(1, 1, figsize=(8, 8),squeeze=False)
 
 		for (i, accuracyName) in enumerate(accuracyNames):
 			# Plot the loss for both the training and validation data
-			ax[i].set_title("Accuracy for {}".format(accuracyName))
-			ax[i].set_xlabel("Epoch #")
-			ax[i].set_ylabel("Accuracy")
-			ax[i].plot(np.arange(0, self.nepochs), self.train_accuracy_vs_epoch[i], label="TRAIN SAMPLE - " + accuracyName)
-			ax[i].plot(np.arange(0, self.nepochs), self.test_accuracy_vs_epoch[i], label="TEST SAMPLE - " + accuracyName)
-			ax[i].legend()
+			#ax[i].set_title("Accuracy for {}".format(accuracyName))
+			#ax[i].set_xlabel("Epoch #")
+			#ax[i].set_ylabel("Accuracy")
+			#ax[i].plot(np.arange(0, self.nepochs), self.train_accuracy_vs_epoch[i], label="TRAIN SAMPLE - " + accuracyName)
+			#ax[i].plot(np.arange(0, self.nepochs), self.test_accuracy_vs_epoch[i], label="TEST SAMPLE - " + accuracyName)
+			#ax[i].legend()
+
+			ax[i,0].set_title("Accuracy for {}".format(accuracyName))
+			ax[i,0].set_xlabel("Epoch #")
+			ax[i,0].set_ylabel("Accuracy")
+			ax[i,0].plot(np.arange(0, self.nepochs), self.train_accuracy_vs_epoch[i], label="TRAIN SAMPLE - " + accuracyName)
+			ax[i,0].plot(np.arange(0, self.nepochs), self.test_accuracy_vs_epoch[i], label="TEST SAMPLE - " + accuracyName)
+			ax[i,0].legend()
 
 		plt.tight_layout()
 		plt.savefig(self.outfile_accuracy)
