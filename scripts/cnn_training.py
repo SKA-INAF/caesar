@@ -157,6 +157,7 @@ def get_args():
 
 	parser.add_argument('-outfile_nnout_train', '--outfile_nnout_train', dest='outfile_nnout_train', required=False, type=str, default='train_nnout.dat', action='store',help='Name of output file with NN output for train data (default=train_nnout.dat)')
 	parser.add_argument('-outfile_nnout_test', '--outfile_nnout_test', dest='outfile_nnout_test', required=False, type=str, default='test_nnout.dat', action='store',help='Name of output file with NN output for test data (default=test_nnout.dat)')
+	parser.add_argument('-outfile_nnout_metrics', '--outfile_nnout_metrics', dest='outfile_nnout_metrics', required=False, type=str, default='nnout_metrics.dat', action='store',help='Name of output file with NN train metrics (default=nnout_metrics.dat)')
 
 	args = parser.parse_args()	
 
@@ -288,6 +289,7 @@ class CNNTrainer(object):
 		self.outfile_fluxaccuracy= 'nn_fluxaccuracy.png'
 		self.outfile_nnout_train= 'train_nnout.dat'
 		self.outfile_nnout_test= 'test_nnout.dat'
+		self.outfile_nnout_metrics= 'nnout_metrics.dat'
 
 	def set_img_filename(self,filename):
 		""" Set the input residual image used to generate train data """
@@ -336,6 +338,10 @@ class CNNTrainer(object):
 	def set_outfile_nnout_test(self,filename):	
 		""" Set output file name where to store NN output for test data"""	
 		self.outfile_nnout_test= filename
+
+	def set_outfile_nnout_metrics(self,filename):	
+		""" Set output file name where to store NN output metrics"""	
+		self.outfile_nnout_metrics= filename
 
 	def enable_training(self,choice):
 		""" Enable/disable training step"""
@@ -1782,6 +1788,22 @@ class CNNTrainer(object):
 		""" Evaluating network """
 
 		#================================
+		#==   SAVE TRAIN METRICS
+		#================================
+		N= self.train_loss_vs_epoch.shape[1]
+		epoch_ids= np.array(range(N))
+		epoch_ids+= 1
+		epoch_ids= epoch_ids.reshape(1,N)
+
+		metrics_data= np.concatenate(
+			(epoch_ids,self.train_loss_vs_epoch,self.test_loss_vs_epoch,self.train_accuracy_vs_epoch,self.test_accuracy_vs_epoch),
+			axis=1
+		)
+			
+		self.write_ascii(metrics_data,self.outfile_nnout_metrics,'# epoch - tot loss - type loss - pars loss - tot loss (test) - type loss (test) - pars loss (test) - type acc - pars acc - type acc (test) - pars acc (test)')	
+
+		
+		#================================
 		#==   EVALUATE NN ON TRAIN DATA
 		#================================
 		print("INFO: Classifying train data ...")
@@ -2241,6 +2263,7 @@ def main():
 	outfile_fluxaccuracy= args.outfile_fluxaccuracy
 	outfile_nnout_train= args.outfile_nnout_train
 	outfile_nnout_test= args.outfile_nnout_test
+	outfile_nnout_metrics= args.outfile_nnout_metrics
 
 	print("DEBUG: flip_train? ", flip_train)
 	
@@ -2311,6 +2334,7 @@ def main():
 	cnn.set_outfile_fluxaccuracy(outfile_fluxaccuracy)
 	cnn.set_outfile_nnout_train(outfile_nnout_train)
 	cnn.set_outfile_nnout_test(outfile_nnout_test)
+	cnn.set_outfile_nnout_metrics(outfile_nnout_metrics)
 	
 	# - Run network train
 	cnn.run()
