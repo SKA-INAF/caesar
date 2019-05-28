@@ -214,6 +214,11 @@ class CNNTrainer(object):
 		self.img_source_filelist= ''
 		self.sourcepars_filelist= ''
 		self.nnarc_file= ''
+
+		# - Bkg generation
+		self.gen_bkg_from_img= True
+		self.bkg_rms= 300.e-6
+		self.bkg_mean= 0
 		
 		# - Source generation
 		self.gridx= None
@@ -995,13 +1000,19 @@ class CNNTrainer(object):
 			if index%100==0 :
 				print("INFO: Generating bkg train image no. %s/%s ..." % (index+1,self.nsamples_bkg))
 	
-			# - Generate crop img center randomly
-			x0= int(np.random.uniform(marginx,nx-marginx-1))
-			y0= int(np.random.uniform(marginy,ny-marginy-1))
-			print("INFO: Extract crop image around pos(%s,%s)" % (x0,y0))
+			if self.gen_bkg_from_img:
+				# - Generate crop img center randomly
+				x0= int(np.random.uniform(marginx,nx-marginx-1))
+				y0= int(np.random.uniform(marginy,ny-marginy-1))
+				print("INFO: Extract crop image around pos(%s,%s)" % (x0,y0))
 			
-			# - Extract crop img data
-			data_crop= self.crop_img(x0,y0,self.train_img_sizex,self.train_img_sizey)
+				# - Extract crop img data
+				data_crop= self.crop_img(x0,y0,self.train_img_sizex,self.train_img_sizey)
+
+			else:
+				# - Generate random bkg data
+				data_crop= self.generate_noise(self.train_img_sizex,self.train_img_sizey,self.bkg_rms,self.bkg_mean)			
+
 			imgcropsize= np.shape(data_crop)
 			print("INFO: img crop shape=",imgcropsize)
 			
@@ -1053,6 +1064,14 @@ class CNNTrainer(object):
 		print("DEBUG: outputs_labels_bkg=",self.outputs_labels_bkg)
 
 		return 0
+
+	#################################
+	##     GENERATE NOISE IMAGE
+	#################################
+	def generate_noise(self,nx,ny,sigma,mean=0):
+		""" Generate image data from random noise """
+		data= np.random.normal(mean,sigma,(ny,nx))
+		return data
 
 	#################################
 	##     GENERATE BLOB
@@ -1136,17 +1155,26 @@ class CNNTrainer(object):
 			if index%100==0 :
 				print("INFO: Generating source train image no. %s/%s ..." % (index+1,self.nsamples_source))
 	
-			# - Generate crop img center randomly
-			x0= int(np.random.uniform(marginx,nx-marginx-1))
-			y0= int(np.random.uniform(marginy,ny-marginy-1))
-			ix= int(np.round(x0))
-			iy= int(np.round(y0))
-			if self.img_data[iy,ix]==0 or np.isnan(self.img_data[iy,ix]):
-				print("WARN: Skip sample image crop centered on (%s,%s) (pixel is zero or nan) ..." % (x0,y0))
-				continue
+
+
+			if self.gen_bkg_from_img:
+				# - Generate crop img center randomly
+				x0= int(np.random.uniform(marginx,nx-marginx-1))
+				y0= int(np.random.uniform(marginy,ny-marginy-1))
+				ix= int(np.round(x0))
+				iy= int(np.round(y0))
+				if self.img_data[iy,ix]==0 or np.isnan(self.img_data[iy,ix]):
+					print("WARN: Skip sample image crop centered on (%s,%s) (pixel is zero or nan) ..." % (x0,y0))
+					continue
 			
-			# - Extract crop img data
-			data_crop= self.crop_img(x0,y0,self.train_img_sizex,self.train_img_sizey)
+				# - Extract crop img data
+				data_crop= self.crop_img(x0,y0,self.train_img_sizex,self.train_img_sizey)
+
+			else:
+				# - Generate random bkg data
+				data_crop= self.generate_noise(self.train_img_sizex,self.train_img_sizey,self.bkg_rms,self.bkg_mean)	
+
+
 			imgcropsize= np.shape(data_crop)
 			
 			# - Check data integrity (skip if all zeros or nan/inf)
