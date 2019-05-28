@@ -183,7 +183,7 @@ class NNPrinter(keras.callbacks.Callback):
 		#print("y_true shape=",y_true_shape)
 		
 		loss= logs.get('loss')
-		print("LOSS=", loss)
+		#print("LOSS=", loss)
 		self.losses.append(loss)
 
 ###########################
@@ -252,7 +252,6 @@ class CNNTrainer(object):
 		self.sigma_max= 20
 		self.normmin_pars= np.array([0,0,self.normmin,self.sigma_min,self.sigma_min,np.radians(self.theta_min)])
 		self.normmax_pars= np.array([self.train_img_sizex,self.train_img_sizey,self.normmax,self.sigma_max,self.sigma_max,np.radians(self.theta_max)])
-		
 		self.test_size= 0.2
 		self.inputs_train= None
 		self.inputs_test= None 
@@ -293,7 +292,6 @@ class CNNTrainer(object):
 		self.dropout_enabled= True
 		self.maxpool_enabled= True
 		self.batchnorm_enabled= True
-		
 		self.train_loss_vs_epoch= None
 		self.test_loss_vs_epoch= None
 		self.train_accuracy_vs_epoch= None
@@ -314,6 +312,10 @@ class CNNTrainer(object):
 		self.outfile_nnout_train= 'train_nnout.dat'
 		self.outfile_nnout_test= 'test_nnout.dat'
 		self.outfile_nnout_metrics= 'nnout_metrics.dat'
+
+	#################################
+	##     SETTER/GETTER METHODS
+	#################################
 
 	def set_img_filename(self,filename):
 		""" Set the input residual image used to generate train data """
@@ -538,12 +540,26 @@ class CNNTrainer(object):
 		self.beam_bpa_min= pa_min
 		self.beam_bpa_max= pa_max	
 	
-	def write_fits(self,data,filename):
-		""" Read data to FITS image """
-		hdu= fits.PrimaryHDU(data)
-		hdul= fits.HDUList([hdu])
-		hdul.writeto(filename,overwrite=True)
+	
+	#################################
+	##     HELPER METHODS
+	#################################
+	def has_patterns_in_string(self,s,patterns):
+		""" Return true if patterns are found in string """
+		if not patterns:		
+			return False
 
+		found= False
+		for pattern in patterns:
+			found= pattern in s
+			if found:
+				break
+
+		return found
+
+	#################################
+	##     WRITE DATA TO ASCII FILE
+	#################################
 	def write_ascii(self,data,filename,header=''):
 		""" Write data to ascii file """
 		fout = open(filename, 'wt')
@@ -562,23 +578,11 @@ class CNNTrainer(object):
 
 		fout.close();
 
-	
-	def has_patterns_in_string(self,s,patterns):
-		""" Return true if patterns are found in string """
-		if not patterns:		
-			return False
-
-		found= False
-		for pattern in patterns:
-			found= pattern in s
-			if found:
-				break
-
-		return found
-
-
-	def read_list(self,filename,skip_patterns=[]):
-		""" Read a file list line by line """
+	#################################
+	##     READ ASCII DATA
+	#################################
+	def read_ascii(self,filename,skip_patterns=[]):
+		""" Read an ascii file line by line """
 	
 		try:
 			f = open(filename, 'r')
@@ -605,7 +609,19 @@ class CNNTrainer(object):
 
 		return fields
 
+	#################################
+	##     WRITE IMAGE DATA TO FITS
+	#################################
+	def write_fits(self,data,filename):
+		""" Read data to FITS image """
+		hdu= fits.PrimaryHDU(data)
+		hdul= fits.HDUList([hdu])
+		hdul.writeto(filename,overwrite=True)
 
+	
+	#################################
+	##     READ FITS IMAGE
+	#################################
 	def read_fits(self,filename):
 		""" Read FITS image and return data """
 
@@ -634,7 +650,9 @@ class CNNTrainer(object):
 		return output_data
 
 
-
+	#################################
+	##     READ INPUT IMAGE
+	#################################
 	def read_img(self):
 		""" Read FITS image and set image data """
 
@@ -673,6 +691,9 @@ class CNNTrainer(object):
 
 		return 0
 
+	#################################
+	##     CROP IMAGE
+	#################################
 	def crop_img(self,x0,y0,dx,dy):
 		""" Extract sub image of size (dx,dy) around pixel (x0,y0) """
 
@@ -706,7 +727,7 @@ class CNNTrainer(object):
 
 		# - Read list with files		
 		try:
-			filelist_data= self.read_list(filelist,['#'])
+			filelist_data= self.read_ascii(filelist,['#'])
 		except IOError:
 			errmsg= 'Cannot read file: ' + filelist
 			print ("ERROR: " + errmsg)
@@ -814,7 +835,7 @@ class CNNTrainer(object):
 
 		# - Read list with image files		
 		try:
-			filelist_data= self.read_list(filelist,['#'])
+			filelist_data= self.read_ascii(filelist,['#'])
 		except IOError:
 			errmsg= 'Cannot read file: ' + filelist
 			print ("ERROR: " + errmsg)
@@ -822,7 +843,7 @@ class CNNTrainer(object):
 
 		# - Read list with source pars files		
 		try:
-			filelist_pars_data= self.read_list(filelist_pars,['#'])
+			filelist_pars_data= self.read_ascii(filelist_pars,['#'])
 		except IOError:
 			errmsg= 'Cannot read file: ' + filelist_pars
 			print ("ERROR: " + errmsg)
@@ -869,7 +890,7 @@ class CNNTrainer(object):
 			source_pars= []
 			skip_patterns= ['#']
 			try:
-				source_pars= self.read_list(filename_pars,skip_patterns)
+				source_pars= self.read_ascii(filename_pars,skip_patterns)
 			except IOError:
 				errmsg= 'Cannot read file: ' + filename_spar
 				print ("ERROR: " + errmsg)
@@ -1491,7 +1512,7 @@ class CNNTrainer(object):
 		nn_data= []
 		skip_patterns= ['#']
 		try:
-			nn_data= self.read_list(filename,skip_patterns)
+			nn_data= self.read_ascii(filename,skip_patterns)
 		except IOError:
 			print("ERROR: Failed to read nn arc file %d!" % filename)
 			return -1
@@ -2122,7 +2143,7 @@ class CNNTrainer(object):
 		lossNames = ["loss"]
 		plt.style.use("ggplot")
 		#(fig, ax) = plt.subplots(3, 1, figsize=(13, 13))
-		(fig, ax) = plt.subplots(3, 1, figsize=(13, 13),squeeze=False)
+		(fig, ax) = plt.subplots(1, 1, figsize=(13, 13),squeeze=False)
 		
 		for (i, lossName) in enumerate(lossNames):
 			# Plot the loss for both the training and validation data
