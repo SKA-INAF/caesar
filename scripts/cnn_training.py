@@ -214,7 +214,7 @@ class CNNTrainer(object):
 		self.img_data= None
 		self.img_sizex= 0
 		self.img_sizey= 0
-		self.pixsize= 0 # in arcsec
+		self.pixsize= 4 # in arcsec
 		self.img_bkg_filelist= ''
 		self.img_source_filelist= ''
 		self.sourcepars_filelist= ''
