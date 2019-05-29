@@ -1171,8 +1171,6 @@ class CNNTrainer(object):
 			if index%100==0 :
 				print("INFO: Generating source train image no. %s/%s ..." % (index+1,self.nsamples_source))
 	
-
-
 			if self.gen_bkg_from_img:
 				# - Generate crop img center randomly
 				x0= int(np.random.uniform(marginx,nx-marginx-1))
@@ -1406,10 +1404,11 @@ class CNNTrainer(object):
 		""" Generate training data """
 	
 		# - Read input image
-		print("INFO: Reading input image %s ..." % self.img_file)
-		status= self.read_img()
-		if status<0:
-			return -1	
+		if self.gen_bkg_from_img:
+			print("INFO: Reading input image %s ..." % self.img_file)
+			status= self.read_img()
+			if status<0:
+				return -1	
 
 		# - Generate train data for bkg
 		print("INFO: Generating train data for bkg ...")
