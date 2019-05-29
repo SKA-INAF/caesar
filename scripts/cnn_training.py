@@ -2422,8 +2422,8 @@ def main():
 	learning_rate= args.learning_rate
 
 	use_standard_nn= args.use_standard_nn
-	if not use_standard_nn and not nnarcfile:
-		print("ERROR: No nn architecture file given in input (needed to build the net)!")
+	if do_training and not use_standard_nn and not nnarcfile:
+		print("ERROR: No nn architecture file given in input (needed to build the net for training)!")
 		return 1
 
 	dropout_enabled= True
