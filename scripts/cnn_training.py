@@ -2390,7 +2390,9 @@ def main():
 	bmin_max= args.bmin_max
 	pa_min= args.pa_min
 	pa_max= args.pa_max	
-	generate_bkg= args.generate_bkg
+	generate_bkg_from_img= True
+	if args.generate_bkg:
+		generate_bkg_from_img= False
 	bkg_rms= args.bkg_rms
 	bkg_mean= args.bkg_mean
 
@@ -2464,7 +2466,7 @@ def main():
 	#===========================
 	# - Check if input file is needed and not given
 	if enable_train_data_generation:
-		if not generate_bkg and not inputimg:
+		if generate_bkg_from_img and not inputimg:
 			print("ERROR: Missing input file argument (needed to generate train data)!")
 			return 1
 	else:
@@ -2505,7 +2507,7 @@ def main():
 	cnn.set_beam_bmaj_range(bmaj_min,bmaj_max)
 	cnn.set_beam_bmin_range(bmin_min,bmin_max)
 	cnn.set_beam_pa_range(pa_min,pa_max)
-	cnn.enable_bkg_generation_from_img(generate_bkg)
+	cnn.enable_bkg_generation_from_img(generate_bkg_from_img)
 	cnn.set_gen_bkg_rms(bkg_rms)
 	cnn.set_gen_bkg_mean(bkg_mean)
 
