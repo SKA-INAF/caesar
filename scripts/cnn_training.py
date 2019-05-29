@@ -1264,6 +1264,8 @@ class CNNTrainer(object):
 					print("WARN: Failed to generate Gaus2D (hint: too large trunc threshold), skip and regenerate...")
 					continue
 
+				print("blob_data=",blob_data)
+
 				## Update source mask & counts				
 				sources_data+= blob_data
 				mask_data[iy,ix]+= S
