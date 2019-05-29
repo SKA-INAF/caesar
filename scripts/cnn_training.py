@@ -584,7 +584,7 @@ class CNNTrainer(object):
 	def write_ascii(self,data,filename,header=''):
 		""" Write data to ascii file """
 		# - Skip if data is empty
-		if not data:
+		if data.size<=0:
 			return
 
 		# - Open file and write header
