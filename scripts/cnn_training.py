@@ -1043,7 +1043,7 @@ class CNNTrainer(object):
 				data_crop= self.generate_noise(self.train_img_sizex,self.train_img_sizey,self.bkg_rms,self.bkg_mean)			
 
 			imgcropsize= np.shape(data_crop)
-			print("INFO: img crop shape=",imgcropsize)
+			#print("INFO: img crop shape=",imgcropsize)
 			
 			# - Check data integrity (skip if all zeros or nan/inf)
 			n_nonzero= np.count_nonzero(data_crop)
