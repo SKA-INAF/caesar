@@ -76,10 +76,10 @@ def get_args():
 	parser.add_argument('-filelist_bkg', '--filelist_bkg', dest='filelist_bkg', required=False, type=str,action='store',help='List of files with bkg train images')
 	parser.add_argument('-filelist_source', '--filelist_source', dest='filelist_source', required=False, type=str,action='store',help='List of files with source train images')	
 	parser.add_argument('-nnarcfile', '--nnarcfile', dest='nnarcfile', required=False, type=str,action='store',help='Name of file with NN architecture')	
-	parser.add_argument('--generate_train_data', dest='generate_train_data', action='store_true')	
+	parser.add_argument('--generate_train_data', dest='generate_train_data', action='store_true',help='Generate train data randomly instead of reading train data from disk')	
 	parser.set_defaults(generate_train_data=False)	
 	
-	parser.add_argument('--no-training', dest='no_training', action='store_true')	
+	parser.add_argument('--no-training', dest='no_training', action='store_true',help='Disable NN build and training')	
 	parser.set_defaults(no_training=False)	
 
 	parser.add_argument('-filelist_sourcepars', '--filelist_sourcepars', dest='filelist_sourcepars', required=False, type=str,action='store',help='List of files with source target pars')
@@ -97,11 +97,16 @@ def get_args():
 	parser.add_argument('-pa_max', '--pa_max', dest='pa_max', required=False, type=float, default=90, action='store',help='Gaussian components  max position angle in deg (default=180)')
 	parser.add_argument('-nsources_max', '--nsources_max', dest='nsources_max', required=False, type=int, default=5, action='store',help='Maximum number of sources generated per crop image (default=5)')
 	
+	parser.add_argument('--generate_bkg', dest='generate_bkg', action='store_true',help='Generate bkg instead of reading it from input image')	
+	parser.set_defaults(generate_bkg=False)	
+	parser.add_argument('-bkg_rms', '--bkg_rms', dest='bkg_rms', required=False, type=float, default=300.e-6, action='store',help='Generated bkg rms (default=300 muJy/beam)')
+	parser.add_argument('-bkg_mean', '--bkg_mean', dest='bkg_mean', required=False, type=float, default=0, action='store',help='Generated bkg average (default=0 muJy/beam)')
+
 
 	parser.add_argument('-normdatamin', '--normdatamin', dest='normdatamin', required=False, type=float, default=-0.0100, action='store',help='Normalization min used to scale data in (0,1) range (default=-100 mJy/beam)')	
 	parser.add_argument('-normdatamax', '--normdatamax', dest='normdatamax', required=False, type=float, default=10, action='store',help='Normalization max used to scale data in (0,1) range (default=10 Jy/beam)')
 
-	parser.add_argument('--normalize_targets', dest='normalize_targets', action='store_true')	
+	parser.add_argument('--normalize_targets', dest='normalize_targets', action='store_true',help='Normalize target data before training')	
 	parser.set_defaults(normalize_targets=False)
 	
 	parser.add_argument('-nx', '--nx', dest='nx', required=False, type=int, default=101, action='store',help='Image width in pixels (default=101)')
@@ -321,6 +326,17 @@ class CNNTrainer(object):
 	#################################
 	##     SETTER/GETTER METHODS
 	#################################
+	def enable_bkg_generation_from_img(self,choice):
+		""" Turn on/off bkg generation from input image. """
+		self.gen_bkg_from_img= choice
+
+	def set_gen_bkg_rms(self,rms):
+		""" Set generated bkg rms """
+		self.bkg_rms= rms
+
+	def set_get_bkg_mean(self,mean):
+		""" Set generated bkg mean"""
+		self.bkg_mean= mean
 
 	def set_img_filename(self,filename):
 		""" Set the input residual image used to generate train data """
@@ -2360,19 +2376,6 @@ def main():
 	enable_train_data_generation= False
 	if args.generate_train_data:
 		enable_train_data_generation= True
-		if not inputimg:
-			print("ERROR: Missing input file argument (needed to generate train data)!")
-			return 1
-	else:
-		if not filelist_bkg:
-			print("ERROR: Missing input filelist_bkg argument (needed to read bkg train data)!")
-			return 1			
-		if not filelist_source:
-			print("ERROR: Missing input filelist_source argument (needed to read source train data)!")
-			return 1	
-		if not filelist_sourcepars:
-			print("ERROR: Missing input filelist_sourcepars argument (needed to read source target pars data)!")
-			return 1
 
 	# - Source generation
 	marginX= args.marginx
@@ -2388,6 +2391,9 @@ def main():
 	bmin_max= args.bmin_max
 	pa_min= args.pa_min
 	pa_max= args.pa_max	
+	generate_bkg= args.generate_bkg
+	bkg_rms= bkg_rms
+	bkg_mean= bkg_mean
 
 	# - Train image generation
 	nx= args.nx
@@ -2422,9 +2428,7 @@ def main():
 	learning_rate= args.learning_rate
 
 	use_standard_nn= args.use_standard_nn
-	if do_training and not use_standard_nn and not nnarcfile:
-		print("ERROR: No nn architecture file given in input (needed to build the net for training)!")
-		return 1
+	
 
 	dropout_enabled= True
 	if args.no_dropout:
@@ -2456,8 +2460,30 @@ def main():
 	outfile_nnout_test= args.outfile_nnout_test
 	outfile_nnout_metrics= args.outfile_nnout_metrics
 
-	print("DEBUG: flip_train? ", flip_train)
-	
+	#===========================
+	#==   CHECK ARGS
+	#===========================
+	# - Check if input file is needed and not given
+	if enable_train_data_generation:
+		if not generate_bkg and not inputimg:
+			print("ERROR: Missing input file argument (needed to generate train data)!")
+			return 1
+	else:
+		if not filelist_bkg:
+			print("ERROR: Missing input filelist_bkg argument (needed to read bkg train data)!")
+			return 1			
+		if not filelist_source:
+			print("ERROR: Missing input filelist_source argument (needed to read source train data)!")
+			return 1	
+		if not filelist_sourcepars:
+			print("ERROR: Missing input filelist_sourcepars argument (needed to read source target pars data)!")
+			return 1
+
+	# - Check if nnarc file is needed and not given
+	if do_training and not use_standard_nn and not nnarcfile:
+		print("ERROR: No nn architecture file given in input (needed to build the net for training)!")
+		return 1
+
 	#===========================
 	#==   RUN NN TRAINING
 	#===========================
@@ -2480,6 +2506,9 @@ def main():
 	cnn.set_beam_bmaj_range(bmaj_min,bmaj_max)
 	cnn.set_beam_bmin_range(bmin_min,bmin_max)
 	cnn.set_beam_pa_range(pa_min,pa_max)
+	cnn.enable_bkg_generation_from_img(generate_bkg)
+	cnn.set_gen_bkg_rms(bkg_rms)
+	cnn.set_gen_bkg_mean(bkg_mean)
 
 	# - Set NN architecture & train options
 	cnn.enable_training(do_training)
