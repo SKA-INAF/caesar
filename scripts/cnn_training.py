@@ -334,7 +334,7 @@ class CNNTrainer(object):
 		""" Set generated bkg rms """
 		self.bkg_rms= rms
 
-	def set_get_bkg_mean(self,mean):
+	def set_gen_bkg_mean(self,mean):
 		""" Set generated bkg mean"""
 		self.bkg_mean= mean
 
