@@ -83,8 +83,10 @@ def get_args():
 	parser.set_defaults(no_training=False)	
 
 	parser.add_argument('-filelist_sourcepars', '--filelist_sourcepars', dest='filelist_sourcepars', required=False, type=str,action='store',help='List of files with source target pars')
-	parser.add_argument('-marginx', '--marginx', dest='marginx', required=False, type=int, default=0,action='store',help='Image x margin in pixels used in source generation')
-	parser.add_argument('-marginy', '--marginy', dest='marginy', required=False, type=int, default=0,action='store',help='Image y margin in pixels used in source generation')
+	parser.add_argument('-marginx', '--marginx', dest='marginx', required=False, type=int, default=0,action='store',help='Input image x margin in pixels used in source generation')
+	parser.add_argument('-marginy', '--marginy', dest='marginy', required=False, type=int, default=0,action='store',help='Input image y margin in pixels used in source generation')
+	parser.add_argument('-marginx_source', '--marginx_source', dest='marginx_source', required=False, type=int, default=2,action='store',help='Train image x margin in pixels used in source generation')
+	parser.add_argument('-marginy_source', '--marginy_source', dest='marginy_source', required=False, type=int, default=2,action='store',help='Train image y margin in pixels used in source generation')
 	parser.add_argument('-Smin', '--Smin', dest='Smin', required=False, type=float, default=1.e-6, action='store',help='Minimum source flux in Jy (default=1.e-6)')
 	parser.add_argument('-Smax', '--Smax', dest='Smax', required=False, type=float, default=1, action='store',help='Maximum source flux in Jy (default=1)')
 	parser.add_argument('-Smodel', '--Smodel', dest='Smodel', required=False, type=str, default='uniform', action='store',help='Source flux generation model (default=uniform)')
@@ -398,6 +400,11 @@ class CNNTrainer(object):
 		""" Set margin in X & Y """
 		self.marginx= marginx
 		self.marginy= marginy
+
+	def set_source_margins(self,marginx,marginy):
+		""" Set margin in X & Y for source generation """
+		self.source_gen_marginx= marginx
+		self.source_gen_marginy= marginy
 
 	def set_input_data_norm_range(self,datamin,datamax):
 		""" Set input data normalization range """
@@ -2388,6 +2395,8 @@ def main():
 	# - Source generation
 	marginX= args.marginx
 	marginY= args.marginy
+	marginX_source= args.marginx_source
+	marginY_source= args.marginy_source
 	Smin= args.Smin
 	Smax= args.Smax
 	Smodel= args.Smodel
@@ -2509,6 +2518,7 @@ def main():
 
 	cnn.enable_train_data_generation(enable_train_data_generation)
 	cnn.set_margins(marginX,marginY)
+	cnn.set_source_margins(marginX_source,marginY_source)
 	cnn.set_nsources_max(nsources_max)
 	cnn.set_source_flux_range(Smin,Smax)
 	cnn.set_source_flux_rand_model(Smodel)
