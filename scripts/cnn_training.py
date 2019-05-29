@@ -2392,8 +2392,8 @@ def main():
 	pa_min= args.pa_min
 	pa_max= args.pa_max	
 	generate_bkg= args.generate_bkg
-	bkg_rms= bkg_rms
-	bkg_mean= bkg_mean
+	bkg_rms= args.bkg_rms
+	bkg_mean= args.bkg_mean
 
 	# - Train image generation
 	nx= args.nx
