@@ -2301,20 +2301,23 @@ class CNNTrainer(object):
 			if status<0:
 				return -1
 			
+		
 		#===========================
-		#==   BUILD NN
-		#===========================
-		#- Create the network
-		print("INFO: Building network architecture ...")
-		status= self.build_network()
-		if status<0:
-			return -1
-
-
-		#===========================
-		#==   TRAIN NN
+		#==   RUN NN
 		#===========================
 		if self.do_training:
+			#===========================
+			#==   BUILD NN
+			#===========================
+			#- Create the network
+			print("INFO: Building network architecture ...")
+			status= self.build_network()
+			if status<0:
+				return -1
+
+			#===========================
+			#==   TRAIN NN
+			#===========================
 			print("INFO: Training network ...")
 			status= self.train_network()
 			if status<0:
