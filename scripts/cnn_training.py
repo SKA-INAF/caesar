@@ -1259,6 +1259,7 @@ class CNNTrainer(object):
 				theta_rad= np.radians(theta)
 
 				## Generate gaus 2D data
+				print("DEBUG: Generating source no. %d: (x0,y0,S,sigmax,sigmay,theta)=(%s,%s,%s,%s,%s,%s)" % (nsources,x0_source,y0_source,S,sigmax,sigmay,theta))
 				blob_data= self.generate_blob(ampl=S,x0=x0_source,y0=y0_source,sigmax=sigmax,sigmay=sigmay,theta=theta,trunc_thr=self.trunc_thr)
 				if blob_data is None:
 					print("WARN: Failed to generate Gaus2D (hint: too large trunc threshold), skip and regenerate...")
