@@ -583,12 +583,18 @@ class CNNTrainer(object):
 	#################################
 	def write_ascii(self,data,filename,header=''):
 		""" Write data to ascii file """
+		# - Skip if data is empty
+		if not data:
+			return
+
+		# - Open file and write header
 		fout = open(filename, 'wt')
 		if header:
 			fout.write(header)
 			fout.write('\n')	
 			fout.flush()	
 		
+		# - Write t
 		nrows= data.shape[0]
 		ncols= data.shape[1]
 		for i in range(nrows):
