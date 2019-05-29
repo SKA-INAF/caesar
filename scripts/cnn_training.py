@@ -1205,7 +1205,7 @@ class CNNTrainer(object):
 			source_pars= []
 			nsources= 0
 
-			print("INFO: Generating #%d sources in image crop centered on (%s,%s) ..." % (nsources_max,x0,y0))
+			print("INFO: Generating #%d sources in image ..." % (nsources_max))
 
 			while nsources < nsources_max:
 				# Generate source position
