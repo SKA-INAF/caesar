@@ -2066,12 +2066,18 @@ class CNNTrainer(object):
 			for index in true_obj_indexes:
 				x0_true= target_pars[0 + index*self.npars]
 				y0_true= target_pars[1 + index*self.npars]
-				S_true= target_pars[2 + index*self.npars]
+				S_true= 1
+				if (2 + index*self.npars) < target_pars.size:
+					S_true= target_pars[2 + index*self.npars]
+
 				if pred[index]>detThr:
 					ntrue+= 1
 					x0_rec= pred_pars[0 + index*self.npars]
 					y0_rec= pred_pars[1 + index*self.npars]
-					S_rec= pred_pars[2 + index*self.npars]
+					S_rec= 1
+					if (2 + index*self.npars)<pred_pars.size:
+						S_rec= pred_pars[2 + index*self.npars]
+
 					s_list.append(np.log10(S_true))
 					spull_list.append(S_rec/S_true-1)
 					xpull_list.append(x0_rec-x0_true)
@@ -2148,12 +2154,18 @@ class CNNTrainer(object):
 			for index in true_obj_indexes:
 				x0_true= target_pars[0 + index*self.npars]
 				y0_true= target_pars[1 + index*self.npars]
-				S_true= target_pars[2 + index*self.npars]
+				S_true= 1
+				if (2 + index*self.npars)<target_pars.size:
+					S_true= target_pars[2 + index*self.npars]
+
 				if pred[index]>detThr:
 					ntrue+= 1
 					x0_rec= pred_pars[0 + index*self.npars]
 					y0_rec= pred_pars[1 + index*self.npars]
-					S_rec= pred_pars[2 + index*self.npars]
+					S_rec= 1
+					if (2 + index*self.npars)<pred_pars.size:			
+						S_rec= pred_pars[2 + index*self.npars]
+
 					s_list_test.append(np.log10(S_true))
 					spull_list_test.append(S_rec/S_true-1)
 					xpull_list_test.append(x0_rec-x0_true)
