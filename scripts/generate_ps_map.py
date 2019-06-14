@@ -402,6 +402,16 @@ class SkyMapSimulator(object):
 	def write_ds9_regions(self):
 		""" Write DS9 region """
 	
+		## Retrieve coord sys
+		if self.model_im:
+			cs= self.model_im.coordsys()
+		else:
+			if self.model_ext_im:
+				cs= self.model_ext_im.coordsys() 
+			else:
+				print('ERROR: Cannot retrieve coord sys from model images!')
+				return -1
+		
 		## Open file	
 		fout = open(self.ds9_outfile, 'wb')
 
@@ -415,7 +425,7 @@ class SkyMapSimulator(object):
 		fout.write('global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n')
 		fout.write('image\n')
 
-		cs= self.model_im.coordsys() 
+		
 		wcs_type= cs.referencecode()[0]
 		wcs_type= wcs_type.lower()
 		wcs_type_str= (("%s\n") % wcs_type)
@@ -506,6 +516,8 @@ class SkyMapSimulator(object):
 
 		fout.close();
 		fout_wcs.close();
+
+		return 0
 
 	
 	def write_data_to_fits(self,im,outputfile):
