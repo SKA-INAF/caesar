@@ -510,8 +510,11 @@ class SkyMapSimulator(object):
 	
 	def write_data_to_fits(self,im,outputfile):
 		""" Write casa image to FITS """
-		im.tofits(outputfile,overwrite=True)
-		
+		if im:
+			im.tofits(outputfile,overwrite=True)
+		else:
+			print 'WARN: Null input image given, nothing will be written to fits'
+
 
 	def init(self):
 		""" Initialize data """
@@ -878,11 +881,13 @@ class SkyMapSimulator(object):
 		self.img_im.setrestoringbeam(major=bmaj,minor=bmin,pa=bpa) 
 			
 		## == WRITE MAPS TO FITS FILES ==
-		print ('INFO: Writing model to FITS...')
-		self.write_data_to_fits(self.model_im,self.model_outfile)
+		if self.add_ps_sources:
+			print ('INFO: Writing model to FITS...')
+			self.write_data_to_fits(self.model_im,self.model_outfile)
 
-		print ('INFO: Writing ext source map to FITS...')
-		self.write_data_to_fits(self.model_ext_im,self.model_ext_outfile)
+		if self.add_ext_sources:
+			print ('INFO: Writing ext source map to FITS...')
+			self.write_data_to_fits(self.model_ext_im,self.model_ext_outfile)
 		
 		print ('INFO: Writing image to FITS...')
 		self.write_data_to_fits(self.img_im,self.img_outfile)
@@ -900,9 +905,12 @@ class SkyMapSimulator(object):
 
 		## Close open CASA images	
 		print ('INFO: Closing CASA images ...')
-		self.mosaic_im.done()
-		self.model_im.done()
-		self.img_im.done()
+		if self.mosaic_im:
+			self.mosaic_im.done()
+		if self.model_im:
+			self.model_im.done()
+		if self.img_im:	
+			self.img_im.done()
 		if self.model_ext_im:
 			self.model_ext_im.done()
 
@@ -991,8 +999,6 @@ class SkyMapImager(object):
 			raise ValueError('Missing skymodel image input filename!')
 
 
-
-		
 		#####################################
 		## Read residual map from file
 		#####################################
