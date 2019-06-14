@@ -557,9 +557,8 @@ class SkyMapSimulator(object):
 			raise ValueError('Invalid margin specified (<0 or larger than image half size!')
 					
 		## Initialize grid
-		print("INFO: Initializing grid for blov generation...")
+		print("INFO: Initializing grid for blob generation...")
 		self.gridy, self.gridx = np.mgrid[0:self.nx, 0:self.ny]
-
 
 	def generate_compact_sources(self):
 		""" Generate list of compact sources in the map.
@@ -972,8 +971,11 @@ class SkyMapImager(object):
 	
 	def write_data_to_fits(self,im,outputfile):
 		""" Write casa image to FITS """
-		im.tofits(outputfile,overwrite=True)
-		
+		if im:
+			im.tofits(outputfile,overwrite=True)
+		else:
+			print 'WARN: Null input image given, nothing will be written to fits'
+			
 
 	def init(self):
 		""" Initialize imager """
