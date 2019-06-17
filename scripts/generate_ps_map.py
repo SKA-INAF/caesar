@@ -338,8 +338,8 @@ class SkyMapSimulator(object):
 			x= self.exts_list[i][1]
 			y= self.exts_list[i][2]
 			S= self.exts_list[i][3]
-			x_wcs= self.model_im.toworld([x,y])['numeric'][0]
-			y_wcs= self.model_im.toworld([x,y])['numeric'][1]
+			x_wcs= self.model_ext_im.toworld([x,y])['numeric'][0]
+			y_wcs= self.model_ext_im.toworld([x,y])['numeric'][1]
 			x_wcs= np.rad2deg(x_wcs)
 			y_wcs= np.rad2deg(y_wcs)
 
