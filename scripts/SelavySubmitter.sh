@@ -679,7 +679,7 @@ generate_exec_script(){
 #######################################
 
 
-if [ "$FILELIST_GIVEN" = true ]; then
+if [ $FILELIST_GIVEN = true ]; then
 
 	#######################################
 	##     LOOP OVER FILES IN LIST
@@ -730,7 +730,7 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		generate_config $configfile
 
 		## Generate run script file (if running on container)
-		if [ "$RUN_IN_CONTAINER" = true ] ; then
+		if [ $RUN_IN_CONTAINER = true ] ; then
 			echo "INFO: Generating run script file $runfile ..."
 			generate_run_script "$runfile" "$CURRENTJOBDIR/$configfile"
 		fi
@@ -739,16 +739,16 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		echo "INFO: Creating submit script file $shfile for input file: $inputfile ..."
 
 		CMD=""
-		if [ "$MPI_ENABLED" = true ]; then	
+		if [ $MPI_ENABLED = true ]; then	
 			CMD="mpirun -np $NPROC_TOT $MPI_OPTIONS "
 			if [ "$HOSTFILE_GIVEN" = true ] ; then
 				CMD="$CMD -f $HOSTFILE "
 			fi
 		fi
-		if [ "$RUN_IN_CONTAINER" = true ] ; then
+		if [ $RUN_IN_CONTAINER = true ] ; then
 			##EXE="$CMD singularity exec $CONTAINER_OPTIONS $CONTAINER_IMG selavy "
 			EXE="$CMD singularity exec $CONTAINER_OPTIONS $CONTAINER_IMG $CURRENTJOBDIR/$runfile "
-			EXE_ARGS=""	
+			EXE_ARGS=" "	
 		else
 			EXE="$CMD selavy "
 			EXE_ARGS="-c $BASEDIR/$configfile "
@@ -758,7 +758,7 @@ if [ "$FILELIST_GIVEN" = true ]; then
 
 
 		# Submits the job to batch system
-		if [ "$SUBMIT" = true ] ; then
+		if [ $SUBMIT = true ] ; then
 			echo "INFO: Submitting script $shfile to QUEUE $BATCH_QUEUE using $BATCH_SYSTEM batch system ..."
 			$BATCH_SUB_CMD $BATCH_QUEUE_NAME_OPTION $BATCH_QUEUE $CURRENTJOBDIR/$shfile
 		fi
@@ -808,7 +808,7 @@ else
 
 	## Generate run script file (if running on container)
 	runfile="Run_$filename_base_noext"'.sh'	
-	if [ "$RUN_IN_CONTAINER" = true ] ; then
+	if [ $RUN_IN_CONTAINER = true ] ; then
 		echo "INFO: Generating run script file $runfile ..."
 		generate_run_script "$runfile" "$CURRENTJOBDIR/$configfile"
 	fi
@@ -817,17 +817,17 @@ else
 	shfile="Submit_$filename_base_noext"'.sh'
 	
 	CMD=""
-	if [ "$MPI_ENABLED" = true ]; then	
+	if [ $MPI_ENABLED = true ]; then	
 		CMD="mpirun -np $NPROC_TOT $MPI_OPTIONS "
 		if [ "$HOSTFILE_GIVEN" = true ] ; then
 			CMD="$CMD -f $HOSTFILE "
 		fi
 	fi
 
-	if [ "$RUN_IN_CONTAINER" = true ] ; then
+	if [ $RUN_IN_CONTAINER = true ] ; then
 		##EXE="$CMD singularity exec $CONTAINER_OPTIONS $CONTAINER_IMG selavy "
 		EXE="$CMD singularity exec $CONTAINER_OPTIONS $CONTAINER_IMG $CURRENTJOBDIR/$runfile "		
-		EXE_ARGS=""
+		EXE_ARGS=" "
 	else
 		EXE="$CMD selavy "
 		EXE_ARGS="-c $BASEDIR/$configfile "
@@ -838,7 +838,7 @@ else
 	generate_exec_script "$shfile" "$jobId" "$EXE" "$EXE_ARGS" "$logfile"
 
 	# Submits the job to batch system
-	if [ "$SUBMIT" = true ] ; then
+	if [ $SUBMIT = true ] ; then
 		echo "INFO: Submitting script $shfile to QUEUE $BATCH_QUEUE using $BATCH_SYSTEM batch system ..."
 		$BATCH_SUB_CMD $BATCH_QUEUE_NAME_OPTION $BATCH_QUEUE $CURRENTJOBDIR/$shfile
 	fi
