@@ -573,7 +573,7 @@ generate_run_script(){
 	local exe="selavy"
 	local exe_args="-c $parset_file"
 
-	echo "INFO: Creating sh file $shfile (jobindex=$jobindex, exe=$exe, exe_args=$exe_args)..."
+	echo "INFO: Creating sh file $shfile (exe=$exe, exe_args=$exe_args)..."
 	( 
 			echo "#!/bin/bash"
 
