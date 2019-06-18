@@ -566,6 +566,28 @@ generate_config(){
 #######################################
 ##   DEFINE GENERATE EXE SCRIPT FCN
 #######################################
+generate_run_script(){
+
+	local shfile=$1
+	local parsetfile=$2
+	local exe="selavy"
+	local exe_args="-c $parset_file"
+
+	echo "INFO: Creating sh file $shfile (jobindex=$jobindex, exe=$exe, exe_args=$exe_args)..."
+	( 
+			echo "#!/bin/bash"
+
+			echo ""
+			echo "$exe $exe_args"
+
+	) > $shfile
+
+	chmod +x $shfile
+
+}
+## close function generate_run_script()
+
+
 generate_exec_script(){
 
 	local shfile=$1
@@ -694,10 +716,12 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		## Define config & run script file names 
 		if [ "$APPEND_RUN_INDEX" = true ]; then
 			configfile="selavy_$filename_base_noext"'_'"$index.parset"
-			shfile="SelavyRun_$filename_base_noext"'_'"$index.sh"
+			runfile="Run_$filename_base_noext"'_'"$index.sh"
+			shfile="Submit_$filename_base_noext"'_'"$index.sh"
 		else
 			configfile="selavy_$filename_base_noext"'.parset'
-			shfile="SelavyRun_$filename_base_noext"'.sh'
+			runfile="Run_$filename_base_noext"'.sh'
+			shfile="Submit_$filename_base_noext"'.sh'
 		fi
 
 		
@@ -705,9 +729,14 @@ if [ "$FILELIST_GIVEN" = true ]; then
   	echo "INFO: Creating config file $configfile for input file: $inputfile ..."
 		generate_config $configfile
 
+		## Generate run script file (if running on container)
+		if [ "$RUN_IN_CONTAINER" = true ] ; then
+			echo "INFO: Generating run script file $runfile ..."
+			generate_run_script "$runfile" "$CURRENTJOBDIR/$configfile"
+		fi
 
 		## Generate script
-		echo "INFO: Creating script file $shfile for input file: $inputfile ..."
+		echo "INFO: Creating submit script file $shfile for input file: $inputfile ..."
 
 		CMD=""
 		if [ "$MPI_ENABLED" = true ]; then	
@@ -717,12 +746,14 @@ if [ "$FILELIST_GIVEN" = true ]; then
 			fi
 		fi
 		if [ "$RUN_IN_CONTAINER" = true ] ; then
-			EXE="$CMD singularity exec $CONTAINER_OPTIONS $CONTAINER_IMG selavy "		
+			##EXE="$CMD singularity exec $CONTAINER_OPTIONS $CONTAINER_IMG selavy "
+			EXE="$CMD singularity exec $CONTAINER_OPTIONS $CONTAINER_IMG $CURRENTJOBDIR/$runfile "
+			EXE_ARGS=""	
 		else
 			EXE="$CMD selavy "
+			EXE_ARGS="-c $BASEDIR/$configfile "
 		fi
-		EXE_ARGS="-c $BASEDIR/$configfile "
-
+		
 		generate_exec_script "$shfile" "$index" "$EXE" "$EXE_ARGS" "$logfile"
 
 
@@ -775,10 +806,15 @@ else
   echo "INFO: Creating config file $configfile for input file: $inputfile ..."
 	generate_config $configfile
 
+	## Generate run script file (if running on container)
+	runfile="Run_$filename_base_noext"'.sh'	
+	if [ "$RUN_IN_CONTAINER" = true ] ; then
+		echo "INFO: Generating run script file $runfile ..."
+		generate_run_script "$runfile" "$CURRENTJOBDIR/$configfile"
+	fi
 
 	## Define executable & args variables and generate script
-	shfile="Run_$filename_base_noext"'.sh'
-	
+	shfile="Submit_$filename_base_noext"'.sh'
 	
 	CMD=""
 	if [ "$MPI_ENABLED" = true ]; then	
@@ -789,13 +825,14 @@ else
 	fi
 
 	if [ "$RUN_IN_CONTAINER" = true ] ; then
-		EXE="$CMD singularity exec $CONTAINER_OPTIONS $CONTAINER_IMG selavy "		
+		##EXE="$CMD singularity exec $CONTAINER_OPTIONS $CONTAINER_IMG selavy "
+		EXE="$CMD singularity exec $CONTAINER_OPTIONS $CONTAINER_IMG $CURRENTJOBDIR/$runfile "		
+		EXE_ARGS=""
 	else
 		EXE="$CMD selavy "
+		EXE_ARGS="-c $BASEDIR/$configfile "
 	fi
-	EXE_ARGS="-c $BASEDIR/$configfile "
-
-
+	
 	echo "INFO: Creating script file $shfile for input file: $inputfile ..."
 	jobId=" "
 	generate_exec_script "$shfile" "$jobId" "$EXE" "$EXE_ARGS" "$logfile"
