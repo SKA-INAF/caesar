@@ -228,6 +228,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"
 	echo "--addrunindex - Append a run index to submission script (in case of list execution) (default=no)"
 	echo "--outdir=[OUTPUT_DIR] - Output directory where to put run output file (default=pwd)"
+	echo "--no-logredir - Do not redirect logs to output file in script "	
 	echo "--no-mpi - Disable MPI run (even with 1 proc) (default=enabled)"
 	echo "--mpioptions - Options to be passed to MPI (e.g. --bind-to {none,hwthread, core, l1cache, l2cache, l3cache, socket, numa, board}) (default=)"
 	echo "--nproc=[NPROC] - Number of MPI processors per node used (NB: mpi tot nproc=nproc x nnodes) (default=1)"
@@ -265,6 +266,7 @@ INPUTFILE=""
 INPUTFILE_GIVEN=false
 APPEND_RUN_INDEX=false
 MPI_ENABLED=true
+REDIRECT_LOGS=true
 NPROC=1
 MPI_OPTIONS=""
 HOSTFILE=""
@@ -490,7 +492,9 @@ do
 		--addrunindex*)
 			APPEND_RUN_INDEX=true
 		;;
-
+		--no-logredir*)
+			REDIRECT_LOGS=false
+		;;
 		--outdir=*)
     	OUTPUT_DIR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
     ;;
@@ -1652,9 +1656,13 @@ generate_exec_script(){
       echo 'echo "*************************************************"'
       echo 'echo ""'
       echo '  cd $JOBDIR'
+			
+			if [ $REDIRECT_LOGS = true ]; then			
+      	echo "  $exe $exe_args >& $logfile"
+			else
+				echo "  $exe $exe_args"
+      fi
 
-      echo "  $exe $exe_args >& $logfile"
-      
       echo '  echo ""'
 
       echo " "
