@@ -478,6 +478,8 @@ generate_config(){
 		echo '# The subsection shows the pixel range for each axis, giving the first & last pixel to be used (1-based)'
 		echo "Selavy.subsection = [$XMIN:$XMAX,$YMIN:$YMAX,*,*]"
 
+		echo ""
+
 		echo '############################################'
 		echo '##     OUTPUT OPTIONS'
 		echo '############################################'
@@ -486,6 +488,8 @@ generate_config(){
 		echo "Selavy.resultsFile = $catalog_file"
 		echo "Selavy.votFile = $vot_file"
 		echo "Selavy.writeFitResults = true"
+
+		echo ""
 
 		echo "############################################"
 		echo "##     RUN OPTIONS"
