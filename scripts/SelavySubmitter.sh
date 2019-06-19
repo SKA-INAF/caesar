@@ -484,6 +484,7 @@ generate_config(){
 		echo "Selavy.flagDS9 = $SAVE_DS9REGIONS"
 		echo "Selavy.ds9File = $ds9region_file"
 		echo "Selavy.resultsFile = $catalog_file"
+		echo "Selavy.votFile = $vot_file"
 		echo "Selavy.writeFitResults = true"
 
 		echo "############################################"
@@ -712,8 +713,9 @@ if [ $FILELIST_GIVEN = true ]; then
 		outputfile="out-$filename_base_noext"'.root'
  		ds9region_file="ds9-$filename_base_noext"'.reg'
 		ds9fitregion_file="ds9_fitcomp-$filename_base_noext"'.reg'
-		catalog_file="catalog-$filename_base_noext"'.dat'
-		catalog_fitcomp_file="catalog_fitcomp-$filename_base_noext"'.dat'
+		catalog_file="catalog-$filename_base_noext"'.txt'
+		catalog_fitcomp_file="catalog_fitcomp-$filename_base_noext"'.txt'
+		vot_file="catalog-$filename_base_noext"'.xml'
 		bkgmap_file="bkg-$filename_base_noext"'.fits'
 		rmsmap_file="rms-$filename_base_noext"'.fits'
 		snrmap_file="snr-$filename_base_noext"'.fits'
@@ -800,8 +802,9 @@ else
 	outputfile="out-$filename_base_noext"'.root'
  	ds9region_file="ds9-$filename_base_noext"'.reg'
 	ds9fitregion_file="ds9_fitcomp-$filename_base_noext"'.reg'
-	catalog_file="catalog-$filename_base_noext"'.dat'
-	catalog_fitcomp_file="catalog_fitcomp-$filename_base_noext"'.dat'
+	catalog_file="catalog-$filename_base_noext"'.txt'
+	catalog_fitcomp_file="catalog_fitcomp-$filename_base_noext"'.txt'
+	vot_file="catalog-$filename_base_noext"'.xml'	
 	bkgmap_file="bkg-$filename_base_noext"'.fits'
 	rmsmap_file="rms-$filename_base_noext"'.fits'
 	snrmap_file="snr-$filename_base_noext"'.fits'
