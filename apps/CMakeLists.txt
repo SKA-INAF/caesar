@@ -12,6 +12,7 @@ add_subdirectory(sourceMatchFinder)
 add_subdirectory(sourceRegionSelector)
 add_subdirectory(sourceRegionMatchFinder)
 add_subdirectory(sourceRegionTagger)
+add_subdirectory(sourceSelector)
 
 set (INCLUDE_DIRS ${INCLUDE_DIRS} PARENT_SCOPE)
 set (Task_ReadImg_SRCS ${Task_ReadImg_SRCS} PARENT_SCOPE)
@@ -28,4 +29,5 @@ set (Task_SourceMatchFinder_SRCS ${Task_SourceMatchFinder_SRCS} PARENT_SCOPE)
 set (Task_SourceRegionSelector_SRCS ${Task_SourceRegionSelector_SRCS} PARENT_SCOPE)
 set (Task_SourceRegionMatchFinder_SRCS ${Task_SourceRegionMatchFinder_SRCS} PARENT_SCOPE)
 set (Task_SourceRegionTagger_SRCS ${Task_SourceRegionTagger_SRCS} PARENT_SCOPE)
+set (Task_SourceSelector_SRCS ${Task_SourceSelector_SRCS} PARENT_SCOPE)
 
