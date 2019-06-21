@@ -1,6 +1,7 @@
 add_subdirectory(img)
 add_subdirectory(imgio)
 add_subdirectory(imgfilt)
+add_subdirectory(sproc)
 add_subdirectory(imgproc)
 add_subdirectory(utils)
 
