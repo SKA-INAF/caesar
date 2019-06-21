@@ -650,6 +650,25 @@ class CodeUtils : public TObject {
 		}
 
 		/**
+		* \brief Convert string vector to typed vector
+		*/
+		template<typename T>
+		static std::vector<T> StringVecToTypedVec(const std::vector<std::string>& vec)
+		{
+			std::vector<T> vec_typed;
+			if(vec.empty()) return vec_typed;
+			for(size_t i=0;i<vec.size();i++){
+				std::stringstream ss(vec[i]);
+				T val= T(0);
+				ss >> val;
+				vec_typed.push_back(val);
+			}
+			return vec_typed;
+		}
+
+		
+		
+		/**
 		* \brief Find pattern in string
 		*/
 		static bool HasPatternInString(std::string str,std::string pattern)
@@ -705,6 +724,24 @@ class CodeUtils : public TObject {
 			return JoinCollection(data.begin(),data.end(),separator);
 		}
 
+		/**
+		* \brief Perform logical OR among all vector elements
+		*/
+		static bool GetVecLogicalOr(const std::vector<bool>& v)
+		{
+			bool res= std::any_of(v.begin(),v.end(), [](bool elem) { return elem; });
+			return res;
+		}
+
+		/**
+		* \brief Perform logical AND among all vector elements
+		*/
+		static bool GetVecLogicalAnd(const std::vector<bool>& v)
+		{
+			bool res= std::all_of(v.begin(),v.end(), [](bool elem) { return elem; });
+			return res;
+		}
+		
 		/**
 		* \brief Compare string case insensitive 
 		*/
@@ -774,12 +811,32 @@ class CodeUtils : public TObject {
 };
 
 
+/**
+* \brief Convert string vector to bool vector (specialization of general method)
+*/
+template<>
+inline std::vector<bool> CodeUtils::StringVecToTypedVec<bool>(const std::vector<std::string>& vec)
+{
+	std::vector<bool> vec_typed;
+	if(vec.empty()) return vec_typed;
+	for(size_t i=0;i<vec.size();i++){
+		std::stringstream ss(vec[i]);
+		bool val= false;
+		ss >> std::boolalpha >> val;
+		vec_typed.push_back(val);
+	}
+	return vec_typed;
+}
+
 
 #ifdef __MAKECINT__
 #pragma link C++ class CodeUtils+;
 #endif	
 
 }//close namespace
+
+
+
 
 
 #endif 

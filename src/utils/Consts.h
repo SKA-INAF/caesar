@@ -335,6 +335,13 @@ enum LoggerTarget {
 	eSYSLOG_TARGET= 3
 };
 
+enum CutType {
+	eUNKNOWN_CUT=0,
+	eEQUALITY_CUT=1,
+	eBOUND_CUT=2,
+	eSINGLE_BOUND_CUT=3
+};
+
 #ifdef __MAKECINT__
 #pragma link C++ enum WCSType+;
 #pragma link C++ enum ImgFilters+;

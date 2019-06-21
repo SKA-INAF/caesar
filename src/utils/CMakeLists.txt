@@ -11,9 +11,12 @@ set(THIS_SRCS ${THIS_SRCS}
 	${SRC_DIR}/CodeUtils.cc 
 	${SRC_DIR}/MathUtils.cc 
 	${SRC_DIR}/GraphicsUtils.cc 
-	${SRC_DIR}/EllipseUtils.cc 
+	${SRC_DIR}/EllipseUtils.cc
+	${SRC_DIR}/Graph.cc 	 
 	${SRC_DIR}/Option.cc 	
+	${SRC_DIR}/Cut.cc 	
 	${SRC_DIR}/ConfigParser.cc 
+	${SRC_DIR}/CutParser.cc 
 #	${SRC_DIR}/Logger.cc
 	${SRC_DIR}/TaskData.cc
 	${SRC_DIR}/Serializer.cc
@@ -33,8 +36,11 @@ set(THIS_HEADERS ${THIS_HEADERS}
 	${INC_DIR}/MathUtils.h 
 	${INC_DIR}/GraphicsUtils.h 
 	${INC_DIR}/EllipseUtils.h
+	${INC_DIR}/Graph.h 
 	${INC_DIR}/Option.h 
-	${INC_DIR}/ConfigParser.h 
+	${INC_DIR}/Cut.h 	
+	${INC_DIR}/ConfigParser.h
+	${INC_DIR}/CutParser.h  
 #	${INC_DIR}/Logger.h
 	${INC_DIR}/TaskData.h
 	${INC_DIR}/Serializer.h
@@ -53,8 +59,11 @@ set(THIS_DICT_HEADERS ${THIS_DICT_HEADERS}
 	MathUtils.h 
 	GraphicsUtils.h 
 	EllipseUtils.h
-	Option.h 
+	Graph.h
+	Option.h
+	Cut.h 
 	ConfigParser.h 
+	CutParser.h 
 #	Logger.h
 	TaskData.h
 	Serializer.h
@@ -72,8 +81,11 @@ set(THIS_DICT_SRCS ${THIS_DICT_SRCS}
 	${SRC_DIR}/MathUtils.cc 
 	${SRC_DIR}/GraphicsUtils.cc 
 	${SRC_DIR}/EllipseUtils.cc 
+	${SRC_DIR}/Graph.cc 
 	${SRC_DIR}/Option.cc 	
+	${SRC_DIR}/Cut.cc 	
 	${SRC_DIR}/ConfigParser.cc 
+	${SRC_DIR}/CutParser.cc 
 #	${SRC_DIR}/Logger.cc
 	${SRC_DIR}/TaskData.cc
 	${SRC_DIR}/Serializer.cc

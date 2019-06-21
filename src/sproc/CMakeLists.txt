@@ -8,34 +8,20 @@ file(GLOB THIS_HEADERS ${INC_DIR}/*.h)
 set(
 	THIS_DICT_HEADERS 
 	${THIS_DICT_HEADERS} 
-	BkgFinder.h 
-	BkgData.h 
-	SLIC.h 
-	SLICData.h 
-	Pixel.h 
-	Region.h
-	BlobFinder.h
-	SFinder.h	
-	Contour.h
-	ChanVeseSegmenter.h
-	SLICSegmenter.h
-	LRACSegmenter.h
+	Blob.h
+	Source.h
+	SourceCube.h
+	SourceFitter.h
+	SourceExporter.h
 )
 set(
 	THIS_DICT_SRCS 
 	${THIS_DICT_SRCS} 
-	${SRC_DIR}/BkgFinder.cc 
-	${SRC_DIR}/BkgData.cc 
-	${SRC_DIR}/SLIC.cc 
-	${SRC_DIR}/SLICData.cc
-	${SRC_DIR}/Pixel.cc 
-	${SRC_DIR}/Region.cc	
-	${SRC_DIR}/BlobFinder.cc
-	${SRC_DIR}/SFinder.cc
-	${SRC_DIR}/Contour.cc
-	${SRC_DIR}/ChanVeseSegmenter.cc
-	${SRC_DIR}/SLICSegmenter.cc
-	${SRC_DIR}/LRACSegmenter.cc
+	${SRC_DIR}/Blob.cc
+	${SRC_DIR}/Source.cc
+	${SRC_DIR}/SourceCube.cc		
+	${SRC_DIR}/SourceFitter.cc
+	${SRC_DIR}/SourceExporter.cc
 )
 
 set(THIS_HEADERS_WPATH "")
