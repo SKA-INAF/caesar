@@ -313,4 +313,47 @@
 #pragma link C++ class Caesar::vector<DS9EllipseRegion>+;
 #pragma link C++ class Caesar::vector<DS9EllipseRegion*>+;
 
+
+//== CUT PARSER ==
+#pragma link C++ class Caesar::Cut+;
+#pragma link C++ class Caesar::Cut*+;
+#pragma link C++ class std::map<std::string,Caesar::Cut*>+;
+
+#pragma link C++ class Caesar::EqualityCut<int>+;
+#pragma link C++ class Caesar::EqualityCut<long int>+;
+#pragma link C++ class Caesar::EqualityCut<float>+;
+#pragma link C++ class Caesar::EqualityCut<double>+;
+#pragma link C++ class Caesar::EqualityCut<bool>+;
+#pragma link C++ class Caesar::EqualityCut<int>*+;
+#pragma link C++ class Caesar::EqualityCut<long int>*+;
+#pragma link C++ class Caesar::EqualityCut<float>*+;
+#pragma link C++ class Caesar::EqualityCut<double>*+;
+#pragma link C++ class Caesar::EqualityCut<bool>*+;
+
+#pragma link C++ class Caesar::BoundCut<int>+;
+#pragma link C++ class Caesar::BoundCut<long int>+;
+#pragma link C++ class Caesar::BoundCut<float>+;
+#pragma link C++ class Caesar::BoundCut<double>+;
+#pragma link C++ class Caesar::BoundCut<bool>+;
+#pragma link C++ class Caesar::BoundCut<int>*+;
+#pragma link C++ class Caesar::BoundCut<long int>*+;
+#pragma link C++ class Caesar::BoundCut<float>*+;
+#pragma link C++ class Caesar::BoundCut<double>*+;
+#pragma link C++ class Caesar::BoundCut<bool>*+;
+#pragma link C++ class Caesar::SingleBoundCut<int>+;
+#pragma link C++ class Caesar::SingleBoundCut<long int>+;
+#pragma link C++ class Caesar::SingleBoundCut<float>+;
+#pragma link C++ class Caesar::SingleBoundCut<double>+;
+#pragma link C++ class Caesar::SingleBoundCut<bool>+;
+#pragma link C++ class Caesar::SingleBoundCut<int>*+;
+#pragma link C++ class Caesar::SingleBoundCut<long int>*+;
+#pragma link C++ class Caesar::SingleBoundCut<float>*+;
+#pragma link C++ class Caesar::SingleBoundCut<double>*+;
+#pragma link C++ class Caesar::SingleBoundCut<bool>*+;
+
+#pragma link C++ class Caesar::CutFactory+;
+#pragma link C++ class Caesar::CutParser+;
+
+
+
 #endif
