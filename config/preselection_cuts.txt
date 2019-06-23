@@ -1,0 +1,43 @@
+###################################
+##        CUTS
+###################################
+##
+## ===================================
+##   SOURCE ISLAND MORPHOLOGY CUTS
+## ====================================
+nPixels T >= AND {3}
+minBoundingBox T >= AND {2}
+circRatio T >= AND {0.4}
+elongation T <= AND {0.7}
+ellipseAreaRatio F <> AND {0.6} {1.4} 
+beamAreaRatio F <> AND {0.1} {10}
+goodSourceFlag T == AND {1}
+##
+## =======================
+##    SOURCE FIT CUTS
+## =======================
+# - Island-level cuts
+hasFit T == AND {1}
+fitStatus T == OR {3,4}
+hasGoodFitChi2 T <= AND {10}
+fitQualityFlag T == OR {2,3}
+fitFlux T >= AND {1.e-7}
+fitFluxToIslandRatio T <= AND {2}
+#
+# - Component-level cuts
+fitComponentFlux T >= AND {1.e-7}
+fitComponentPeakFluxToMaxRatio T <= AND {2}
+fitComponentPeakSignificance T >= AND {2.5}
+fitComponentCentroidInsideIsland T == AND {1}
+fitComponentIsolatedCentroid T >= AND {2}
+##
+## ================================
+##    SOURCE CLASSIFICATION CUTS
+## ================================
+sourceType F == OR {1,2}
+sourceFlag F == OR {1,2}
+sourceSimType F == OR {2,5}
+fitComponentType F == AND {2}
+fitComponentFlag F == AND {1}
+##
+####################################
