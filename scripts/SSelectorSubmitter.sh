@@ -199,11 +199,6 @@ if [ "$BATCH_SYSTEM" != "PBS" ] && [ "$BATCH_SYSTEM" != "SLURM" ]; then
   exit 1
 fi
 
-if [ "$ENV_FILE" = "" ]; then
-  echo "ERROR: Empty ENV_FILE arg!"
-  exit 1
-fi
-
 if [ "$CONTAINER_IMG" = "" ] && [ "$RUN_IN_CONTAINER" = true ]; then
   echo "ERROR: Empty CONTAINER_IMG argument (hint: you must specify a container image if run in container option is activated)!"
   exit 1
@@ -224,8 +219,11 @@ export OUTPUT_DATADIR="$PWD"
 export DATADIR=""
 
 ## Load env file
-echo "INFO: Loading environment variables defined in file $ENV_FILE ..."
-source $ENV_FILE
+if [ "$ENV_FILE" != "" ]; then
+  echo "INFO: Loading environment variables defined in file $ENV_FILE ..."
+	source $ENV_FILE
+fi
+
 
 ## Define batch run options
 if [ "$BATCH_SYSTEM" = "PBS" ]; then
