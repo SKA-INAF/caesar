@@ -402,7 +402,7 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		else
 			EXE="$CAESAR_DIR/bin/SourceSelector"
 		fi
-		EXE_ARGS="--inputfile=$inputfile --cutfile=$CUTFILE --output=$outputfile --region-output=$ds9region_file --catalog-output=$catalog_file"
+		EXE_ARGS="--input=$inputfile --cutfile=$CUTFILE --output=$outputfile --region-output=$ds9region_file --catalog-output=$catalog_file"
 
 		generate_exec_script "$shfile" "$index" "$EXE" "$EXE_ARGS" "$logfile"
 
@@ -453,7 +453,7 @@ else
 	else
 		EXE="$CAESAR_DIR/bin/SourceSelector"
 	fi
-	EXE_ARGS="--inputfile=$inputfile --cutfile=$CUTFILE --output=$outputfile --region-output=$ds9region_file --catalog-output=$catalog_file"
+	EXE_ARGS="--input=$inputfile --cutfile=$CUTFILE --output=$outputfile --region-output=$ds9region_file --catalog-output=$catalog_file"
 
 	echo "INFO: Creating script file $shfile for input file: $inputfile ..."
 	jobId=" "
