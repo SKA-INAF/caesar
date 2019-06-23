@@ -353,6 +353,7 @@
 
 #pragma link C++ class Caesar::CutFactory+;
 #pragma link C++ class Caesar::CutParser+;
+#pragma link C++ class Caesar::SourceSelector+;
 
 
 
