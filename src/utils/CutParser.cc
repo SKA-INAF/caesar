@@ -47,13 +47,13 @@ ClassImp(Caesar::CutParser)
 
 namespace Caesar {
 
-bool CutParser::m_hasRegisteredCuts;
+//bool CutParser::m_hasRegisteredCuts;
 std::string CutParser::m_cutFile= "";
 
 CutParser::CutParser() 
 {
 	m_cutFile= "";
-	m_hasRegisteredCuts= false;	
+	//m_hasRegisteredCuts= false;	
 
 }//close costructor
 
@@ -273,12 +273,6 @@ int CutParser::Parse(std::string filename)
 		
 	}//close while
 
-	//## Print parsed cuts
-	#ifdef LOGGING_ENABLED
-		INFO_LOG("Printing parsed cuts...");
-	#endif
-	PrintCuts();
-
 	//## Close file
 	in.close();
 
@@ -287,29 +281,6 @@ int CutParser::Parse(std::string filename)
 }//close Parse()
 
 
-int CutParser::RegisterPredefinedCuts()
-{	
-	//Register pre-defined cuts
-	try {
-		//=============
-		//==  CUTS   ==
-		//=============
-		//REGISTER_OPTION(inputFile,std::string,"","","");
-		
-		
-		//Set has_registered flag (otherwise cuts are re-built)
-		m_hasRegisteredCuts= true;
-
-	}//close try block
-	catch(...)
-	{
-		cerr<<"CutParser::RegisterPredefinedCuts(): ERROR: Failed to load predefined cuts!"<<endl;
-		return -1;
-	}
-
-	return 0;
-
-}//close RegisterPredefinedCuts()
 
 }//close namespace
 

@@ -1196,7 +1196,7 @@ class SourceComponentPars : public TObject {
 			//Check if has fit pars
 			if(!m_hasWCSDeconvolvedEllipsePars) {
 				#ifdef LOGGING_ENABLED
-					WARN_LOG("No WCS beam-deconvolved ellipse pars was computed!");
+					DEBUG_LOG("No WCS beam-deconvolved ellipse pars was computed!");
 				#endif
 				return -1;
 			}
@@ -1543,6 +1543,38 @@ class SourceFitPars : public TObject {
 		* \brief Get number of components
 		*/
 		int GetNComponents(){return nComponents;}
+
+		/**
+		* \brief Remove fit components
+		*/
+		int RemoveComponents(std::vector<int> componentIds)
+		{
+			//Check components given
+			int nComponentsToRemove= static_cast<int>(componentIds.size());
+			if(nComponentsToRemove<=0 || nComponentsToRemove>nComponents){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No components given to remove or too many (exceeding number of current components)!");
+				#endif
+				return -1;
+			}
+			for(size_t i=0;i<componentIds.size();i++){
+				int componentId= componentIds[i];
+				if(componentId<0 || componentId>=nComponents) {
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Component "<<componentId<<" does not exist!");
+					#endif
+					return -1;
+				}
+			}//end loop
+
+			//Delete fit components from vector
+			CodeUtils::DeleteItems(pars,componentIds);
+
+			//Recompute nComponents
+			nComponents= static_cast<int>(pars.size());
+
+			return 0;
+		}
 
 		/**
 		* \brief Get component flux density

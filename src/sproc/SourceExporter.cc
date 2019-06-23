@@ -599,7 +599,7 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			double pa_deconv_wcs= 0;
 			if(fitPars.GetComponentFitWCSDeconvolvedEllipsePars(k,bmaj_deconv_wcs,bmin_deconv_wcs,pa_deconv_wcs)<0){
 				#ifdef LOGGING_ENABLED
-					WARN_LOG("Failed to retrieve WCS beam-deconvolved ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+					DEBUG_LOG("Failed to retrieve WCS beam-deconvolved ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
 				#endif
 			}
 

@@ -261,10 +261,28 @@ class Source : public Blob {
 		std::vector<Source*>& GetNestedSources(){return m_NestedSources;}
 
 		/**
+		* \brief Clear nested sources
+		*/
+		int ClearNestedSources()
+		{
+			if(m_NestedSources.empty()) return 0;
+			for(size_t i=0;i<m_NestedSources.size();i++){
+				if(m_NestedSources[i]){
+					delete m_NestedSources[i];	
+					m_NestedSources[i]= 0;
+				}
+			}
+			m_NestedSources.clear();
+			m_HasNestedSources= false;
+			return 0;
+		}
+			
+
+		/**
 		* \brief Set nested sources
 		*/
-		int SetNestedSources(std::vector<Source*>& sources,bool clear_existing=true){
-
+		int SetNestedSources(std::vector<Source*>& sources,bool clear_existing=true)
+		{
 			//Check input list
 			if(sources.empty()){
 				#ifdef LOGGING_ENABLED
@@ -284,8 +302,13 @@ class Source : public Blob {
 			m_NestedSources.clear();
 
 			//Add new collection
-			m_NestedSources.insert(m_NestedSources.end(),sources.begin(),sources.end());
-			m_HasNestedSources= true;
+			if(sources.empty()){
+				m_NestedSources.insert(m_NestedSources.end(),sources.begin(),sources.end());
+				m_HasNestedSources= true;
+			}
+			else{
+				m_HasNestedSources= false;
+			}
 
 			return 0;
 

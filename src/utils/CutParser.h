@@ -29,7 +29,6 @@
 
 #include <Cut.h>
 
-#include <json/json.h>
 
 #include <TObject.h>
 #include <TBranch.h>
@@ -55,9 +54,11 @@ class CutParser : public TObject
 		static CutParser& Instance() 
 		{
     	static CutParser myInstance; 
+			/*
 			if(!m_hasRegisteredCuts){
 				RegisterPredefinedCuts();
 			}
+			*/
       return myInstance;
     }
  
@@ -93,10 +94,17 @@ class CutParser : public TObject
 		/** 
 		\brief Retrieve cut
  		*/
-		template <typename T>
 		Cut* GetCut(std::string name)
 		{
 			return CutFactory::Instance().GetCut(name);
+		}
+
+		/** 
+		\brief Retrieve cuts
+ 		*/
+		std::map<std::string,Cut*> GetCuts()
+		{
+			return CutFactory::Instance().GetCuts();
 		}
 	
 		/** 
@@ -116,14 +124,11 @@ class CutParser : public TObject
 			return CutFactory::Instance().IsCutPassed<T>(name,val);
 		}
 
-	
-	private:
-		static int RegisterPredefinedCuts();
 		
 	private:
 
 		static std::string m_cutFile;
-		static bool m_hasRegisteredCuts;
+		//static bool m_hasRegisteredCuts;
 		
 	ClassDef(CutParser,1)
 		

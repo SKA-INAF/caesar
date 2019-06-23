@@ -13,6 +13,7 @@ set(
 	SourceCube.h
 	SourceFitter.h
 	SourceExporter.h
+	SourceSelector.h
 )
 set(
 	THIS_DICT_SRCS 
@@ -22,6 +23,7 @@ set(
 	${SRC_DIR}/SourceCube.cc		
 	${SRC_DIR}/SourceFitter.cc
 	${SRC_DIR}/SourceExporter.cc
+	${SRC_DIR}/SourceSelector.cc
 )
 
 set(THIS_HEADERS_WPATH "")
