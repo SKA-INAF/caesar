@@ -547,13 +547,11 @@ int ParseOptions(int argc, char *argv[])
 	}
 
 	//Set DS9 region component file name
-	regionComponentsOutputFileName= regionOutputFileName;
-	CodeUtils::ExtractFileNameFromPath(regionComponentsOutputFileName,true);
+	regionComponentsOutputFileName= CodeUtils::ExtractFileNameFromPath(regionOutputFileName,true);
 	regionComponentsOutputFileName+= "_fitcomp.reg";
 
 	//Set catalog component file name
-	catalogComponentsOutputFileName= catalogOutputFileName;
-	CodeUtils::ExtractFileNameFromPath(catalogComponentsOutputFileName,true);
+	catalogComponentsOutputFileName= CodeUtils::ExtractFileNameFromPath(catalogOutputFileName,true);
 	catalogComponentsOutputFileName+= "_fitcomp.dat";
 
 	return 0;

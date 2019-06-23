@@ -21,6 +21,7 @@
 #include <DS9Region.h>
 #include <DS9RegionParser.h>
 #include <SourceExporter.h>
+#include <SourceSelector.h>
 
 #include <ConfigParser.h>
 #ifdef LOGGING_ENABLED
@@ -55,11 +56,11 @@ void Usage(char* exeName)
 	cout<<"Options:"<<endl;
   cout<<"-h, --help \t Show help message and exit"<<endl;
 	cout<<"-i, --input=[INPUT_FILE] \t Input ROOT file produced by CAESAR containing the source collection to be selected"<<endl;
+	cout<<"-c, --cutfile=[CUT_FILE] \t Input ascii file containing the list of cuts to be applied to source collection"<<endl;
 	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (ROOT format) where to store selected sources (default=sources.root)"<<endl;
 	cout<<"-R, --region-output=[REGION_OUTPUT_FILE] \t Output DS9 region file name where to store selected sources (default=sources.reg)"<<endl;
 	cout<<"-C, --catalog-output=[CATALOG_OUTPUT_FILE] \t Output catalog file name where to store selected sources (default=catalog.dat)"<<endl;
 	cout<<"-v, --verbosity=[LEVEL] \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
-	
 	cout<<"=============================="<<endl;
 
 }//close Usage()
@@ -68,6 +69,7 @@ static const struct option options_tab[] = {
   /* name, has_arg, &flag, val */
   { "help", no_argument, 0, 'h' },
 	{ "input", required_argument, 0, 'i' },
+	{ "cutfile", required_argument, 0, 'c' },
 	{ "region-output", required_argument, 0, 'R' },
 	{ "catalog-output", required_argument, 0, 'C' },
 	{ "verbosity", required_argument, 0, 'v'},
@@ -78,6 +80,7 @@ static const struct option options_tab[] = {
 
 //Options
 std::string fileName= "";
+std::string cutFileName= "";
 std::string outputFileName= "sources.root";
 std::string regionOutputFileName= "sources.reg";
 std::string regionComponentsOutputFileName= "sources_fitcomp.reg";
@@ -198,7 +201,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:o:R:C:v:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:c:o:R:C:v:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -213,6 +216,11 @@ int ParseOptions(int argc, char *argv[])
     	case 'i':	
 			{
 				fileName= std::string(optarg);	
+				break;	
+			}
+			case 'c':	
+			{
+				cutFileName= std::string(optarg);	
 				break;	
 			}
 			case 'o':	
@@ -263,6 +271,14 @@ int ParseOptions(int argc, char *argv[])
 		#endif
 		return -1;
 	}
+	
+	//Check cut file name
+	if(cutFileName==""){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty cut file name given!");
+		#endif
+		return -1;
+	}
 
 	//Check output file name
 	if(outputFileName==""){
@@ -289,13 +305,11 @@ int ParseOptions(int argc, char *argv[])
 	}
 
 	//Set DS9 region component file name
-	regionComponentsOutputFileName= regionOutputFileName;
-	CodeUtils::ExtractFileNameFromPath(regionComponentsOutputFileName,true);
+	regionComponentsOutputFileName= CodeUtils::ExtractFileNameFromPath(regionOutputFileName,true);
 	regionComponentsOutputFileName+= "_fitcomp.reg";
 
 	//Set catalog component file name
-	catalogComponentsOutputFileName= catalogOutputFileName;
-	CodeUtils::ExtractFileNameFromPath(catalogComponentsOutputFileName,true);
+	catalogComponentsOutputFileName= CodeUtils::ExtractFileNameFromPath(catalogOutputFileName,true);
 	catalogComponentsOutputFileName+= "_fitcomp.dat";
 
 	return 0;
@@ -336,31 +350,16 @@ void ClearData()
 int SelectSources()
 {
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Selecting #"<<m_sources.size()<<" sources...");
+		INFO_LOG("Applying cut selection to #"<<m_sources.size()<<" sources...");
 	#endif
 	
-	//Selection applied to pixel coordinates
-	for(size_t i=0;i<m_sources.size();i++){
-		//Get source centroid
-		Source* source= m_sources[i];
-		if(!source->HasStats()){
-			WARN_LOG("Source no. "<<i+1<<" has no stats computed, skip source as cannot apply selection...");
-			continue;
-		}
-
-		double X0= source->X0;
-		double Y0= source->Y0;
-
-			
-		//m_sources_sel.push_back(source);
-
-
-	}//end loop sources
-	
-	
-	#ifdef LOGGING_ENABLED
-		INFO_LOG("#"<<m_sources_sel.size()<<"/"<<m_sources.size()<<" sources selected inside regions...");
-	#endif
+	int status= SourceSelector::SelectSources(m_sources_sel,m_sources,cutFileName);	
+	if(status<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to apply selection to sources through selector!");
+		#endif
+		return -1;
+	}
 
 	return 0;
 
