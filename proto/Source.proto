@@ -304,6 +304,7 @@ message SourceComponentPars {
 	optional int32 m_flag= 38;
 	optional float m_pixSize= 39;
 	optional int32 m_type= 40;
+	optional bool m_selected= 41;
 
 }//close SourceComponentPars()
 
