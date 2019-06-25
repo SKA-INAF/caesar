@@ -455,7 +455,6 @@ int SelectSources()
 		}//end loop sources
 
 		//Delete WCS for this collection
-		//if(wcs) CodeUtils::DeletePtr<WCS>(wcs);
 		if(wcs) WCSUtils::DeleteWCS(&wcs);
 
 	}//close else

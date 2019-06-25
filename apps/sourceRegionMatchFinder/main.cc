@@ -1128,6 +1128,10 @@ int FillSourcePars(Source* aSource,int sourceIndex,int nestedSourceIndex)
 		//Fill component pars & ellipse
 		ComponentPars* thisComponentPars= 0;
 		for(int k=0;k<nComponents;k++){
+			//Skip source component if not selected
+			bool isSelected= fitPars.IsSelectedComponent(k);
+			if(!isSelected) continue;
+
 			std::string sname= sourceName + std::string(Form("_fitcomp%d",k+1));
 			double A= fitPars.GetParValue(k,"A");
 			double fluxDensity= fitPars.GetComponentFluxDensity(k);
@@ -1760,14 +1764,17 @@ int FindSourceMatchesInTiles()
 			//Get source fit info
 			bool hasFitInfo= source->HasFitInfo();
 			int nFitComponents= 0;
+			int nSelFitComponents= 0;
 			if(hasFitInfo) {
 				SourceFitPars fitPars= source->GetFitPars();
 				nFitComponents= fitPars.GetNComponents();
+				nSelFitComponents= fitPars.GetNSelComponents();
 			}
 			
 			//Count total number of sources
 			nTotSources++;
-			nTotSourceComponents+= nFitComponents;
+			//nTotSourceComponents+= nFitComponents;
+			nTotSourceComponents+= nSelFitComponents;
 	
 			int nMatches= 0;
 
@@ -1811,7 +1818,11 @@ int FindSourceMatchesInTiles()
 				source->SetFlag(eFake);
 				if(hasFitInfo){
 					SourceFitPars fitPars= source->GetFitPars();
-					for(int l=0;l<nFitComponents;l++) fitPars.SetComponentFlag(l,eFake);
+					for(int l=0;l<nFitComponents;l++) {
+						bool isSelected= fitPars.IsSelectedComponent(l);
+						if(!isSelected) continue;
+						fitPars.SetComponentFlag(l,eFake);
+					}
 					source->SetFitPars(fitPars);
 				}
 
@@ -1842,7 +1853,6 @@ int FindSourceMatchesInTiles()
 			//Match source components
 			if(matchSourceComponent){
 				
-
 				for(size_t l=0;l<componentPars.size();l++){
 					ComponentPars* cpars= componentPars[l];
 					int nComponentMatches= 0;

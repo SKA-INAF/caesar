@@ -1572,6 +1572,9 @@ int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogInd
 		//Fill component pars & ellipse
 		ComponentPars* thisComponentPars= 0;
 		for(int k=0;k<nComponents;k++){
+			bool isSelected= fitPars.IsSelectedComponent(k);
+			if(!isSelected) continue;
+
 			std::string sname= sourceName + std::string(Form("_fitcomp%d",k+1));
 			double A= fitPars.GetParValue(k,"A");
 			double fluxDensity= fitPars.GetComponentFluxDensity(k);
