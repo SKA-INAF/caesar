@@ -2027,13 +2027,13 @@ void Save()
 
 	//Save DS9 regions with selected sources	
 	#ifdef LOGGING_ENABLED
-		ERROR_LOG("Saving DS9 regions with selected sources...");
+		INFO_LOG("Saving DS9 regions with selected sources...");
 	#endif
 	SaveDS9Regions();
 
 	//Save ascii catalog with selected sources
 	#ifdef LOGGING_ENABLED
-		ERROR_LOG("Saving ascii catalog with selected sources...");
+		INFO_LOG("Saving ascii catalog with selected sources...");
 	#endif
 	SaveCatalog();
 
