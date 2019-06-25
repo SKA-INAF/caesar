@@ -398,6 +398,8 @@ class MathUtils : public TObject {
 			return d;
 		}
 
+		
+
 	private:
 	
 		ClassDef(MathUtils,1)

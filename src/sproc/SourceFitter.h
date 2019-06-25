@@ -290,6 +290,7 @@ class SourceComponentPars : public TObject {
 			//Init other vars
 			m_flag= eCandidate;
 			m_type= ePointLike;
+			m_selected= true;
 
 		}//close contructor
 
@@ -361,6 +362,15 @@ class SourceComponentPars : public TObject {
 		\brief Set source component type
  		*/
 		void SetType(int type){m_type=type;}
+
+		/** 
+		\brief Get source component selected flag
+ 		*/	
+		bool IsSelected(){return m_selected;}
+		/** 
+		\brief Set source component selected flag
+ 		*/
+		void SetSelected(bool val){m_selected=val;}
 
 
 		/** 
@@ -1352,7 +1362,10 @@ class SourceComponentPars : public TObject {
 		//- Source component type
 		int m_type;
 
-	ClassDef(SourceComponentPars,6)
+		//- Source component selection flag
+		bool m_selected;
+
+	ClassDef(SourceComponentPars,7)
 
 };//close SourceComponentPars()
 
@@ -1543,6 +1556,47 @@ class SourceFitPars : public TObject {
 		* \brief Get number of components
 		*/
 		int GetNComponents(){return nComponents;}
+
+		/**
+		* \brief Get number of selected components
+		*/
+		int GetNSelComponents()
+		{
+			int nSelComponents= 0;
+			for(size_t i=0;i<pars.size();i++){
+				bool isSelected= pars[i].IsSelected();
+				if(isSelected) nSelComponents++;
+			}
+			return nSelComponents;
+		}
+	
+		/**
+		* \brief Check if component is selected
+		*/
+		bool IsSelectedComponent(int componentId){
+			if(componentId<0 || componentId>=nComponents) {
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist, returning false!");
+				#endif
+				return false;
+			}
+			return pars[componentId].IsSelected();
+		}
+
+		/**
+		* \brief Set if component is selected
+		*/
+		int SetSelectedComponent(int componentId,bool selected)
+		{
+			if(componentId<0 || componentId>=nComponents) {
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist, returning false!");
+				#endif
+				return -1;
+			}
+			pars[componentId].SetSelected(selected);
+			return 0;
+		}
 
 		/**
 		* \brief Remove fit components
@@ -1985,7 +2039,8 @@ class SourceFitPars : public TObject {
 		/**
 		* \brief Set fit covariance matrix
 		*/
-		int SetCovarianceMatrix(double* errMatrixValues,int ndim){
+		int SetCovarianceMatrix(double* errMatrixValues,int ndim)
+		{
 			if(!errMatrixValues || ndim<=0) return -1;
 			fitCovarianceMatrix.ResizeTo(ndim,ndim);
 			fitCovarianceMatrix.Zero();
@@ -2006,6 +2061,91 @@ class SourceFitPars : public TObject {
 			}
 			return 0;
 		}//close SetCovarianceMatrix()
+
+		/**
+		* \brief Remove component(s) from covariance matrix
+		*/
+		/*
+		int RemoveComponentsFromCovarianceMatrix(std::vector<int> componentIds)
+		{	
+			//Check input
+			if(componentIds.empty()) return 0;
+			int nComponents= (fitCovarianceMatrix.GetNrows()-1)/npars_component;
+			
+			for(size_t i=0;i<componentIds.size();i++){
+				if(componentIds[i]<0 || componentIds[i]>=nComponents){
+					#ifdef LOGGING_ENABLED
+						ERROR_LOG("Invalid component id ("<<componentIds[i]<<") to be removed (#"<<nComponents<<" present in cov matrix)!");
+					#endif
+					return -1;
+				}
+			}
+		
+			//Set components to be kept
+			std::vector<int> keptComponentIds;
+			for(int i=0;i<nComponents;i++){
+				bool keepComponent= true;
+				for(size_t k=0;k<componentIds.size();k++){
+					if(i==componentIds[k]){
+						keepComponent= false;
+						break;
+					}
+				}
+				if(keepComponent) keptComponentIds.push_back(i);
+			}
+
+			//Sort component ids to be kept
+			std::sort(keptComponentIds.begin(),keptComponentIds.end());
+
+			//Check if there are components left
+			int nComponents_left= static_cast<int>(keptComponentIds.size());	
+			int nDim_new= nComponents_left*npars_component + 1;
+			if(nComponents_left<=0){
+				fitCovarianceMatrix.ResizeTo(0,0);
+				return 0;
+			}
+
+			//Copy cov matrix
+			TMatrixD C= fitCovarianceMatrix;
+			fitCovarianceMatrix.ResizeTo(nDim_new,nDim_new);
+			for(int i=0;i<fitCovarianceMatrix.GetNrows();i++){
+				
+				for(int j=0;j<fitCovarianceMatrix.GetNcols();j++){
+					int componentIndex= j/npars_component;
+					int parIndex= j%npars_component;
+					int componentId= keptComponentIds[componentIndex];
+					int colId= componentId*npars_component + parIndex;
+					int rowId= componentId*npars_component + j;
+					//fitCovarianceMatrix(i,j)= C(colId,colId);
+				}
+			}
+
+			for(int k=0;k<nComponents_left;k++){
+				int componentId= keptComponentIds[k];
+				int row_start= componentId*npars_component;
+				for(int i=0;i<npars_component;i++){
+					for(int j=0;j<npars_component;j++){
+						int index= i*npars_component + j;
+						
+						//fitCovarianceMatrix(i,j)= errMatrixValues[index];
+					}
+				}
+
+				for(int i=0;i<fitCovarianceMatrix.GetNrows();i++){
+					for(int j=0;j<fitCovarianceMatrix.GetNcols();j++){
+						int componentId= 
+						int rowId= i*npars_component + j;
+						
+						//fitCovarianceMatrix(i,j)= errMatrixValues[index];
+					}
+				}
+			}
+
+			return 0;
+
+		}//close RemoveComponentsFromCovarianceMatrix()
+		*/
+		
 
 		/**
 		* \brief Get fit covariance matrix

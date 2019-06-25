@@ -601,6 +601,14 @@ class Source : public Blob {
 		}
 
 		/**
+		* \brief Get number of selected fit components
+		*/
+		int GetNSelFitComponents(){
+			if(!m_HasFitInfo) return 0;
+			return m_fitPars.GetNSelComponents();
+		}
+
+		/**
 		* \brief Find component peaks
 		*/
 		int FindComponentPeaks(std::vector<ImgPeak>& peaks,double peakZThr=0,int maxPeaks=-1,int peakShiftTolerance=2,std::vector<int> kernels= {3,5,7},int peakKernelMultiplicityThr=1,bool invertSearch=false);

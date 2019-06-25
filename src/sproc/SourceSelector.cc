@@ -170,18 +170,19 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 			std::string cutName= it->first;
 			Cut* cut= it->second;
 				
-			int nComponents_before= aSource->GetNFitComponents();
+			//int nComponents_before= aSource->GetNFitComponents();
+			int nComponents_before= aSource->GetNSelFitComponents();
 
 			passed= ApplyCut(cutName,aSource,cut);
-			#ifdef LOGGING_ENABLED
-				INFO_LOG("Source "<<aSource->GetName()<<": cut="<<cutName<<", passed? "<<passed);
-			#endif
-
-			int nComponents_after= aSource->GetNFitComponents();
+			
+			//int nComponents_after= aSource->GetNFitComponents();
+			int nComponents_after= aSource->GetNSelFitComponents();
 			int nComponents_rejected= nComponents_before-nComponents_after;
-			//nSourceComponentsRejectedPerCut[cutName]+= nComponents_rejected; 
-
+			
 			if(!passed) {
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Source "<<aSource->GetName()<<": cut="<<cutName<<" (nComponents(BEFORE)="<<nComponents_before<<", nComponents(AFTER)="<<nComponents_after<<"), passed? "<<passed);
+				#endif
 				nSourcesRejectedPerCut[cutName]++;
 				nSourceComponentsRejectedPerCut[cutName]+= nComponents_before;
 				break;
@@ -213,18 +214,19 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 				std::string cutName= it->first;
 				Cut* cut= it->second;
 			
-				int nComponents_nested_before= aNestedSource->GetNFitComponents();
+				//int nComponents_nested_before= aNestedSource->GetNFitComponents();
+				int nComponents_nested_before= aNestedSource->GetNSelFitComponents();
 	
 				passed_nested= ApplyCut(cutName,aNestedSource,cut);
-				#ifdef LOGGING_ENABLED
-					INFO_LOG("Source "<<aNestedSource->GetName()<<": cut="<<cutName<<", passed? "<<passed_nested);
-				#endif
 
-				int nComponents_nested_after= aNestedSource->GetNFitComponents();
+				//int nComponents_nested_after= aNestedSource->GetNFitComponents();
+				int nComponents_nested_after= aNestedSource->GetNSelFitComponents();
 				int nComponents_nested_rejected= nComponents_nested_before-nComponents_nested_after;
-				//nSourceComponentsRejectedPerCut[cutName]+= nComponents_nested_rejected; 
-
+				
 				if(!passed_nested) {
+					#ifdef LOGGING_ENABLED
+						INFO_LOG("Source "<<aNestedSource->GetName()<<": cut="<<cutName<<" (nComponents(BEFORE)="<<nComponents_nested_before<<", nComponents(AFTER)="<<nComponents_nested_after<<"), passed? "<<passed_nested);
+					#endif
 					nSourcesRejectedPerCut[cutName]++;
 					nSourceComponentsRejectedPerCut[cutName]+= nComponents_nested_before; 
 					break;
@@ -246,12 +248,14 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 		{
 			//- Increment source counters for mother source selected
 			nSources_sel++;
-			nSourceComponents_sel+= aSource->GetNFitComponents();
+			//nSourceComponents_sel+= aSource->GetNFitComponents();
+			nSourceComponents_sel+= aSource->GetNSelFitComponents();
 
 			//- Increment source counters for nested sources 
 			nSources_sel+= nestedSources_sel.size();//nested sources
-			for(size_t j=0;j<nestedSources_sel.size();j++) nSourceComponents_sel+= nestedSources_sel[j]->GetNFitComponents();		
-
+			//for(size_t j=0;j<nestedSources_sel.size();j++) nSourceComponents_sel+= nestedSources_sel[j]->GetNFitComponents();		
+			for(size_t j=0;j<nestedSources_sel.size();j++) nSourceComponents_sel+= nestedSources_sel[j]->GetNSelFitComponents();		
+	
 			//- Update nested sources in mother source
 			if(nestedSources_sel.empty()) aSource->ClearNestedSources();
 			else aSource->SetNestedSources(nestedSources_sel);
@@ -266,7 +270,8 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 				//  Add nested sources to collection as mother sources
 				nSources_sel+= nestedSources_sel.size();
 				for(size_t j=0;j<nestedSources_sel.size();j++) {
-					nSourceComponents_sel+= nestedSources_sel[j]->GetNFitComponents();	
+					//nSourceComponents_sel+= nestedSources_sel[j]->GetNFitComponents();
+					nSourceComponents_sel+= nestedSources_sel[j]->GetNSelFitComponents();	
 					sources_sel.push_back(nestedSources_sel[j]);
 				}
 			}
@@ -297,8 +302,6 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 	}
 	std::cout<<"================================"<<std::endl;
 	
-
-
 	return 0;
 
 }//close SelectSources()
@@ -353,6 +356,7 @@ bool SourceSelector::ApplyCut(std::string cutName,Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::HasFitCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
 	bool hasFitInfo= source->HasFitInfo();
 	bool passed= cut->isPassed(hasFitInfo);
 	return passed;
@@ -364,6 +368,7 @@ bool SourceSelector::HasFitCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::SourceFitStatusCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
 	bool hasFitInfo= source->HasFitInfo();
 	//if(!hasFitInfo) return false;
 	if(!hasFitInfo) return true;
@@ -378,6 +383,7 @@ bool SourceSelector::SourceFitStatusCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::HasGoodFitChi2Cut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
 	bool hasFitInfo= source->HasFitInfo();
 	//if(!hasFitInfo) return false;
 	if(!hasFitInfo) return true;
@@ -395,6 +401,7 @@ bool SourceSelector::HasGoodFitChi2Cut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::SourceFitQualityFlagCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
 	bool hasFitInfo= source->HasFitInfo();
 	//if(!hasFitInfo) return false;
 	if(!hasFitInfo) return true;
@@ -409,6 +416,7 @@ bool SourceSelector::SourceFitQualityFlagCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::SourceFluxCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
 	bool hasFitInfo= source->HasFitInfo();
 	//if(!hasFitInfo) return false;
 	if(!hasFitInfo) return true;
@@ -425,6 +433,7 @@ bool SourceSelector::SourceFluxCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::SourceFluxToIslandRatioCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
 	bool hasFitInfo= source->HasFitInfo();
 	//if(!hasFitInfo) return false;
 	if(!hasFitInfo) return true;
@@ -444,6 +453,9 @@ bool SourceSelector::SourceFluxToIslandRatioCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::SourceComponentFluxCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
+
+	/*
 	bool hasFitInfo= source->HasFitInfo();
 	//if(!hasFitInfo) return false;
 	if(!hasFitInfo) return true;
@@ -475,6 +487,40 @@ bool SourceSelector::SourceComponentFluxCut(Source* source,Cut* cut)
 		fitPars.RemoveComponents(componentsToBeRemoved); 
 		source->SetFitPars(fitPars);
 	}
+	*/
+
+	
+	bool hasFitInfo= source->HasFitInfo();
+	//if(!hasFitInfo) return false;
+	if(!hasFitInfo) return true;
+	SourceFitPars fitPars= source->GetFitPars();
+	int nComponents= source->GetNFitComponents();
+	int nComponents_sel= 0;
+	std::vector<int> componentsToBeRemoved;
+
+	for(int k=0;k<nComponents;k++)
+	{
+		bool isSelected= fitPars.IsSelectedComponent(k);
+		if(!isSelected) continue;
+
+		double fluxDensity= fitPars.GetComponentFluxDensity(k);
+		bool passed= cut->isPassed(fluxDensity);
+		if(passed){
+			nComponents_sel++;
+		}
+		else{
+			fitPars.SetSelectedComponent(k,false);
+		}
+	}//end loop components
+	
+	//Update fit pars
+	source->SetFitPars(fitPars);	
+	
+	//If no components are left, return false (not resetting fitPars here)
+	if(nComponents_sel<=0){
+		source->SetHasFitInfo(false);
+		return false;
+	}	
 
 	return true;
 
@@ -486,6 +532,9 @@ bool SourceSelector::SourceComponentFluxCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::SourceComponentCentroidInsideIslandCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
+
+	/*
 	//Check if has fit 
 	bool hasFitInfo= source->HasFitInfo();
 	//if(!hasFitInfo) return false;
@@ -532,6 +581,54 @@ bool SourceSelector::SourceComponentCentroidInsideIslandCut(Source* source,Cut* 
 		fitPars.RemoveComponents(componentsToBeRemoved); 
 		source->SetFitPars(fitPars);
 	}
+	*/
+
+	//Check if has fit 
+	bool hasFitInfo= source->HasFitInfo();
+	//if(!hasFitInfo) return false;
+	if(!hasFitInfo) return true;
+
+	//Check if has parameters & centroid
+	if( (source->GetContours()).size()<=0) {
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No contour stored for this source, cannot perform check, returning passed!");
+		#endif
+		return true;
+	}
+	
+	//Retrieve contour & fit pars
+	Contour* contour= (source->GetContours())[0];
+	SourceFitPars fitPars= source->GetFitPars();
+	int nComponents= source->GetNFitComponents();
+	int nComponents_sel= 0;
+	std::vector<int> componentsToBeRemoved;
+
+	//Check if component centroid is inside source island contour
+	for(int k=0;k<nComponents;k++)
+	{
+		bool isSelected= fitPars.IsSelectedComponent(k);
+		if(!isSelected) continue;
+
+		double x0= fitPars.GetParValue(k,"x0");	
+		double y0= fitPars.GetParValue(k,"y0");
+		bool isInsideContour= contour->IsPointInsideContour(x0,y0);
+		bool passed= cut->isPassed(isInsideContour);
+		if(passed){
+			nComponents_sel++;
+		}
+		else{
+			fitPars.SetSelectedComponent(k,false);
+		}
+	}//end loop components
+
+	//Update fit pars
+	source->SetFitPars(fitPars);	
+	
+	//If no components are left, return false (not resetting fitPars here)
+	if(nComponents_sel<=0){
+		source->SetHasFitInfo(false);
+		return false;
+	}	
 
 	return true;
 
@@ -543,6 +640,9 @@ bool SourceSelector::SourceComponentCentroidInsideIslandCut(Source* source,Cut* 
 //==============================================
 bool SourceSelector::SourceComponentCentroidDistanceCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
+
+	/*
 	//Check if has fit 
 	bool hasFitInfo= source->HasFitInfo();
 	//if(!hasFitInfo) return false;
@@ -608,6 +708,79 @@ bool SourceSelector::SourceComponentCentroidDistanceCut(Source* source,Cut* cut)
 		fitPars.RemoveComponents(componentsToBeRemoved); 
 		source->SetFitPars(fitPars);
 	}
+	*/
+
+	//Check if has fit 
+	bool hasFitInfo= source->HasFitInfo();
+	//if(!hasFitInfo) return false;
+	if(!hasFitInfo) return true;
+
+	SourceFitPars fitPars= source->GetFitPars();
+	int nComponents= source->GetNFitComponents();
+	int nSelComponents= source->GetNSelFitComponents();
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("BEFORE CUT: Source "<<source->GetName()<<": nComponents="<<nComponents<<", nSelComponents="<<nSelComponents);
+	#endif
+	
+	//Check number of components
+	if(nSelComponents<=0) return false;//cut not passed with no components (this should not occur at this stage)
+	if(nSelComponents==1) return true;//cut always passed with just 1 one component
+
+	//Sort components by descending peak flux
+	std::vector<double> peakFluxes;
+	std::vector<double> peakFluxes_sorted;
+	std::vector<size_t> sorting_indexes;
+	for(int k=0;k<nComponents;k++){
+		double A= fitPars.GetParValue(k,"A");	
+		peakFluxes.push_back(A);
+	}
+	CodeUtils::sort_descending(peakFluxes,peakFluxes_sorted,sorting_indexes);
+
+
+	//Check if component centroid are separated by more than specified cut
+	for(size_t i=0;i<sorting_indexes.size();i++)
+	{
+		int componentId_i= sorting_indexes[i];
+		bool isSelected_i= fitPars.IsSelectedComponent(componentId_i);
+		if(!isSelected_i) continue;
+		double x0_i= fitPars.GetParValue(componentId_i,"x0");	
+		double y0_i= fitPars.GetParValue(componentId_i,"y0");
+
+		for(size_t j=i+1;j<sorting_indexes.size();j++)
+		{
+			int componentId_j= sorting_indexes[j];
+			bool isSelected_j= fitPars.IsSelectedComponent(componentId_j);
+			if(!isSelected_j) continue;
+			double x0_j= fitPars.GetParValue(componentId_j,"x0");	
+			double y0_j= fitPars.GetParValue(componentId_j,"y0");
+			double dx= fabs(x0_i-x0_j);
+			double dy= fabs(y0_i-y0_j);
+			//double d= sqrt( (x0_i-x0_j)*(x0_i-x0_j) + (y0_i-y0_j)*(y0_i-y0_j) );
+			bool passed_x= cut->isPassed(dx);
+			bool passed_y= cut->isPassed(dy);
+			bool passed= (passed_x || passed_y);
+			if(!passed){//remove fainter component is (i,j) are too close
+				fitPars.SetSelectedComponent(componentId_j,false);
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Source "<<source->GetName()<<": deselect component "<<componentId_j<<" as too close to component "<<componentId_i<<" (dx="<<dx<<", dy="<<dy<<")");
+				#endif
+			}
+		}//end loop components
+	}//end loop components
+
+	//Update fit pars
+	source->SetFitPars(fitPars);
+
+	//If no components are left, return false (do this after setting updating source fit pars
+	int nComponents_sel= source->GetNSelFitComponents();
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("AFTER CUT: Source "<<source->GetName()<<": nComponents="<<nComponents<<", nSelComponents="<<nComponents_sel);
+	#endif
+	if(nComponents_sel<=0){
+		source->SetHasFitInfo(false);
+		return false;
+	}	
 
 	return true;
 
@@ -618,6 +791,8 @@ bool SourceSelector::SourceComponentCentroidDistanceCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::SourceComponentPeakFluxCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
+	/*
 	//Check if has fit 
 	bool hasFitInfo= source->HasFitInfo();
 	//if(!hasFitInfo) return false;
@@ -654,6 +829,43 @@ bool SourceSelector::SourceComponentPeakFluxCut(Source* source,Cut* cut)
 		fitPars.RemoveComponents(componentsToBeRemoved); 
 		source->SetFitPars(fitPars);
 	}
+	*/
+
+	//Check if has fit 
+	bool hasFitInfo= source->HasFitInfo();
+	//if(!hasFitInfo) return false;
+	if(!hasFitInfo) return true;
+
+	double Smax= source->GetSmax();
+	SourceFitPars fitPars= source->GetFitPars();
+	int nComponents= source->GetNFitComponents();
+	int nComponents_sel= 0;
+	
+	//Check if component centroid is inside source island contour
+	for(int k=0;k<nComponents;k++)
+	{
+		bool isSelected= fitPars.IsSelectedComponent(k);
+		if(!isSelected) continue;
+
+		double A= fitPars.GetParValue(k,"A");	
+		double peakFluxRatio= A/Smax;
+		bool passed= cut->isPassed(peakFluxRatio);
+		if(passed){
+			nComponents_sel++;
+		}
+		else{
+			fitPars.SetSelectedComponent(k,false);
+		}
+	}//end loop components
+
+	//Update fit pars
+	source->SetFitPars(fitPars);
+
+	//If no components are left, return false (not resetting fitPars here)
+	if(nComponents_sel<=0){
+		source->SetHasFitInfo(false);
+		return false;
+	}	
 
 	return true;
 
@@ -665,6 +877,8 @@ bool SourceSelector::SourceComponentPeakFluxCut(Source* source,Cut* cut)
 //==============================================
 bool SourceSelector::SourceComponentPeakSignificanceCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
+	/*
 	//Check if has fit 
 	bool hasFitInfo= source->HasFitInfo();
 	//if(!hasFitInfo) return false;
@@ -712,6 +926,54 @@ bool SourceSelector::SourceComponentPeakSignificanceCut(Source* source,Cut* cut)
 		fitPars.RemoveComponents(componentsToBeRemoved); 
 		source->SetFitPars(fitPars);
 	}
+	*/
+
+	//Check if has fit 
+	bool hasFitInfo= source->HasFitInfo();
+	//if(!hasFitInfo) return false;
+	if(!hasFitInfo) return true;
+
+	double nPixels= static_cast<double>(source->NPix);
+	double bkgSum= source->GetBkgSum();
+	double bkgRMSSum= source->GetBkgRMSSum();
+	double bkgMean= bkgSum/nPixels;
+	double rmsMean= bkgRMSSum/nPixels;
+	if(rmsMean==0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No bkg info stored, returning passed!");
+		#endif
+		return true;
+	}
+
+	SourceFitPars fitPars= source->GetFitPars();
+	int nComponents= source->GetNFitComponents();
+	int nComponents_sel= 0;
+	
+	//Check if component centroid is inside source island contour
+	for(int k=0;k<nComponents;k++)
+	{
+		bool isSelected= fitPars.IsSelectedComponent(k);
+		if(!isSelected) continue;
+
+		double A= fitPars.GetParValue(k,"A");	
+		double Z= (A-bkgMean)/rmsMean;
+		bool passed= cut->isPassed(Z);
+		if(passed){
+			nComponents_sel++;
+		}
+		else{
+			fitPars.SetSelectedComponent(k,false);
+		}
+	}//end loop components
+
+	//Update fit pars
+	source->SetFitPars(fitPars);
+
+	//If no components are left, return false (not resetting fitPars here)
+	if(nComponents_sel<=0){
+		source->SetHasFitInfo(false);
+		return false;
+	}	
 
 	return true;
 
@@ -723,6 +985,8 @@ bool SourceSelector::SourceComponentPeakSignificanceCut(Source* source,Cut* cut)
 //==============================================
 bool SourceSelector::SourceComponentTypeCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
+	/*
 	//Check if has fit 
 	bool hasFitInfo= source->HasFitInfo();
 	//if(!hasFitInfo) return false;
@@ -758,7 +1022,43 @@ bool SourceSelector::SourceComponentTypeCut(Source* source,Cut* cut)
 		fitPars.RemoveComponents(componentsToBeRemoved); 
 		source->SetFitPars(fitPars);
 	}
+	*/
 
+	//Check if has fit 
+	bool hasFitInfo= source->HasFitInfo();
+	//if(!hasFitInfo) return false;
+	if(!hasFitInfo) return true;
+
+	SourceFitPars fitPars= source->GetFitPars();
+	int nComponents= source->GetNFitComponents();
+	int nComponents_sel= 0;
+	
+	//Check if component centroid is inside source island contour
+	for(int k=0;k<nComponents;k++)
+	{
+		bool isSelected= fitPars.IsSelectedComponent(k);
+		if(!isSelected) continue;
+
+		int type;
+		fitPars.GetComponentType(type,k);
+		bool passed= cut->isPassed(type);
+		if(passed){
+			nComponents_sel++;
+		}
+		else{
+			fitPars.SetSelectedComponent(k,false);
+		}
+	}//end loop components
+
+	//Update fit pars
+	source->SetFitPars(fitPars);
+
+	//If no components are left, return false (not resetting fitPars here)
+	if(nComponents_sel<=0){
+		source->SetHasFitInfo(false);
+		return false;
+	}	
+	
 	return true;
 
 }//close SourceComponentTypeCut()
@@ -768,6 +1068,8 @@ bool SourceSelector::SourceComponentTypeCut(Source* source,Cut* cut)
 //==============================================
 bool SourceSelector::SourceComponentFlagCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
+	/*
 	//Check if has fit 
 	bool hasFitInfo= source->HasFitInfo();
 	//if(!hasFitInfo) return false;
@@ -803,6 +1105,42 @@ bool SourceSelector::SourceComponentFlagCut(Source* source,Cut* cut)
 		fitPars.RemoveComponents(componentsToBeRemoved); 
 		source->SetFitPars(fitPars);
 	}
+	*/
+
+	//Check if has fit 
+	bool hasFitInfo= source->HasFitInfo();
+	//if(!hasFitInfo) return false;
+	if(!hasFitInfo) return true;
+
+	SourceFitPars fitPars= source->GetFitPars();
+	int nComponents= source->GetNFitComponents();
+	int nComponents_sel= 0;
+	
+	//Check if component centroid is inside source island contour
+	for(int k=0;k<nComponents;k++)
+	{
+		bool isSelected= fitPars.IsSelectedComponent(k);
+		if(!isSelected) continue;
+
+		int flag;
+		fitPars.GetComponentFlag(flag,k);
+		bool passed= cut->isPassed(flag);
+		if(passed){
+			nComponents_sel++;
+		}
+		else{
+			fitPars.SetSelectedComponent(k,false);
+		}
+	}//end loop components
+
+	//Update fit pars
+	source->SetFitPars(fitPars);
+
+	//If no components are left, return false (not resetting fitPars here)
+	if(nComponents_sel<=0){
+		source->SetHasFitInfo(false);
+		return false;
+	}	
 
 	return true;
 
@@ -814,6 +1152,7 @@ bool SourceSelector::SourceComponentFlagCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::NPixelsCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
 	long int nPixels= source->NPix;
 	bool passed= cut->isPassed(nPixels);
 	return passed;
@@ -825,6 +1164,8 @@ bool SourceSelector::NPixelsCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::MinBoundingBoxCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
+
 	//Check for line-like source
 	if( (source->GetContours()).size()<=0) {
 		#ifdef LOGGING_ENABLED
@@ -845,6 +1186,7 @@ bool SourceSelector::MinBoundingBoxCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::GoodSourceFlagCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
 	bool isGoodSource= source->IsGoodSource();
 	bool passed= cut->isPassed(isGoodSource);
 	return passed;
@@ -857,6 +1199,7 @@ bool SourceSelector::GoodSourceFlagCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::CircularityRatioCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
 	//Check source has parameters
 	if(!source->HasParameters()) {	
 		#ifdef LOGGING_ENABLED
@@ -885,6 +1228,7 @@ bool SourceSelector::CircularityRatioCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::ElongationCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
 	//Check source has parameters
 	if(!source->HasParameters()) {	
 		#ifdef LOGGING_ENABLED
@@ -912,6 +1256,7 @@ bool SourceSelector::ElongationCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::EllipseAreaRatioCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
 	//Check source has parameters
 	if(!source->HasParameters()) {	
 		#ifdef LOGGING_ENABLED
@@ -948,6 +1293,8 @@ bool SourceSelector::EllipseAreaRatioCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::BeamAreaRatioCut(Source* source,Cut* cut)
 {
+	if(cut && !cut->isEnabled()) return true;
+
 	//Check number of beams contained in source
 	double nPixels= static_cast<double>(source->NPix);
 	double beamArea= source->GetBeamFluxIntegral();
@@ -971,7 +1318,7 @@ bool SourceSelector::BeamAreaRatioCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::SourceTypeCut(Source* source,Cut* cut)
 {
-	//Check cut
+	if(cut && !cut->isEnabled()) return true;
 	int type= source->Type;
 	bool passed= cut->isPassed(type);
 	return passed;
@@ -983,7 +1330,7 @@ bool SourceSelector::SourceTypeCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::SourceFlagCut(Source* source,Cut* cut)
 {
-	//Check cut
+	if(cut && !cut->isEnabled()) return true;
 	int flag= source->Flag;
 	bool passed= cut->isPassed(flag);
 	return passed;
@@ -995,7 +1342,7 @@ bool SourceSelector::SourceFlagCut(Source* source,Cut* cut)
 //===========================================
 bool SourceSelector::SourceSimTypeCut(Source* source,Cut* cut)
 {
-	//Check cut
+	if(cut && !cut->isEnabled()) return true;
 	int type= source->SimType;
 	bool passed= cut->isPassed(type);
 	return passed;

@@ -139,7 +139,6 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 				#endif
 				return -1;
 			}
-			//wcs= metadata->GetWorldCoord(wcsType);
 			wcs= metadata->GetWCS(wcsType);
 			if(!wcs){
 				#ifdef LOGGING_ENABLED
@@ -151,20 +150,6 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 		}
 
 		//Print source info to ascii
-		/*
-		std::string s= SourceToAscii(sources[k],wcsType,wcs);
-		fprintf(fout,"%s\n",s.c_str());
-		
-		//Add nested sources
-		if(dumpNestedSourceInfo){
-			std::vector<Source*> nestedSources= sources[k]->GetNestedSources();
-			for(size_t j=0;j<nestedSources.size();j++){
-				std::string s_nested= SourceToAscii(nestedSources[j],wcsType,wcs);
-				fprintf(fout,"%s\n",s_nested.c_str());
-			}//end loop sources
-		}//close if
-		*/
-
 		std::vector<std::string> slist= SourceToAscii(sources[k],dumpNestedSourceInfo,wcsType,wcs);
 		for(size_t j=0;j<slist.size();j++){
 			fprintf(fout,"%s\n",slist[j].c_str());
@@ -173,7 +158,6 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 	}//end loop sources
 
 	//Delete WCS
-	//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	//Close file
@@ -204,7 +188,6 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 	bool deleteWCS= false;
 	if(!wcs){
 		if(metadata){
-			//wcs= metadata->GetWorldCoord(wcsType);
 			wcs= metadata->GetWCS(wcsType);
 			if(wcs) deleteWCS= true;
 			else {
@@ -273,7 +256,8 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 	ss<<source->NPix<<"\t";
 
 	//- Number of sub-components
-	ss<<source->GetNFitComponents()<<"\t";
+	//ss<<source->GetNFitComponents()<<"\t";
+	ss<<source->GetNSelFitComponents()<<"\t";
 	ss<<source->GetNestedSourceNumber()<<"\t";
 
 	//- Pixel centroids
@@ -302,9 +286,7 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 	//- Source flags
 	ss<<source->Type<<"\t"<<source->Flag<<"\t"<<source->IsGoodSource()<<"\t";
 	ss<<source->GetDepthLevel();
-	//ss<<source->HasFitInfo()<<"\t";
-	//ss<<source->HasNestedSources();
-
+	
 	//Add string to list
 	sourceStrList.push_back(ss.str());
 
@@ -323,16 +305,11 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 		
 
 	//Delete WCS
-	//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	return sourceStrList;
 
 }//close SourceToAscii()
-
-
-
-
 
 
 
@@ -467,7 +444,6 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 	bool deleteWCS= false;
 	if(!wcs){
 		if(metadata){
-			//wcs= metadata->GetWorldCoord(wcsType);
 			wcs= metadata->GetWCS(wcsType);
 			if(wcs) deleteWCS= true;
 			else {
@@ -512,6 +488,10 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 		//Loop over fit components
 		for(int k=0;k<nComponents;k++)
 		{
+			//Skip component if not selected
+			bool isSelected= fitPars.IsSelectedComponent(k);
+			if(!isSelected) continue;
+
 			//Get component fit pars
 			//- Amplitude
 			double A= fitPars.GetParValue(k,"A");
@@ -718,7 +698,6 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 	
 	
 	//Delete WCS
-	//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	return fitComponentStrList;
@@ -864,7 +843,8 @@ int SourceExporter::FillSourceTTree(TTree* dataTree,SourceTreeData& sourceTreeDa
 	sourceTreeData.nPix= source->NPix;
 
 	//GEt number of nested sources & fit components
-	sourceTreeData.nFitComponents= source->GetNFitComponents();
+	//sourceTreeData.nFitComponents= source->GetNFitComponents();
+	sourceTreeData.nFitComponents= source->GetNSelFitComponents();
 	sourceTreeData.nNestedSources= source->GetNestedSourceNumber();
 
 	//Get source centroid
@@ -1134,6 +1114,10 @@ int SourceExporter::FillSourceComponentTree(TTree* dataTree,SourceComponentTreeD
 		//Loop over fit components
 		for(int k=0;k<nComponents;k++)
 		{
+			//Skip component if not selected
+			bool isSelected= fitPars.IsSelectedComponent(k);
+			if(!isSelected) continue;
+
 			//Get component fit pars
 			//- Component id
 			sourceData.componentId= k+1;
@@ -1426,7 +1410,6 @@ std::string SourceExporter::GetDS9RegionColor(Source* source)
 		
 }//close GetDS9RegionColor()
 
-//const std::string SourceExporter::SourceToDS9Region(Source* source,bool dumpNestedSourceInfo,bool convertToWCS,WorldCoor* wcs,int coordSystem)
 const std::string SourceExporter::SourceToDS9Region(Source* source,bool dumpNestedSourceInfo,bool convertToWCS,WCS* wcs,int coordSystem)
 {
 	//Check source
@@ -1638,6 +1621,10 @@ const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,
 		//Loop over fit ellipses and convert to DS9 regions
 		for(size_t i=0;i<ellipses.size();i++){
 			if(!ellipses[i]) continue;
+
+			//Check if component is selected
+			bool isSelected= fitPars.IsSelectedComponent(i);
+			if(!isSelected) continue;
 
 			//Get fit component flag
 			int fitComponentFlag= -1;
