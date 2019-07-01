@@ -114,6 +114,7 @@ TTree* recExtSourceInfo= 0;
 std::vector<Source*> sources;
 std::vector<Source*> sources_rec;
 int SourceFoundFlag;
+int nSourceMatches;
 std::string SourceName;
 int sourceType;
 int SourceSimType;
@@ -518,6 +519,7 @@ bool FindPointSourceMatch(int source_true_index)
 
 	//## Init stored rec source match info
 	SourceFoundFlag= 0;
+	nSourceMatches= 0;
 	SourceName_rec= "";
 	NPix_rec= 0;
 	S_rec= -1;
@@ -562,7 +564,8 @@ bool FindPointSourceMatch(int source_true_index)
 
 	//## Store tree info
 	if(foundSource){
-		SourceFoundFlag= 1;	
+		SourceFoundFlag= 1;
+		nSourceMatches= static_cast<int>(match_info_list.size());	
 		SourcePosMatchPars match_info= match_info_list[0];//in case of multiple match pick the first (they are sorted by posDiff)
 
 		long int match_source_index= match_info.index;
@@ -1194,6 +1197,7 @@ void Init(){
 
 	if(!matchedSourceInfo) matchedSourceInfo= new TTree("SourceMatchInfo","SourceMatchInfo");
 	matchedSourceInfo->Branch("found",&SourceFoundFlag,"found/I");
+	matchedSourceInfo->Branch("nMatches",&nSourceMatches,"nMatches/I");
 	matchedSourceInfo->Branch("name",&SourceName);
 	matchedSourceInfo->Branch("type",&sourceType,"type/I");
 	matchedSourceInfo->Branch("simtype",&SourceSimType,"simtype/I");
