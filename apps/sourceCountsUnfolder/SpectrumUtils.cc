@@ -337,6 +337,9 @@ TF1* SpectrumUtils::ComputeSpectrumModel(SpectrumPars& pars,double xmin,double x
 	}
 	else if(spectrumModel==eSmoothBrokenPowerLaws){
 		SpectrumModel= new TF1("SpectrumModel",SpectrumUtils::SmoothCutoffPowerLawSpectrum,xmin,xmax,nSpectrumPars);
+	}
+	else if(spectrumModel==ePol3){
+		SpectrumModel= new TF1("SpectrumModel",SpectrumUtils::Pol3Spectrum,xmin,xmax,nSpectrumPars);
 	}	
 	else{
 		#ifdef LOGGING_ENABLED
@@ -360,6 +363,9 @@ TF1* SpectrumUtils::ComputeSpectrumModel(SpectrumPars& pars,double xmin,double x
 	else if(spectrumModel==eSmoothBrokenPowerLaws){
 		integral= SpectrumModel->Integral(xmin,xmax);
 	}
+	else if(spectrumModel==ePol3){
+		integral= SpectrumModel->Integral(xmin,xmax);
+	}
 
 	//Check if integral is 0 or nan
 	if(!std::isfinite(integral) || std::isnan(integral)){
@@ -375,6 +381,88 @@ TF1* SpectrumUtils::ComputeSpectrumModel(SpectrumPars& pars,double xmin,double x
 
 }//close ComputeSpectrumModel()
 
+
+TF1* SpectrumUtils::ComputeEfficiencyModel(EfficiencyPars& pars,double xmin,double xmax,int npts)
+{
+	//Create model function
+	TF1* efficiencyModel= 0;
+	int nEffPars= pars.GetNPars();
+	int effModel= pars.GetModel();
+	std::vector<double> effParList= pars.GetPars();
+	
+	if(effModel==eCONST_EFF){
+		efficiencyModel= new TF1("EfficiencyModel","[0]",xmin,xmax);
+	}
+	else if(effModel==eSIGMOID_EFF){
+		efficiencyModel= new TF1("EfficiencyModel",SpectrumUtils::EfficiencyModel,xmin,xmax,nEffPars);
+	}
+	else{
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid model selected!");
+		#endif
+		return nullptr;
+	}
+
+	//Set model parameters
+	efficiencyModel->SetNpx(npts);
+	efficiencyModel->SetParameters(effParList.data());	
+	
+	return efficiencyModel;
+
+}//close ComputeEfficiencyModel()
+
+
+TF1* SpectrumUtils::ComputeBiasModel(BiasPars& biasPars,double xmin,double xmax,int npts)
+{
+	//Create model function
+	TF1* biasModelFcn= 0;
+	int nBiasPars= biasPars.GetNPars();
+	int biasModel= biasPars.GetModel();
+	std::vector<double> biasParList= biasPars.GetPars();
+
+	//Compute bias
+	if(biasModel==eCONST_BIAS){
+		biasModelFcn= new TF1("BiasModel","[0]",xmin,xmax);
+	}	
+	else if(biasModel==eEXP_BIAS){
+		biasModelFcn= new TF1("BiasModel",SpectrumUtils::ExpBiasModel,xmin,xmax,nBiasPars);
+	}	
+	else if(biasModel==eEXP_STEP_BIAS){
+		biasModelFcn= new TF1("BiasModel",SpectrumUtils::StepExpBiasModel,xmin,xmax,nBiasPars);
+	}
+
+	//Set model parameters
+	biasModelFcn->SetNpx(npts);
+	biasModelFcn->SetParameters(biasParList.data());	
+
+	return biasModelFcn;
+
+}//close ComputeBiasModel()
+
+
+TF1* SpectrumUtils::ComputeResoModel(ResoPars& resoPars,double xmin,double xmax,int npts)
+{
+	//Create model function
+	TF1* resoModelFcn= 0;
+	int nResoPars= resoPars.GetNPars();
+	int resoModel= resoPars.GetModel();
+	std::vector<double> resoParList= resoPars.GetPars();
+
+	//Compute bias
+	if(resoModel==eCONST_RESO){
+		resoModelFcn= new TF1("ResoModel","[0]",xmin,xmax);
+	}	
+	else if(resoModel==eEXP_RESO){
+		resoModelFcn= new TF1("ResoModel",SpectrumUtils::ResolutionModel,xmin,xmax,nResoPars);
+	}	
+	
+	//Set model parameters
+	resoModelFcn->SetNpx(npts);
+	resoModelFcn->SetParameters(resoParList.data());	
+
+	return resoModelFcn;
+
+}//close ComputeResoModel()
 
 
 TF2* SpectrumUtils::ComputeResponseModel(SpectrumPars& spectrumPars,BiasPars& biasPars,ResoPars& resoPars,EfficiencyPars& effPars,double xmin,double xmax,double ymin,double ymax,int npts)
@@ -428,6 +516,9 @@ TF2* SpectrumUtils::ComputeResponseModel(SpectrumPars& spectrumPars,BiasPars& bi
 		integral= (xmax-xmin);
 	}
 	else if(spectrumModel==eSmoothBrokenPowerLaws){
+		integral= spectrumModelFcn->Integral(xmin,xmax);
+	}	
+	else if(spectrumModel==ePol3){
 		integral= spectrumModelFcn->Integral(xmin,xmax);
 	}	
 
@@ -598,12 +689,12 @@ TH2D* SpectrumUtils::ComputeParametricResponse(SpectrumPars& spectrumPars,BiasPa
 				DEBUG_LOG("binWidth_rec="<<binWidth_rec<<", lgSMin_rec="<<lgSMin_rec<<", lgSMax_rec="<<lgSMax_rec);
 			#endif
 
-			//double Rji_noNorm= ResponseModelFcn->Integral(lgSMin_true,lgSMax_true,lgSMin_rec,lgSMax_rec);
-			double Rji_noNorm= ResponseModelFcn->Eval(lgS_true,lgS_rec);
+			double Rji_noNorm= ResponseModelFcn->Integral(lgSMin_true,lgSMax_true,lgSMin_rec,lgSMax_rec);
+			//double Rji_noNorm= ResponseModelFcn->Eval(lgS_true,lgS_rec);
 			double Rji= Rji_noNorm/ProbNorm;
 
 			#ifdef LOGGING_ENABLED
-				DEBUG_LOG("lgS_true="<<lgS_true<<" ["<<lgSMin_true<<","<<lgSMax_true<<"], lgS_rec="<<lgS_rec<<" ["<<lgSMin_rec<<","<<lgSMax_rec<<"], ProbNorm="<<ProbNorm<<", Rji_noNorm="<<Rji_noNorm<<" Rji="<<Rji);
+				INFO_LOG("lgS_true="<<lgS_true<<" ["<<lgSMin_true<<","<<lgSMax_true<<"], lgS_rec="<<lgS_rec<<" ["<<lgSMin_rec<<","<<lgSMax_rec<<"], ProbNorm="<<ProbNorm<<", Rji_noNorm="<<Rji_noNorm<<" Rji="<<Rji);
 			#endif
 			
 			ResponseMat->SetBinContent(i+1,j+1,Rji);
@@ -626,6 +717,167 @@ TH2D* SpectrumUtils::ComputeParametricResponse(SpectrumPars& spectrumPars,BiasPa
 }//close ComputeParametricResponse()
 
 
+
+
+
+TH2D* SpectrumUtils::BuildResponseMatrix(SpectrumPars& spectrumPars,BiasPars& biasPars,ResoPars& resoPars,EfficiencyPars& effPars,std::vector<double>& TrueBins, std::vector<double>& RecBins,int npts)
+{
+	//## Check bins
+	int NTrueBins= (int)TrueBins.size()-1;
+	int NRecBins= (int)RecBins.size()-1;
+	if(NTrueBins<=0 || NRecBins<=0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid number of bins specified!");
+		#endif
+		return 0;
+	}
+	double BinEdge_Rec[NRecBins+1];
+	double BinEdge_True[NTrueBins+1];
+
+	for(int s=0;s<NRecBins;s++) {
+		BinEdge_Rec[s]= RecBins[s];
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("BinEdge_Rec["<<s<<"]="<<BinEdge_Rec[s]);
+		#endif
+	}
+	BinEdge_Rec[NRecBins]= RecBins[NRecBins];		
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("BinEdge_Rec["<<NRecBins<<"]="<<BinEdge_Rec[NRecBins]);
+	#endif
+	
+	for(int s=0;s<NTrueBins;s++) {	
+		BinEdge_True[s]= TrueBins[s];
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("BinEdge_True["<<s<<"]="<<BinEdge_True[s]);
+		#endif
+	}
+	BinEdge_True[NTrueBins]= TrueBins[NTrueBins];		
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("BinEdge_True["<<NTrueBins<<"]="<<BinEdge_True[NTrueBins]);
+	#endif
+	
+	double LgSmin_true= BinEdge_True[0];
+	double LgSmax_true= BinEdge_True[NTrueBins];
+	double LgSmin_rec= BinEdge_Rec[0];
+	double LgSmax_rec= BinEdge_Rec[NRecBins];
+
+
+	//## Init spectrum model fcn
+	TF1* SpectrumModelFcn= ComputeSpectrumModel(spectrumPars,LgSmin_true,LgSmax_true,npts);
+	if(!SpectrumModelFcn){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute the spectrum model!");
+		#endif
+		return 0;
+	}
+
+	//## Init efficiency model fcn
+	TF1* EfficiencyModelFcn= ComputeEfficiencyModel(effPars,LgSmin_true,LgSmax_true,npts);
+	if(!EfficiencyModelFcn){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute the efficiency model!");
+		#endif
+		return 0;
+	}
+
+	//## Init bias model fcn
+	TF1* BiasModelFcn= ComputeBiasModel(biasPars,LgSmin_true,LgSmax_true,npts);
+	if(!BiasModelFcn){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute the bias model!");
+		#endif
+		return 0;
+	}
+
+	//## Init reso model fcn
+	TF1* ResoModelFcn= ComputeResoModel(resoPars,LgSmin_true,LgSmax_true,npts);
+	if(!ResoModelFcn){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute the reso model!");
+		#endif
+		return 0;
+	}
+
+	//## Init response model 1D fcn
+	TF1* ResponseModelFcn= new TF1("ResponseModel",SpectrumUtils::ResponseModel1D,LgSmin_true,LgSmax_true,4);
+	ResponseModelFcn->SetNpx(npts);
+	
+
+	//## Init response matrix
+	TH2D* ResponseMat= new TH2D("ResponseMat","ResponseMat",NTrueBins,BinEdge_True,NRecBins,BinEdge_Rec);
+	ResponseMat->Sumw2();
+
+	
+	//## Fill matrix
+	for(int i=0;i<ResponseMat->GetNbinsX();i++){
+		double lgS_true= ResponseMat->GetXaxis()->GetBinCenter(i+1);
+		double binWidth_true= ResponseMat->GetXaxis()->GetBinWidth(i+1);	
+		double lgSMin_true= ResponseMat->GetXaxis()->GetBinLowEdge(i+1);
+		double lgSMax_true= lgSMin_true + binWidth_true;
+		double N= SpectrumModelFcn->Integral(lgSMin_true,lgSMax_true);
+
+		double eff= EfficiencyModelFcn->Eval(lgS_true);
+		double bias= BiasModelFcn->Eval(lgS_true);
+		double reso= ResoModelFcn->Eval(lgS_true);
+		//ResponseModelFcn->SetParameters(N,bias,reso);
+		ResponseModelFcn->SetParameters(1,lgS_true,bias,reso);
+
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("binWidth_true="<<binWidth_true<<", lgSMin_true="<<lgSMin_true<<", lgSMax_true="<<lgSMax_true<<", bias="<<bias<<", reso="<<reso<<", eff="<<eff);
+		#endif
+		
+		for(int j=0;j<ResponseMat->GetNbinsY();j++){
+			double lgS_rec= ResponseMat->GetYaxis()->GetBinCenter(j+1);
+			double binWidth_rec= ResponseMat->GetYaxis()->GetBinWidth(j+1);	
+			double lgSMin_rec= ResponseMat->GetYaxis()->GetBinLowEdge(j+1);
+			double lgSMax_rec= lgSMin_rec + binWidth_rec;
+
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("binWidth_rec="<<binWidth_rec<<", lgSMin_rec="<<lgSMin_rec<<", lgSMax_rec="<<lgSMax_rec);
+			#endif
+			
+			//double response= ResponseModelFcn->Eval(lgS_rec);
+			double response= ResponseModelFcn->Integral(lgSMin_rec,lgSMax_rec);
+			double Rji= eff*response;
+			
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("lgS_true="<<lgS_true<<" ["<<lgSMin_true<<","<<lgSMax_true<<"], lgS_rec="<<lgS_rec<<" ["<<lgSMin_rec<<","<<lgSMax_rec<<"], N="<<N<<", eff="<<eff<<", bias="<<bias<<", reso="<<reso<<", Rji="<<Rji);
+			#endif
+			
+			ResponseMat->SetBinContent(i+1,j+1,Rji);
+			ResponseMat->SetBinError(i+1,j+1,0.);
+			
+		}//end loop rec bins
+	}//end loop true bins
+	
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Deleting spectrum model...");
+	#endif
+	if(SpectrumModelFcn) SpectrumModelFcn->Delete();
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Deleting efficiency model...");
+	#endif
+	if(EfficiencyModelFcn) EfficiencyModelFcn->Delete();	
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Deleting bias model...");
+	#endif
+	if(BiasModelFcn) BiasModelFcn->Delete();	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Deleting reso model...");
+	#endif
+	if(ResoModelFcn) ResoModelFcn->Delete();	
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Deleting response model...");
+	#endif
+	if(ResponseModelFcn) ResponseModelFcn->Delete();	
+	
+
+	return ResponseMat;
+
+}//close BuildResponseMatrix()
 
 double SpectrumUtils::PowerLawSpectrum(double* x, double* par)
 {
@@ -714,6 +966,19 @@ double SpectrumUtils::SmoothCutoffPowerLawSpectrum(double* x, double* par)
 
 }//close SmoothCutoffPowerLawSpectrum()
 
+
+double SpectrumUtils::Pol3Spectrum(double* x, double* par)
+{
+	double lgS= x[0];
+	double p0= par[0];
+	double p1= par[1];
+	double p2= par[2];
+	double p3= par[3];
+	double fval= p0 + p1*lgS + p2*lgS*lgS + p3*lgS*lgS*lgS;
+	return fval;
+
+}//close Pol3Spectrum()
+
 double SpectrumUtils::GetPowerLawIntegral(double gamma,double lgSMin, double lgSMax)
 {
 	double SpectrumInt= 0;
@@ -797,10 +1062,29 @@ double SpectrumUtils::EfficiencyModel(double* x, double* par)
 
 }//close EfficiencyModel()
 
+
+double SpectrumUtils::ResponseModel1D(double* x, double* par)
+{
+	double lgS_rec= x[0];
+	double norm= par[0];
+	double lgS_true= par[1];
+	double bias= par[2];
+	double reso= par[3];
+	
+	//double arg = (lgS + bias)/reso;	
+	double arg= (lgS_rec - (lgS_true + bias) )/reso;
+	double gaussNorm= 1./(reso*sqrt(2.*TMath::Pi()));
+	double fval = norm*gaussNorm*TMath::Exp(-0.5*arg*arg);
+	return fval;
+
+}//close ResponseModel1D()
+
 double SpectrumUtils::ResponseModel(double* x, double* par)
 {
 	double lgS_true= x[0];
 	double lgS_rec= x[1];
+	double S_true= pow(10,lgS_true);
+	double S_rec= pow(10,lgS_rec);
 	int par_counter= 0;
 
 	//## Set spectrum pars
@@ -818,6 +1102,9 @@ double SpectrumUtils::ResponseModel(double* x, double* par)
 	}
 	else if(spectrumModel==eSmoothBrokenPowerLaws){
 		nSpectrumPars= SmoothCutoffPowerLaws::GetParNumber();
+	}
+	else if(spectrumModel==ePol3){
+		nSpectrumPars= Pol3SpectrumPars::GetParNumber();
 	}
 	else{
 		#ifdef LOGGING_ENABLED
@@ -845,6 +1132,9 @@ double SpectrumUtils::ResponseModel(double* x, double* par)
 	}	
 	else if(spectrumModel==eFlat){
 		spectrum= 1;
+	}
+	else if(spectrumModel==ePol3){
+		spectrum= Pol3Spectrum(&lgS_true,spectrumPars);
 	}
 
 	//## Set bias pars
@@ -949,8 +1239,6 @@ double SpectrumUtils::ResponseModel(double* x, double* par)
 		efficiency= EfficiencyModel(&lgS_rec,effPars);
 	}
 	
-	
-
 	//## Set response function
   double arg = (lgS_rec - (lgS_true + bias) )/reso;
 	double gaussNorm= 1./(reso*sqrt(2.*TMath::Pi()));
@@ -966,6 +1254,11 @@ double SpectrumUtils::ResponseModel(double* x, double* par)
 	return response;
 
 }//close ResponseModel()
+
+
+
+
+
 
 //==========================================
 //      SPECTRUM PARS

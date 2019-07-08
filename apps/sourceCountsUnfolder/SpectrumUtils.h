@@ -544,7 +544,8 @@ enum SpectrumModel {
 	ePowerLaw= 0,
 	eBrokenPowerLaws= 1,
 	eFlat= 2,
-	eSmoothBrokenPowerLaws= 3
+	eSmoothBrokenPowerLaws= 3,
+	ePol3=4
 };
 
 class FlatSpectrumPars : public SpectrumPars 
@@ -643,6 +644,7 @@ class BrokenPowerLawsPars : public SpectrumPars {
 };//close BrokenPowerLawsPars class
 
 
+
 class SmoothCutoffPowerLaws : public SpectrumPars 
 {	
 	public:
@@ -672,6 +674,33 @@ class SmoothCutoffPowerLaws : public SpectrumPars
 		
 };//close SmoothCutoffPowerLaws
 
+
+class Pol3SpectrumPars : public SpectrumPars {
+	
+	public:
+		Pol3SpectrumPars(FitPar p0,FitPar p1,FitPar p2,FitPar p3) 
+		{
+			model= ePol3;	
+			nPars= 4;
+			pars.AddPar(p0);
+			pars.AddPar(p1);
+			pars.AddPar(p2);
+			pars.AddPar(p3);	
+		};
+		
+		virtual ~Pol3SpectrumPars() {};
+
+	public:
+		//Overridden method
+		static int GetParNumber() {return 4;}
+		virtual double GetIntegral(double xmin,double xmax) {
+			return 1;
+		}
+		SpectrumPars* Clone() const { 
+			return new Pol3SpectrumPars(*this); 
+		}
+		
+};//close Pol3SpectrumPars class
 
 //===================================================
 //==        SPECTRUM UTILS
@@ -719,13 +748,30 @@ class SpectrumUtils
  		*/
 		static TF1* ComputeSpectrumModel(SpectrumPars& pars,double xmin,double xmax,int npts=1000);
 		/** 
+		\brief Compute efficiency model function
+ 		*/
+		static TF1* ComputeEfficiencyModel(EfficiencyPars& pars,double xmin,double xmax,int npts=1000);
+		/** 
+		\brief Compute reso model function
+ 		*/
+		static TF1* ComputeResoModel(ResoPars& resoPars,double xmin,double xmax,int npts=1000);
+		/** 
+		\brief Compute bias model function
+ 		*/
+		static TF1* ComputeBiasModel(BiasPars& biasPars,double xmin,double xmax,int npts=1000);
+
+		/** 
 		\brief Compute response model function
  		*/
-		static TF2* ComputeResponseModel(SpectrumPars& spectrumPars,BiasPars& biasPars,ResoPars& sigmaPars,EfficiencyPars& effPars,double xmin,double xmax,double ymin,double ymax,int npts=1000);
+		static TF2* ComputeResponseModel(SpectrumPars& spectrumPars,BiasPars& biasPars,ResoPars& resoPars,EfficiencyPars& effPars,double xmin,double xmax,double ymin,double ymax,int npts=1000);
 		/** 
 		\brief Compute response model matrix
  		*/
-		static TH2D* ComputeParametricResponse(SpectrumPars& spectrumPars,BiasPars& biasPars,ResoPars& sigmaPars,EfficiencyPars& effPars,std::vector<double>& TrueBins, std::vector<double>& RecBins,int npts=1000);
+		static TH2D* ComputeParametricResponse(SpectrumPars& spectrumPars,BiasPars& biasPars,ResoPars& resoPars,EfficiencyPars& effPars,std::vector<double>& TrueBins, std::vector<double>& RecBins,int npts=1000);
+		/** 
+		\brief Build response matrix
+ 		*/
+		static TH2D* BuildResponseMatrix(SpectrumPars& spectrumPars,BiasPars& biasPars,ResoPars& resoPars,EfficiencyPars& effPars,std::vector<double>& TrueBins, std::vector<double>& RecBins,int npts=1000);
 
 		//==========================================
 		//==      MATH FUNCTIONS
@@ -743,6 +789,10 @@ class SpectrumUtils
 		\brief Smooth cutoff power-law spectrum model
  		*/
 		static double SmoothCutoffPowerLawSpectrum(double* x, double* par);	
+		/** 
+		\brief 3rd degree polynomial spectrum model
+ 		*/
+		static double Pol3Spectrum(double* x, double* par);	
 
 		/** 
 		\brief Compute power law integral
@@ -767,14 +817,19 @@ class SpectrumUtils
 		\brief Compute flux bias step+exp model
  		*/
 		static double StepExpBiasModel(double* x, double* par);
+
 		/** 
 		\brief Compute detection efficiency model
  		*/
 		static double EfficiencyModel(double* x, double* par);
 		/** 
-		\brief Compute response model
+		\brief Compute 2D response model
  		*/
 		static double ResponseModel(double* x, double* par);
+		/** 
+		\brief Compute response model 1D
+ 		*/
+		static double ResponseModel1D(double* x, double* par);
 
 };//close class
 

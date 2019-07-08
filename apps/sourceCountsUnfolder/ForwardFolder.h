@@ -75,6 +75,32 @@ class ForwardFolder
 		*/
 		TH1D* GetForwardFoldedSpectrum(){return fForwardFoldedSpectrum;}
 
+		/**
+		* \brief Get fit pars
+		*/
+		std::vector<double> GetFitPars()
+		{
+			std::vector<double> pars;
+			int nTotPars= fInitFitPars->GetNPars();
+			for(int i=0;i<nTotPars;i++){
+				pars.push_back(fFitPar[i]);
+			}	
+			return pars;
+		}
+
+		/**
+		* \brief Get fit par errors
+		*/
+		std::vector<double> GetFitParErrors()
+		{
+			std::vector<double> parErrors;
+			int nTotPars= fInitFitPars->GetNPars();
+			for(int i=0;i<nTotPars;i++){
+				parErrors.push_back(fFitParErr[i]);
+			}	
+			return parErrors;
+		}
+
 	private:
 		/**
 		* \brief Initialize class data
@@ -91,7 +117,7 @@ class ForwardFolder
 		/**
 		* \brief Fit log-likelihood definition
 		*/
-		static void LogLikelihoodFcn(int& nPar, double* gin, double &f, double* par, int iflag);		
+		static void MinimizedFcn(int& nPar, double* gin, double &f, double* par, int iflag);		
 		/**
 		* \brief Compute uncertainties on unfolded spectrum
 		*/

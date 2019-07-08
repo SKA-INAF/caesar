@@ -178,6 +178,9 @@ int ForwardFolder::Init()
 	else if(spectrumModel==eFlat){
 		fTrueSpectrumModelFcn= new TF1("TrueSpectrumModelFcn","[0]",fLgEMin_true,fLgEMax_true);
 	}
+	else if(spectrumModel==ePol3){
+		fTrueSpectrumModelFcn= new TF1("TrueSpectrumModelFcn",SpectrumUtils::Pol3Spectrum,fLgEMin_true,fLgEMax_true,nSpectrumPars);
+	}
 	else{
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("INvalid spectrum model selected!");
@@ -318,7 +321,7 @@ TH1D* ForwardFolder::UnfoldSpectrum(SpectrumPars& initFitPars,std::string runMod
 	TMinuit* gMinuit = new TMinuit(nPar);
   gMinuit->SetPrintLevel(0);
 	gMinuit->SetMaxIterations(100000);
-	gMinuit->SetFCN(ForwardFolder::LogLikelihoodFcn);
+	gMinuit->SetFCN(ForwardFolder::MinimizedFcn);
 	gMinuit->mnexcm("SET NOW",arglist,0,ierflag);
 
 	arglist[0] = 1;
@@ -349,7 +352,7 @@ TH1D* ForwardFolder::UnfoldSpectrum(SpectrumPars& initFitPars,std::string runMod
   arglist[0]= 1;
   gMinuit->mnexcm("SET STR",arglist,1,ierflag);
 
-	arglist[0]= 0.5;//0.5 likelihood, 1 ChiSquare
+	arglist[0]= 1;//0.5 likelihood, 1 ChiSquare
   gMinuit->mnexcm("SET ERR",arglist,1,ierflag);
 
 	if(runMode=="CALL"){ //## Call Chi2 with initial values
@@ -440,7 +443,7 @@ TH1D* ForwardFolder::UnfoldSpectrum(SpectrumPars& initFitPars,std::string runMod
 }//close UnfoldSpectrum()
 
 
-void ForwardFolder::LogLikelihoodFcn(int& nPar, double* gin, double &f, double* par, int iflag)
+void ForwardFolder::MinimizedFcn(int& nPar, double* gin, double &f, double* par, int iflag)
 {
 	//## The parameters are the correction factors to be applied to the measured spectrum 
 	//## Set correction in current true spectrum
@@ -452,7 +455,7 @@ void ForwardFolder::LogLikelihoodFcn(int& nPar, double* gin, double &f, double* 
 
 	//## Update "true" spectrum given current fit parameters
 	fTrueSpectrumModelFcn->SetParameters(par);
-	fTrueSpectrumModelFcn->SetParameter(0,pow(10,par[0]));
+	//fTrueSpectrumModelFcn->SetParameter(0,pow(10,par[0]));
 	
 	SpectrumUtils::GetModelSpectrum(*fTrueSpectrum,fTrueSpectrumModelFcn,false);
 
@@ -469,10 +472,14 @@ void ForwardFolder::LogLikelihoodFcn(int& nPar, double* gin, double &f, double* 
 		double lgERecMax= lgERecMin + fCurrentRecSpectrum->GetBinWidth(i+1);
 		
 		double nData= fCurrentRecSpectrum->GetBinContent(i+1);
+		if(nData==0) continue;
 
 		//Find corresponding bin in folded spectrum
 		int binId= FoldedSpectrum->FindBin(lgERec);
 		double nExp= FoldedSpectrum->GetBinContent(binId);
+
+		//Take absolute value
+		//nExp= fabs(nExp);
 		
 		//fForwardFoldedSpectrum->SetBinContent(i+1,nExp);
 		//fForwardFoldedSpectrum->SetBinError(i+1,sqrt(nExp));
@@ -482,6 +489,7 @@ void ForwardFolder::LogLikelihoodFcn(int& nPar, double* gin, double &f, double* 
 		//Skip bins if requested
 		if(fUseFitRange && (lgERecMin<fLgEMin_fit || lgERecMax>fLgEMax_fit) ) continue;
 
+		/*
 		double thisChi2= 0;
 		if(nExp>0){
   		LogLikelihood+= -(nData*log(nExp)-nExp);
@@ -493,20 +501,25 @@ void ForwardFolder::LogLikelihoodFcn(int& nPar, double* gin, double &f, double* 
 				Chi2+= nExp;
 				thisChi2= nExp;
 			}
-			//cout<<"INFO: lgERec="<<lgERec<<"  nData="<<nData<<"  nExp="<<nExp<<"  LL="<<LogLikelihood<<"  Chi2="<<Chi2<<"  DeltaChi2="<<thisChi2<<endl;
+			cout<<"INFO: lgERec="<<lgERec<<", nData="<<nData<<", nExp="<<nExp<<", LL="<<LogLikelihood<<", Chi2="<<Chi2<<", DeltaChi2="<<thisChi2<<endl;
 		}
+		*/
+
+		double thisChi2= (nExp-nData)*(nExp-nData);
+		Chi2+= thisChi2;
+		cout<<"INFO: lgERec="<<lgERec<<", nData="<<nData<<", nExp="<<nExp<<", thisChi2="<<thisChi2<<", Chi2="<<Chi2<<endl;
 	
 		NDF++;
 
 	}//end loop rec bins
 
 	
-	f = LogLikelihood;
-
-	Chi2*= 2;
+	//Chi2*= 2;
 	NDF-= nPar-2;
 
-	
+	//f = LogLikelihood;
+	f= Chi2;
+
 	cout<<"*** CURRENT FIT ***"<<endl;
 	cout<<"nPar="<<nPar<<" nTotPar="<<nTotPar<<endl;
 	cout<<"LL="<<LogLikelihood<<endl;
@@ -521,7 +534,7 @@ void ForwardFolder::LogLikelihoodFcn(int& nPar, double* gin, double &f, double* 
 	
 	FoldedSpectrum->Delete();
 
-}//close ForwardFolder::LogLikelihoodFcn()
+}//close MinimizedFcn()
 
 
 int ForwardFolder::ComputeUncertainties(SpectrumPars& initFitPars,int nRandomSamples)

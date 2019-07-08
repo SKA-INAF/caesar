@@ -70,8 +70,9 @@ void Usage(char* exeName)
 	cout<<"-b, --biaspars=[BIAS_PARS] \t Flux bias model pars"<<endl;
 	cout<<"-R, --resomodel=[RESO_MODEL] \t Reso model (const,exp)"<<endl;
 	cout<<"-r, --resopars=[RESO_PARS] \t Flux reso model pars"<<endl;
-	cout<<"-S, --smodel=[SPECTRUM_MODEL] \t Spectrum model used for response matrix creation (flat,powerlaw,brokenpowerlaw)"<<endl;
-	cout<<"-s, --smodel-fit=[SPECTRUM_MODEL] \t Spectrum model used as fit model in unfolding (flat,powerlaw,brokenpowerlaw)"<<endl;
+	cout<<"-S, --smodel=[SPECTRUM_MODEL] \t Spectrum model used for response matrix creation (flat,powerlaw,brokenpowerlaw,pol3)"<<endl;
+	cout<<"-s, --smodel-fit=[SPECTRUM_MODEL] \t Spectrum model used as fit model in unfolding (flat,powerlaw,brokenpowerlaw,pol3)"<<endl;
+	cout<<"-d, --spol3pars=[SPECTRUM_POL3_PARS] \t Flux spectrum 3rd degree polynomial model pars"<<endl;
 	cout<<"-v, --verbosity=[LEVEL] \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	cout<<"=============================="<<endl;
 
@@ -97,6 +98,7 @@ static const struct option options_tab[] = {
 	{ "resomodel", required_argument, 0, 'R' },
 	{ "smodel", required_argument, 0, 'S' },
 	{ "smodel-fit", required_argument, 0, 's' },
+	{ "spol3pars", required_argument, 0, 'd' },
 	{ "interactive", no_argument, 0, 'I' },
   {(char*)0, (int)0, (int*)0, (int)0}
 };
@@ -113,25 +115,28 @@ double gSpectrumModelIndex2= 2.7;
 double gSpectrumModelIndex3= 3.5;
 double gSpectrumModelLgSBreak= -2.88;
 double gSpectrumModelLgSBreak_min= -3.0;
-double gSpectrumModelLgSBreak_max= -2.6;
+double gSpectrumModelLgSBreak_max= -2.2;
 double gSpectrumModelLgSCutoff= -0.67;
 double gSpectrumModelLgSCutoff_min= -0.8;
-double gSpectrumModelLgSCutoff_max= -0.4;
+double gSpectrumModelLgSCutoff_max= -0.3;
+std::vector<double> gSpectrumModelPol3Pars {224.546,188.565,53.5395,5.12536};
 std::vector<double> gEfficiencyPars {9.86885e-01,-2.85922e+00,4.14620e-01};
-std::vector<double> gFluxBiasPars {1.97524e-06,3.82100e+00,-4.54680e-04};
-std::vector<double> gFluxResoPars {6.60898e-04,2.04734e+00};
+std::vector<double> gFluxBiasPars {1.26004e-05,2.88008e+00,-3.31134e-04};
+std::vector<double> gFluxResoPars {4.86065e-04,1.78705e+00};
 int gBiasModel= eCONST_RESO;
 int gResoModel= eCONST_BIAS;
 int gEfficiencyModel= eCONST_EFF;
 int gSpectrumModel= eFlat;
-int gSpectrumModel_fit= eBrokenPowerLaws;
+//int gSpectrumModel_fit= eBrokenPowerLaws;
+int gSpectrumModel_fit= ePol3;
 double gConstEfficiency= 1;
 double gConstBias= 0;
 double gConstReso= 0.2;
 bool gUseFitRange= true;
-double gLgSMin_fit= -3.6;
+double gLgSMin_fit= -3.;
+//double gLgSMin_fit= -4;
 double gLgSMax_fit= 1.5;
-bool gComputeUncertainties= false;
+bool gComputeUncertainties= true;
 int gNRandSamples= 100;
 	
 
@@ -148,6 +153,8 @@ ForwardFolder* gForwardFolder= 0;
 TH1D* gUnfoldedSpectrum= 0;
 TH1D* gFFSpectrum= 0;
 
+std::vector<double> gSourceCountsExpDataFitPars_Hopkins {0.859,0.508,0.376,-0.049,-0.121,0.057,-0.008};
+std::vector<double> gSourceCountsExpDataFitPars_Katgert {0.908,0.619,0.190,-0.075};
 
 //Functions
 int ParseOptions(int argc, char *argv[]);
@@ -274,7 +281,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:H:o:v:Ig:G:l:c:C:e:b:r:E:B:R:S:s:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:H:o:v:Ig:G:l:c:C:e:b:r:E:B:R:S:s:d:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -399,7 +406,8 @@ int ParseOptions(int argc, char *argv[])
 				else if(spectrumModel_str=="powerlaw") gSpectrumModel= ePowerLaw;
 				else if(spectrumModel_str=="brokenpowerlaw") gSpectrumModel= eBrokenPowerLaws;
 				else if(spectrumModel_str=="smoothbrokenpowerlaw") gSpectrumModel= eSmoothBrokenPowerLaws;
-				else gSpectrumModel= ePowerLaw;
+				else if(spectrumModel_str=="pol3") gSpectrumModel= ePol3;
+				else gSpectrumModel= eFlat;
 				break;	
 			}
 			case 's':	
@@ -409,7 +417,20 @@ int ParseOptions(int argc, char *argv[])
 				else if(spectrumModel_str=="powerlaw") gSpectrumModel_fit= ePowerLaw;
 				else if(spectrumModel_str=="brokenpowerlaw") gSpectrumModel_fit= eBrokenPowerLaws;
 				else if(spectrumModel_str=="smoothbrokenpowerlaw") gSpectrumModel_fit= eSmoothBrokenPowerLaws;
-				else gSpectrumModel_fit= ePowerLaw;
+				else if(spectrumModel_str=="pol3") gSpectrumModel_fit= ePol3;
+				else gSpectrumModel_fit= ePol3;
+				break;	
+			}
+			case 'd':	
+			{
+				std::string pol3Pars_str= std::string(optarg);
+				std::vector<std::string> pol3Pars_strs= CodeUtils::SplitStringOnPattern(pol3Pars_str,',');
+				gSpectrumModelPol3Pars.clear();
+				for(size_t i=0;i<pol3Pars_strs.size();i++){
+					double pol3Par= atof(pol3Pars_strs[i].c_str());
+					cout<<"pol3Par_str="<<pol3Pars_strs[i]<<", pol3Par="<<pol3Par<<endl;
+					gSpectrumModelPol3Pars.push_back(pol3Par);
+				}
 				break;	
 			}
 			case 'v':	
@@ -577,11 +598,19 @@ int UnfoldData()
 	//====================================================
 	//==         SET SPECTRUM PARS
 	//=====================================================
+	// - Power law spectrum pars
 	double gamma1= gSpectrumModelIndex1;
 	double gamma2= gSpectrumModelIndex2;
 	double gamma3= gSpectrumModelIndex3;
 	double gamma_min= 0;
 	double gamma_max= 10;
+	double gamma1_min= -2;
+	double gamma1_max= -1;
+	double gamma2_min= 0;
+	double gamma2_max= 1;
+	double gamma3_min= 0.5;
+	double gamma3_max= 1.5;
+		
 	double lgS_break= gSpectrumModelLgSBreak;
 	double lgS_break_min= gSpectrumModelLgSBreak_min;
 	double lgS_break_max= gSpectrumModelLgSBreak_max;
@@ -591,13 +620,30 @@ int UnfoldData()
 	double lgS_min= -5;
 	double lgS_max= 10;
 	FitPar normPar= FitPar("Norm",1);
-	FitPar gammaPar1= FitPar("Gamma1",gamma1,gamma_min,gamma_max);
-	FitPar gammaPar2= FitPar("Gamma2",gamma2,gamma_min,gamma_max);
-	FitPar gammaPar3= FitPar("Gamma3",gamma3,gamma_min,gamma_max);
+	
+	/*
+	FitPar gammaPar1= FitPar("Gamma1",gamma1,gamma1_min,gamma1_max);
+	FitPar gammaPar2= FitPar("Gamma2",gamma2,gamma2_min,gamma2_max);
+	FitPar gammaPar3= FitPar("Gamma3",gamma3,gamma3_min,gamma3_max);
 	FitPar breakPar= FitPar("Break",lgS_break,lgS_break_min,lgS_break_max);
 	FitPar cutoffPar= FitPar("Cutoff",lgS_cutoff,lgS_cutoff_min,lgS_cutoff_max);
+	*/
+		
+	FitPar gammaPar1= FitPar("Gamma1",gamma1);
+	FitPar gammaPar2= FitPar("Gamma2",gamma2);
+	FitPar gammaPar3= FitPar("Gamma3",gamma3);
+	FitPar breakPar= FitPar("Break",lgS_break);
+	FitPar cutoffPar= FitPar("Cutoff",lgS_cutoff);
+	
+
+	// - 3rd deg pol pars
+	FitPar p0= FitPar("p0",gSpectrumModelPol3Pars[0]);
+	FitPar p1= FitPar("p1",gSpectrumModelPol3Pars[1]);
+	FitPar p2= FitPar("p2",gSpectrumModelPol3Pars[2]);
+	FitPar p3= FitPar("p3",gSpectrumModelPol3Pars[3]);
 
 
+	// - Define spectrum pars
 	SpectrumPars* spectrumPars= 0;
 	if(gSpectrumModel_fit==ePowerLaw){
 		spectrumPars= new PowerLawPars(normPar,gammaPar2);
@@ -608,10 +654,16 @@ int UnfoldData()
 	else if(gSpectrumModel_fit==eBrokenPowerLaws){
 		spectrumPars= new BrokenPowerLawsPars(normPar,gammaPar1, gammaPar2, gammaPar3,breakPar,cutoffPar);
 	}
+	else if(gSpectrumModel_fit==ePol3){
+		spectrumPars= new Pol3SpectrumPars(p0,p1,p2,p3);
+	}
 
 	//Fix spectrum pars?
-	//spectrumPars.FixPar("Gamma1",gamma1);
-	//spectrumPars.FixPar("Break",lgS_break);
+	//spectrumPars->FixPar("Break",lgS_break);
+	//spectrumPars->FixPar("Gamma1",gamma1);
+	//spectrumPars->FixPar("Gamma2",gamma2);
+	//spectrumPars->FixPar("Gamma3",gamma3);
+	//spectrumPars->FixPar("Cutoff",lgS_cutoff);
 	
 
 	//====================================================
@@ -647,7 +699,7 @@ int SetResponseMatrix()
 	//====================================================
 	//==         SET RESPONSE MODEL PARS
 	//=====================================================		
-	//- Set spectrum pars
+	//- Set power law spectrum pars
 	double gamma1= gSpectrumModelIndex1;
 	double gamma2= gSpectrumModelIndex2;
 	double gamma3= gSpectrumModelIndex3;
@@ -664,7 +716,13 @@ int SetResponseMatrix()
 	FitPar breakPar= FitPar("Break",lgS_break,lgS_min,lgS_max);
 	FitPar cutoffPar= FitPar("Cutoff",lgS_cutoff,lgS_min,lgS_max);
 
+	// - Set 3rd deg pol pars
+	FitPar p0= FitPar("p0",gSpectrumModelPol3Pars[0]);
+	FitPar p1= FitPar("p1",gSpectrumModelPol3Pars[1]);
+	FitPar p2= FitPar("p2",gSpectrumModelPol3Pars[2]);
+	FitPar p3= FitPar("p3",gSpectrumModelPol3Pars[3]);
 
+	// - Set spectrum pars
 	SpectrumPars* spectrumPars= 0;
 	if(gSpectrumModel==ePowerLaw){
 		spectrumPars= new PowerLawPars(normPar,gammaPar2);
@@ -674,6 +732,9 @@ int SetResponseMatrix()
 	}
 	else if(gSpectrumModel==eBrokenPowerLaws){
 		spectrumPars= new BrokenPowerLawsPars(normPar,gammaPar1, gammaPar2, gammaPar3,breakPar,cutoffPar);
+	}
+	else if(gSpectrumModel==ePol3){
+		spectrumPars= new Pol3SpectrumPars(p0,p1,p2,p3);
 	}
 	
 	
@@ -705,6 +766,7 @@ int SetResponseMatrix()
 	double lgSmin_rec= gRecBins[0];
 	double lgSmax_rec= gRecBins[gRecBins.size()-1];
 
+	/*
 	gResponseModelFcn= SpectrumUtils::ComputeResponseModel(
 		*spectrumPars,
 		*biasPars,
@@ -713,9 +775,10 @@ int SetResponseMatrix()
 		lgSmin_true,lgSmax_true,
 		lgSmin_rec,lgSmax_rec
 	);
-
+	*/
 	
-	gResponseMatrix= SpectrumUtils::ComputeParametricResponse(
+	//gResponseMatrix= SpectrumUtils::ComputeParametricResponse(
+	gResponseMatrix= SpectrumUtils::BuildResponseMatrix(
 		*spectrumPars,
 		*biasPars,
 		*resoPars,
@@ -739,25 +802,28 @@ int SetResponseMatrix()
 void Draw()
 {
 	// - Draw response function 2D
-	TCanvas* ResponseModelPlot= new TCanvas("ResponseModelPlot","ResponseModelPlot");
-	ResponseModelPlot->cd();
-
 	if(gResponseModelFcn){
+		TCanvas* ResponseModelPlot= new TCanvas("ResponseModelPlot","ResponseModelPlot");
+		ResponseModelPlot->cd();
+
 		gResponseModelFcn->Draw("COLZ");
 	}
 
 	// - Draw response matrix
-	TCanvas* ResponseMatrixPlot= new TCanvas("ResponseMatrixPlot","ResponseMatrixPlot");
-	ResponseMatrixPlot->cd();
-
 	if(gResponseMatrix){
+		TCanvas* ResponseMatrixPlot= new TCanvas("ResponseMatrixPlot","ResponseMatrixPlot");
+		ResponseMatrixPlot->cd();
+
 		gResponseMatrix->SetStats(0);
+		gResponseMatrix->GetZaxis()->SetRangeUser(-0.0001,1);
 		gResponseMatrix->Draw("COLZ");
+	
+		TF1* diagFcn= new TF1("diagFcn","x",gTrueBins[0],gTrueBins[gTrueBins.size()-1]);
+		diagFcn->SetLineColor(kWhite);
+		diagFcn->Draw("lsame");
 	}
 
-	TF1* diagFcn= new TF1("diagFcn","x",gTrueBins[0],gTrueBins[gTrueBins.size()-1]);
-	diagFcn->Draw("lsame");
-
+	
 	
 	//--> Results Plot
 	TCanvas* Plot= new TCanvas("Plot","Plot");
@@ -765,34 +831,106 @@ void Draw()
 
 	gSourceCounts->SetTitle(0);
 	gSourceCounts->SetStats(0);
-	gSourceCounts->GetXaxis()->SetTitle("lg(S/Jy)");
+	gSourceCounts->GetXaxis()->SetTitle("log_{10}(S/Jy)");
 	gSourceCounts->GetXaxis()->SetTitleSize(0.06);
 	gSourceCounts->GetXaxis()->SetTitleOffset(0.8);
-	gSourceCounts->GetYaxis()->SetTitle("nentries");
+	gSourceCounts->GetYaxis()->SetTitle("S^{2.5} x dN/dS (Jy^{1.5}sr^{-1})");
 	gSourceCounts->GetYaxis()->SetTitleSize(0.06);
 	gSourceCounts->GetYaxis()->SetTitleOffset(1.3);
 	gSourceCounts->SetMarkerColor(kBlack);
 	gSourceCounts->SetLineColor(kBlack);
 	gSourceCounts->SetMarkerStyle(8);
-	gSourceCounts->Draw("ep");
+	gSourceCounts->SetMarkerSize(1.3);
+	gSourceCounts->Draw("EPZ");
 	
-	gUnfoldedSpectrum->SetMarkerColor(kRed);
-	gUnfoldedSpectrum->SetLineColor(kRed);
-	gUnfoldedSpectrum->SetMarkerStyle(21);
-	gUnfoldedSpectrum->Draw("ep same");
+	gUnfoldedSpectrum->SetMarkerColor(kBlack);
+	gUnfoldedSpectrum->SetLineColor(kBlack);
+	gUnfoldedSpectrum->SetMarkerSize(1.3);
+	gUnfoldedSpectrum->SetMarkerStyle(24);
+	gUnfoldedSpectrum->Draw("EPZ same");
 	
 	gFFSpectrum->SetMarkerColor(kGreen+1);
-	gFFSpectrum->SetLineColor(kGreen+1);
+	//gFFSpectrum->SetLineColor(kGreen+1);
+	gFFSpectrum->SetLineColor(kBlack);
 	gFFSpectrum->SetMarkerStyle(23);
-	gFFSpectrum->Draw("ep same");
+	gFFSpectrum->Draw("L hist same");
+
+	TF1* expDataFitFcn_Katgert= new TF1(
+		"expDataFitFcn_Katgert",
+		"pow(10,([0] + [1]*(x+3) + [2]*pow(x+3,2) + [3]*pow(x+3,3)) )",
+		gTrueBins[0],gTrueBins[gTrueBins.size()-1]
+	);
+	expDataFitFcn_Katgert->SetParameters(gSourceCountsExpDataFitPars_Katgert.data());
+	expDataFitFcn_Katgert->SetLineColor(kBlack);
+	expDataFitFcn_Katgert->SetLineStyle(kDashed);
+	expDataFitFcn_Katgert->Draw("l same");
+
+	/*
+	TF1* expDataFitFcn_Hopkins= new TF1(
+		"expDataFitFcn_Hopkins",
+		"pow(10,([0] + [1]*(x+3) + [2]*pow(x+3,2) + [3]*pow(x+3,3) + [4]*pow(x+3,4) + [5]*pow(x+3,5) + [6]*pow(x+3,6) ) )",
+		gTrueBins[0],gTrueBins[gTrueBins.size()-1]
+	);
+	expDataFitFcn_Hopkins->SetParameters(gSourceCountsExpDataFitPars_Hopkins.data());
+	expDataFitFcn_Hopkins->SetLineColor(kBlack);
+	expDataFitFcn_Hopkins->SetLineStyle(kDotted);
+	//expDataFitFcn_Hopkins->Draw("l same");
+	*/
+
+	TF1* expDataFitFcn_Hopkins= new TF1(
+		"expDataFitFcn_Hopkins",
+		"pow(10,([0] + [1]*(x+3) + [2]*pow(x+3,2) + [3]*pow(x+3,3) + [4]*pow(x+3,4) + [5]*pow(x+3,5) + [6]*pow(x+3,6) ) )",
+		gTrueBins[0],gTrueBins[gTrueBins.size()-1]
+	);
+	//expDataFitFcn_Hopkins->SetParameters(0.859,0.508,0.376,-0.049,-0.121,0.057,-0.008);
+	expDataFitFcn_Hopkins->SetParameters(gSourceCountsExpDataFitPars_Hopkins.data());
+	expDataFitFcn_Hopkins->SetLineColor(kBlack);
+	expDataFitFcn_Hopkins->SetLineStyle(kDotted);
+	expDataFitFcn_Hopkins->Draw("l same");
+
+	std::vector<double> fitPars= gForwardFolder->GetFitPars();
+	TF1* trueFitModelFcn= new TF1("trueFitModelFcn",SpectrumUtils::BrokenPowerLawSpectrum,gLgSMin_fit,gLgSMax_fit,6);
+	trueFitModelFcn->SetParameters(fitPars.data());
+	trueFitModelFcn->SetLineColor(kRed);
+	trueFitModelFcn->Draw("l same");
+
+
+	TF1* fitFcn= new TF1("fitFcn",SpectrumUtils::BrokenPowerLawSpectrum,gLgSMin_fit,gLgSMax_fit,6);
+	double gamma1= gSpectrumModelIndex1;
+	double gamma2= gSpectrumModelIndex2;
+	double gamma3= gSpectrumModelIndex3;
+	double gamma_min= 0;
+	double gamma_max= 10;
+	double lgS_break= gSpectrumModelLgSBreak;
+	double lgS_break_min= gSpectrumModelLgSBreak_min;
+	double lgS_break_max= gSpectrumModelLgSBreak_max;
+	double lgS_cutoff= gSpectrumModelLgSCutoff;
+	double lgS_cutoff_min= gSpectrumModelLgSCutoff_min;
+	double lgS_cutoff_max= gSpectrumModelLgSCutoff_max;
+	fitFcn->SetParNames("norm","gamma1","gamma2","gamma3","lgS_break","lgS_cutoff");
+	fitFcn->SetParameters(1000,gamma1,gamma2,gamma3,lgS_break,lgS_cutoff);
+	
+	gUnfoldedSpectrum->Fit(fitFcn,"RN");
+	fitFcn->SetLineColor(kBlue);
+	fitFcn->Draw("l same");
 
 	TLegend* PlotLegend= new TLegend(0.6,0.6,0.8,0.8);	
 	PlotLegend->SetTextSize(0.045);
 	PlotLegend->SetTextFont(52);
-	PlotLegend->AddEntry(gSourceCounts,"rec","PL");
+	//PlotLegend->SetHeader("Source Counts");
+	PlotLegend->AddEntry(gSourceCounts,"measured","PL");
 	PlotLegend->AddEntry(gUnfoldedSpectrum,"unfolded","PL");
-	PlotLegend->AddEntry(gFFSpectrum,"fitted","PL");
+	PlotLegend->AddEntry(gFFSpectrum,"fit","L");
 	PlotLegend->Draw("same");
+
+	TLegend* PlotLegend2= new TLegend(0.1,0.6,0.3,0.8);	
+	PlotLegend2->SetTextSize(0.045);
+	PlotLegend2->SetTextFont(52);
+	PlotLegend2->SetHeader("Exp data fit @ 1.4 GHz)");
+	PlotLegend2->AddEntry(expDataFitFcn_Hopkins,"Hopkins et al. (2013)","L");
+	PlotLegend2->AddEntry(expDataFitFcn_Katgert,"Katgert et al. (1998)","L");
+	PlotLegend2->Draw("same");
+
 
 }//close Draw()
 
