@@ -73,6 +73,7 @@ void Usage(char* exeName)
 	cout<<"-S, --smodel=[SPECTRUM_MODEL] \t Spectrum model used for response matrix creation (flat,powerlaw,brokenpowerlaw,pol3)"<<endl;
 	cout<<"-s, --smodel-fit=[SPECTRUM_MODEL] \t Spectrum model used as fit model in unfolding (flat,powerlaw,brokenpowerlaw,pol3)"<<endl;
 	cout<<"-d, --spol3pars=[SPECTRUM_POL3_PARS] \t Flux spectrum 3rd degree polynomial model pars"<<endl;
+	cout<<"-u, --uncertainties \t Compute stats & syst uncertainties in unfolded flux"<<endl;
 	cout<<"-v, --verbosity=[LEVEL] \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	cout<<"=============================="<<endl;
 
@@ -99,6 +100,7 @@ static const struct option options_tab[] = {
 	{ "smodel", required_argument, 0, 'S' },
 	{ "smodel-fit", required_argument, 0, 's' },
 	{ "spol3pars", required_argument, 0, 'd' },
+	{ "uncertainties", required_argument, 0, 'u' },
 	{ "interactive", no_argument, 0, 'I' },
   {(char*)0, (int)0, (int*)0, (int)0}
 };
@@ -136,7 +138,7 @@ bool gUseFitRange= true;
 double gLgSMin_fit= -3.;
 //double gLgSMin_fit= -4;
 double gLgSMax_fit= 1.5;
-bool gComputeUncertainties= true;
+bool gComputeUncertainties= false;
 int gNRandSamples= 100;
 	
 
@@ -281,7 +283,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:H:o:v:Ig:G:l:c:C:e:b:r:E:B:R:S:s:d:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:H:o:v:Ig:G:l:c:C:e:b:r:E:B:R:S:s:d:u",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -431,6 +433,11 @@ int ParseOptions(int argc, char *argv[])
 					cout<<"pol3Par_str="<<pol3Pars_strs[i]<<", pol3Par="<<pol3Par<<endl;
 					gSpectrumModelPol3Pars.push_back(pol3Par);
 				}
+				break;	
+			}
+			case 'u':	
+			{
+				gComputeUncertainties= true;
 				break;	
 			}
 			case 'v':	
