@@ -101,6 +101,15 @@ class ForwardFolder
 			return parErrors;
 		}
 
+		/**
+		* \brief Use errors in chi2
+		*/
+		void UseErrorsInChi2(bool choice){fUseErrorsInChi2= choice;}
+		/**
+		* \brief Use likelihood fit
+		*/
+		void UseLikelihoodFit(bool choice){fIsLikelihoodFit= choice;}
+
 	private:
 		/**
 		* \brief Initialize class data
@@ -148,6 +157,8 @@ class ForwardFolder
 		static bool fUseFitRange;
 		static double fLgEMin_fit;
 		static double fLgEMax_fit;
+		static bool fUseErrorsInChi2;
+		static bool fIsLikelihoodFit;
 		
 		//Fit results
 		int fFitStatus;

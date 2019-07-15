@@ -238,14 +238,14 @@ bool SpectrumUtils::CheckSpectrumBinnings(const TAxis* a1, const TAxis* a2)
 	//Axis 1 shall be contained inside the Axis 2 AND binning shall match
 	int Nbins_1= a1->GetNbins();
 	int Nbins_2= a2->GetNbins();
-	double xmin_1= a1->GetXmin();
-	double xmax_1= a1->GetXmax();
-	double xmin_2= a2->GetXmin();
-	double xmax_2= a2->GetXmax();
+	float xmin_1= a1->GetXmin();
+	float xmax_1= a1->GetXmax();
+	float xmin_2= a2->GetXmin();
+	float xmax_2= a2->GetXmax();
 
 	if(xmin_1<xmin_2 || xmax_1>xmax_2){
 		#ifdef LOGGING_ENABLED
-			WARN_LOG("First histo axis is not contained inside the second histo!");
+			WARN_LOG("First histo axis (["<<xmin_1<<","<<xmax_1<<"]) is not contained inside the second histo (["<<xmin_2<<","<<xmax_2<<"])!");
 		#endif
 		return false;
 	}
@@ -335,11 +335,20 @@ TF1* SpectrumUtils::ComputeSpectrumModel(SpectrumPars& pars,double xmin,double x
 	else if(spectrumModel==eBrokenPowerLaws){
 		SpectrumModel= new TF1("SpectrumModel",SpectrumUtils::BrokenPowerLawSpectrum,xmin,xmax,nSpectrumPars);
 	}
+	else if(spectrumModel==eTwoBrokenPowerLaws){
+		SpectrumModel= new TF1("SpectrumModel",SpectrumUtils::TwoBrokenPowerLawSpectrum,xmin,xmax,nSpectrumPars);
+	}
 	else if(spectrumModel==eSmoothBrokenPowerLaws){
 		SpectrumModel= new TF1("SpectrumModel",SpectrumUtils::SmoothCutoffPowerLawSpectrum,xmin,xmax,nSpectrumPars);
 	}
+	else if(spectrumModel==ePowerLawWithCutoff){
+		SpectrumModel= new TF1("SpectrumModel",SpectrumUtils::PowerLawWithCutoffSpectrum,xmin,xmax,nSpectrumPars);
+	}
 	else if(spectrumModel==ePol3){
 		SpectrumModel= new TF1("SpectrumModel",SpectrumUtils::Pol3Spectrum,xmin,xmax,nSpectrumPars);
+	}
+	else if(spectrumModel==ePol6){
+		SpectrumModel= new TF1("SpectrumModel",SpectrumUtils::Pol6Spectrum,xmin,xmax,nSpectrumPars);
 	}	
 	else{
 		#ifdef LOGGING_ENABLED
@@ -363,7 +372,13 @@ TF1* SpectrumUtils::ComputeSpectrumModel(SpectrumPars& pars,double xmin,double x
 	else if(spectrumModel==eSmoothBrokenPowerLaws){
 		integral= SpectrumModel->Integral(xmin,xmax);
 	}
+	else if(spectrumModel==ePowerLawWithCutoff){
+		integral= SpectrumModel->Integral(xmin,xmax);
+	}
 	else if(spectrumModel==ePol3){
+		integral= SpectrumModel->Integral(xmin,xmax);
+	}	
+	else if(spectrumModel==ePol6){
 		integral= SpectrumModel->Integral(xmin,xmax);
 	}
 
@@ -519,6 +534,9 @@ TF2* SpectrumUtils::ComputeResponseModel(SpectrumPars& spectrumPars,BiasPars& bi
 		integral= spectrumModelFcn->Integral(xmin,xmax);
 	}	
 	else if(spectrumModel==ePol3){
+		integral= spectrumModelFcn->Integral(xmin,xmax);
+	}	
+	else if(spectrumModel==ePol6){
 		integral= spectrumModelFcn->Integral(xmin,xmax);
 	}	
 
@@ -891,6 +909,36 @@ double SpectrumUtils::PowerLawSpectrum(double* x, double* par)
 
 }//close PowerLawSpectrum()
 
+double SpectrumUtils::PowerLawWithCutoffSpectrum(double* x, double* par)
+{
+	double lgS= x[0];	
+	double S= pow(10,lgS);
+	double norm= par[0];
+	double gamma= par[1];
+	double lgS0= par[2];
+	double Wc= par[3];
+
+	double arg= (lgS-lgS0)/Wc;
+	double cutoff= 2./(1.+TMath::Exp(arg));
+
+	double spectrum_before= norm*log(10)*pow(S,-gamma+1);
+	double spectrum_after= norm*log(10)*pow(S,-gamma+1)*cutoff;
+	double spectrum= 0.;	
+
+	if(lgS<lgS0){
+		spectrum= spectrum_before;
+	}
+	else{
+		spectrum= spectrum_after;
+	}
+	
+	double fval= spectrum;
+
+	return fval;
+
+}//close PowerLawWithCutoffSpectrum()
+
+
 double SpectrumUtils::BrokenPowerLawSpectrum(double* x, double* par)
 {
 	double lgS= x[0];	
@@ -928,6 +976,37 @@ double SpectrumUtils::BrokenPowerLawSpectrum(double* x, double* par)
 	return norm*spectrum;
 
 }//close BrokenPowerLawSpectrum()
+
+
+double SpectrumUtils::TwoBrokenPowerLawSpectrum(double* x, double* par)
+{
+	double lgS= x[0];	
+	
+	double norm= par[0];
+	double gamma1= par[1];
+	double gamma2= par[2];
+	double lgS0= par[3];
+	
+	double norm1= 1;
+	double norm2= norm1* pow(pow(10,lgS0),gamma2-gamma1);
+
+	double spectrum1Par[2]= {norm1,gamma1};
+	double spectrum2Par[2]= {norm2,gamma2};
+		
+	double spectrum1= PowerLawSpectrum(&lgS,spectrum1Par);
+	double spectrum2= PowerLawSpectrum(&lgS,spectrum2Par);
+	
+	double spectrum= 0.;
+	if(lgS<lgS0){
+		spectrum= spectrum1;
+	}
+	else{
+		spectrum= spectrum2;
+	}
+	
+	return norm*spectrum;
+
+}//close TwoBrokenPowerLawSpectrum()
 
 double SpectrumUtils::SmoothCutoffPowerLawSpectrum(double* x, double* par)
 {
@@ -975,9 +1054,31 @@ double SpectrumUtils::Pol3Spectrum(double* x, double* par)
 	double p2= par[2];
 	double p3= par[3];
 	double fval= p0 + p1*lgS + p2*lgS*lgS + p3*lgS*lgS*lgS;
+	//double counts= p0 + p1*(lgS+3) + p2*pow(lgS+3,2) + p3*pow(lgS+3,3);
+	//double fval= pow(10,counts);
+
 	return fval;
 
 }//close Pol3Spectrum()
+
+
+double SpectrumUtils::Pol6Spectrum(double* x, double* par)
+{
+	double lgS= x[0];
+	double p0= par[0];
+	double p1= par[1];
+	double p2= par[2];
+	double p3= par[3];
+	double p4= par[4];
+	double p5= par[5];
+	double p6= par[6];
+	double fval= p0 + p1*lgS + p2*pow(lgS,2) + p3*pow(lgS,3) + p4*pow(lgS,4) + p5*pow(lgS,5) + p6*pow(lgS,6);
+	//double counts= p0 + p1*(lgS+3) + p2*pow(lgS+3,2) + p3*pow(lgS+3,3) + p4*pow(lgS+3,4) + p5*pow(lgS+3,5) + p6*pow(lgS+3,6);
+	//double fval= pow(10,counts);
+
+	return fval;
+
+}//close Pol6Spectrum()
 
 double SpectrumUtils::GetPowerLawIntegral(double gamma,double lgSMin, double lgSMax)
 {
@@ -1013,6 +1114,18 @@ double SpectrumUtils::GetBrokenPowerLawIntegral(double Gamma1,double Gamma2,doub
 	return SpectrumInt;
 
 }//close GetBrokenPowerLawIntegral()
+
+double SpectrumUtils::GetTwoBrokenPowerLawIntegral(double Gamma1,double Gamma2,double Break,double lgSMin, double lgSMax) 
+{
+	double norm1= 1;
+	double norm2= norm1* pow(pow(10,Break),Gamma2-Gamma1);
+	double SpectrumInt1= norm1*SpectrumUtils::GetPowerLawIntegral(Gamma1,lgSMin,Break);
+	double SpectrumInt2= norm2*SpectrumUtils::GetPowerLawIntegral(Gamma2,Break,lgSMax);
+	double SpectrumInt= SpectrumInt1 + SpectrumInt2;
+
+	return SpectrumInt;
+
+}//close GetTwoBrokenPowerLawIntegral()
 
 double SpectrumUtils::ResolutionModel(double* x, double* par)
 {
@@ -1097,14 +1210,23 @@ double SpectrumUtils::ResponseModel(double* x, double* par)
 	else if(spectrumModel==eBrokenPowerLaws){
 		nSpectrumPars= BrokenPowerLawsPars::GetParNumber();
 	}
+	else if(spectrumModel==eTwoBrokenPowerLaws){
+		nSpectrumPars= TwoBrokenPowerLawsPars::GetParNumber();
+	}
 	else if(spectrumModel==eFlat){
 		nSpectrumPars= FlatSpectrumPars::GetParNumber();
 	}
 	else if(spectrumModel==eSmoothBrokenPowerLaws){
 		nSpectrumPars= SmoothCutoffPowerLaws::GetParNumber();
 	}
+	else if(spectrumModel==ePowerLawWithCutoff){
+		nSpectrumPars= PowerLawWithCutoff::GetParNumber();
+	}
 	else if(spectrumModel==ePol3){
 		nSpectrumPars= Pol3SpectrumPars::GetParNumber();
+	}
+	else if(spectrumModel==ePol6){
+		nSpectrumPars= Pol6SpectrumPars::GetParNumber();
 	}
 	else{
 		#ifdef LOGGING_ENABLED
@@ -1126,15 +1248,24 @@ double SpectrumUtils::ResponseModel(double* x, double* par)
 	}
 	else if(spectrumModel==eBrokenPowerLaws){
 		spectrum= BrokenPowerLawSpectrum(&lgS_true,spectrumPars);
+	}		
+	else if(spectrumModel==eTwoBrokenPowerLaws){
+		spectrum= TwoBrokenPowerLawSpectrum(&lgS_true,spectrumPars);
 	}	
 	else if(spectrumModel==eSmoothBrokenPowerLaws){
 		spectrum= SmoothCutoffPowerLawSpectrum(&lgS_true,spectrumPars);
+	}	
+	else if(spectrumModel==ePowerLawWithCutoff){
+		spectrum= PowerLawWithCutoffSpectrum(&lgS_true,spectrumPars);
 	}	
 	else if(spectrumModel==eFlat){
 		spectrum= 1;
 	}
 	else if(spectrumModel==ePol3){
 		spectrum= Pol3Spectrum(&lgS_true,spectrumPars);
+	}
+	else if(spectrumModel==ePol6){
+		spectrum= Pol6Spectrum(&lgS_true,spectrumPars);
 	}
 
 	//## Set bias pars
@@ -1285,5 +1416,13 @@ double BrokenPowerLawsPars::GetIntegral(double xmin,double xmax)
 	double Break= pars.GetPar(4)->GetValue();
 	double Cutoff= pars.GetPar(5)->GetValue();
 	return SpectrumUtils::GetBrokenPowerLawIntegral(Gamma1,Gamma2,Gamma3,Break,Cutoff,xmin,xmax);
+}
+
+double TwoBrokenPowerLawsPars::GetIntegral(double xmin,double xmax) 
+{
+	double Gamma1= pars.GetPar(1)->GetValue();
+	double Gamma2= pars.GetPar(2)->GetValue();
+	double Break= pars.GetPar(3)->GetValue();
+	return SpectrumUtils::GetTwoBrokenPowerLawIntegral(Gamma1,Gamma2,Break,xmin,xmax);
 }
 

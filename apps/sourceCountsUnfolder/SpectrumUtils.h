@@ -541,11 +541,14 @@ class SpectrumPars
 
 
 enum SpectrumModel {
-	ePowerLaw= 0,
-	eBrokenPowerLaws= 1,
-	eFlat= 2,
-	eSmoothBrokenPowerLaws= 3,
-	ePol3=4
+	eFlat= 0,
+	ePowerLaw= 1,
+	ePowerLawWithCutoff= 2,
+	eTwoBrokenPowerLaws= 3,
+	eBrokenPowerLaws= 4,
+	eSmoothBrokenPowerLaws= 5,
+	ePol3=6,
+	ePol6=7
 };
 
 class FlatSpectrumPars : public SpectrumPars 
@@ -562,12 +565,6 @@ class FlatSpectrumPars : public SpectrumPars
 		//Overridden method
 		static int GetParNumber() {return 1;}
 		virtual double GetIntegral(double xmin,double xmax);
-		/*
-		virtual double GetIntegral(double xmin,double xmax) {
-			double Gamma= (pars.GetPar(1))->GetValue();
-			return SpectrumUtils::GetPowerLawIntegral(Gamma,xmin,xmax);
-		}
-		*/
 		SpectrumPars* Clone() const { 
 			return new FlatSpectrumPars(*this); 
 		}
@@ -592,12 +589,6 @@ class PowerLawPars : public SpectrumPars {
 		//Overridden method
 		static int GetParNumber() {return 2;}
 		virtual double GetIntegral(double xmin,double xmax);
-		/*
-		virtual double GetIntegral(double xmin,double xmax) {
-			double Gamma= (pars.GetPar(1))->GetValue();
-			return SpectrumUtils::GetPowerLawIntegral(Gamma,xmin,xmax);
-		}
-		*/
 		SpectrumPars* Clone() const { 
 			return new PowerLawPars(*this); 
 		}
@@ -627,21 +618,37 @@ class BrokenPowerLawsPars : public SpectrumPars {
 		//Overridden method
 		static int GetParNumber() {return 6;}
 		virtual double GetIntegral(double xmin,double xmax);
-		/*
-		virtual double GetIntegral(double xmin,double xmax) {
-			double Gamma= pars.GetPar(1)->GetValue();
-			double Gamma2= pars.GetPar(2)->GetValue();
-			double Gamma3= pars.GetPar(3)->GetValue();
-			double Break= pars.GetPar(4)->GetValue();
-			double Cutoff= pars.GetPar(5)->GetValue();
-			return SpectrumUtils::GetBrokenPowerLawIntegral(Gamma,Gamma2,Gamma3,Break,Cutoff,xmin,xmax);
-		}
-		*/
 		SpectrumPars* Clone() const { 
 			return new BrokenPowerLawsPars(*this); 
 		}
 		
 };//close BrokenPowerLawsPars class
+
+
+class TwoBrokenPowerLawsPars : public SpectrumPars {
+	
+	public:
+		TwoBrokenPowerLawsPars(FitPar normPar,FitPar gammaPar,FitPar gamma2Par,FitPar breakPar) 
+		{
+			model= eTwoBrokenPowerLaws;	
+			nPars= 4;
+			pars.AddPar(normPar);
+			pars.AddPar(gammaPar);
+			pars.AddPar(gamma2Par);
+			pars.AddPar(breakPar);
+		};
+		
+		virtual ~TwoBrokenPowerLawsPars() {};
+
+	public:
+		//Overridden method
+		static int GetParNumber() {return 6;}
+		virtual double GetIntegral(double xmin,double xmax);
+		SpectrumPars* Clone() const { 
+			return new TwoBrokenPowerLawsPars(*this); 
+		}
+		
+};//close TwoBrokenPowerLawsPars class
 
 
 
@@ -674,6 +681,33 @@ class SmoothCutoffPowerLaws : public SpectrumPars
 		
 };//close SmoothCutoffPowerLaws
 
+class PowerLawWithCutoff : public SpectrumPars 
+{	
+	public:
+		PowerLawWithCutoff(FitPar normPar,FitPar gammaPar,FitPar cutoffPar,FitPar smoothCutoffPar) 
+		{
+			model= ePowerLawWithCutoff;	
+			nPars= 4;
+			pars.AddPar(normPar);
+			pars.AddPar(gammaPar);
+			pars.AddPar(cutoffPar);
+			pars.AddPar(smoothCutoffPar);
+		};
+		
+		virtual ~PowerLawWithCutoff() {};
+
+	public:
+		//Overridden method
+		static int GetParNumber() {return 4;}
+		virtual double GetIntegral(double xmin,double xmax) {
+			return 1;
+		}
+		SpectrumPars* Clone() const { 
+			return new PowerLawWithCutoff(*this); 
+		}
+		
+};//close PowerLawWithCutoff
+
 
 class Pol3SpectrumPars : public SpectrumPars {
 	
@@ -701,6 +735,37 @@ class Pol3SpectrumPars : public SpectrumPars {
 		}
 		
 };//close Pol3SpectrumPars class
+
+
+class Pol6SpectrumPars : public SpectrumPars {
+	
+	public:
+		Pol6SpectrumPars(FitPar p0,FitPar p1,FitPar p2,FitPar p3,FitPar p4,FitPar p5,FitPar p6) 
+		{
+			model= ePol6;	
+			nPars= 7;
+			pars.AddPar(p0);
+			pars.AddPar(p1);
+			pars.AddPar(p2);
+			pars.AddPar(p3);
+			pars.AddPar(p4);
+			pars.AddPar(p5);
+			pars.AddPar(p6);		
+		};
+		
+		virtual ~Pol6SpectrumPars() {};
+
+	public:
+		//Overridden method
+		static int GetParNumber() {return 4;}
+		virtual double GetIntegral(double xmin,double xmax) {
+			return 1;
+		}
+		SpectrumPars* Clone() const { 
+			return new Pol6SpectrumPars(*this); 
+		}
+		
+};//close Pol6SpectrumPars class
 
 //===================================================
 //==        SPECTRUM UTILS
@@ -782,9 +847,17 @@ class SpectrumUtils
  		*/
 		static double PowerLawSpectrum(double* x, double* par);	
 		/** 
+		\brief Power law spectrum with cutoff model
+ 		*/
+		static double PowerLawWithCutoffSpectrum(double* x, double* par);	
+		/** 
 		\brief Broken power-law spectrum model
  		*/
 		static double BrokenPowerLawSpectrum(double* x, double* par);
+		/** 
+		\brief 2 broken power-law spectrum model
+ 		*/
+		static double TwoBrokenPowerLawSpectrum(double* x, double* par);
 		/** 
 		\brief Smooth cutoff power-law spectrum model
  		*/
@@ -792,7 +865,11 @@ class SpectrumUtils
 		/** 
 		\brief 3rd degree polynomial spectrum model
  		*/
-		static double Pol3Spectrum(double* x, double* par);	
+		static double Pol3Spectrum(double* x, double* par);
+		/** 
+		\brief 6th degree polynomial spectrum model
+ 		*/
+		static double Pol6Spectrum(double* x, double* par);	
 
 		/** 
 		\brief Compute power law integral
@@ -802,6 +879,10 @@ class SpectrumUtils
 		\brief Compute broken power law integral
  		*/
 		static double GetBrokenPowerLawIntegral(double gamma1,double gamma2,double gamma3,double lgS_break,double lgS_cutoff,double lgS_min, double lgS_max);
+		/** 
+		\brief Compute 2 broken power law integral
+ 		*/
+		static double GetTwoBrokenPowerLawIntegral(double gamma1,double gamma2,double lgS_break,double lgS_min, double lgS_max);
 	
 
 		// - Response models

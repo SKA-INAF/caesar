@@ -62,6 +62,8 @@ using namespace Caesar;
 bool ForwardFolder::fUseFitRange;
 double ForwardFolder::fLgEMin_fit;
 double ForwardFolder::fLgEMax_fit;
+bool ForwardFolder::fUseErrorsInChi2= false;
+bool ForwardFolder::fIsLikelihoodFit= false;
 SpectrumPars* ForwardFolder::fInitFitPars;
 
 TF1* ForwardFolder::fTrueSpectrumModelFcn;
@@ -136,20 +138,29 @@ int ForwardFolder::Init()
 	double BinEdge_RecSpectrum[fNRecBins+1];
 	double BinEdge_TrueSpectrum[fNTrueBins+1];
 
+	cout<<"== TRUE BINS =="<<endl;
+	cout<<"BinEdge_TrueSpectrum={";
 	for(int s=0;s<fNTrueBins;s++) {
 		fLgEBins_true[s]= fResponseMatrix->GetXaxis()->GetBinLowEdge(s+1);
 		BinEdge_TrueSpectrum[s]= fLgEBins_true[s];
+		cout<<BinEdge_TrueSpectrum[s]<<",";
 	}
 	fLgEBins_true[fNTrueBins]= fLgEBins_true[fNTrueBins-1]+fResponseMatrix->GetXaxis()->GetBinWidth(fNTrueBins);
 	BinEdge_TrueSpectrum[fNTrueBins]= fLgEBins_true[fNTrueBins];
+	cout<<BinEdge_TrueSpectrum[fNTrueBins]<<"}"<<endl;
+	cout<<endl;
 
+	cout<<"== REC BINS =="<<endl;
+	cout<<"BinEdge_RecSpectrum={";
 	for(int s=0;s<fNRecBins;s++) {
 		fLgEBins_rec[s]= fResponseMatrix->GetYaxis()->GetBinLowEdge(s+1);
 		BinEdge_RecSpectrum[s]= fLgEBins_rec[s];
+		cout<<BinEdge_RecSpectrum[s]<<",";
 	}
 	fLgEBins_rec[fNRecBins]= fLgEBins_rec[fNRecBins-1]+fResponseMatrix->GetXaxis()->GetBinWidth(fNRecBins);
 	BinEdge_RecSpectrum[fNRecBins]= fLgEBins_rec[fNRecBins];
-
+	cout<<BinEdge_RecSpectrum[fNRecBins]<<"}"<<endl;
+	cout<<endl;
 
 	// - Ensure rec spectrum and response matrix have no bin offsets
 	bool hasSameBinLimits= SpectrumUtils::CheckSpectrumBinnings(fRecSpectrum->GetXaxis(),fResponseMatrix->GetXaxis());
@@ -172,8 +183,14 @@ int ForwardFolder::Init()
 	else if(spectrumModel==eBrokenPowerLaws){
 		fTrueSpectrumModelFcn= new TF1("TrueSpectrumModelFcn",SpectrumUtils::BrokenPowerLawSpectrum,fLgEMin_true,fLgEMax_true,nSpectrumPars);
 	}
+	else if(spectrumModel==eTwoBrokenPowerLaws){
+		fTrueSpectrumModelFcn= new TF1("TrueSpectrumModelFcn",SpectrumUtils::TwoBrokenPowerLawSpectrum,fLgEMin_true,fLgEMax_true,nSpectrumPars);
+	}
 	else if(spectrumModel==eSmoothBrokenPowerLaws){
 		fTrueSpectrumModelFcn= new TF1("TrueSpectrumModelFcn",SpectrumUtils::SmoothCutoffPowerLawSpectrum,fLgEMin_true,fLgEMax_true,nSpectrumPars);
+	}
+	else if(spectrumModel==ePowerLawWithCutoff){
+		fTrueSpectrumModelFcn= new TF1("TrueSpectrumModelFcn",SpectrumUtils::PowerLawWithCutoffSpectrum,fLgEMin_true,fLgEMax_true,nSpectrumPars);
 	}
 	else if(spectrumModel==eFlat){
 		fTrueSpectrumModelFcn= new TF1("TrueSpectrumModelFcn","[0]",fLgEMin_true,fLgEMax_true);
@@ -181,9 +198,12 @@ int ForwardFolder::Init()
 	else if(spectrumModel==ePol3){
 		fTrueSpectrumModelFcn= new TF1("TrueSpectrumModelFcn",SpectrumUtils::Pol3Spectrum,fLgEMin_true,fLgEMax_true,nSpectrumPars);
 	}
+	else if(spectrumModel==ePol6){
+		fTrueSpectrumModelFcn= new TF1("TrueSpectrumModelFcn",SpectrumUtils::Pol6Spectrum,fLgEMin_true,fLgEMax_true,nSpectrumPars);
+	}
 	else{
 		#ifdef LOGGING_ENABLED
-			ERROR_LOG("INvalid spectrum model selected!");
+			ERROR_LOG("Invalid spectrum model selected!");
 		#endif
 		return -1;
 	}
@@ -236,10 +256,17 @@ int ForwardFolder::Init()
 	fCurrentRecSpectrum->SetMarkerColor(kBlack);
 	fCurrentRecSpectrum->SetLineColor(kBlack);
 
+	cout<<"== REC SPECTRUM =="<<endl;
 	fCurrentRecSpectrum->Reset();
 	for(int i=0;i<fRecSpectrum->GetNbinsX();i++) {
+		cout<<"Bin "<<i+1<<": x="<<fRecSpectrum->GetBinCenter(i+1)<<", y="<<fRecSpectrum->GetBinContent(i+1)<<endl;
 		fCurrentRecSpectrum->SetBinContent(i+1,fRecSpectrum->GetBinContent(i+1));
 		fCurrentRecSpectrum->SetBinError(i+1,fRecSpectrum->GetBinError(i+1));
+	}
+
+	cout<<"== REC SPECTRUM CURRENT =="<<endl;
+	for(int i=0;i<fCurrentRecSpectrum->GetNbinsX();i++) {
+		cout<<"Bin "<<i+1<<": x="<<fCurrentRecSpectrum->GetBinCenter(i+1)<<", y="<<fCurrentRecSpectrum->GetBinContent(i+1)<<endl;
 	}
 
 	// - Initialize fit covariance matrix
@@ -353,6 +380,7 @@ TH1D* ForwardFolder::UnfoldSpectrum(SpectrumPars& initFitPars,std::string runMod
   gMinuit->mnexcm("SET STR",arglist,1,ierflag);
 
 	arglist[0]= 1;//0.5 likelihood, 1 ChiSquare
+	if(fIsLikelihoodFit) arglist[0]= 0.5;
   gMinuit->mnexcm("SET ERR",arglist,1,ierflag);
 
 	if(runMode=="CALL"){ //## Call Chi2 with initial values
@@ -411,7 +439,8 @@ TH1D* ForwardFolder::UnfoldSpectrum(SpectrumPars& initFitPars,std::string runMod
 	double nTot= fCurrentRecSpectrum->Integral();
 	double nTrueTot= fTrueSpectrum->Integral();
 
-	for(int j=0;j<fNRecBins;j++){
+	//for(int j=0;j<fNRecBins;j++){
+	for(int j=0;j<fCurrentRecSpectrum->GetNbinsX();j++){
 		double lgERec= fCurrentRecSpectrum->GetBinCenter(j+1);
 		double nRec= fCurrentRecSpectrum->GetBinContent(j+1);
 		double nRecErr= fCurrentRecSpectrum->GetBinError(j+1);
@@ -472,53 +501,71 @@ void ForwardFolder::MinimizedFcn(int& nPar, double* gin, double &f, double* par,
 		double lgERecMax= lgERecMin + fCurrentRecSpectrum->GetBinWidth(i+1);
 		
 		double nData= fCurrentRecSpectrum->GetBinContent(i+1);
-		if(nData==0) continue;
-
+		double nDataErr= fCurrentRecSpectrum->GetBinError(i+1);
+		if(nDataErr==0) nDataErr= 1;
+		
 		//Find corresponding bin in folded spectrum
 		int binId= FoldedSpectrum->FindBin(lgERec);
+		if(binId==-1){
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Cannot find bin (lgERec="<<lgERec<<") in folded spectrum, skip bin!");
+			#endif
+			continue;
+		}
 		double nExp= FoldedSpectrum->GetBinContent(binId);
-
-		//Take absolute value
-		//nExp= fabs(nExp);
-		
+		cout<<"INFO: lgERec="<<lgERec<<", nData="<<nData<<" +- "<<nDataErr<<", nExp="<<nExp<<endl;
+	
 		//fForwardFoldedSpectrum->SetBinContent(i+1,nExp);
 		//fForwardFoldedSpectrum->SetBinError(i+1,sqrt(nExp));
 		fCurrentForwardFoldedSpectrum->SetBinContent(i+1,nExp);
 		fCurrentForwardFoldedSpectrum->SetBinError(i+1,sqrt(nExp));
 
+		
 		//Skip bins if requested
+		if(nData==0) continue;
 		if(fUseFitRange && (lgERecMin<fLgEMin_fit || lgERecMax>fLgEMax_fit) ) continue;
 
-		/*
-		double thisChi2= 0;
-		if(nExp>0){
-  		LogLikelihood+= -(nData*log(nExp)-nExp);
-			if(nData>0){
-				Chi2+= nExp-nData + nData*log(nData/nExp);
-				thisChi2= nExp-nData + nData*log(nData/nExp);
+		
+		if(fIsLikelihoodFit){
+			double thisChi2= 0;
+			if(nExp>0){
+  			LogLikelihood+= -(nData*log(nExp)-nExp);
+				if(nData>0){
+					Chi2+= nExp-nData + nData*log(nData/nExp);
+					thisChi2= nExp-nData + nData*log(nData/nExp);
+				}
+				else{
+					Chi2+= nExp;
+					thisChi2= nExp;
+				}
+				cout<<"INFO: lgERec="<<lgERec<<", nData="<<nData<<" +- "<<nDataErr<<", nExp="<<nExp<<", LL="<<LogLikelihood<<", Chi2="<<Chi2<<", DeltaChi2="<<thisChi2<<endl;
 			}
 			else{
-				Chi2+= nExp;
-				thisChi2= nExp;
+				LogLikelihood+= 1.e+99;
 			}
-			cout<<"INFO: lgERec="<<lgERec<<", nData="<<nData<<", nExp="<<nExp<<", LL="<<LogLikelihood<<", Chi2="<<Chi2<<", DeltaChi2="<<thisChi2<<endl;
 		}
-		*/
+		else{
+			double diff= (nExp-nData);
+			if(fUseErrorsInChi2 && nDataErr>0) diff/= nDataErr;
+			double thisChi2= diff*diff;
+			Chi2+= thisChi2;
+			cout<<"INFO: lgERec="<<lgERec<<", nData="<<nData<<" +- "<<nDataErr<<", nExp="<<nExp<<", thisChi2="<<thisChi2<<", Chi2="<<Chi2<<endl;
+		}
 
-		double thisChi2= (nExp-nData)*(nExp-nData);
-		Chi2+= thisChi2;
-		cout<<"INFO: lgERec="<<lgERec<<", nData="<<nData<<", nExp="<<nExp<<", thisChi2="<<thisChi2<<", Chi2="<<Chi2<<endl;
-	
 		NDF++;
 
 	}//end loop rec bins
 
 	
-	//Chi2*= 2;
+	if(fIsLikelihoodFit) Chi2*= 2;
 	NDF-= nPar-2;
 
-	//f = LogLikelihood;
-	f= Chi2;
+	if(fIsLikelihoodFit){ 
+		f = LogLikelihood;
+	}
+	else{
+		f= Chi2;
+	}
 
 	cout<<"*** CURRENT FIT ***"<<endl;
 	cout<<"nPar="<<nPar<<" nTotPar="<<nTotPar<<endl;
