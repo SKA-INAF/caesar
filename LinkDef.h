@@ -253,6 +253,16 @@
 #pragma link C++ class Caesar::vector<SourceCube>+;
 #pragma link C++ class Caesar::vector<SourceCube*>+;
 
+#pragma link C++ class Caesar::SourceMatchData+;
+#pragma link C++ class Caesar::vector<SourceMatchData>+;
+#pragma link C++ class Caesar::vector<SourceMatchData*>+;
+#pragma link C++ class Caesar::SourceGroup+;
+#pragma link C++ class Caesar::vector<SourceGroup>+;
+#pragma link C++ class Caesar::vector<SourceGroup*>+;
+#pragma link C++ class Caesar::ComponentMatchIndex+;
+#pragma link C++ class Caesar::vector<ComponentMatchIndex>+;
+#pragma link C++ class Caesar::vector<ComponentMatchIndex*>+;
+
 #pragma link C++ class Caesar::SourceExporter+;
 
 //slic generator

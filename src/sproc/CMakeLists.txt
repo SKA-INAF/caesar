@@ -11,6 +11,7 @@ set(
 	Blob.h
 	Source.h
 	SourceCube.h
+	SourceMatchData.h
 	SourceFitter.h
 	SourceExporter.h
 	SourceSelector.h
@@ -20,7 +21,8 @@ set(
 	${THIS_DICT_SRCS} 
 	${SRC_DIR}/Blob.cc
 	${SRC_DIR}/Source.cc
-	${SRC_DIR}/SourceCube.cc		
+	${SRC_DIR}/SourceCube.cc	
+	${SRC_DIR}/SourceMatchData.cc	
 	${SRC_DIR}/SourceFitter.cc
 	${SRC_DIR}/SourceExporter.cc
 	${SRC_DIR}/SourceSelector.cc

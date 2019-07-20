@@ -93,6 +93,15 @@ class SourceCube : public TNamed {
 	public:
 
 		/**
+		* \brief Get cube size
+		*/
+		int GetSize(){return static_cast<int>(m_sources.size());}
+		/**
+		* \brief Get number of matches
+		*/
+		int GetNMatches(){return static_cast<int>(m_componentMatchIndexes.size());}
+
+		/**
 		* \brief Add source to cube
 		*/
 		int AddSource(Source* aSource){
@@ -104,8 +113,8 @@ class SourceCube : public TNamed {
 		/**
 		* \brief Add component
 		*/
-		void AddComponent(){
-			m_componentIndexes.push_back( std::vector<std::pair<size_t,size_t>>() );
+		void AddComponentMatch(){
+			m_componentMatchIndexes.push_back( std::vector<std::pair<size_t,size_t>>() );
 		}
 
 		/**
@@ -136,7 +145,7 @@ class SourceCube : public TNamed {
 		std::vector<Source*> m_sources;
 
 		//- List of component matches in cube
-		std::vector<std::vector<std::pair<size_t,size_t>>> m_componentIndexes; 	
+		std::vector<std::vector<std::pair<size_t,size_t>>> m_componentMatchIndexes; 	
 
 		//- Canvas with source plots	
 		TCanvas* m_sourcePlot;

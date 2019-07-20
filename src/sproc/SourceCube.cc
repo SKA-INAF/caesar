@@ -449,13 +449,13 @@ int SourceCube::DoSourceSEDs()
 	//Get component SEDs
 	TGraphAsymmErrors* componentSEDGraph= 0;
 
-	for(size_t i=0;i<m_componentIndexes.size();i++){//loop over components matches
+	for(size_t i=0;i<m_componentMatchIndexes.size();i++){//loop over components matches
 		
 		componentSEDGraph= new TGraphAsymmErrors();
 
-		for(size_t j=0;j<m_componentIndexes[i].size();j++){//loop over channels
-			size_t sindex= m_componentIndexes[i][j].first;
-			size_t cindex= m_componentIndexes[i][j].second;
+		for(size_t j=0;j<m_componentMatchIndexes[i].size();j++){//loop over channels
+			size_t sindex= m_componentMatchIndexes[i][j].first;
+			size_t cindex= m_componentMatchIndexes[i][j].second;
 			#ifdef LOGGING_ENABLED
 				INFO_LOG("Match component no. "<<i+1<<": sindex="<<sindex<<", cindex="<<cindex);
 			#endif
@@ -547,7 +547,7 @@ int SourceCube::DoSourceSEDs()
 int SourceCube::AddIndexToComponent(int cubeComponentIndex,size_t sindex,size_t componentIndex)
 {
 	//Check if cube component id was allocated
-	int nComponents= static_cast<int>(m_componentIndexes.size());
+	int nComponents= static_cast<int>(m_componentMatchIndexes.size());
 	if(nComponents<=0 || nComponents<cubeComponentIndex+1){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Component with index "<<cubeComponentIndex<<" was not allocated!");
@@ -556,7 +556,7 @@ int SourceCube::AddIndexToComponent(int cubeComponentIndex,size_t sindex,size_t 
 	}
 	
 	//Fill component indexes
-	m_componentIndexes[cubeComponentIndex].push_back(std::make_pair(sindex,componentIndex));
+	m_componentMatchIndexes[cubeComponentIndex].push_back(std::make_pair(sindex,componentIndex));
 				
 	return 0;
 		

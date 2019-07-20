@@ -401,6 +401,9 @@ if(BUILD_APPS)
 	target_link_libraries(SourceCountsUnfolderExe Caesar ${LINKED_LIBS})
 	set_target_properties(SourceCountsUnfolderExe PROPERTIES OUTPUT_NAME SourceCountsUnfolder)
 
+	add_executable(SourceCatalogsMatchFinderExe ${Task_SourceCatalogsMatchFinder_SRCS})
+	target_link_libraries(SourceCatalogsMatchFinderExe Caesar ${LINKED_LIBS})
+	set_target_properties(SourceCatalogsMatchFinderExe PROPERTIES OUTPUT_NAME SourceCatalogsMatchFinder)
 
 	if(ENABLE_MPI AND MPI_FOUND)
 		include_directories(${MPI_CXX_INCLUDE_PATH})
@@ -599,6 +602,7 @@ if(BUILD_APPS)
 		SourceRegionTagger
 		SourceSelector
 		SourceCountsUnfolder
+		SourceCatalogsMatchFinder
 	)
 	if(ENABLE_MPI)
 		list(APPEND EXE_FILES FindSourceMPI)
