@@ -752,11 +752,18 @@ int ComputeSpectralIndices()
 	#endif
 	for(size_t i=0;i<sourceMatchDataCollection.size();i++)
 	{
+		//Compute source SED and spectral index
 		if(sourceMatchDataCollection[i]->ComputeSourceSEDs()<0){
 			#ifdef LOGGING_ENABLED
-				WARN_LOG("Failed to compute spectral indices for source match data no. "<<i+1<<", skip to next...");
+				WARN_LOG("Failed to compute spectral indices for source match data no. "<<i+1<<"!");
 			#endif
-			continue;
+		}
+
+		//Compute source component SEDs and relative spectral indices
+		if(sourceMatchDataCollection[i]->ComputeSourceComponentSEDs()<0){
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to compute source component spectral indices for source match data no. "<<i+1<<"!");
+			#endif
 		}
 
 	}//end loop match data

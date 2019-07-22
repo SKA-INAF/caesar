@@ -240,7 +240,7 @@ class ComponentMatchIndex : public TObject
 		int catalogIndex;
 		int sourceGroupIndex;
 		int componentIndex;
-
+		
 	ClassDef(ComponentMatchIndex,1)
 
 };
@@ -251,8 +251,95 @@ class ComponentMatchIndex : public TObject
 #pragma link C++ class vector<ComponentMatchIndex*>+;
 #endif
 
+
+class ComponentMatchIndexGroup : public TObject
+{
+	public:	
+		ComponentMatchIndexGroup()
+			: TObject()
+		{
+			index_list.clear();
+		}
+		virtual ~ComponentMatchIndexGroup(){}
+	
+	public:
+		void AddIndex(int catindex,int sindex,int cindex)
+		{
+			index_list.push_back(ComponentMatchIndex(catindex,sindex,cindex));
+		}
+		void AddIndex(ComponentMatchIndex cmi)
+		{
+			index_list.push_back(cmi);
+		}
+		std::vector<ComponentMatchIndex>& GetIndexes(){return index_list;}
+	
+	public:
+		std::vector<ComponentMatchIndex> index_list;
+		
+	ClassDef(ComponentMatchIndexGroup,1)
+
+};
+#ifdef __MAKECINT__
+#pragma link C++ class ComponentMatchIndexGroup+;
+#pragma link C++ class vector<ComponentMatchIndexGroup>+;
+#pragma link C++ class vector<ComponentMatchIndexGroup*>+;
+#endif
+
+
 //======================================
-//==      CLASS: SOURCE MATCH GROUP
+//==      STRUCT: SPECTRAL INDEX DATA
+//======================================
+class SpectralIndexData : public TObject 
+{
+	public:
+		/** 
+		\brief Class constructor: initialize structures.
+ 		*/
+		SpectralIndexData()
+		{
+			Init();
+		}
+		/**
+		* \brief Class destructor: free allocated memory
+		*/
+		virtual ~SpectralIndexData(){}
+
+	private:
+		/**
+		* \brief Init data
+		*/
+		void Init()
+		{
+			hasSpectralIndex= false;
+			spectralIndex= -999;
+			spectralIndexErr= 0;
+			isMultiSourceMatchIndex= false;
+			spectralFitChi2= -999;
+			spectralFitNDF= 0;
+			isSpectralIndexFit= false;
+		}
+		
+	public:
+		bool hasSpectralIndex;
+		bool isMultiSourceMatchIndex;
+		double spectralIndex;
+		double spectralIndexErr;
+		bool isSpectralIndexFit;
+		double spectralFitChi2;
+		double spectralFitNDF;
+
+	ClassDef(SpectralIndexData,1)
+
+};
+
+#ifdef __MAKECINT__
+#pragma link C++ class SpectralIndexData+;
+#pragma link C++ class vector<SpectralIndexData>+;
+#pragma link C++ class vector<SpectralIndexData*>+;
+#endif
+
+//======================================
+//==      CLASS: SOURCE MATCH DATA
 //======================================
 class SourceMatchData : public TObject {
 
@@ -288,18 +375,51 @@ class SourceMatchData : public TObject {
 		
 	public:
 
-		
+		/**
+		* \brief Has source match
+		*/
+		bool HasSourceMatch()
+		{
+			if(m_matchedSources.empty()) return false;
+			bool hasMatch= false;
+			for(size_t i=0;i<m_matchedSources.size();i++){
+				if(!m_matchedSources[i].empty()){
+					hasMatch= true;
+					break;
+				}
+			}
+			return hasMatch;
+		}
+
+		/**
+		* \brief Has source component match
+		*/
+		bool HasSourceComponentMatch(int componentId)
+		{
+			if(m_componentMatchIndexes.empty()) return false;
+			if(componentId<0 || componentId>=(int)(m_componentMatchIndexes.size())) return false;
+			if(m_componentMatchIndexes[componentId].empty()) return false;
+			bool hasMatch= false;
+			for(size_t j=0;j<m_componentMatchIndexes[componentId].size();j++){
+				std::vector<ComponentMatchIndex> index_list= m_componentMatchIndexes[componentId][j].GetIndexes();
+				if(!index_list.empty()){
+					hasMatch= true;
+					break;
+				}
+			}
+			return hasMatch;
+		}
+
 		/**
 		* \brief Add matched source to group
 		*/
 		int AddMatchedSourceToGroup(int catalogIndex,Source* aSource){
 			if(!aSource) return -1;
 			if(catalogIndex<0 || catalogIndex>=(int)(m_matchedSources.size())) return -1;
-			int status= m_matchedSources[catalogIndex]->AddSource(aSource);
-			if(status<0) return -1;
+			m_matchedSources[catalogIndex].push_back(aSource);
 			m_nMatches= 0;
 			for(size_t i=0;i<m_matchedSources.size();i++){
-				if(m_matchedSources[i]->GetNSources()>0) m_nMatches++;
+				if(!m_matchedSources[i].empty()) m_nMatches++;
 			}
 			return 0;
 		}
@@ -312,7 +432,147 @@ class SourceMatchData : public TObject {
 		* \brief Compute source SED and spectral index
 		*/
 		int ComputeSourceSEDs();
+		/**
+		* \brief Compute source component SED and spectral index
+		*/
+		int ComputeSourceComponentSEDs();
+		/**
+		* \brief Compute source SED and spectral index
+		*/
+		//double GetSpectralIndex(){return m_spectralIndex;}
+		double GetSpectralIndex(){return m_spectralIndexData.spectralIndex;}
+		/**
+		* \brief Has spectral index
+		*/
+		//double HasSpectralIndex(){return m_hasSpectralIndex;}
+		double HasSpectralIndex(){return m_spectralIndexData.hasSpectralIndex;}
+		/**
+		* \brief Is multimatch spectral index
+		*/
+		//double IsMultiMatchSpectralIndex(){return m_isMultiSourceMatchIndex;}
+		double IsMultiMatchSpectralIndex(){return m_spectralIndexData.isMultiSourceMatchIndex;}
+
+		/**
+		* \brief Get source
+		*/
+		Source* GetSource(){return m_source;}
+		/**
+		* \brief Get source name
+		*/
+		std::string GetSourceName(){
+			if(!m_source) return std::string("");			
+			return m_source->GetName();	
+		}
+		/**
+		* \brief Get source match names
+		*/
+		std::vector<std::string> GetMatchedSourceNames(int catalogIndex){
+			std::vector<std::string> snames;
+			if(catalogIndex<0 || catalogIndex>=(int)(m_matchedSources.size())) return snames;
+			//return m_matchedSources[catalogIndex]->GetSourceNames();
+			for(size_t j=0;j<m_matchedSources[catalogIndex].size();j++){
+				std::string sname= m_matchedSources[catalogIndex][j]->GetName();
+				snames.push_back(sname);
+			}
+			return snames;
+		}
+
+		/**
+		* \brief Get source match frequencies
+		*/
+		int GetMatchedSourceFrequency(int catalogIndex,double& freq,double& dfreq)
+		{
+			freq= 0;
+			dfreq= 0;	
+			if(m_matchedSources.empty()) return -1;				
+			if(catalogIndex<0 || catalogIndex>=(int)(m_matchedSources.size())) return -1;
+			if(m_matchedSources[catalogIndex].empty()) return -1;
+
+			//Get metadata
+			ImgMetaData* metadata= m_matchedSources[catalogIndex][0]->GetImageMetaData();
+			if(!metadata){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to get source metadata!");
+				#endif
+				return -1;
+			}
+
+			//Get frequency	
+			double Nu= metadata->Freq;
+			double dNu= metadata->dFreq;
+			std::string FreqUnits= metadata->FreqUnit;
+			if(FreqUnits=="Hz"){//convert to GHz
+				Nu/= 1.e+9;
+				dNu/= 1.e+9;
+			}
+
+			freq= Nu;
+			dfreq= dNu;
+			
+			return 0;
+		}
+
+		/**
+		* \brief Get flux and its error. If Nsources>2 return sum
+		*/
+		int GetMatchedSourceFlux(int catalogIndex,double& flux,double& fluxErr,bool& summed)
+		{
+			flux= 0;
+			fluxErr= 0;
+			summed= false;
+			if(m_matchedSources.empty()) return -1;
+			if(catalogIndex<0 || catalogIndex>=(int)(m_matchedSources.size())) return -1;
+			if(m_matchedSources[catalogIndex].empty()) return -1;
+
+			if(m_matchedSources[catalogIndex].size()>1) summed= true;
+
+			double fluxErrSum2= 0;
+
+			for(size_t i=0;i<m_matchedSources[catalogIndex].size();i++){
+				double fluxDensity= 0;
+				double fluxDensityErr= 0;
+				int status= m_matchedSources[catalogIndex][i]->GetFluxDensity(fluxDensity);
+				
+				if(status<0){
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Cannot get flux density of source no. "<<i+1<<" in group (no fit info?), using Smax...");	
+					#endif
+					fluxDensity= m_matchedSources[catalogIndex][i]->GetS();
+					fluxDensityErr= 0;
+				}
+				else{
+					m_matchedSources[catalogIndex][i]->GetFluxDensityErr(fluxDensityErr);
+				}
+				double beamArea= m_matchedSources[catalogIndex][i]->GetBeamFluxIntegral();
+				if(beamArea<=0){
+					#ifdef LOGGING_ENABLED
+						ERROR_LOG("Cannot get beam area for source no. "<<i+1<<" in group (not computed?), cannot compute flux!");	
+					#endif	
+					return -1;
+				}
+				double thisFlux= fluxDensity/beamArea;
+				double thisFluxErr= fluxDensityErr/beamArea;	
+				flux+= thisFlux;
+				fluxErrSum2+= thisFluxErr*thisFluxErr;
+
+			}//end loop sources
+
+			fluxErr= sqrt(fluxErrSum2);
+
+			return 0;
+		}
+
+		/**
+		* \brief Get matched sources
+		*/
+		std::vector<std::vector<Source*>>& GetMatchedSources(){return m_matchedSources;}
+
+		/**
+		* \brief Draw SED
+		*/
+		int DrawSED();
 		
+
 	private:
 		
 		/**
@@ -329,20 +589,16 @@ class SourceMatchData : public TObject {
 		//- List of matched sources per catalog
 		int m_nCatalogs;
 		int m_nMatches;//number of catalog matches
-		std::vector<SourceGroup*> m_matchedSources;
+		std::vector<std::vector<Source*>> m_matchedSources;
 
 		//- List of component matches
-		std::vector<std::vector<ComponentMatchIndex>> m_componentMatchIndexes; 	
-
+		//std::vector<std::vector<ComponentMatchIndex>> m_componentMatchIndexes;
+		std::vector<std::vector<ComponentMatchIndexGroup>> m_componentMatchIndexes;
+		
 		// - Spectral index (lgS vs lgNu fit)
-		bool m_hasSpectralIndex;
-		bool m_isMultiSourceMatchIndex;
-		double m_spectralIndex;
-		double m_spectralIndexErr;
-		bool m_isSpectralIndexFit;
-		double m_spectralFitChi2;
-		double m_spectralFitNDF;
-			
+		SpectralIndexData m_spectralIndexData;
+		std::vector<SpectralIndexData> m_componentSpectralIndexData;
+		
 		//- Graph with source SED
 		TGraphAsymmErrors* m_sourceSED;
 		std::vector<TGraphAsymmErrors*> m_sourceComponentSED;

@@ -262,6 +262,12 @@
 #pragma link C++ class Caesar::ComponentMatchIndex+;
 #pragma link C++ class Caesar::vector<ComponentMatchIndex>+;
 #pragma link C++ class Caesar::vector<ComponentMatchIndex*>+;
+#pragma link C++ class Caesar::ComponentMatchIndexGroup+;
+#pragma link C++ class Caesar::vector<ComponentMatchIndexGroup>+;
+#pragma link C++ class Caesar::vector<ComponentMatchIndexGroup*>+;
+#pragma link C++ class Caesar::SpectralIndexData+;
+#pragma link C++ class Caesar::vector<SpectralIndexData>+;
+#pragma link C++ class Caesar::vector<SpectralIndexData*>+;
 
 #pragma link C++ class Caesar::SourceExporter+;
 
