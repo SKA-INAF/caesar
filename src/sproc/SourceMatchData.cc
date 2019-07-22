@@ -853,6 +853,17 @@ int SourceMatchData::DrawSED()
 		freq= Form("%1.2f %s",Nu,(FreqUnits).c_str());
 	}
 
+	//Get WCS position
+	int wcsType= eJ2000;
+	WCS* wcs= m_source->GetWCS(wcsType);
+	double X0= m_source->X0;
+	double Y0= m_source->Y0;
+	if(wcs){
+		m_source->GetWCSPos(X0,Y0,wcs,wcsType);
+		WCSUtils::DeleteWCS(&wcs);
+	}
+	
+
 	//Get flux
 	double fluxDensity= 0;
 	int status= m_source->GetFluxDensity(fluxDensity);
@@ -867,7 +878,7 @@ int SourceMatchData::DrawSED()
 	fluxText= Form("%1.2f %s",flux,(fluxUnits).c_str());
 
 	//Create canvas
-	TString canvasName= Form("SEDPlot_%s",m_source->GetName().c_str());
+	TString canvasName= Form("SEDPlot_%s",sname.c_str());
 	TCanvas* Plot= new TCanvas(canvasName,canvasName,800,800);
 	Plot->cd();
 
@@ -892,7 +903,7 @@ int SourceMatchData::DrawSED()
 	//Draw main source info
 	TPaveText* sourceInfoText = new TPaveText(0.4,0.15,0.8,0.3,"NDC");
 	sourceInfoText->AddText(Form("Name: %s, Freq: %s",sname.c_str(),freq.Data()));
-	sourceInfoText->AddText(Form("C(%1.2f,%1.2f), S(mJy):",fluxText.Data()));
+	sourceInfoText->AddText(Form("C(%1.2f,%1.2f), S(mJy): %s",X0,Y0,fluxText.Data()));
 	sourceInfoText->SetTextAlign(12);
 	sourceInfoText->SetTextSize(0.02);
 	sourceInfoText->SetTextFont(52);
