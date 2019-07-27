@@ -64,6 +64,11 @@ constexpr double WCSUtils::g_em[6][6];
 constexpr double WCSUtils::g_emi[6][6];
 constexpr char WCSUtils::g_pcodes[26][4];
 
+constexpr double WCSUtils::g_jgal[3][3];
+constexpr double WCSUtils::g_bgal[3][3];
+constexpr double WCSUtils::g_a[3];
+constexpr double WCSUtils::g_ad[3];
+
 WCSUtils::WCSUtils()
 {
 
