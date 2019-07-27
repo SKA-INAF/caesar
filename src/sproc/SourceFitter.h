@@ -302,6 +302,84 @@ class SourceComponentPars : public TObject {
 			FitParsErr.clear();
 		}
 
+		/**
+		* \brief Copy constructor
+		*/
+		SourceComponentPars(const SourceComponentPars& pars)
+		{
+			// Copy constructor
+  		Init();
+  		((SourceComponentPars&)pars).Copy(*this);
+		}
+		
+		/**
+		* \brief Assignment Operator
+		*/
+		SourceComponentPars& operator=(const SourceComponentPars& pars)
+		{
+			// Operator =
+  		if (this != &pars) ((SourceComponentPars&)pars).Copy(*this);
+  		return *this;
+		}
+
+		/**
+		* \brief Copy method
+		*/
+		void Copy(TObject& obj) const
+		{
+			//Copy vars
+			((SourceComponentPars&)obj).m_pixSize = m_pixSize;
+
+			((SourceComponentPars&)obj).m_hasBeamPars = m_hasBeamPars;
+			((SourceComponentPars&)obj).m_beam_bmaj = m_beam_bmaj;
+			((SourceComponentPars&)obj).m_beam_bmin = m_beam_bmin;
+			((SourceComponentPars&)obj).m_beam_pa = m_beam_pa;
+			((SourceComponentPars&)obj).m_beam_area = m_beam_area;
+			((SourceComponentPars&)obj).m_beam_eccentricity = m_beam_eccentricity;
+
+			((SourceComponentPars&)obj).m_hasEllipsePars = m_hasEllipsePars;
+			((SourceComponentPars&)obj).m_x0 = m_x0;
+			((SourceComponentPars&)obj).m_y0 = m_y0;
+			((SourceComponentPars&)obj).m_bmaj = m_bmaj;
+			((SourceComponentPars&)obj).m_bmin = m_bmin;
+			((SourceComponentPars&)obj).m_pa = m_pa;
+			((SourceComponentPars&)obj).m_x0_err = m_x0_err;
+			((SourceComponentPars&)obj).m_y0_err = m_y0_err;
+			((SourceComponentPars&)obj).m_bmaj_err = m_bmaj_err;		
+			((SourceComponentPars&)obj).m_bmin_err = m_bmin_err;
+			((SourceComponentPars&)obj).m_pa_err = m_pa_err;
+			((SourceComponentPars&)obj).m_eccentricity = m_eccentricity;
+			((SourceComponentPars&)obj).m_area = m_area;
+			((SourceComponentPars&)obj).m_rotangle_vs_beam = m_rotangle_vs_beam;
+
+			((SourceComponentPars&)obj).m_hasWCSEllipsePars = m_hasWCSEllipsePars;
+			((SourceComponentPars&)obj).m_x0_wcs = m_x0_wcs;
+			((SourceComponentPars&)obj).m_y0_wcs = m_y0_wcs;
+			((SourceComponentPars&)obj).m_bmaj_wcs = m_bmaj_wcs;
+			((SourceComponentPars&)obj).m_bmin_wcs = m_bmin_wcs;
+			((SourceComponentPars&)obj).m_pa_wcs = m_pa_wcs;
+			((SourceComponentPars&)obj).m_x0_err_wcs = m_x0_err_wcs;
+			((SourceComponentPars&)obj).m_y0_err_wcs = m_y0_err_wcs;
+			((SourceComponentPars&)obj).m_bmaj_err_wcs = m_bmaj_err_wcs;
+			((SourceComponentPars&)obj).m_bmin_err_wcs = m_bmin_err_wcs;
+			((SourceComponentPars&)obj).m_pa_err_wcs = m_pa_err_wcs;
+	
+			((SourceComponentPars&)obj).m_hasWCSDeconvolvedEllipsePars = m_hasWCSDeconvolvedEllipsePars;
+			((SourceComponentPars&)obj).m_bmaj_deconv_wcs = m_bmaj_deconv_wcs;
+			((SourceComponentPars&)obj).m_bmin_deconv_wcs = m_bmin_deconv_wcs;
+			((SourceComponentPars&)obj).m_pa_deconv_wcs = m_pa_deconv_wcs;
+				
+			((SourceComponentPars&)obj).m_flag = m_flag;
+			((SourceComponentPars&)obj).m_type = m_type;
+			((SourceComponentPars&)obj).m_selected = m_selected;
+						
+			//Copy maps
+			((SourceComponentPars&)obj).FitPars = FitPars;
+			((SourceComponentPars&)obj).FitParsErr = FitParsErr;
+			
+		}//close Copy()
+
+
 	public:
 		/** 
 		\brief Set par value & error
@@ -1250,6 +1328,9 @@ class SourceComponentPars : public TObject {
     	return pa;
 		}
 
+		/**
+		* \brief Init ellipse pars
+		*/
 		void InitEllipsePars()
 		{
 			m_hasEllipsePars= false;
@@ -1299,6 +1380,27 @@ class SourceComponentPars : public TObject {
 			m_pixSize= 0;
 
 		}//close InitEllipsePars()
+
+		/**
+		* \brief Init class data
+		*/
+		void Init()
+		{
+			//Init pars with 0
+			std::vector<std::string> parNames {"A","x0","y0","sigmaX","sigmaY","theta"};
+			for(size_t i=0;i<parNames.size();i++){
+				FitPars.insert( std::pair<std::string,double>(parNames[i],0.) );
+				FitParsErr.insert( std::pair<std::string,double>(parNames[i],0.) );
+			}
+
+			//Initialize ellipse pars
+			InitEllipsePars();
+
+			//Init other vars
+			m_flag= eCandidate;
+			m_type= ePointLike;
+			m_selected= true;
+		}
 		
 	private:
 

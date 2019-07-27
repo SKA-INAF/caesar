@@ -29,6 +29,9 @@
 #define _SOURCE_MATCH_DATA_h 1
 
 #include <Source.h>
+#include <SourceGroup.h>
+#include <SpectralIndexData.h>
+
 #ifdef LOGGING_ENABLED
 	#include <Logger.h>
 #endif
@@ -59,165 +62,345 @@ namespace Caesar {
 
 //class Source;
 
-//======================================
-//==      CLASS: SOURCE GROUP
-//======================================
-class SourceGroup : public TObject 
+//=======================================
+//==  CLASS: SourceMatchPars
+//=======================================
+class SourceMatchPars : public TObject
 {
-	public:
-		/** 
-		\brief Class constructor: initialize structures.
- 		*/
-		SourceGroup()
+	public:	
+		SourceMatchPars()
+			: TObject()
 		{
-			Init();		
+			Init();
 		}
-		/**
-		* \brief Class destructor: free allocated memory
-		*/
-		virtual ~SourceGroup()
-		{
-			Clear();
-		}
-
-	public:
-		/**
-		* \brief Add source to group
-		*/
-		int AddSource(Source* aSource){
-			if(!aSource) return -1;
-			m_sources.push_back(aSource);
-			return 0;
-		}
-		/**
-		* \brief Get size of group
-		*/
-		int GetNSources(){return static_cast<int>(m_sources.size());}
-		/**
-		* \brief Get source names
-		*/
-		std::vector<std::string> GetSourceNames()
-		{
-			std::vector<std::string> snames;
-			for(size_t i=0;i<m_sources.size();i++){
-				std::string sname= m_sources[i]->GetName();
-				snames.push_back(sname);
-			}
-			return snames;
-		}
-
-		/**
-		* \brief Get flux and its error. If Nsources>2 return sum
-		*/
-		int GetFlux(double& flux,double& fluxErr,bool& summed)
-		{
-			flux= 0;
-			fluxErr= 0;
-			summed= false;
-			if(m_sources.empty()) return -1;
-			if(m_sources.size()>1) summed= true;
-
-			double fluxErrSum2= 0;
-
-			for(size_t i=0;i<m_sources.size();i++){
-				double fluxDensity= 0;
-				double fluxDensityErr= 0;
-				int status= m_sources[i]->GetFluxDensity(fluxDensity);
-				
-				if(status<0){
-					#ifdef LOGGING_ENABLED
-						WARN_LOG("Cannot get flux density of source no. "<<i+1<<" in group (no fit info?), using Smax...");	
-					#endif
-					fluxDensity= m_sources[i]->GetS();
-					fluxDensityErr= 0;
-				}
-				else{
-					m_sources[i]->GetFluxDensityErr(fluxDensityErr);
-				}
-				double beamArea= m_sources[i]->GetBeamFluxIntegral();
-				if(beamArea<=0){
-					#ifdef LOGGING_ENABLED
-						ERROR_LOG("Cannot get beam area for source no. "<<i+1<<" in group (not computed?), cannot compute flux!");	
-					#endif	
-					return -1;
-				}
-				double thisFlux= fluxDensity/beamArea;
-				double thisFluxErr= fluxDensityErr/beamArea;	
-				flux+= thisFlux;
-				fluxErrSum2+= thisFluxErr*thisFluxErr;
-
-			}//end loop sources
-
-			fluxErr= sqrt(fluxErrSum2);
-
-			return 0;
-		}
-
-		/**
-		* \brief Get frequency and relative width
-		*/
-		int GetFrequency(double& freq,double& dfreq)
-		{
-			freq= 0;
-			dfreq= 0;
-			if(m_sources.empty()) return -1;
-
-			//Get metadata
-			ImgMetaData* metadata= m_sources[0]->GetImageMetaData();
-			if(!metadata){
-				#ifdef LOGGING_ENABLED
-					WARN_LOG("Failed to get source metadata!");
-				#endif
-				return -1;
-			}
-
-			//Get frequency	
-			double Nu= metadata->Freq;
-			double dNu= metadata->dFreq;
-			std::string FreqUnits= metadata->FreqUnit;
-			if(FreqUnits=="Hz"){//convert to GHz
-				Nu/= 1.e+9;
-				dNu/= 1.e+9;
-			}
-
-			freq= Nu;
-			dfreq= dNu;
-			
-			return 0;
-
-		}//close GetFrequency()
-
+		virtual ~SourceMatchPars(){}
+		
 	private:
-		/**
-		* \brief Init class data
-		*/
+		
 		void Init()
 		{
-			m_sources.clear();	
+			posDist_Euclidean= -999;
+			posDist_Haversine= -999;
+			contourOverlapArea= -999;
+			contourArea1= -999;
+			contourArea2= -999;
+			contourOverlapFlag= -999;
+			contourOverlapAreaRatio1= -999;
+			contourOverlapAreaRatio2= -999;
+			fluxRelDiff= -999;
 		}
-		/**
-		* \brief Delete class data
-		*/
-		void Clear()
-		{
-			CodeUtils::DeletePtrCollection<Source>(m_sources);
-		}
-		
-
-	private:
-		// - Source collection
-		std::vector<Source*> m_sources;
-
-	ClassDef(SourceGroup,1)
 
 
-};//close class SourceGroup
+	public:
+
+		double posDist_Euclidean;
+		double posDist_Haversine;
+		double contourOverlapArea;
+		double contourArea1;
+		double contourArea2;
+		int contourOverlapFlag;
+		double contourOverlapAreaRatio1;
+		double contourOverlapAreaRatio2;
+		double fluxRelDiff;
+
+	ClassDef(SourceMatchPars,1)
+
+};
 
 #ifdef __MAKECINT__
-#pragma link C++ class SourceGroup+;
-#pragma link C++ class vector<SourceGroup>+;
-#pragma link C++ class vector<SourceGroup*>+;
+#pragma link C++ class SourceMatchPars+;
+#pragma link C++ class vector<SourceMatchPars>+;
+#pragma link C++ class vector<SourceMatchPars*>+;
 #endif
+
+
+//=======================================
+//==  CLASS: SourceMatchParsGroup
+//=======================================
+class SourceMatchParsGroup : public TObject
+{
+	public:	
+		SourceMatchParsGroup()
+			: TObject()
+		{
+			Init();
+		}
+		virtual ~SourceMatchParsGroup(){}
+		
+	public:
+		int AddPars(SourceMatchPars* pars)
+		{
+			if(!pars) return -1;
+			
+			//Add pars to group
+			sourceMatchPars.push_back(*pars);
+			int index= sourceMatchPars.size()-1;
+			
+			//Update pars
+			if(pars->posDist_Euclidean>posDist_Euclidean_max)	{
+				posDist_Euclidean_max= pars->posDist_Euclidean;
+				index_posDist_Euclidean_max= index;
+			}
+		  if(pars->posDist_Euclidean<posDist_Euclidean_min)	{
+				posDist_Euclidean_min= pars->posDist_Euclidean;
+				index_posDist_Euclidean_min= index;	
+			}
+			if(pars->posDist_Haversine>posDist_Haversine_max)	{
+				posDist_Haversine_max= pars->posDist_Haversine;
+				index_posDist_Haversine_max= index;
+			}
+		  if(pars->posDist_Haversine<posDist_Haversine_min)	{
+				posDist_Haversine_min= pars->posDist_Haversine;
+				index_posDist_Haversine_min= index;	
+			}
+
+			if(pars->contourOverlapAreaRatio1>contourOverlapAreaRatio1_max){
+				contourOverlapAreaRatio1_max= pars->contourOverlapAreaRatio1;
+				index_contourOverlapAreaRatio1_max= index;
+			} 
+			if(pars->contourOverlapAreaRatio1<contourOverlapAreaRatio1_min){
+				contourOverlapAreaRatio1_min= pars->contourOverlapAreaRatio1;
+				index_contourOverlapAreaRatio1_min= index;
+			}
+			if(pars->contourOverlapAreaRatio2>contourOverlapAreaRatio2_max){
+				contourOverlapAreaRatio2_max= pars->contourOverlapAreaRatio2;
+				index_contourOverlapAreaRatio2_max= index;
+			}
+			if(pars->contourOverlapAreaRatio2<contourOverlapAreaRatio2_min){
+				contourOverlapAreaRatio2_min= pars->contourOverlapAreaRatio2;
+				index_contourOverlapAreaRatio2_min= index;
+			}
+
+			return 0;
+		}
+
+	private:
+		
+		void Init()
+		{
+			sourceMatchPars.clear();
+			index_posDist_Euclidean_min= -1;
+			index_posDist_Euclidean_max= -1;
+			posDist_Euclidean_min= 1.e+99;
+			posDist_Euclidean_max= -1.e+99;	
+			index_posDist_Haversine_min= -1;
+			index_posDist_Haversine_max= -1;
+			posDist_Haversine_min= 1.e+99;
+			posDist_Haversine_max= -1.e+99;
+
+			index_contourOverlapAreaRatio1_min= -1;
+			index_contourOverlapAreaRatio1_max= -1;
+			contourOverlapAreaRatio1_min= 1.e+99;
+			contourOverlapAreaRatio1_max= -1.e+99;
+			index_contourOverlapAreaRatio2_min= -1;
+			index_contourOverlapAreaRatio2_max= -1;
+			contourOverlapAreaRatio2_min= 1.e+99;
+			contourOverlapAreaRatio2_max= -1.e+99;			
+		}
+
+
+	public:
+
+		std::vector<SourceMatchPars> sourceMatchPars;
+
+		int index_posDist_Euclidean_min;
+		int index_posDist_Euclidean_max;
+		double posDist_Euclidean_min;
+		double posDist_Euclidean_max;	
+		int index_posDist_Haversine_min;
+		int index_posDist_Haversine_max;		
+		double posDist_Haversine_min;
+		double posDist_Haversine_max;
+		
+		int index_contourOverlapAreaRatio1_min;
+		int index_contourOverlapAreaRatio1_max;
+		double contourOverlapAreaRatio1_min;
+		double contourOverlapAreaRatio1_max;
+		int index_contourOverlapAreaRatio2_min;
+		int index_contourOverlapAreaRatio2_max;
+		double contourOverlapAreaRatio2_min;
+		double contourOverlapAreaRatio2_max;
+
+	ClassDef(SourceMatchParsGroup,1)
+
+};
+
+#ifdef __MAKECINT__
+#pragma link C++ class SourceMatchParsGroup+;
+#pragma link C++ class vector<SourceMatchParsGroup>+;
+#pragma link C++ class vector<SourceMatchParsGroup*>+;
+#endif
+
+
+
+//=======================================
+//==  CLASS: SourceComponentMatchPars
+//=======================================
+class SourceComponentMatchPars : public TObject
+{
+	public:	
+		SourceComponentMatchPars()
+			: TObject()
+		{
+			Init();
+		}
+		virtual ~SourceComponentMatchPars(){}
+		
+	private:
+		
+		void Init()
+		{
+			posDist_Euclidean= -999;
+			posDist_Haversine= -999;
+			ellipseOverlapArea= -999;
+			ellipseArea1= -999;
+			ellipseArea2= -999;
+			ellipseOverlapFlag= -999;
+			ellipseOverlapAreaRatio1= -999;
+			ellipseOverlapAreaRatio2= -999;
+			fluxRelDiff= -999;
+		}
+
+
+	public:
+
+		double posDist_Euclidean;
+		double posDist_Haversine;
+		double ellipseOverlapArea;
+		double ellipseArea1;
+		double ellipseArea2;
+		int ellipseOverlapFlag;
+		double ellipseOverlapAreaRatio1;
+		double ellipseOverlapAreaRatio2;
+		double fluxRelDiff;
+
+	ClassDef(SourceComponentMatchPars,1)
+
+};
+
+#ifdef __MAKECINT__
+#pragma link C++ class SourceComponentMatchPars+;
+#pragma link C++ class vector<SourceComponentMatchPars>+;
+#pragma link C++ class vector<SourceComponentMatchPars*>+;
+#endif
+
+
+//=============================================
+//==  CLASS: SourceComponentMatchParsGroup
+//=============================================
+class SourceComponentMatchParsGroup : public TObject
+{
+	public:	
+		SourceComponentMatchParsGroup()
+			: TObject()
+		{
+			Init();
+		}
+		virtual ~SourceComponentMatchParsGroup(){}
+		
+	public:
+		int AddPars(SourceComponentMatchPars* pars)
+		{
+			if(!pars) return -1;
+			
+			//Add pars to group
+			sourceComponentMatchPars.push_back(*pars);
+			int index= sourceComponentMatchPars.size()-1;
+			
+			//Update pars
+			if(pars->posDist_Euclidean>posDist_Euclidean_max)	{
+				posDist_Euclidean_max= pars->posDist_Euclidean;
+				index_posDist_Euclidean_max= index;
+			}
+		  if(pars->posDist_Euclidean<posDist_Euclidean_min)	{
+				posDist_Euclidean_min= pars->posDist_Euclidean;
+				index_posDist_Euclidean_min= index;	
+			}
+			if(pars->posDist_Haversine>posDist_Haversine_max)	{
+				posDist_Haversine_max= pars->posDist_Haversine;
+				index_posDist_Haversine_max= index;
+			}
+		  if(pars->posDist_Haversine<posDist_Haversine_min)	{
+				posDist_Haversine_min= pars->posDist_Haversine;
+				index_posDist_Haversine_min= index;	
+			}
+			
+			if(pars->ellipseOverlapAreaRatio1>ellipseOverlapAreaRatio1_max){
+				ellipseOverlapAreaRatio1_max= pars->ellipseOverlapAreaRatio1;
+				index_ellipseOverlapAreaRatio1_max= index;
+			} 
+			if(pars->ellipseOverlapAreaRatio1<ellipseOverlapAreaRatio1_min){
+				ellipseOverlapAreaRatio1_min= pars->ellipseOverlapAreaRatio1;
+				index_ellipseOverlapAreaRatio1_min= index;
+			}
+			if(pars->ellipseOverlapAreaRatio2>ellipseOverlapAreaRatio2_max){
+				ellipseOverlapAreaRatio2_max= pars->ellipseOverlapAreaRatio2;
+				index_ellipseOverlapAreaRatio2_max= index;
+			}
+			if(pars->ellipseOverlapAreaRatio2<ellipseOverlapAreaRatio2_min){
+				ellipseOverlapAreaRatio2_min= pars->ellipseOverlapAreaRatio2;
+				index_ellipseOverlapAreaRatio2_min= index;
+			}
+			return 0;
+		}
+
+		
+	private:
+
+		void Init()
+		{
+			sourceComponentMatchPars.clear();
+			index_posDist_Euclidean_min= -1;
+			index_posDist_Euclidean_max= -1;
+			posDist_Euclidean_min= 1.e+99;
+			posDist_Euclidean_max= -1.e+99;	
+			index_posDist_Haversine_min= -1;
+			index_posDist_Haversine_max= -1;
+			posDist_Haversine_min= 1.e+99;
+			posDist_Haversine_max= -1.e+99;
+
+			index_ellipseOverlapAreaRatio1_min= -1;
+			index_ellipseOverlapAreaRatio1_max= -1;
+			ellipseOverlapAreaRatio1_min= 1.e+99;
+			ellipseOverlapAreaRatio1_max= -1.e+99;
+			index_ellipseOverlapAreaRatio2_min= -1;
+			index_ellipseOverlapAreaRatio2_max= -1;
+			ellipseOverlapAreaRatio2_min= 1.e+99;
+			ellipseOverlapAreaRatio2_max= -1.e+99;	
+		}
+
+	public:
+
+		std::vector<SourceComponentMatchPars> sourceComponentMatchPars;
+
+		int index_posDist_Euclidean_min;
+		int index_posDist_Euclidean_max;
+		double posDist_Euclidean_min;
+		double posDist_Euclidean_max;	
+		int index_posDist_Haversine_min;
+		int index_posDist_Haversine_max;		
+		double posDist_Haversine_min;
+		double posDist_Haversine_max;
+
+		int index_ellipseOverlapAreaRatio1_min;
+		int index_ellipseOverlapAreaRatio1_max;
+		double ellipseOverlapAreaRatio1_min;
+		double ellipseOverlapAreaRatio1_max;
+		int index_ellipseOverlapAreaRatio2_min;
+		int index_ellipseOverlapAreaRatio2_max;
+		double ellipseOverlapAreaRatio2_min;
+		double ellipseOverlapAreaRatio2_max;
+
+	ClassDef(SourceComponentMatchParsGroup,1)
+};
+
+
+#ifdef __MAKECINT__
+#pragma link C++ class SourceComponentMatchParsGroup+;
+#pragma link C++ class vector<SourceComponentMatchParsGroup>+;
+#pragma link C++ class vector<SourceComponentMatchParsGroup*>+;
+#endif
+
 
 class ComponentMatchIndex : public TObject
 {
@@ -255,24 +438,82 @@ class ComponentMatchIndex : public TObject
 class ComponentMatchIndexGroup : public TObject
 {
 	public:	
+		/**
+		* \brief Constructor
+		*/
 		ComponentMatchIndexGroup()
 			: TObject()
 		{
 			index_list.clear();
 		}
+
+		/**
+		* \brief Destructor
+		*/
 		virtual ~ComponentMatchIndexGroup(){}
+
+		/**
+		* \brief Copy constructor
+		*/
+		/*
+		ComponentMatchIndexGroup(const ComponentMatchIndexGroup& cmig)		
+		{
+			// Copy constructor
+  		index_list.clear();
+  		((ComponentMatchIndexGroup&)cmig).Copy(*this);
+		}
+		*/
+		
+		/**
+		* \brief Assignment Operator
+		*/
+		/*
+		ComponentMatchIndexGroup& operator=(const ComponentMatchIndexGroup& cmig)
+		{
+			// Operator =
+  		if (this != &cmig) ((ComponentMatchIndexGroup&)cmig).Copy(*this);
+  		return *this;
+		}
+		*/
+		/**
+		* \brief Copy method
+		*/
+		/*
+		void Copy(TObject& obj) const	
+		{
+			(((ComponentMatchIndexGroup&)obj).index_list).clear();
+			(((ComponentMatchIndexGroup&)obj).index_list)= index_list;
+		}
+		*/
 	
 	public:
+		/**
+		* \brief Add index
+		*/
 		void AddIndex(int catindex,int sindex,int cindex)
 		{
 			index_list.push_back(ComponentMatchIndex(catindex,sindex,cindex));
 		}
+
+		/**
+		* \brief Add index
+		*/
 		void AddIndex(ComponentMatchIndex cmi)
 		{
 			index_list.push_back(cmi);
 		}
+
+		/**
+		* \brief Get indexes
+		*/
 		std::vector<ComponentMatchIndex>& GetIndexes(){return index_list;}
-	
+		
+		/**
+		* \brief Get number of indexes
+		*/
+		int GetNIndexes(){return static_cast<int>(index_list.size());}
+		
+
 	public:
 		std::vector<ComponentMatchIndex> index_list;
 		
@@ -287,58 +528,6 @@ class ComponentMatchIndexGroup : public TObject
 
 
 //======================================
-//==      STRUCT: SPECTRAL INDEX DATA
-//======================================
-class SpectralIndexData : public TObject 
-{
-	public:
-		/** 
-		\brief Class constructor: initialize structures.
- 		*/
-		SpectralIndexData()
-		{
-			Init();
-		}
-		/**
-		* \brief Class destructor: free allocated memory
-		*/
-		virtual ~SpectralIndexData(){}
-
-	private:
-		/**
-		* \brief Init data
-		*/
-		void Init()
-		{
-			hasSpectralIndex= false;
-			spectralIndex= -999;
-			spectralIndexErr= 0;
-			isMultiSourceMatchIndex= false;
-			spectralFitChi2= -999;
-			spectralFitNDF= 0;
-			isSpectralIndexFit= false;
-		}
-		
-	public:
-		bool hasSpectralIndex;
-		bool isMultiSourceMatchIndex;
-		double spectralIndex;
-		double spectralIndexErr;
-		bool isSpectralIndexFit;
-		double spectralFitChi2;
-		double spectralFitNDF;
-
-	ClassDef(SpectralIndexData,1)
-
-};
-
-#ifdef __MAKECINT__
-#pragma link C++ class SpectralIndexData+;
-#pragma link C++ class vector<SpectralIndexData>+;
-#pragma link C++ class vector<SpectralIndexData*>+;
-#endif
-
-//======================================
 //==      CLASS: SOURCE MATCH DATA
 //======================================
 class SourceMatchData : public TObject {
@@ -351,8 +540,8 @@ class SourceMatchData : public TObject {
 		/** 
 		\brief Class constructor: initialize structures.
  		*/
-		SourceMatchData(Source* aSource,int nCatalogs);
-			
+		SourceMatchData(Source* aSource,int nCatalogs,bool cloneSource=true);
+		
 		/**
 		* \brief Class destructor: free allocated memory
 		*/
@@ -361,73 +550,50 @@ class SourceMatchData : public TObject {
 		/**
 		* \brief Copy constructor
 		*/
-		SourceMatchData(const SourceMatchData& smatch);
+		//SourceMatchData(const SourceMatchData& sourceMatchData);
 		
 		/**
 		* \brief Assignment Operator
 		*/
-		SourceMatchData& operator=(const SourceMatchData& smatch);
+		//SourceMatchData& operator=(const SourceMatchData& sourceMatchData);
 		/**
 		* \brief Copy method
 		*/
-		void Copy(TObject& smatch) const;
+		//void Copy(TObject& obj) const;
 	
 		
 	public:
 
 		/**
 		* \brief Has source match
-		*/
-		bool HasSourceMatch()
-		{
-			if(m_matchedSources.empty()) return false;
-			bool hasMatch= false;
-			for(size_t i=0;i<m_matchedSources.size();i++){
-				if(!m_matchedSources[i].empty()){
-					hasMatch= true;
-					break;
-				}
-			}
-			return hasMatch;
-		}
+		*/			
+		bool HasSourceMatch();
 
 		/**
 		* \brief Has source component match
 		*/
-		bool HasSourceComponentMatch(int componentId)
-		{
-			if(m_componentMatchIndexes.empty()) return false;
-			if(componentId<0 || componentId>=(int)(m_componentMatchIndexes.size())) return false;
-			if(m_componentMatchIndexes[componentId].empty()) return false;
-			bool hasMatch= false;
-			for(size_t j=0;j<m_componentMatchIndexes[componentId].size();j++){
-				std::vector<ComponentMatchIndex> index_list= m_componentMatchIndexes[componentId][j].GetIndexes();
-				if(!index_list.empty()){
-					hasMatch= true;
-					break;
-				}
-			}
-			return hasMatch;
-		}
+		bool HasSourceComponentMatch(int componentId);
 
 		/**
 		* \brief Add matched source to group
 		*/
-		int AddMatchedSourceToGroup(int catalogIndex,Source* aSource){
-			if(!aSource) return -1;
-			if(catalogIndex<0 || catalogIndex>=(int)(m_matchedSources.size())) return -1;
-			m_matchedSources[catalogIndex].push_back(aSource);
-			m_nMatches= 0;
-			for(size_t i=0;i<m_matchedSources.size();i++){
-				if(!m_matchedSources[i].empty()) m_nMatches++;
-			}
-			return 0;
-		}
-
+		int AddMatchedSourceToGroup(int catalogIndex,Source* aSource,bool clone=true);
+		/**
+		* \brief Add matched source pars
+		*/
+		int AddMatchedSourcePars(int catalogIndex,SourceMatchPars* smatchpars);
+		
 		/**
 		* \brief Add matched component index info
 		*/
 		int AddMatchedComponentIndex(int componentIndex,int catalogIndex,int matchedSourceIndex,int matchedComponentIndex);
+
+		/**
+		* \brief Add matched source component pars
+		*/
+		int AddMatchedSourceComponentPars(int componentIndex,int catalogIndex,SourceComponentMatchPars* cmatchpars);
+		
+		
 		/**
 		* \brief Compute source SED and spectral index
 		*/
@@ -439,17 +605,14 @@ class SourceMatchData : public TObject {
 		/**
 		* \brief Compute source SED and spectral index
 		*/
-		//double GetSpectralIndex(){return m_spectralIndex;}
 		double GetSpectralIndex(){return m_spectralIndexData.spectralIndex;}
 		/**
 		* \brief Has spectral index
 		*/
-		//double HasSpectralIndex(){return m_hasSpectralIndex;}
 		double HasSpectralIndex(){return m_spectralIndexData.hasSpectralIndex;}
 		/**
 		* \brief Is multimatch spectral index
 		*/
-		//double IsMultiMatchSpectralIndex(){return m_isMultiSourceMatchIndex;}
 		double IsMultiMatchSpectralIndex(){return m_spectralIndexData.isMultiSourceMatchIndex;}
 
 		/**
@@ -463,109 +626,32 @@ class SourceMatchData : public TObject {
 			if(!m_source) return std::string("");			
 			return m_source->GetName();	
 		}
+
+		
 		/**
 		* \brief Get source match names
 		*/
-		std::vector<std::string> GetMatchedSourceNames(int catalogIndex){
-			std::vector<std::string> snames;
-			if(catalogIndex<0 || catalogIndex>=(int)(m_matchedSources.size())) return snames;
-			//return m_matchedSources[catalogIndex]->GetSourceNames();
-			for(size_t j=0;j<m_matchedSources[catalogIndex].size();j++){
-				std::string sname= m_matchedSources[catalogIndex][j]->GetName();
-				snames.push_back(sname);
-			}
-			return snames;
-		}
+		int GetMatchedSourceNames(std::vector<std::string>& snames,int catalogIndex);
 
 		/**
 		* \brief Get source match frequencies
 		*/
-		int GetMatchedSourceFrequency(int catalogIndex,double& freq,double& dfreq)
-		{
-			freq= 0;
-			dfreq= 0;	
-			if(m_matchedSources.empty()) return -1;				
-			if(catalogIndex<0 || catalogIndex>=(int)(m_matchedSources.size())) return -1;
-			if(m_matchedSources[catalogIndex].empty()) return -1;
-
-			//Get metadata
-			ImgMetaData* metadata= m_matchedSources[catalogIndex][0]->GetImageMetaData();
-			if(!metadata){
-				#ifdef LOGGING_ENABLED
-					WARN_LOG("Failed to get source metadata!");
-				#endif
-				return -1;
-			}
-
-			//Get frequency	
-			double Nu= metadata->Freq;
-			double dNu= metadata->dFreq;
-			std::string FreqUnits= metadata->FreqUnit;
-			if(FreqUnits=="Hz"){//convert to GHz
-				Nu/= 1.e+9;
-				dNu/= 1.e+9;
-			}
-
-			freq= Nu;
-			dfreq= dNu;
-			
-			return 0;
-		}
+		int GetMatchedSourceFrequency(int catalogIndex,double& freq,double& dfreq);
 
 		/**
 		* \brief Get flux and its error. If Nsources>2 return sum
-		*/
-		int GetMatchedSourceFlux(int catalogIndex,double& flux,double& fluxErr,bool& summed)
-		{
-			flux= 0;
-			fluxErr= 0;
-			summed= false;
-			if(m_matchedSources.empty()) return -1;
-			if(catalogIndex<0 || catalogIndex>=(int)(m_matchedSources.size())) return -1;
-			if(m_matchedSources[catalogIndex].empty()) return -1;
-
-			if(m_matchedSources[catalogIndex].size()>1) summed= true;
-
-			double fluxErrSum2= 0;
-
-			for(size_t i=0;i<m_matchedSources[catalogIndex].size();i++){
-				double fluxDensity= 0;
-				double fluxDensityErr= 0;
-				int status= m_matchedSources[catalogIndex][i]->GetFluxDensity(fluxDensity);
-				
-				if(status<0){
-					#ifdef LOGGING_ENABLED
-						WARN_LOG("Cannot get flux density of source no. "<<i+1<<" in group (no fit info?), using Smax...");	
-					#endif
-					fluxDensity= m_matchedSources[catalogIndex][i]->GetS();
-					fluxDensityErr= 0;
-				}
-				else{
-					m_matchedSources[catalogIndex][i]->GetFluxDensityErr(fluxDensityErr);
-				}
-				double beamArea= m_matchedSources[catalogIndex][i]->GetBeamFluxIntegral();
-				if(beamArea<=0){
-					#ifdef LOGGING_ENABLED
-						ERROR_LOG("Cannot get beam area for source no. "<<i+1<<" in group (not computed?), cannot compute flux!");	
-					#endif	
-					return -1;
-				}
-				double thisFlux= fluxDensity/beamArea;
-				double thisFluxErr= fluxDensityErr/beamArea;	
-				flux+= thisFlux;
-				fluxErrSum2+= thisFluxErr*thisFluxErr;
-
-			}//end loop sources
-
-			fluxErr= sqrt(fluxErrSum2);
-
-			return 0;
-		}
+		*/		
+		int GetMatchedSourceFlux(int catalogIndex,double& flux,double& fluxErr,bool& summed);
 
 		/**
 		* \brief Get matched sources
 		*/
-		std::vector<std::vector<Source*>>& GetMatchedSources(){return m_matchedSources;}
+		std::vector<SourceGroup*>& GetMatchedSources(){return m_matchedSources;}
+		
+		/**
+		* \brief Get matched sources per catalog
+		*/
+		int GetMatchedSourcesPerCatalog(std::vector<Source*>& sources,int catalogIndex);
 
 		/**
 		* \brief Draw SED
@@ -585,16 +671,23 @@ class SourceMatchData : public TObject {
 	
 		// - Source  to be crossmatched
 		Source* m_source;
+		bool m_ownedSource;
 
 		//- List of matched sources per catalog
 		int m_nCatalogs;
 		int m_nMatches;//number of catalog matches
-		std::vector<std::vector<Source*>> m_matchedSources;
+		std::vector<int> m_nMatchesPerCatalog;
+
+		std::vector<SourceGroup*> m_matchedSources;
+		bool m_ownedMatchedSources;
 
 		//- List of component matches
-		//std::vector<std::vector<ComponentMatchIndex>> m_componentMatchIndexes;
 		std::vector<std::vector<ComponentMatchIndexGroup>> m_componentMatchIndexes;
 		
+		//- Matched source pars
+		std::vector<SourceMatchParsGroup> m_sourceMatchPars;
+		std::vector<std::vector<SourceComponentMatchParsGroup>> m_sourceComponentMatchPars;
+
 		// - Spectral index (lgS vs lgNu fit)
 		SpectralIndexData m_spectralIndexData;
 		std::vector<SpectralIndexData> m_componentSpectralIndexData;

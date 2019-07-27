@@ -144,6 +144,9 @@ void Blob::Copy(TObject &obj) const
 	TNamed::Copy((Blob&)obj);
 
 	// Copy this blob to blob
+	#ifdef LOGGING_ENABLED	
+		DEBUG_LOG("Copying blob vars...");
+	#endif
   ((Blob&)obj).HasPixelsAtEdge = HasPixelsAtEdge;
 	((Blob&)obj).Id = Id;
 	((Blob&)obj).NPix = NPix;
@@ -191,16 +194,25 @@ void Blob::Copy(TObject &obj) const
 	((Blob&)obj).m_hasBoxBkgInfo= m_hasBoxBkgInfo;
 
 	//Image metadata
+	#ifdef LOGGING_ENABLED	
+		DEBUG_LOG("Deleting existing image metadata...");
+	#endif
 	if(((Blob&)obj).m_imgMetaData){
 		delete ((Blob&)obj).m_imgMetaData;
 		((Blob&)obj).m_imgMetaData= 0;
 	}
+	#ifdef LOGGING_ENABLED	
+		DEBUG_LOG("Copying image metadata...");
+	#endif
 	if(m_imgMetaData){
 		((Blob&)obj).m_imgMetaData= new ImgMetaData;
 		*((Blob&)obj).m_imgMetaData = *m_imgMetaData;
 	}
 
 	//Image range
+	#ifdef LOGGING_ENABLED	
+		DEBUG_LOG("Copying other blob vars...");
+	#endif
 	((Blob&)obj).m_Xmin = m_Xmin;
 	((Blob&)obj).m_Xmax = m_Xmax;
 	((Blob&)obj).m_Ymin = m_Ymin;
@@ -214,7 +226,10 @@ void Blob::Copy(TObject &obj) const
 				
 	//Copy pixel collection
 	//Delete first any existing collection
-	for(unsigned int i=0;i<(((Blob&)obj).m_Pixels).size();i++){
+	#ifdef LOGGING_ENABLED	
+		DEBUG_LOG("Deleting existing pixel collection...");
+	#endif
+	for(size_t i=0;i<(((Blob&)obj).m_Pixels).size();i++){
 		if( (((Blob&)obj).m_Pixels)[i] ){
 			delete (((Blob&)obj).m_Pixels)[i];
 			(((Blob&)obj).m_Pixels)[i]= 0;
@@ -222,6 +237,9 @@ void Blob::Copy(TObject &obj) const
 	}
 	(((Blob&)obj).m_Pixels).clear();
 
+	#ifdef LOGGING_ENABLED	
+		DEBUG_LOG("Copying pixel collection...");
+	#endif
 	Pixel* aPixel= 0;
 	for(unsigned int i=0;i<m_Pixels.size();i++){
 		aPixel= new Pixel;
@@ -229,7 +247,9 @@ void Blob::Copy(TObject &obj) const
 		(((Blob&)obj).m_Pixels).push_back(aPixel);
 	}
 
-		
+	#ifdef LOGGING_ENABLED	
+		DEBUG_LOG("Deleting existing contour collection...");
+	#endif
 	//Copy contour collection
 	//Delete first any existing collection
 	for(size_t i=0;i<(((Blob&)obj).m_Contours).size();i++){
@@ -239,7 +259,10 @@ void Blob::Copy(TObject &obj) const
 		}
 	}
 	(((Blob&)obj).m_Contours).clear();
-
+	
+	#ifdef LOGGING_ENABLED	
+		DEBUG_LOG("Copying contour collection...");
+	#endif
 	Contour* aContour= 0;
 	for(unsigned int i=0;i<m_Contours.size();i++){
 		aContour= new Contour;

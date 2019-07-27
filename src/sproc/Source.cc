@@ -104,12 +104,18 @@ Source::Source(const Source& source)
   ((Source&)source).Copy(*this);
 }
 
-void Source::Copy(TObject &obj) const {
-
+void Source::Copy(TObject &obj) const 
+{
 	//Copy mother blob 
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copy blob...");
+	#endif
 	Blob::Copy((Source&)obj);
 
 	// Copy this source to source obj	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copy source variables...");
+	#endif
   ((Source&)obj).Type = Type;
 	((Source&)obj).Flag = Flag;	
 	((Source&)obj).SimType= SimType;
@@ -129,7 +135,10 @@ void Source::Copy(TObject &obj) const {
 	((Source&)obj).m_fitStatus= m_fitStatus;
 	
 	//Delete first a previously existing vector
-	for(unsigned int i=0;i<(((Source&)obj).m_NestedSources).size();i++){
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Delete existing nested source list ...");
+	#endif
+	for(size_t i=0;i<(((Source&)obj).m_NestedSources).size();i++){
 		if( (((Source&)obj).m_NestedSources)[i] ){
 			delete (((Source&)obj).m_NestedSources)[i];
 			(((Source&)obj).m_NestedSources)[i]= 0;
@@ -137,14 +146,19 @@ void Source::Copy(TObject &obj) const {
 	}
 	(((Source&)obj).m_NestedSources).clear();
 
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Copy nested source list ...");
+	#endif
 	((Source&)obj).m_NestedSource= 0;
 	for(unsigned int i=0;i<m_NestedSources.size();i++){
 		((Source&)obj).m_NestedSource= new Source;
 		*(((Source&)obj).m_NestedSource)= *(m_NestedSources[i]);
 		(((Source&)obj).m_NestedSources).push_back( ((Source&)obj).m_NestedSource );
 	}
-
-
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("End copy source ...");
+	#endif
+	
 }//close Copy()
 
 Source& Source::operator=(const Source& source) { 

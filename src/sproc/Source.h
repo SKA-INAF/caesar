@@ -171,22 +171,7 @@ class Source : public Blob {
 		*/
 		void Copy(TObject& source) const;
 
-		/**
-		* \brief Source type enumeration
-		*/
-		//enum SourceType {eUnknown=0,eCompact=1,ePointLike=2,eExtended=3,eCompactPlusExtended=4};
-
-		/**
-		* \brief Source flag enumeration
-		*/
-		//enum SourceFlag {eReal=1,eCandidate=2,eFake=3};
-
-		/**
-		* \brief Simulated source type enumeration
-		*/
-		//enum SimSourceType {eUnknownSimClass=0,eRingLike=1,eBubbleLike=2,eEllipseLike=3,eDiskLike=4,eBlobLike=5};
 		
-
 	public:
 		/**
 		* \brief Set source type

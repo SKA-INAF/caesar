@@ -27,6 +27,9 @@
 
 #include <SourceMatchData.h>
 #include <Source.h>
+#include <SourceGroup.h>
+#include <SpectralIndexData.h>
+
 #include <CodeUtils.h>
 #include <GraphicsUtils.h>
 
@@ -62,10 +65,13 @@
 using namespace std;
 
 ClassImp(Caesar::SourceMatchData)
-ClassImp(Caesar::SourceGroup)
-ClassImp(Caesar::SpectralIndexData)
 ClassImp(Caesar::ComponentMatchIndex)
 ClassImp(Caesar::ComponentMatchIndexGroup)
+ClassImp(Caesar::SourceMatchPars)
+ClassImp(Caesar::SourceComponentMatchPars)
+ClassImp(Caesar::SourceMatchParsGroup)
+ClassImp(Caesar::SourceComponentMatchParsGroup)
+
 
 namespace Caesar {
 
@@ -75,14 +81,28 @@ SourceMatchData::SourceMatchData()
 {
 	//Initialize
 	m_source= nullptr;
+	m_ownedSource= false;
+	m_ownedMatchedSources= false;
 	m_nCatalogs= 0;
 	Init();
 
 }//close costructor
 
-SourceMatchData::SourceMatchData(Source* aSource,int nCatalogs) 
-	: TObject(), m_source(aSource), m_nCatalogs(nCatalogs)
+SourceMatchData::SourceMatchData(Source* aSource,int nCatalogs,bool cloneSource) 
+	: TObject(), m_nCatalogs(nCatalogs)
 {
+	//Init source
+	if(aSource){	
+		if(cloneSource){
+			m_source= new Source;
+			*(m_source)= *(aSource);
+			m_ownedSource= true;
+		}	
+		else{
+			m_source= aSource;
+		}
+	}
+
 	//Initialize 
 	Init();
 
@@ -91,87 +111,105 @@ SourceMatchData::SourceMatchData(Source* aSource,int nCatalogs)
 
 SourceMatchData::~SourceMatchData()
 {
-	//Delete source 
-	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("Deleting source ...");
-	#endif
-	CodeUtils::DeletePtr<Source>(m_source);
-	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("done!");
-	#endif
+	//Delete source (if pointer is owned)
+	if(m_ownedSource){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Deleting source ...");
+		#endif
+	
+		CodeUtils::DeletePtr<Source>(m_source);
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("done!");
+		#endif
+	}
 
 	//Delete source collection
-	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("Deleting source match collection added ...");
-	#endif
-	//CodeUtils::DeletePtrCollection<SourceGroup>(m_matchedSources);
-	for(size_t i=0;i<m_matchedSources.size();i++){
-		for(size_t j=0;j<m_matchedSources[i].size();j++){
-			if(m_matchedSources[i][j]){
-				delete m_matchedSources[i][j];
-				m_matchedSources[i][j]= 0;
-			}
-		}	
+	if(m_ownedMatchedSources){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Deleting source match collection added ...");
+		#endif
+		CodeUtils::DeletePtrCollection<SourceGroup>(m_matchedSources);
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("done!");
+		#endif
 	}
-	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("done!");
-	#endif
-
+	
+	
 	//Delete source SED graph
 	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("Deleting source SED graph ...");
+		INFO_LOG("Deleting source SED graph ...");
 	#endif
 	CodeUtils::DeletePtr<TGraphAsymmErrors>(m_sourceSED);
 	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("done!");
+		INFO_LOG("done!");
 	#endif
 
 	//Delete source component SED collection
 	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("Deleting source component SED graph added ...");
+		INFO_LOG("Deleting source component SED graph added ...");
 	#endif
 	CodeUtils::DeletePtrCollection<TGraphAsymmErrors>(m_sourceComponentSED);
 	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("done!");
+		INFO_LOG("done!");
 	#endif
-
 	
 }//close destructor
 
-
+/*
 SourceMatchData::SourceMatchData(const SourceMatchData& sourceMatchData) 
 {
   // Copy constructor
 	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("Copy constuctor called...");
+		INFO_LOG("Copy constructor called...");
 	#endif
   Init();
   ((SourceMatchData&)sourceMatchData).Copy(*this);
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("done!");
+	#endif
 }
+*/
 
+
+
+/*
 void SourceMatchData::Copy(TObject &obj) const 
 {
+	//Copy object
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Copy object...");
+	#endif
+	TObject::Copy((SourceMatchData&)obj);
+
 	//Copy vars
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Copy vars...");
+	#endif
 	((SourceMatchData&)obj).m_nCatalogs = m_nCatalogs;
 	((SourceMatchData&)obj).m_nMatches = m_nMatches;
 
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Copy spectral index data...");
+	#endif
 	((SourceMatchData&)obj).m_spectralIndexData = m_spectralIndexData;
  	(((SourceMatchData&)obj).m_componentSpectralIndexData).clear();
 	for(size_t i=0;i<m_componentSpectralIndexData.size();i++){
-		(((SourceMatchData&)obj).m_componentSpectralIndexData).push_back(SpectralIndexData());
+		(((SourceMatchData&)obj).m_componentSpectralIndexData).push_back(m_componentSpectralIndexData[i]);
 	}
 
-	/*
-	((SourceMatchData&)obj).m_hasSpectralIndex = m_hasSpectralIndex;
-	((SourceMatchData&)obj).m_isMultiSourceMatchIndex = m_isMultiSourceMatchIndex;
-	((SourceMatchData&)obj).m_spectralIndex = m_spectralIndex;
-	((SourceMatchData&)obj).m_spectralIndexErr = m_spectralIndexErr;
-	((SourceMatchData&)obj).m_isSpectralIndexFit = m_isSpectralIndexFit;
-	((SourceMatchData&)obj).m_spectralFitChi2 = m_spectralFitChi2;
-	((SourceMatchData&)obj).m_spectralFitNDF = m_spectralFitNDF;
-	*/
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Copy component match indexes...");
+	#endif
+	(((SourceMatchData&)obj).m_componentMatchIndexes).clear();
+	for(size_t i=0;i<m_componentMatchIndexes.size();i++){
+		(((SourceMatchData&)obj).m_componentMatchIndexes).push_back( std::vector<ComponentMatchIndexGroup>() );
+		for(size_t j=0;j<m_componentMatchIndexes[i].size();j++) (((SourceMatchData&)obj).m_componentMatchIndexes)[i].push_back(m_componentMatchIndexes[i][j]);
+	}
 
 	//Copy source SED graph
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Copy source SED...");
+	#endif
 	if(((SourceMatchData&)obj).m_sourceSED){
 		delete ((SourceMatchData&)obj).m_sourceSED;
 		((SourceMatchData&)obj).m_sourceSED= 0;
@@ -182,6 +220,9 @@ void SourceMatchData::Copy(TObject &obj) const
 	}
 
 	//Copy source SED component collection
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Copy source component SED...");
+	#endif
 	//Delete first any existing collection
 	for(size_t i=0;i<(((SourceMatchData&)obj).m_sourceComponentSED).size();i++){
 		if( (((SourceMatchData&)obj).m_sourceComponentSED)[i] ){
@@ -191,6 +232,7 @@ void SourceMatchData::Copy(TObject &obj) const
 	}
 	(((SourceMatchData&)obj).m_sourceComponentSED).clear();
 
+	
 	TGraphAsymmErrors* aGraph= 0;
 	for(size_t i=0;i<m_sourceComponentSED.size();i++){
 		aGraph= new TGraphAsymmErrors;
@@ -199,6 +241,9 @@ void SourceMatchData::Copy(TObject &obj) const
 	}
 
 	//Copy source
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Copy source ...");
+	#endif
 	if(((SourceMatchData&)obj).m_source){
 		delete ((SourceMatchData&)obj).m_source;
 		((SourceMatchData&)obj).m_source= 0;
@@ -210,26 +255,9 @@ void SourceMatchData::Copy(TObject &obj) const
 
 	//Copy source collection
 	//Delete first any existing collection
-	for(size_t i=0;i<(((SourceMatchData&)obj).m_matchedSources).size();i++){
-		for(size_t j=0;j<(((SourceMatchData&)obj).m_matchedSources[i]).size();j++){
-			if( (((SourceMatchData&)obj).m_matchedSources)[i][j] ){
-				delete (((SourceMatchData&)obj).m_matchedSources)[i][j];
-				(((SourceMatchData&)obj).m_matchedSources)[i][j]= 0;
-			}
-		}
-	}
-	(((SourceMatchData&)obj).m_matchedSources).clear();
-
-	Source* aSource= 0;
-	for(size_t i=0;i<m_matchedSources.size();i++){
-		for(size_t j=0;j<m_matchedSources[i].size();j++){
-			aSource= new Source;
-			*aSource= *(m_matchedSources[i][j]);
-			(((SourceMatchData&)obj).m_matchedSources)[i].push_back(aSource);
-		}
-	}
-
-	/*
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Deleting existing matched source collection ...");
+	#endif
 	for(size_t i=0;i<(((SourceMatchData&)obj).m_matchedSources).size();i++){
 		if( (((SourceMatchData&)obj).m_matchedSources)[i] ){
 			delete (((SourceMatchData&)obj).m_matchedSources)[i];
@@ -237,6 +265,11 @@ void SourceMatchData::Copy(TObject &obj) const
 		}
 	}
 	(((SourceMatchData&)obj).m_matchedSources).clear();
+	
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Copying matched source collection ...");
+	#endif
 
 	SourceGroup* aSourceGroup= 0;
 	for(size_t i=0;i<m_matchedSources.size();i++){
@@ -244,46 +277,62 @@ void SourceMatchData::Copy(TObject &obj) const
 		*aSourceGroup= *(m_matchedSources[i]);
 		(((SourceMatchData&)obj).m_matchedSources).push_back(aSourceGroup);
 	}
-	*/
-
+	
 }//close Copy()
+*/
 
+/*
 SourceMatchData& SourceMatchData::operator=(const SourceMatchData& sourceMatchData) 
 { 
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Copy operator called ...");
+	#endif
 	// Operator =
   if (this != &sourceMatchData) ((SourceMatchData&)sourceMatchData).Copy(*this);
   return *this;
 }
-
+*/
 
 void SourceMatchData::Init()
 {
-	//Init spectral index
-	m_componentSpectralIndexData.clear();
-
+	
 	//Init source SEDs
-	m_sourceSED= nullptr;
-	m_sourceComponentSED.clear();
-
+	m_sourceSED= new TGraphAsymmErrors;
+	
+	
 	//Init source group data
 	m_nMatches= 0;
+	m_nMatchesPerCatalog.clear();
 	m_componentMatchIndexes.clear();
+	m_sourceMatchPars.clear();
+	m_sourceMatchPars.resize(m_nCatalogs);
+	SourceGroup* aSourceGroup= 0;
+
 	for(int i=0;i<m_nCatalogs;i++){
-		m_matchedSources.push_back( std::vector<Source*>());
+		m_nMatchesPerCatalog.push_back(0);
+		aSourceGroup= new SourceGroup;
+		m_matchedSources.push_back(aSourceGroup);
 	}
 	
+	
 	//Init component match index
+	m_componentSpectralIndexData.clear();
+	m_sourceComponentSED.clear();
+	TGraphAsymmErrors* sed= 0;
+
 	if(m_source){
 		int nComponents= m_source->GetNFitComponents();
 		if(nComponents>0) {
 			for(int i=0;i<nComponents;i++){
-				//m_componentMatchIndexes.push_back( std::vector<ComponentMatchIndex>() );
+				sed= new TGraphAsymmErrors;
+				m_sourceComponentSED.push_back(sed);
 				m_componentMatchIndexes.push_back( std::vector<ComponentMatchIndexGroup>() );
-				for(int j=0;j<m_nCatalogs;j++){
-					m_componentMatchIndexes[i].push_back(ComponentMatchIndexGroup());
-				}
+				m_componentMatchIndexes[i].resize(m_nCatalogs);
+
+				m_sourceComponentMatchPars.push_back( std::vector<SourceComponentMatchParsGroup>() );	
+				m_sourceComponentMatchPars[i].resize(m_nCatalogs);
 			}
-			m_componentSpectralIndexData.push_back( SpectralIndexData() );
+			m_componentSpectralIndexData.resize(nComponents);
 		}
 	}
 
@@ -291,11 +340,128 @@ void SourceMatchData::Init()
 
 
 
+
+bool SourceMatchData::HasSourceMatch()
+{
+	if(m_matchedSources.empty()) return false;
+	bool hasMatch= false;
+	for(size_t i=0;i<m_matchedSources.size();i++){
+		if(m_matchedSources[i]->GetNSources()>0){
+		//if(m_matchedSources[i].GetNSources()>0){
+			hasMatch= true;
+			break;
+		}
+	}
+	return hasMatch;
+}
+
+
+bool SourceMatchData::HasSourceComponentMatch(int componentId)
+{
+	cout<<"HasSourceComponentMatch(): pto 1"<<endl;
+	if(m_componentMatchIndexes.empty()) return false;
+	if(componentId<0 || componentId>=(int)(m_componentMatchIndexes.size())) return false;
+	cout<<"HasSourceComponentMatch(): pto 2"<<endl;
+	if(m_componentMatchIndexes[componentId].empty()) return false;
+	cout<<"HasSourceComponentMatch(): pto 3 (N="<<m_componentMatchIndexes[componentId].size()<<")"<<endl;
+			
+	bool hasMatch= false;
+	for(size_t j=0;j<m_componentMatchIndexes[componentId].size();j++){
+		cout<<"HasSourceComponentMatch(): pto 4"<<endl;
+		int nIndexes= m_componentMatchIndexes[componentId][j].GetNIndexes();
+		//std::vector<ComponentMatchIndex> index_list= m_componentMatchIndexes[componentId][j].GetIndexes();
+		cout<<"HasSourceComponentMatch(): pto 5"<<endl;
+		//if(!index_list.empty()){
+		if(nIndexes>0){
+			hasMatch= true;
+			break;
+		}
+	}
+	return hasMatch;
+}
+
+
+
+int SourceMatchData::GetMatchedSourcesPerCatalog(std::vector<Source*>& sources,int catalogIndex)
+{
+	if(m_matchedSources.empty()) return -1;
+	if(catalogIndex<0 || catalogIndex>=(int)(m_matchedSources.size())) return -1;
+	if(!m_matchedSources[catalogIndex]){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Matched source group (CAT="<<catalogIndex<<") is nullptr, this should not occur!");
+		#endif
+		return -1;
+	}
+	sources= m_matchedSources[catalogIndex]->GetSources();
+				
+	return 0;
+}
+
+
+
+
+
+int SourceMatchData::AddMatchedSourceToGroup(int catalogIndex,Source* aSource,bool clone)
+{
+	if(!aSource) return -1;
+	if(catalogIndex<0 || catalogIndex>=(int)(m_matchedSources.size())) return -1;
+	if(!m_matchedSources[catalogIndex]){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Matched source group (CAT="<<catalogIndex<<") is nullptr, this should not occur!");
+		#endif
+		return -1;
+	}
+
+	//Add source
+	int status= m_matchedSources[catalogIndex]->AddSource(aSource,clone);
+
+	//Update number of matched sources
+	m_nMatches= 0;
+	for(size_t i=0;i<m_matchedSources.size();i++){
+		int nMatchesInCatalog= m_matchedSources[i]->GetNSources();
+		m_nMatchesPerCatalog[i]= nMatchesInCatalog;
+		if(nMatchesInCatalog>0) m_nMatches++;
+	}
+	return status;	
+}
+
+
+int SourceMatchData::AddMatchedSourcePars(int catalogIndex,SourceMatchPars* smatchpars)
+{
+	if(!smatchpars) return -1;
+	if(catalogIndex<0 || catalogIndex>=(int)(m_sourceMatchPars.size())) return -1;
+	//m_sourceMatchPars[catalogIndex].push_back(*smatchpars);
+	m_sourceMatchPars[catalogIndex].AddPars(smatchpars);
+
+	return 0;
+
+}//close AddMatchedSourcePars()
+
+
+int SourceMatchData::AddMatchedSourceComponentPars(int componentIndex,int catalogIndex,SourceComponentMatchPars* cmatchpars)
+{
+	if(!cmatchpars) return -1;
+	if(componentIndex<0 || componentIndex>=(int)(m_sourceComponentMatchPars.size())){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Component with index "<<componentIndex<<" was not allocated!");
+		#endif
+		return -1;
+	}
+	if(catalogIndex<0 || catalogIndex>=(int)(m_sourceComponentMatchPars[componentIndex].size())) return -1;
+
+	m_sourceComponentMatchPars[componentIndex][catalogIndex].AddPars(cmatchpars);	
+
+	return 0;
+
+}//close	AddMatchedSourceComponentPars()	
+
+
 int SourceMatchData::AddMatchedComponentIndex(int componentIndex,int catalogIndex,int matchedSourceIndex,int matchedComponentIndex)
 {
-	//Check if cube component id was allocated
+	//Check if component id was allocated
 	int nComponents= static_cast<int>(m_componentMatchIndexes.size());
-	if(nComponents<=0 || nComponents<componentIndex+1){
+	//if(nComponents<=0 || nComponents<componentIndex+1){
+	if(nComponents<=0 || componentIndex<0 || componentIndex>=nComponents){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Component with index "<<componentIndex<<" was not allocated!");
 		#endif
@@ -303,7 +469,6 @@ int SourceMatchData::AddMatchedComponentIndex(int componentIndex,int catalogInde
 	}
 	
 	//Fill component indexes
-	//m_componentMatchIndexes[componentIndex].push_back( ComponentMatchIndex(catalogIndex,matchedSourceIndex,matchedComponentIndex) );
 	m_componentMatchIndexes[componentIndex][catalogIndex].AddIndex(catalogIndex,matchedSourceIndex,matchedComponentIndex);				
 
 	return 0;
@@ -312,27 +477,101 @@ int SourceMatchData::AddMatchedComponentIndex(int componentIndex,int catalogInde
 
 
 
+
+
+int SourceMatchData::GetMatchedSourceNames(std::vector<std::string>& snames,int catalogIndex)
+{
+	snames.clear();
+	if(catalogIndex<0 || catalogIndex>=(int)(m_matchedSources.size())) return -1;
+	if(!m_matchedSources[catalogIndex]){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Matched source group (CAT="<<catalogIndex<<") is nullptr, this should not occur!");
+		#endif
+		return -1;
+	}
+
+	cout<<"pto 0"<<endl;
+	if(m_matchedSources[catalogIndex]->GetSourceNames(snames)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get matched source names!");
+		#endif
+		return -1;
+	}
+	cout<<"pto 1"<<endl;
+
+	return 0;
+}
+
+
+
+
+int SourceMatchData::GetMatchedSourceFrequency(int catalogIndex,double& freq,double& dfreq)
+{
+	freq= 0;
+	dfreq= 0;	
+	if(m_matchedSources.empty()) return -1;				
+	if(catalogIndex<0 || catalogIndex>=(int)(m_matchedSources.size())) return -1;
+	if(!m_matchedSources[catalogIndex]){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Matched source group (CAT="<<catalogIndex<<") is nullptr, this should not occur!");
+		#endif
+		return -1;
+	}
+			
+	int status= m_matchedSources[catalogIndex]->GetFrequency(freq,dfreq);
+			
+	return status;
+}
+
+
+
+int SourceMatchData::GetMatchedSourceFlux(int catalogIndex,double& flux,double& fluxErr,bool& summed)
+{
+	flux= 0;
+	fluxErr= 0;
+	summed= false;
+			
+	if(m_matchedSources.empty()) return -1;
+	if(catalogIndex<0 || catalogIndex>=(int)(m_matchedSources.size())) return -1;
+	if(!m_matchedSources[catalogIndex]){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Matched source group (CAT="<<catalogIndex<<") is nullptr, this should not occur!");
+		#endif
+		return -1;
+	}
+
+	int status= m_matchedSources[catalogIndex]->GetFlux(flux,fluxErr,summed);
+			
+	return status;
+}
+
+
+
 int SourceMatchData::ComputeSourceSEDs()
 {
 	//Do nothing if no source set
 	if(!m_source) return -1;
 	if(m_matchedSources.empty()) return 0;
-
+	if(!m_sourceSED) return -1;
+	
 	//Delete existing source SEDs
 	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("Delete existing SED graphs...");
+		INFO_LOG("Clear existing SED graph...");
 	#endif
-	CodeUtils::DeletePtr<TGraphAsymmErrors>(m_sourceSED);
-	//m_isMultiSourceMatchIndex= false;
-	//m_hasSpectralIndex= false;
+	m_sourceSED->Set(0);//remove all existing points	
 	m_spectralIndexData.isMultiSourceMatchIndex= false;
 	m_spectralIndexData.hasSpectralIndex= false;
 	
+	std::string sname=  m_source->GetName();
 
 	//## Get source spectral info
 	std::vector<double> lgNu_list;
 	std::vector<double> lgFlux_list;
 	std::vector<double> lgFluxErr_list;
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Get source metadata ...");
+	#endif
 
 	//Get source metadata
 	ImgMetaData* metadata= m_source->GetImageMetaData();
@@ -385,7 +624,7 @@ int SourceMatchData::ComputeSourceSEDs()
 	double lgFluxErr= log10(TMath::E())*fluxErr/flux;
 
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Source "<<m_source->GetName()<<": Nu="<<Nu<<", dNu="<<dNu<<", FreqUnits="<<FreqUnits<<", lgNu="<<lgNu<<", flux="<<flux<<", lgFlux="<<lgFlux);
+		INFO_LOG("Source "<<sname<<": Nu="<<Nu<<", dNu="<<dNu<<", FreqUnits="<<FreqUnits<<", lgNu="<<lgNu<<", flux="<<flux<<", lgFlux="<<lgFlux);
 	#endif
 	
 	lgNu_list.push_back(lgNu);
@@ -394,7 +633,6 @@ int SourceMatchData::ComputeSourceSEDs()
 
 	//Check if we have matched sources
 	if(!HasSourceMatch()) {
-		m_sourceSED= new TGraphAsymmErrors(1);
 		m_sourceSED->SetPoint(0,lgNu,lgFlux);
 		m_sourceSED->SetPointError(0,0,0,lgFluxErr,lgFluxErr);
 		return 0;//nothing to be done without matched sources
@@ -405,15 +643,25 @@ int SourceMatchData::ComputeSourceSEDs()
 	for(size_t i=0;i<m_matchedSources.size();i++)
 	{
 		//Skip if no matches
-		if(m_matchedSources[i].empty()) continue;
-
-		//Get source names
-		std::vector<std::string> snames= GetMatchedSourceNames(i);
-		std::stringstream ss;
-		ss<<"{";
-		for(size_t j=0;j<snames.size()-1;j++) ss<<snames[j]<<",";
-		ss<<snames[snames.size()-1]<<"}"; 
+		if(m_matchedSources[i]->GetNSources()<=0) continue;
 		
+		//Get source names
+		std::vector<std::string> snames;
+		if(GetMatchedSourceNames(snames,i)<0){
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to get names of matched source group no. "<<i+1<<"!");
+			#endif
+		}
+		std::stringstream ss;
+		cout<<"ComputeSourceSEDs: pto 1"<<endl;
+		if(!snames.empty()){
+			ss<<"{";
+			cout<<"ComputeSourceSEDs: pto 2"<<endl;
+			for(size_t j=0;j<snames.size()-1;j++) ss<<snames[j]<<",";
+			cout<<"ComputeSourceSEDs: pto 3"<<endl;
+			ss<<snames[snames.size()-1]<<"}";
+			cout<<"ComputeSourceSEDs: pto 4"<<endl; 
+		}
 
 		//Get frequency
 		if(GetMatchedSourceFrequency(i,Nu,dNu)<0){
@@ -435,7 +683,6 @@ int SourceMatchData::ComputeSourceSEDs()
 		}
 		lgFlux= log10(flux);
 		lgFluxErr= log10(TMath::E())*fluxErr/flux;
-		//if(fluxSummed) m_isMultiSourceMatchIndex= true;
 		if(fluxSummed) m_spectralIndexData.isMultiSourceMatchIndex= true;
 
 		#ifdef LOGGING_ENABLED
@@ -448,51 +695,6 @@ int SourceMatchData::ComputeSourceSEDs()
 
 	}//end loop matched sources
 	
-	/*
-	for(size_t i=0;i<m_matchedSources.size();i++)
-	{
-		
-		//Get source names
-		//std::vector<std::string> snames= m_matchedSources[i]->GetSourceNames();
-		//std::stringstream ss;
-		//ss<<"{";
-		//for(size_t j=0;j<snames.size()-1;j++) ss<<snames[j]<<",";
-		//ss<<snames[snames.size()-1]<<"}"; 
-		
-
-		//Get frequency
-		if(m_matchedSources[i]->GetFrequency(Nu,dNu)<0){
-			#ifdef LOGGING_ENABLED
-				WARN_LOG("Failed to get frequency for matched source no. "<<i+1<<"!");
-			#endif
-			return -1;
-		}
-		lgNu= log10(Nu);
-		dlgNu= log10(TMath::E())*dNu/Nu;	
-		
-		//Get flux
-		bool fluxSummed= false;
-		if(m_matchedSources[i]->GetFlux(flux,fluxErr,fluxSummed)<0){
-			#ifdef LOGGING_ENABLED
-				WARN_LOG("Failed to get flux for matched source no. "<<i+1<<"!");
-			#endif
-			return -1;
-		}
-		lgFlux= log10(flux);
-		lgFluxErr= log10(TMath::E())*fluxErr/flux;
-		if(fluxSummed) m_isMultiSourceMatchIndex= true;
-
-		#ifdef LOGGING_ENABLED
-			//INFO_LOG("Matched source group no. "<<i+1<<": snames="<<ss.str()<<", Nu="<<Nu<<", dNu="<<dNu<<", lgNu="<<lgNu<<", flux="<<flux<<", lgFlux="<<lgFlux);
-			INFO_LOG("Matched source group no. "<<i+1<<": Nu="<<Nu<<", dNu="<<dNu<<", lgNu="<<lgNu<<", flux="<<flux<<", lgFlux="<<lgFlux);
-		#endif
-
-		lgNu_list.push_back(lgNu);
-		lgFlux_list.push_back(lgFlux);
-		lgFluxErr_list.push_back(lgFluxErr);
-
-	}//end loop matched sources
-	*/
 
 	//# Sort data by ascending frequencies
 	std::vector<double> lgNu_list_sorted;
@@ -509,7 +711,6 @@ int SourceMatchData::ComputeSourceSEDs()
 
 	//# Fill source SED
 	int N= static_cast<int>(lgNu_list_sorted.size());
-	m_sourceSED= new TGraphAsymmErrors(N);
 	
 	for(int i=0;i<N;i++){
 		m_sourceSED->SetPoint(i,lgNu_list_sorted[i],lgFlux_list_sorted[i]);
@@ -521,7 +722,6 @@ int SourceMatchData::ComputeSourceSEDs()
 
 	//# Find spectral index
 	if(N==2){
-		//m_isSpectralIndexFit= false;
 		m_spectralIndexData.isSpectralIndexFit= false;
 		double x1= 0; 
 		double x2= 0;	
@@ -529,11 +729,6 @@ int SourceMatchData::ComputeSourceSEDs()
 		double y2= 0;
 		m_sourceSED->GetPoint(0,x1,y1);
 		m_sourceSED->GetPoint(1,x2,y2);
-		//m_spectralIndex= (y2-y1)/(x2-x1);
-		//m_spectralIndexErr= 0;
-		//m_spectralFitChi2= 0;
-		//m_spectralFitNDF= 0;
-		//m_hasSpectralIndex= true;
 		m_spectralIndexData.spectralIndex= (y2-y1)/(x2-x1);
 		m_spectralIndexData.spectralIndexErr= 0;
 		m_spectralIndexData.spectralFitChi2= 0;
@@ -541,25 +736,17 @@ int SourceMatchData::ComputeSourceSEDs()
 		m_spectralIndexData.hasSpectralIndex= true;
 	}
 	else{
-		//m_isSpectralIndexFit= true;
 		m_spectralIndexData.isSpectralIndexFit= true;
 		TFitResultPtr fitRes= m_sourceSED->Fit("pol1","S");
-		//m_spectralFitChi2= fitRes->Chi2();
-		//m_spectralFitNDF= fitRes->Ndf();
-		//m_spectralIndex= fitRes->Value(1);
-		//m_spectralIndexErr= fitRes->ParError(1);
-
 		m_spectralIndexData.spectralFitChi2= fitRes->Chi2();
 		m_spectralIndexData.spectralFitNDF= fitRes->Ndf();
 		m_spectralIndexData.spectralIndex= fitRes->Value(1);
 		m_spectralIndexData.spectralIndexErr= fitRes->ParError(1);
 		int fitStatus= fitRes;
-		//if(fitStatus==0) m_hasSpectralIndex= true;
 		if(fitStatus==0) m_spectralIndexData.hasSpectralIndex= true;
 	}
 
 	#ifdef LOGGING_ENABLED
-		//INFO_LOG("Source "<<m_source->GetName()<<": hasSpectralIndex?"<<m_hasSpectralIndex<<", gamma="<<m_spectralIndex<<" +- "<<m_spectralIndexErr<<", chi2/ndf="<<m_spectralFitChi2<<"/"<<m_spectralFitNDF);
 		INFO_LOG("Source "<<m_source->GetName()<<": hasSpectralIndex?"<<m_spectralIndexData.hasSpectralIndex<<", gamma="<<m_spectralIndexData.spectralIndex<<" +- "<<m_spectralIndexData.spectralIndexErr<<", chi2/ndf="<<m_spectralIndexData.spectralFitChi2<<"/"<<m_spectralIndexData.spectralFitNDF);
 	#endif
 	
@@ -571,15 +758,40 @@ int SourceMatchData::ComputeSourceSEDs()
 
 int SourceMatchData::ComputeSourceComponentSEDs()
 {
+	cout<<"ComputeSourceComponentSEDs: pto 1"<<endl;
 	//Do nothing if no source set
 	if(!m_source) return -1;
 	if(m_matchedSources.empty()) return 0;
 	if(m_componentMatchIndexes.empty()) return 0;
 
+	cout<<"ComputeSourceComponentSEDs: pto 2"<<endl;
+
 	//Get source pars
 	if(!m_source->HasFitInfo()) return 0;//no components, nothing to be done
 
+	cout<<"ComputeSourceComponentSEDs: pto 3"<<endl;
+
+	//Get source fit component pars
+	SourceFitPars fitPars= m_source->GetFitPars();
+	int nComponents= m_source->GetNFitComponents();
+	int nComponents_index= static_cast<int>(m_componentMatchIndexes.size());
+
+	if(nComponents!=nComponents_index){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Mismatch between number of components found in source and set in class (nComponents="<<nComponents<<"!="<<nComponents_index<<")!");	
+		#endif	
+		return -1;
+	}
+	
 	std::string sourceName= m_source->GetName();
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("sourceName="<<sourceName<<", nComponents="<<nComponents_index);	
+	#endif	
+
+	cout<<"ComputeSourceComponentSEDs: pto 4"<<endl;
+
+	
 	double beamArea= m_source->GetBeamFluxIntegral();
 	if(beamArea<=0){
 		#ifdef LOGGING_ENABLED
@@ -587,6 +799,8 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 		#endif	
 		return -1;
 	}
+
+	cout<<"ComputeSourceComponentSEDs: pto 5"<<endl;
 
 	//Get source metadata
 	ImgMetaData* metadata= m_source->GetImageMetaData();
@@ -596,6 +810,8 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 		#endif
 		return -1;
 	}
+	
+	cout<<"ComputeSourceComponentSEDs: pto 6"<<endl;
 	
 	//Get source frequency
 	double Nu= metadata->Freq;
@@ -609,20 +825,19 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 	double dlgNu= log10(TMath::E())*dNu/Nu;	
 
 	
-	//Get source fit component pars
-	SourceFitPars fitPars= m_source->GetFitPars();
-
 	
-	//Delete existing source SEDs
+	//Reset existing source SEDs
 	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("Delete existing SED graphs...");
+		INFO_LOG("Reset existing SED graphs...");
 	#endif
-	CodeUtils::DeletePtrCollection<TGraphAsymmErrors>(m_sourceComponentSED);
-	
+	for(size_t i=0;i<m_sourceComponentSED.size();i++){
+		m_sourceComponentSED[i]->Set(0);
+	}
+
+
 	
 	//Loop over source components
-	TGraphAsymmErrors* sed= 0;
-
+	
 	for(size_t i=0;i<m_componentMatchIndexes.size();i++)
 	{
 		std::vector<double> lgNu_list;
@@ -648,11 +863,12 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 		bool isMatchComponentFluxSummed= false;	
 
 		//Skip if no component match	
+		cout<<"ComputeSourceComponentSEDs: pto 7"<<endl;
 		if(!HasSourceComponentMatch(i)){
-			sed= new TGraphAsymmErrors(1);
-			sed->SetPoint(0,lgNu,lgFlux);
-			sed->SetPointError(0,0,0,lgFluxErr,lgFluxErr);
-			m_sourceComponentSED.push_back(sed);
+			cout<<"ComputeSourceComponentSEDs: pto 8"<<endl;
+			m_sourceComponentSED[i]->SetPoint(0,lgNu,lgFlux);
+			m_sourceComponentSED[i]->SetPointError(0,0,0,lgFluxErr,lgFluxErr);
+			cout<<"ComputeSourceComponentSEDs: pto 9"<<endl;
 			continue;
 		}
 
@@ -677,7 +893,14 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 				int catalogIndex= index_list[k].catalogIndex;
 				int matchedSourceIndex= index_list[k].sourceGroupIndex;
 				int matchedComponentIndex= index_list[k].componentIndex;
-				Source* matchedSource= m_matchedSources[catalogIndex][matchedSourceIndex];
+				Source* matchedSource= m_matchedSources[catalogIndex]->GetSource(matchedSourceIndex);
+				
+				if(!matchedSource){
+					#ifdef LOGGING_ENABLED
+						ERROR_LOG("Matched source (CAT="<<catalogIndex<<", matchedSourceIndex="<<matchedSourceIndex<<", matchedComponentIndex="<<matchedComponentIndex<<") is null ptr, this should not occur!");
+					#endif
+					continue;
+				}
 
 				//Skip if no fit pars
 				if(!matchedSource->HasFitInfo()) continue;	
@@ -752,53 +975,49 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 
 		//# Fill source SED
 		int N= static_cast<int>(lgNu_list_sorted.size());
-		sed= new TGraphAsymmErrors(N);
 		
 		for(int k=0;k<N;k++){
-			sed->SetPoint(k,lgNu_list_sorted[k],lgFlux_list_sorted[k]);
-			sed->SetPointError(k,0,0,lgFluxErr_list_sorted[k],lgFluxErr_list_sorted[k]);
+			m_sourceComponentSED[i]->SetPoint(k,lgNu_list_sorted[k],lgFlux_list_sorted[k]);
+			m_sourceComponentSED[i]->SetPointError(k,0,0,lgFluxErr_list_sorted[k],lgFluxErr_list_sorted[k]);
 			#ifdef LOGGING_ENABLED
 				INFO_LOG("Source SED: P"<<k+1<<"("<<lgNu_list_sorted[k]<<","<<lgFlux_list_sorted[k]<<")");
 			#endif
 		}
-		m_sourceComponentSED.push_back(sed);
+		
 	
 
 		//# Find spectral index
-		SpectralIndexData spectralIndexData;
-		spectralIndexData.isMultiSourceMatchIndex= isMatchComponentFluxSummed;
+		m_componentSpectralIndexData[i].isMultiSourceMatchIndex= isMatchComponentFluxSummed;
 		if(N==2){
-			spectralIndexData.isSpectralIndexFit= false;
+			m_componentSpectralIndexData[i].isSpectralIndexFit= false;
 			double x1= 0; 
 			double x2= 0;	
 			double y1= 0;
 			double y2= 0;
-			sed->GetPoint(0,x1,y1);
-			sed->GetPoint(1,x2,y2);
-			spectralIndexData.spectralIndex= (y2-y1)/(x2-x1);
-			spectralIndexData.spectralIndexErr= 0;
-			spectralIndexData.spectralFitChi2= 0;
-			spectralIndexData.spectralFitNDF= 0;
-			spectralIndexData.hasSpectralIndex= true;
+			m_sourceComponentSED[i]->GetPoint(0,x1,y1);
+			m_sourceComponentSED[i]->GetPoint(1,x2,y2);
+			m_componentSpectralIndexData[i].spectralIndex= (y2-y1)/(x2-x1);
+			m_componentSpectralIndexData[i].spectralIndexErr= 0;
+			m_componentSpectralIndexData[i].spectralFitChi2= 0;
+			m_componentSpectralIndexData[i].spectralFitNDF= 0;
+			m_componentSpectralIndexData[i].hasSpectralIndex= true;
 		}
 		else{
-			spectralIndexData.isSpectralIndexFit= true;
-			TFitResultPtr fitRes= sed->Fit("pol1","S");
-			spectralIndexData.spectralFitChi2= fitRes->Chi2();
-			spectralIndexData.spectralFitNDF= fitRes->Ndf();
-			spectralIndexData.spectralIndex= fitRes->Value(1);
-			spectralIndexData.spectralIndexErr= fitRes->ParError(1);
+			m_componentSpectralIndexData[i].isSpectralIndexFit= true;
+			TFitResultPtr fitRes= m_sourceComponentSED[i]->Fit("pol1","S");
+			m_componentSpectralIndexData[i].spectralFitChi2= fitRes->Chi2();
+			m_componentSpectralIndexData[i].spectralFitNDF= fitRes->Ndf();
+			m_componentSpectralIndexData[i].spectralIndex= fitRes->Value(1);
+			m_componentSpectralIndexData[i].spectralIndexErr= fitRes->ParError(1);
 			int fitStatus= fitRes;
-			if(fitStatus==0) spectralIndexData.hasSpectralIndex= true;
+			if(fitStatus==0) m_componentSpectralIndexData[i].hasSpectralIndex= true;
 		}
 
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("Source "<<m_source->GetName()<<", component no. "<<i+1<<": hasSpectralIndex?"<<spectralIndexData.hasSpectralIndex<<", gamma="<<spectralIndexData.spectralIndex<<" +- "<<spectralIndexData.spectralIndexErr<<", chi2/ndf="<<spectralIndexData.spectralFitChi2<<"/"<<spectralIndexData.spectralFitNDF);
+			INFO_LOG("Source "<<m_source->GetName()<<", component no. "<<i+1<<": hasSpectralIndex?"<<m_componentSpectralIndexData[i].hasSpectralIndex<<", gamma="<<m_componentSpectralIndexData[i].spectralIndex<<" +- "<<m_componentSpectralIndexData[i].spectralIndexErr<<", chi2/ndf="<<m_componentSpectralIndexData[i].spectralFitChi2<<"/"<<m_componentSpectralIndexData[i].spectralFitNDF);
 		#endif
 
-		m_componentSpectralIndexData[i]= spectralIndexData;
-		
-
+	
 	}//end loop components
 	
 
@@ -872,21 +1091,42 @@ int SourceMatchData::DrawSED()
 	TString fluxText= "";
 	std::string fluxUnits= "mJy/beam";
 	if(beamArea>0) {
-		flux/= fluxDensity;
+		flux/= beamArea;
 		fluxUnits= "mJy";
 	}
 	fluxText= Form("%1.2f %s",flux,(fluxUnits).c_str());
 
+	//Get spectral index
+	TString sindexText= "";
+	if(m_spectralIndexData.hasSpectralIndex){
+		double gamma= m_spectralIndexData.spectralIndex;
+		double gammaErr= m_spectralIndexData.spectralIndexErr;
+		sindexText= Form("gamma=%1.2f#pm%1.2f",gamma,gammaErr);
+	}
+
+	//Get component spectral index
+	std::vector<TString> sindexTexts;
+	for(size_t i=0;i<m_componentSpectralIndexData.size();i++){
+		if(!m_componentSpectralIndexData[i].hasSpectralIndex) continue;
+		double gamma= m_componentSpectralIndexData[i].spectralIndex;
+		double gammaErr= m_componentSpectralIndexData[i].spectralIndexErr;
+		TString s= Form("gamma(comp%d)=%1.2f#pm%1.2f",(int)(i+1),gamma,gammaErr);
+		sindexTexts.push_back(s);
+	}
+
 	//Create canvas
+	gStyle->SetPadRightMargin(0.1);
+	gStyle->SetPadLeftMargin(0.15);
+
 	TString canvasName= Form("SEDPlot_%s",sname.c_str());
-	TCanvas* Plot= new TCanvas(canvasName,canvasName,800,800);
+	TCanvas* Plot= new TCanvas(canvasName,canvasName,700,700);
 	Plot->cd();
 
 	double step= 0.1;
 	double x_min= lgNu_min - fabs(step*(lgNu_min-lgNu_max));
-	double x_max= lgNu_min + fabs(step*(lgNu_min-lgNu_max));
+	double x_max= lgNu_max + fabs(step*(lgNu_min-lgNu_max));
 	double y_min= lgFlux_min - fabs(step*(lgFlux_min-lgFlux_max));
-	double y_max= lgFlux_min + fabs(step*(lgFlux_min-lgFlux_max));
+	double y_max= lgFlux_max + fabs(step*(lgFlux_min-lgFlux_max));
 
 	TH2D* PlotBkg= new TH2D("PlotBkg","",100,x_min,x_max,100,y_min,y_max);
 	PlotBkg->GetXaxis()->SetTitle("log_{10}(#nu/Hz)");
@@ -904,6 +1144,10 @@ int SourceMatchData::DrawSED()
 	TPaveText* sourceInfoText = new TPaveText(0.4,0.15,0.8,0.3,"NDC");
 	sourceInfoText->AddText(Form("Name: %s, Freq: %s",sname.c_str(),freq.Data()));
 	sourceInfoText->AddText(Form("C(%1.2f,%1.2f), S(mJy): %s",X0,Y0,fluxText.Data()));
+	if(sindexText!="") sourceInfoText->AddText(Form("%s",sindexText.Data()));
+	for(size_t i=0;i<sindexTexts.size();i++){
+		if(sindexTexts[i]!="") sourceInfoText->AddText(Form("%s",sindexTexts[i].Data()));
+	}
 	sourceInfoText->SetTextAlign(12);
 	sourceInfoText->SetTextSize(0.02);
 	sourceInfoText->SetTextFont(52);

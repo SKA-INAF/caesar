@@ -11,6 +11,8 @@ set(
 	Blob.h
 	Source.h
 	SourceCube.h
+	SourceGroup.h
+	SpectralIndexData.h
 	SourceMatchData.h
 	SourceFitter.h
 	SourceExporter.h
@@ -22,6 +24,8 @@ set(
 	${SRC_DIR}/Blob.cc
 	${SRC_DIR}/Source.cc
 	${SRC_DIR}/SourceCube.cc	
+	${SRC_DIR}/SourceGroup.cc
+	${SRC_DIR}/SpectralIndexData.cc
 	${SRC_DIR}/SourceMatchData.cc	
 	${SRC_DIR}/SourceFitter.cc
 	${SRC_DIR}/SourceExporter.cc
