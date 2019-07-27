@@ -114,43 +114,43 @@ SourceMatchData::~SourceMatchData()
 	//Delete source (if pointer is owned)
 	if(m_ownedSource){
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("Deleting source ...");
+			DEBUG_LOG("Deleting source ...");
 		#endif
 	
 		CodeUtils::DeletePtr<Source>(m_source);
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("done!");
+			DEBUG_LOG("done!");
 		#endif
 	}
 
 	//Delete source collection
 	if(m_ownedMatchedSources){
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("Deleting source match collection added ...");
+			DEBUG_LOG("Deleting source match collection added ...");
 		#endif
 		CodeUtils::DeletePtrCollection<SourceGroup>(m_matchedSources);
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("done!");
+			DEBUG_LOG("done!");
 		#endif
 	}
 	
 	
 	//Delete source SED graph
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Deleting source SED graph ...");
+		DEBUG_LOG("Deleting source SED graph ...");
 	#endif
 	CodeUtils::DeletePtr<TGraphAsymmErrors>(m_sourceSED);
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("done!");
+		DEBUG_LOG("done!");
 	#endif
 
 	//Delete source component SED collection
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Deleting source component SED graph added ...");
+		DEBUG_LOG("Deleting source component SED graph added ...");
 	#endif
 	CodeUtils::DeletePtrCollection<TGraphAsymmErrors>(m_sourceComponentSED);
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("done!");
+		DEBUG_LOG("done!");
 	#endif
 	
 }//close destructor
