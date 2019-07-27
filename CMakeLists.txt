@@ -80,6 +80,19 @@ elseif(COMPILER_SUPPORTS_CXX0X)
 else()
     message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
+
+
+# - ADD AddressSanitizer flags?
+include(sanitizers)
+#option(ENABLE_ADDRESS_SANITIZER "Enable AddressSanitizer for deep debug" OFF)
+#if (ENABLE_ADDRESS_SANITIZER)
+#	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
+#	set (CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
+#	set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
+#	#set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+#	#set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+#endif()
+
 message(STATUS "${CMAKE_CXX_COMPILER} compiler flags: ${CMAKE_CXX_FLAGS}")
 
 #-----------------------------------------------------------------------------------------------

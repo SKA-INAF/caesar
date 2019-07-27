@@ -253,6 +253,7 @@
 #pragma link C++ class Caesar::vector<SourceCube>+;
 #pragma link C++ class Caesar::vector<SourceCube*>+;
 
+// - Source match classes
 #pragma link C++ class Caesar::SourceMatchData+;
 #pragma link C++ class Caesar::vector<SourceMatchData>+;
 #pragma link C++ class Caesar::vector<SourceMatchData*>+;
@@ -268,7 +269,20 @@
 #pragma link C++ class Caesar::SpectralIndexData+;
 #pragma link C++ class Caesar::vector<SpectralIndexData>+;
 #pragma link C++ class Caesar::vector<SpectralIndexData*>+;
+#pragma link C++ class Caesar::SourceMatchPars+;
+#pragma link C++ class Caesar::vector<SourceMatchPars>+;
+#pragma link C++ class Caesar::vector<SourceMatchPars*>+;
+#pragma link C++ class Caesar::SourceComponentMatchPars+;
+#pragma link C++ class Caesar::vector<SourceComponentMatchPars>+;
+#pragma link C++ class Caesar::vector<SourceComponentMatchPars*>+;
+#pragma link C++ class Caesar::SourceMatchParsGroup+;
+#pragma link C++ class Caesar::vector<SourceMatchParsGroup>+;
+#pragma link C++ class Caesar::vector<SourceMatchParsGroup*>+;
+#pragma link C++ class Caesar::SourceComponentMatchParsGroup+;
+#pragma link C++ class Caesar::vector<SourceComponentMatchParsGroup>+;
+#pragma link C++ class Caesar::vector<SourceComponentMatchParsGroup*>+;
 
+// - Source export classes
 #pragma link C++ class Caesar::SourceExporter+;
 
 //slic generator
