@@ -186,6 +186,12 @@ class Contour : public TObject {
 		bool IsPointInsideContour(double x,double y);
 
 		/**
+		* \brief Apply offset to points and centroid
+		*/
+		int ApplyOffset(double offsetX,double offsetY);
+
+
+		/**
 		* \brief Get contour point x & y
 		*/
 		int GetPointXY(double& x, double& y,int i){
@@ -406,6 +412,7 @@ class Contour : public TObject {
   		return v;
 		}//close EllipseFitChi2()
 
+		
 
 	public:	
 		bool HasParameters;

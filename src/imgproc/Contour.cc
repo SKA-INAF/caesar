@@ -218,6 +218,29 @@ TGraph* Contour::GetGraph(bool addLastPoint){
 }//close Contour::GetGraph()
 
 
+
+int Contour::ApplyOffset(double offsetX,double offsetY)
+{
+	//Loop over points and apply offset	
+	for(size_t i=0;i<m_Points.size();i++)
+	{
+		double x= m_Points[i].X();
+		double y= m_Points[i].Y();
+		m_Points[i].SetX(x+offsetX);	
+		m_Points[i].SetY(y+offsetY);	
+	}
+	
+	//Apply offset to centroid
+	double Cx= Centroid.X();
+	double Cy= Centroid.Y();
+	Centroid.SetX(Cx+offsetX);
+	Centroid.SetY(Cy+offsetY);
+
+	return 0;
+
+}//close ApplyOffset()
+
+
 TPolyLine* Contour::GetBoundingBoxLine()
 {
 	if(!HasPoints() || !HasParameters){
