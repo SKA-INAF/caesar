@@ -88,8 +88,8 @@ Pixel::Pixel(const Pixel& pixel) : TObject(pixel)
 }
 
 
-void Pixel::Copy(TObject &obj) const {
-
+void Pixel::Copy(TObject &obj) const 
+{
 	//Copy object
 	TObject::Copy((Pixel&)obj);
 
