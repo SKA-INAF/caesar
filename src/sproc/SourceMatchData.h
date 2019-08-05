@@ -603,7 +603,7 @@ class SourceMatchData : public TObject {
 		*/
 		int ComputeSourceComponentSEDs();
 		/**
-		* \brief Compute source SED and spectral index
+		* \brief Get source spectral index
 		*/
 		double GetSpectralIndex(){return m_spectralIndexData.spectralIndex;}
 		/**
@@ -616,6 +616,11 @@ class SourceMatchData : public TObject {
 		double IsMultiMatchSpectralIndex(){return m_spectralIndexData.isMultiSourceMatchIndex;}
 
 		/**
+		* \brief Get component spectral index
+		*/
+		std::vector<SpectralIndexData>& GetSourceComponentSpectralIndexData(){return m_componentSpectralIndexData;}
+
+		/**
 		* \brief Get source
 		*/
 		Source* GetSource(){return m_source;}
@@ -625,6 +630,25 @@ class SourceMatchData : public TObject {
 		std::string GetSourceName(){
 			if(!m_source) return std::string("");			
 			return m_source->GetName();	
+		}
+		/**
+		* \brief Get source flux
+		*/
+		double GetSourceFlux(){
+			if(!m_source) return -999;
+			if(!m_source->HasFitInfo()) return -999;
+			SourceFitPars fitPars= m_source->GetFitPars();
+			double beamArea= m_source->GetBeamFluxIntegral();
+			double fluxDensity= 0;
+			if(m_source->GetFluxDensity(fluxDensity)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to get source flux density!");
+				#endif
+				return -999;
+			}
+			double flux= fluxDensity;	
+			if(beamArea>0) flux/= beamArea;
+			return flux;
 		}
 
 		
@@ -652,6 +676,21 @@ class SourceMatchData : public TObject {
 		* \brief Get matched sources per catalog
 		*/
 		int GetMatchedSourcesPerCatalog(std::vector<Source*>& sources,int catalogIndex);
+
+		/**
+		* \brief Get matched source pars
+		*/
+		std::vector<SourceMatchParsGroup>& GetSourceMatchParsGroup(){return m_sourceMatchPars;}
+
+		/**
+		* \brief Get matched source component pars
+		*/
+		std::vector<std::vector<SourceComponentMatchParsGroup>>& GetSourceComponentMatchParsGroup(){return m_sourceComponentMatchPars;}
+
+		/**
+		* \brief Get matched source component indexes
+		*/
+		std::vector<std::vector<ComponentMatchIndexGroup>>& GetSourceComponentMatchIndexGroup(){return m_componentMatchIndexes;}
 
 		/**
 		* \brief Draw SED

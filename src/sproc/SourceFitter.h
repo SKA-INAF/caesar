@@ -1316,6 +1316,15 @@ class SourceComponentPars : public TObject {
 			return fluxDensity;
 		}
 
+		/**
+		* \brief Get position centroid
+		*/
+		void GetPosition(double& xpos,double& ypos)
+		{
+			xpos= FitPars["x0"];
+			ypos= FitPars["y0"];
+		}
+
 	private:
 
 		/**
@@ -1729,6 +1738,23 @@ class SourceFitPars : public TObject {
 			//Recompute nComponents
 			nComponents= static_cast<int>(pars.size());
 
+			return 0;
+		}
+
+		/**
+		* \brief Get component position
+		*/
+		int GetComponentPosition(double& xpos,double& ypos,int componentId)
+		{
+			xpos= 0;
+			ypos= 0;
+			if(componentId<0 || componentId>=nComponents) {
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist, returning zero pos!");
+				#endif
+				return -1;
+			}
+			pars[componentId].GetPosition(xpos,ypos);
 			return 0;
 		}
 

@@ -122,7 +122,8 @@ class DS9Region : public TObject
 		/**
 		* \brief Parametric constructor
 		*/
-		DS9Region(int shape=eUNKNOWN_SHAPE,int cs=eUNKNOWN_CS);
+		//DS9Region(int shape=eUNKNOWN_SHAPE,int cs=eUNKNOWN_CS);
+		DS9Region(int shape,int cs);
 		/**
 		* \brief Destructor
 		*/
