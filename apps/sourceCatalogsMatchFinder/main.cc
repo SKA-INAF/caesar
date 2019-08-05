@@ -1674,7 +1674,6 @@ bool HaveSourceComponentMatch(SourceComponentMatchPars& scompmatchpars,Component
 
 	//## Check flux rel difference (if requested)	
 	if(matchSourcesByFlux){
-		
 		if( fabs(fluxRelDiff)>matchFluxRelDiffThr ) return false;
 	}
 
@@ -2038,7 +2037,7 @@ int ReadSourceData(std::string filename,int catalogIndex)
 		//Copy source
 		Source* source= new Source;
 		*source= *aSource;
-		//Source* source= aSource;		
+
 
 		//Compute wcs for this source collection if not done
 		if(!wcs){
