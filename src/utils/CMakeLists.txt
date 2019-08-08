@@ -24,6 +24,8 @@ set(THIS_SRCS ${THIS_SRCS}
 	${SRC_DIR}/WCSUtils.cc
 	${SRC_DIR}/DS9Region.cc
 	${SRC_DIR}/DS9RegionParser.cc
+	${SRC_DIR}/AstroObject.cc
+	${SRC_DIR}/AstroObjectParser.cc
 ) 
 
 
@@ -48,6 +50,8 @@ set(THIS_HEADERS ${THIS_HEADERS}
 	${INC_DIR}/WCSUtils.h
 	${INC_DIR}/DS9Region.h
 	${INC_DIR}/DS9RegionParser.h
+	${INC_DIR}/AstroObject.h
+	${INC_DIR}/AstroObjectParser.h
 )
 
 
@@ -71,6 +75,8 @@ set(THIS_DICT_HEADERS ${THIS_DICT_HEADERS}
 	WCSUtils.h
 	DS9Region.h
 	DS9RegionParser.h
+	AstroObject.h
+	AstroObjectParser.h
 )
 
 set(THIS_DICT_SRCS ${THIS_DICT_SRCS} 
@@ -93,6 +99,8 @@ set(THIS_DICT_SRCS ${THIS_DICT_SRCS}
 	${SRC_DIR}/WCSUtils.cc
 	${SRC_DIR}/DS9Region.cc
 	${SRC_DIR}/DS9RegionParser.cc
+	${SRC_DIR}/AstroObject.cc
+	${SRC_DIR}/AstroObjectParser.cc
 ) 
 
 if (ENABLE_LOGGING)

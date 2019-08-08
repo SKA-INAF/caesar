@@ -124,6 +124,7 @@ enum SourceFlag {
 	eFake=3
 };
 
+
 /**
 * \brief Convert source flag enumeration to string
 */
@@ -342,6 +343,79 @@ enum CutType {
 	eSINGLE_BOUND_CUT=3
 };
 
+
+
+enum AstroObjectType 
+{
+	//Major categories
+	eUNKNOWN_OBJECT=0,
+	eSTAR=1,
+	eGALAXY=2,
+	ePN=3,
+	eSNR=4,
+	eBUBBLE=5,
+	eHII=6,
+	eMOLECULAR_CLOUD=7,
+	eGALAXY_CLUSTER=8,
+	eGALAXY_GROUP=9,
+	eGALAXY_SUPERCLUSTER=10,
+	eGLOBULAR_CLUSTER=11,
+	ePLANET=12,
+	eSTAR_CLUSTER=13,
+	eX_BINARY=14,
+	eNEBULA=15,
+	eSTAR_FORMING_REGION=16,
+	eCLOUD=17,
+	
+	//Generic unclassified objects by wavelength
+	eRADIO_OBJ=100,
+	eIR_OBJ=200,
+	eX_OBJ=300,
+	eUV_OBJ=400,
+	eGAMMA_OBJ=500,
+
+	//Stars sub-types
+	eSTAR_IN_CLUSTER=1001,
+	eSTAR_IN_NEBULA=1002,
+	eSTAR_IN_ASSOCIATION=1003,
+	eSTAR_IN_DOUBLE_SYSTEM=1004,
+	eSTAR_VARIABLE=1005,
+	eSTAR_PECULIAR=1006,
+	eSTAR_HB=1007,
+	eSTAR_YSO=1008,
+	eSTAR_HERBIG=1009,
+	eSTAR_EMISS_LINE=1010,
+	eSTAR_BE=1011,
+	eSTAR_BS=1012,
+	eSTAR_RG=1013,
+	eSTAR_AB=1014,
+	eSTAR_C=1015,
+	eSTAR_S=1016,
+	eSTAR_ESG=1017,
+	eSTAR_RSG=1018,
+	eSTAR_YSG=1019,
+	eSTAR_BSG=1020,
+	eSTAR_HSD=1021,
+	eSTAR_PAGB=1022,
+	eSTAR_WD=1023,
+	eSTAR_PWD=1024,
+	eSTAR_LM=1025,
+	eSTAR_BD=1026,
+	eSTAR_NEUTRON=1027,
+	eSTAR_OH=1028,
+	eSTAR_CH=1029,
+	eSTAR_PMS=1030,
+	eSTAR_TTAU=1031,
+	eSTAR_WR=1032,
+	eSTAR_PM=1033,
+	eSTAR_HV=1034,
+	eSTAR_FLARE=1035,
+	eSTAR_PULSAR=1036,
+	eSTAR_SUPERNOVA=1037,
+	eSTAR_SUBSTELLAR=1038,
+	
+};//close AstroObjectType enum codes
+
 #ifdef __MAKECINT__
 #pragma link C++ enum WCSType+;
 #pragma link C++ enum ImgFilters+;
@@ -360,6 +434,7 @@ enum CutType {
 #pragma link C++ enum MorphOperation+;
 #pragma link C++ enum ContourOverlapFlag+;
 #pragma link C++ enum FitMinimizer+;
+#pragma link C++ enum AstroObjectType+;
 #endif
 
 //====================================
