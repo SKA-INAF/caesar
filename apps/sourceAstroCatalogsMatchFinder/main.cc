@@ -973,7 +973,9 @@ int FindSourceMatchesInTiles()
 			nMatchedSourceComponentCatalogMultiplicity[multiplicity]++;
 	
 			//Fill Tree
-			matchedSourceInfo->Fill();
+			if(nMatchedObjects>0){
+				matchedSourceInfo->Fill();
+			}
 
 		}//end (j index) loop component pars in this tile
 

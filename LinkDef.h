@@ -231,16 +231,16 @@
 #pragma link C++ class map<int,Caesar::Pixel*>+;
 
 #pragma link C++ class Caesar::Region+;
-#pragma link C++ class Caesar::vector<Region>+;
-#pragma link C++ class Caesar::vector<Region*>+;
+#pragma link C++ class vector<Caesar::Region>+;
+#pragma link C++ class vector<Caesar::Region*>+;
 #pragma link C++ class Caesar::RegionCollection+;
 
 #pragma link C++ class Caesar::Blob+;
-#pragma link C++ class Caesar::vector<Blob>+;
-#pragma link C++ class Caesar::vector<Blob*>+;
+#pragma link C++ class vector<Caesar::Blob>+;
+#pragma link C++ class vector<Caesar::Blob*>+;
 #pragma link C++ class Caesar::Source+;
-#pragma link C++ class Caesar::vector<Source>+;
-#pragma link C++ class Caesar::vector<Source*>+;
+#pragma link C++ class vector<Caesar::Source>+;
+#pragma link C++ class vector<Caesar::Source*>+;
 #pragma link C++ enum Caesar::Source::SourceType+;
 #pragma link C++ enum Caesar::Source::SourceFlag+;
 #pragma link C++ enum Caesar::Source::SimSourceType+;
@@ -250,37 +250,37 @@
 #pragma link C++ struct ContourPointMatcher+;
 
 #pragma link C++ class Caesar::SourceCube+;
-#pragma link C++ class Caesar::vector<SourceCube>+;
-#pragma link C++ class Caesar::vector<SourceCube*>+;
+#pragma link C++ class vector<Caesar::SourceCube>+;
+#pragma link C++ class vector<Caesar::SourceCube*>+;
 
 // - Source match classes
 #pragma link C++ class Caesar::SourceMatchData+;
-#pragma link C++ class Caesar::vector<SourceMatchData>+;
-#pragma link C++ class Caesar::vector<SourceMatchData*>+;
+#pragma link C++ class vector<Caesar::SourceMatchData>+;
+#pragma link C++ class vector<Caesar::SourceMatchData*>+;
 #pragma link C++ class Caesar::SourceGroup+;
-#pragma link C++ class Caesar::vector<SourceGroup>+;
-#pragma link C++ class Caesar::vector<SourceGroup*>+;
+#pragma link C++ class vector<Caesar::SourceGroup>+;
+#pragma link C++ class vector<Caesar::SourceGroup*>+;
 #pragma link C++ class Caesar::ComponentMatchIndex+;
-#pragma link C++ class Caesar::vector<ComponentMatchIndex>+;
-#pragma link C++ class Caesar::vector<ComponentMatchIndex*>+;
+#pragma link C++ class vector<Caesar::ComponentMatchIndex>+;
+#pragma link C++ class vector<Caesar::ComponentMatchIndex*>+;
 #pragma link C++ class Caesar::ComponentMatchIndexGroup+;
-#pragma link C++ class Caesar::vector<ComponentMatchIndexGroup>+;
-#pragma link C++ class Caesar::vector<ComponentMatchIndexGroup*>+;
+#pragma link C++ class vector<Caesar::ComponentMatchIndexGroup>+;
+#pragma link C++ class vector<Caesar::ComponentMatchIndexGroup*>+;
 #pragma link C++ class Caesar::SpectralIndexData+;
-#pragma link C++ class Caesar::vector<SpectralIndexData>+;
-#pragma link C++ class Caesar::vector<SpectralIndexData*>+;
+#pragma link C++ class vector<Caesar::SpectralIndexData>+;
+#pragma link C++ class vector<Caesar::SpectralIndexData*>+;
 #pragma link C++ class Caesar::SourceMatchPars+;
-#pragma link C++ class Caesar::vector<SourceMatchPars>+;
-#pragma link C++ class Caesar::vector<SourceMatchPars*>+;
+#pragma link C++ class vector<Caesar::SourceMatchPars>+;
+#pragma link C++ class vector<Caesar::SourceMatchPars*>+;
 #pragma link C++ class Caesar::SourceComponentMatchPars+;
-#pragma link C++ class Caesar::vector<SourceComponentMatchPars>+;
-#pragma link C++ class Caesar::vector<SourceComponentMatchPars*>+;
+#pragma link C++ class vector<Caesar::SourceComponentMatchPars>+;
+#pragma link C++ class vector<Caesar::SourceComponentMatchPars*>+;
 #pragma link C++ class Caesar::SourceMatchParsGroup+;
-#pragma link C++ class Caesar::vector<SourceMatchParsGroup>+;
-#pragma link C++ class Caesar::vector<SourceMatchParsGroup*>+;
+#pragma link C++ class vector<Caesar::SourceMatchParsGroup>+;
+#pragma link C++ class vector<Caesar::SourceMatchParsGroup*>+;
 #pragma link C++ class Caesar::SourceComponentMatchParsGroup+;
-#pragma link C++ class Caesar::vector<SourceComponentMatchParsGroup>+;
-#pragma link C++ class Caesar::vector<SourceComponentMatchParsGroup*>+;
+#pragma link C++ class vector<Caesar::SourceComponentMatchParsGroup>+;
+#pragma link C++ class vector<Caesar::SourceComponentMatchParsGroup*>+;
 
 // - Source export classes
 #pragma link C++ class Caesar::SourceExporter+;
@@ -328,28 +328,29 @@
 #pragma link C++ class Caesar::DS9RegionParser+;
 #pragma link C++ class Caesar::DS9RegionMetaData+;
 #pragma link C++ class Caesar::DS9Region+;
-#pragma link C++ class Caesar::vector<DS9Region>+;
-#pragma link C++ class Caesar::vector<DS9Region*>+;
+#pragma link C++ class vector<Caesar::DS9Region>+;
+#pragma link C++ class vector<Caesar::DS9Region*>+;
 #pragma link C++ class Caesar::DS9PolygonRegion+;
-#pragma link C++ class Caesar::vector<DS9PolygonRegion>+;
-#pragma link C++ class Caesar::vector<DS9PolygonRegion*>+;
+#pragma link C++ class vector<Caesar::DS9PolygonRegion>+;
+#pragma link C++ class vector<Caesar::DS9PolygonRegion*>+;
 #pragma link C++ class Caesar::DS9BoxRegion+;
-#pragma link C++ class Caesar::vector<DS9BoxRegion>+;
-#pragma link C++ class Caesar::vector<DS9BoxRegion*>+;
+#pragma link C++ class vector<DS9BoxRegion>+;
+#pragma link C++ class vector<DS9BoxRegion*>+;
 #pragma link C++ class Caesar::DS9CircleRegion+;
-#pragma link C++ class Caesar::vector<DS9CircleRegion>+;
-#pragma link C++ class Caesar::vector<DS9CircleRegion*>+;
+#pragma link C++ class vector<Caesar::DS9CircleRegion>+;
+#pragma link C++ class vector<Caesar::DS9CircleRegion*>+;
 #pragma link C++ class Caesar::DS9EllipseRegion+;
-#pragma link C++ class Caesar::vector<DS9EllipseRegion>+;
-#pragma link C++ class Caesar::vector<DS9EllipseRegion*>+;
+#pragma link C++ class vector<Caesar::DS9EllipseRegion>+;
+#pragma link C++ class vector<Caesar::DS9EllipseRegion*>+;
 
 //AstroObject
 #pragma link C++ class Caesar::AstroObject+;
-#pragma link C++ class Caesar::vector<AstroObject>+;
-#pragma link C++ class Caesar::vector<AstroObject*>+;
+#pragma link C++ class Caesar::AstroObject*+;
+#pragma link C++ class vector<Caesar::AstroObject>+;
+#pragma link C++ class vector<Caesar::AstroObject*>+;
 #pragma link C++ class Caesar::AstroObjectParser+;
-#pragma link C++ class Caesar::vector<AstroObjectParser>+;
-#pragma link C++ class Caesar::vector<AstroObjectParser*>+;
+#pragma link C++ class vector<Caesar::AstroObjectParser>+;
+#pragma link C++ class vector<Caesar::AstroObjectParser*>+;
 
 //== CUT PARSER ==
 #pragma link C++ class Caesar::Cut+;
