@@ -343,6 +343,13 @@
 #pragma link C++ class Caesar::vector<DS9EllipseRegion>+;
 #pragma link C++ class Caesar::vector<DS9EllipseRegion*>+;
 
+//AstroObject
+#pragma link C++ class Caesar::AstroObject+;
+#pragma link C++ class Caesar::vector<AstroObject>+;
+#pragma link C++ class Caesar::vector<AstroObject*>+;
+#pragma link C++ class Caesar::AstroObjectParser+;
+#pragma link C++ class Caesar::vector<AstroObjectParser>+;
+#pragma link C++ class Caesar::vector<AstroObjectParser*>+;
 
 //== CUT PARSER ==
 #pragma link C++ class Caesar::Cut+;
