@@ -705,6 +705,592 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 }//close SourceComponentsToAscii()
 
 
+
+
+
+//=================================================
+//==        JSON EXPORTER
+//=================================================
+int SourceExporter::WriteToJson(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
+{
+	//Open output file
+	FILE* fout= fopen(filename.c_str(),"w");
+
+	
+	//Loop sources
+	bool deleteWCS= false;
+	Json::Value root;
+	std::vector<Json::Value> jsonValues;
+
+	for(size_t k=0;k<sources.size();k++){
+		//If wcs is not given, retrieve it from metadata
+		if(!wcs){
+			ImgMetaData* metadata= sources[k]->GetImageMetaData();
+			if(!metadata){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No metadata are available to retrieve WCS!");
+				#endif
+				return -1;
+			}
+			wcs= metadata->GetWCS(wcsType);
+			if(!wcs){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to get WCS from metadata!");
+				#endif
+				return -1;
+			}
+			deleteWCS= true;
+		}
+
+		//Get source in json format
+		SourceToJson(jsonValues,sources[k],dumpNestedSourceInfo,wcsType,wcs);
+		
+	}//end loop sources
+
+	for(size_t j=0;j<jsonValues.size();j++){
+		root["sources"].append(jsonValues[j]);
+	}
+
+	//Get string from json
+	std::string jsonString= "";
+	bool minimizeJson= false;
+	if(CodeUtils::JsonToString(jsonString,root,minimizeJson)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to convert json object to string!");
+		#endif
+		return -1;
+	}
+
+
+	//Write to file
+	fprintf(fout,"%s",jsonString.c_str());
+
+	//Delete WCS
+	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
+
+	//Close file
+	fclose(fout);
+
+	return 0;
+
+}//close WriteToJson()
+
+int SourceExporter::SourceToJson(std::vector<Json::Value>& jsonValues,Source* source,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
+{
+	//Check source
+	if(!source){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null input source ptr given!");
+		#endif
+		return -1;
+	}
+
+	//Get metadata
+	ImgMetaData* metadata= source->GetImageMetaData();
+		
+	//If wcs is not given, retrieve it from metadata
+	bool deleteWCS= false;
+	if(!wcs){
+		if(metadata){
+			wcs= metadata->GetWCS(wcsType);
+			if(wcs) deleteWCS= true;
+			else {
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to get WCS from metadata!");
+				#endif
+			}
+		}
+		else {
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("No metadata are available to retrieve WCS!");
+			#endif
+		}		
+	}
+	
+	//Compute IAU name
+	std::string name= source->GetName();
+	bool useWeightedPos= false;
+	std::string iauName= name;
+	if(wcs) iauName= source->GetIAUName(useWeightedPos,wcs,wcsType);
+
+	//Compute WCS centroid
+	double X0_wcs= 0;
+	double Y0_wcs= 0;
+	double X0_weighted_wcs= 0;
+	double Y0_weighted_wcs= 0;
+	if(wcs){
+		source->GetWCSPos(X0_wcs,Y0_wcs,wcs,wcsType);
+		source->GetWCSWeightedPos(X0_weighted_wcs,Y0_weighted_wcs,wcs,wcsType);
+	}
+
+	//Get spectral axis info
+	double Nu= -999;
+	double dNu= -999;
+	std::string units= "";
+	source->GetSpectralAxisInfo(Nu,dNu,units);
+	CodeUtils::StripBlankSpaces(units);
+	if(metadata && units=="Hz") {//convert to GHz
+		Nu/= 1.e+9;
+		dNu/= 1.e+9;
+	}
+	
+	double fluxDensity= 0;
+	double fluxDensityErr= 0;
+	if(source->HasFitInfo()){
+		source->GetFluxDensity(fluxDensity);
+		source->GetFluxDensityErr(fluxDensityErr);
+	}
+
+	//Get WCS bounding box
+	float xmin, xmax, ymin, ymax;
+	source->GetSourceRange(xmin,xmax,ymin,ymax);
+	
+	double xmin_wcs, xmax_wcs, ymin_wcs, ymax_wcs;
+	source->GetWCSSourceRange(xmin_wcs,xmax_wcs,ymin_wcs,ymax_wcs,wcs,wcsType);
+		
+	//## Set fields
+	Json::Value json;
+
+	//- Source name
+	json["name"]= name;
+	json["iauName"]= iauName;
+	
+	//- Number of pixels
+	json["nPix"]= source->NPix;
+	
+	//- Number of sub-components
+	json["nComponents"]= source->GetNSelFitComponents();
+	json["nNestedSources"]= source->GetNestedSourceNumber();
+	
+	//- Pixel centroids
+	json["X0"]= source->X0;
+	json["Y0"]= source->Y0;
+	json["X0w"]= source->GetSx();
+	json["Y0w"]= source->GetSy();
+	json["X0_wcs"]= X0_wcs;
+	json["Y0_wcs"]= Y0_wcs;
+	json["X0w_wcs"]= X0_weighted_wcs;
+	json["Y0w_wcs"]= Y0_weighted_wcs;
+
+	//- Bounding box
+	json["Xmin"]= xmin;
+	json["Xmax"]= xmax;
+	json["Ymin"]= ymin;
+	json["Ymax"]= ymax;
+
+	json["Xmin_wcs"]= xmin_wcs;
+	json["Xmax_wcs"]= xmax_wcs;
+	json["Ymin_wcs"]= ymin_wcs;
+	json["Ymax_wcs"]= ymax_wcs;
+
+	//- Frequency
+	json["nu"]= Nu;
+	
+	//- Flux 
+	json["S"]= source->GetS();
+	json["Smax"]= source->GetSmax();
+	json["fluxDensity"]= fluxDensity;
+	json["fluxDensityErr"]= fluxDensityErr;
+	json["beamArea"]= source->GetBeamFluxIntegral();
+
+	//Bkg/noise estimators
+	json["bkgSum"]= source->GetBkgSum();
+	json["bkgRMSSum"]= source->GetBkgRMSSum();
+	
+	//- Source flags
+	json["type"]= source->Type;
+	json["flag"]= source->Flag;
+	json["isGoodSource"]= source->IsGoodSource();
+	json["depthLevel"]= source->GetDepthLevel();
+	
+	jsonValues.push_back(json);
+	
+	//Store nested sources
+	bool hasNestedSources= source->HasNestedSources();
+	if(hasNestedSources && dumpNestedSourceInfo){
+		std::vector<Source*> nestedSources= source->GetNestedSources();
+		for(size_t k=0;k<nestedSources.size();k++)
+		{
+			SourceToJson(jsonValues,nestedSources[k],dumpNestedSourceInfo,wcsType,wcs);
+		}
+	}//close if has nested sources 
+		
+	//Append object
+	//root["sources"].append(json);
+
+
+	//Delete WCS
+	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
+
+	
+	return 0;
+
+}//close SourceToJson()
+
+int SourceExporter::WriteComponentsToJson(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
+{
+	//Open output file
+	FILE* fout= fopen(filename.c_str(),"w");
+
+	//Loop sources
+	bool deleteWCS= false;
+	Json::Value root;
+	std::vector<Json::Value> jsonValues;
+
+	for(size_t k=0;k<sources.size();k++){
+		//If wcs is not given, retrieve it from metadata
+		if(!wcs){
+			ImgMetaData* metadata= sources[k]->GetImageMetaData();
+			if(!metadata){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("No metadata are available to retrieve WCS!");
+				#endif
+				return -1;
+			}
+			//wcs= metadata->GetWorldCoord(wcsType);
+			wcs= metadata->GetWCS(wcsType);
+			if(!wcs){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to get WCS from metadata!");
+				#endif
+				return -1;
+			}
+			deleteWCS= true;
+		}
+
+		//Print source info to ascii
+		SourceComponentsToJson(jsonValues,sources[k],dumpNestedSourceInfo,wcsType,wcs);
+		
+		
+	}//end loop sources
+
+	for(size_t j=0;j<jsonValues.size();j++){
+		root["components"].append(jsonValues[j]);
+	}
+
+	//Get string from json
+	std::string jsonString= "";
+	bool minimizeJson= false;
+	if(CodeUtils::JsonToString(jsonString,root,minimizeJson)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to convert json object to string!");
+		#endif
+		return -1;
+	}
+
+
+	//Write to file
+	fprintf(fout,"%s",jsonString.c_str());
+
+	//Delete WCS
+	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
+
+	//Close file
+	fclose(fout);
+
+	return 0;
+
+}//close WriteComponentsToJson)
+
+int SourceExporter::SourceComponentsToJson(std::vector<Json::Value>& jsonValues,Source* source,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
+{
+	//Check source
+	if(!source){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Null input source ptr given!");
+		#endif
+		return -1;
+	}
+
+	//Get metadata
+	ImgMetaData* metadata= source->GetImageMetaData();
+		
+	//If wcs is not given, retrieve it from metadata
+	bool deleteWCS= false;
+	if(!wcs){
+		if(metadata){
+			wcs= metadata->GetWCS(wcsType);
+			if(wcs) deleteWCS= true;
+			else {
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to get WCS from metadata!");
+				#endif
+			}
+		}
+		else {	
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("No metadata are available to retrieve WCS!");
+			#endif
+		}		
+	}
+
+
+	//Check if fit info are available
+	bool hasFitInfo= source->HasFitInfo();
+	if(hasFitInfo){
+		//Retrieve fit pars
+		SourceFitPars fitPars= source->GetFitPars();
+		int nComponents= fitPars.GetNComponents();
+	
+		//Get spectral axis info
+		double Nu= -999;
+		double dNu= -999;
+		std::string units= "";
+		source->GetSpectralAxisInfo(Nu,dNu,units);
+		CodeUtils::StripBlankSpaces(units);
+		if(metadata && units=="Hz") {//convert to GHz
+			Nu/= 1.e+9;
+			dNu/= 1.e+9;
+		}
+
+		//Get total flux density
+		double fluxDensityTot= 0;
+		double fluxDensityTot_err= 0;
+		source->GetFluxDensity(fluxDensityTot);
+		source->GetFluxDensityErr(fluxDensityTot_err);
+	
+	
+		//Loop over fit components
+		for(int k=0;k<nComponents;k++)
+		{
+			//Skip component if not selected
+			bool isSelected= fitPars.IsSelectedComponent(k);
+			if(!isSelected) continue;
+
+			//Get component fit pars
+			//- Amplitude
+			double A= fitPars.GetParValue(k,"A");
+			double A_err= fitPars.GetParError(k,"A");
+
+			//- Flux density
+			double fluxDensity= fitPars.GetComponentFluxDensity(k);
+			double fluxDensity_err= fitPars.GetComponentFluxDensityErr(k);
+
+			//- Fit ellipse pars
+			double x0= 0;
+			double y0= 0;
+			double bmaj= 0;
+			double bmin= 0;
+			double pa= 0;
+			if(fitPars.GetComponentFitEllipsePars(k,x0,y0,bmaj,bmin,pa)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
+			}
+		
+			double x0_err= 0;
+			double y0_err= 0;
+			double bmaj_err= 0;
+			double bmin_err= 0;
+			double pa_err= 0;
+			if(fitPars.GetComponentFitEllipseParErrors(k,x0_err,y0_err,bmaj_err,bmin_err,pa_err)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve ellipse par errors for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
+			}
+
+			//- Fit ellipse eccentricity, area & rot angle vs beam
+			double E= fitPars.GetComponentFitEllipseEccentricity(k);
+			double Area= fitPars.GetComponentFitEllipseArea(k);
+			double RotAngle= fitPars.GetComponentFitEllipseRotAngleVSBeam(k);
+
+			//- WCS fit ellipse pars
+			double x0_wcs= 0;
+			double y0_wcs= 0;
+			double bmaj_wcs= 0;
+			double bmin_wcs= 0;
+			double pa_wcs= 0;
+			if(fitPars.GetComponentFitWCSEllipsePars(k,x0_wcs,y0_wcs,bmaj_wcs,bmin_wcs,pa_wcs)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve WCS ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
+			}
+			
+			double x0_wcs_err= 0;
+			double y0_wcs_err= 0;
+			double bmaj_wcs_err= 0;
+			double bmin_wcs_err= 0;
+			double pa_wcs_err= 0;
+			if(fitPars.GetComponentFitWCSEllipseParErrors(k,x0_wcs_err,y0_wcs_err,bmaj_wcs_err,bmin_wcs_err,pa_wcs_err)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve WCS ellipse par errors for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
+			}
+
+			//- Beam ellipse pars
+			double bmaj_beam= 0;
+			double bmin_beam= 0;
+			double pa_beam= 0;
+			if(fitPars.GetComponentBeamEllipsePars(k,bmaj_beam,bmin_beam,pa_beam)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve beam ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
+			}
+
+			//- Beam eccentricity & area
+			double E_beam= fitPars.GetComponentBeamEllipseEccentricity(k);
+			double Area_beam= fitPars.GetComponentBeamEllipseArea(k);
+
+			//- Ratio between fit ellipse pars & beam ellipse pars
+			double EccentricityRatio= 0;
+			if(E_beam!=0) EccentricityRatio= E/E_beam;
+			
+			double AreaRatio= 0;
+			if(Area_beam!=0) AreaRatio= Area/Area_beam;
+
+			//- WCS beam-deconvolved ellipse pars
+			double bmaj_deconv_wcs= 0;
+			double bmin_deconv_wcs= 0;
+			double pa_deconv_wcs= 0;
+			if(fitPars.GetComponentFitWCSDeconvolvedEllipsePars(k,bmaj_deconv_wcs,bmin_deconv_wcs,pa_deconv_wcs)<0){
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Failed to retrieve WCS beam-deconvolved ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+				#endif
+			}
+
+			//Compute IAU name
+			std::stringstream ssname;
+			ssname<<source->GetName()<<"_fitcomp"<<k+1;
+			std::string iau_default= ssname.str();		
+			std::string iau= iau_default;
+			if(wcs){
+				std::string wcspos_str= "";
+				AstroUtils::PixelToWCSStrCoords(wcspos_str,wcs,x0,y0);	
+				int status= AstroUtils::GetIAUCoords(iau,wcspos_str);
+				if(status<0){
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Failed to compute IAU name for component no. "<<k+1<<", assume default name "<<iau_default<<" ...");
+					#endif
+					iau= iau_default;		
+				}
+			}
+
+			
+			//Get component flag
+			int componentFlag= -1;
+			if(fitPars.GetComponentFlag(componentFlag,k)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve flag for component no. "<<k+1<<"!");
+				#endif
+			}
+
+			//Get component type
+			int componentType= -1;
+			if(fitPars.GetComponentType(componentType,k)<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Failed to retrieve type for component no. "<<k+1<<"!");
+				#endif
+			}
+	
+			//## Fill source component
+			Json::Value json;
+
+			//- Mother source name & npix
+			json["name"]= source->GetName();
+			json["nPix"]= source->NPix;
+			
+			//- Component id
+			json["componentId"]= k+1;
+			
+			//- Component IAU name
+			json["iauName"]= iau;
+				
+			//- Position in pixel coordinates
+			json["x0"]= x0;
+			json["y0"]= y0;
+			json["x0Err"]= x0_err;
+			json["y0Err"]= y0_err;
+
+			//- Position in WCS coordinates
+			json["x0_wcs"]= x0_wcs;
+			json["y0_wcs"]= y0_wcs;
+			json["x0Err_wcs"]= x0_wcs_err;
+			json["y0Err_wcs"]= y0_wcs_err;
+
+
+			//- Frequency
+			json["nu"]= Nu;
+		
+			//- Flux amplitude & density
+			json["A"]= A;
+			json["Aerr"]= A_err;
+			json["fluxDensity"]= fluxDensity;
+			json["fluxDensityErr"]= fluxDensity_err;
+			json["fluxDensityTot"]= fluxDensityTot;
+			json["fluxDensityTotErr"]= fluxDensityTot_err;
+			json["beamArea"]= source->GetBeamFluxIntegral();
+	
+			//- Ellipse pars in pixel coordinates
+			json["bmaj"]= bmaj;
+			json["bmin"]= bmin;
+			json["pa"]= pa;
+			json["bmajErr"]= bmaj_err;
+			json["bminErr"]= bmin_err;
+			json["paErr"]= pa_err;
+					
+			//- Ellipse pars in WCS coordinates
+			json["bmaj_wcs"]= bmaj_wcs;
+			json["bmin_wcs"]= bmin_wcs;
+			json["pa_wcs"]= pa_wcs;
+ 			json["bmajErr_wcs"]= bmaj_wcs_err;
+			json["bminErr_wcs"]= bmin_wcs_err;
+			json["paErr_wcs"]= pa_wcs_err;
+ 		
+			//Beam ellipse pars
+			json["bmaj_beam"]= bmaj_beam;
+			json["bmin_beam"]= bmin_beam;
+			json["pa_beam"]= pa_beam;
+
+			//- Beam-deconvolved ellipse pars in WCS coordinates
+			json["bmaj_deconv_wcs"]= bmaj_deconv_wcs;
+			json["bmin_deconv_wcs"]= bmin_deconv_wcs;
+			json["pa_deconv_wcs"]= pa_deconv_wcs;
+ 
+			//- Fit ellipse vs beam ellipse pars
+			json["eccentricityRatio"]= EccentricityRatio;
+			json["areaRatio"]= AreaRatio;
+			json["rotAngle"]= RotAngle;
+	
+			//Bkg/noise estimators	
+			json["bkgSum"]= source->GetBkgSum();
+			json["bkgRMSSum"]= source->GetBkgRMSSum();
+
+			//Fit chi2/ndf
+			json["chi2"]= fitPars.GetChi2();
+			json["ndf"]= fitPars.GetNDF();
+
+			//Source component flags
+			json["fitQuality"]= fitPars.GetFitQuality();
+			json["flag"]= componentFlag;
+			json["type"]= componentType;
+
+			//Add json value to collection
+			jsonValues.push_back(json);
+
+		}//end loop components
+	}//close if has fit
+
+	
+	//Store nested components
+	bool hasNestedSources= source->HasNestedSources();
+	if(hasNestedSources && dumpNestedSourceInfo){
+		std::vector<Source*> nestedSources= source->GetNestedSources();
+		for(size_t k=0;k<nestedSources.size();k++)
+		{
+			SourceComponentsToJson(jsonValues,nestedSources[k],dumpNestedSourceInfo,wcsType,wcs);
+		}
+	}//close if has nested sources 
+	
+	
+	//Delete WCS
+	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
+
+	return 0;
+
+}//close SourceComponentsToJson()
+
+
+
 //=================================================
 //==        ROOT EXPORTER
 //=================================================

@@ -35,9 +35,7 @@
 #include <TMatrixD.h>
 #include <TTree.h>
 
-
-//WCSTOOLS (TO BE DEPRECATED)
-//#include <wcs.h>
+#include <json/json.h>
 
 #include <cstdlib>
 #include <iomanip>
@@ -194,6 +192,30 @@ class SourceExporter : public TObject
 		* \brief Get source component ascii string
 		*/
 		static const std::vector<std::string> SourceComponentsToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
+	
+		//=======================================
+		//==      JSON EXPORT
+		//=======================================
+		
+		/**
+		* \brief Write json file from source collection
+		*/
+		static int WriteToJson(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
+		
+		/**
+		* \brief Get source json object
+		*/
+		static int SourceToJson(std::vector<Json::Value>& jsonValues,Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
+
+		/**
+		* \brief Write json file from source component collection
+		*/
+		static int WriteComponentsToJson(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
+		
+		/**
+		* \brief Get source component json object
+		*/
+		static int SourceComponentsToJson(std::vector<Json::Value>& jsonValues,Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
 	
 		//=======================================
 		//==      ROOT EXPORT

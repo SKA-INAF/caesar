@@ -758,18 +758,18 @@ int SourceMatchData::ComputeSourceSEDs()
 
 int SourceMatchData::ComputeSourceComponentSEDs()
 {
-	cout<<"ComputeSourceComponentSEDs: pto 1"<<endl;
+	//cout<<"ComputeSourceComponentSEDs: pto 1"<<endl;
 	//Do nothing if no source set
 	if(!m_source) return -1;
 	if(m_matchedSources.empty()) return 0;
 	if(m_componentMatchIndexes.empty()) return 0;
 
-	cout<<"ComputeSourceComponentSEDs: pto 2"<<endl;
+	//cout<<"ComputeSourceComponentSEDs: pto 2"<<endl;
 
 	//Get source pars
 	if(!m_source->HasFitInfo()) return 0;//no components, nothing to be done
 
-	cout<<"ComputeSourceComponentSEDs: pto 3"<<endl;
+	//cout<<"ComputeSourceComponentSEDs: pto 3"<<endl;
 
 	//Get source fit component pars
 	SourceFitPars fitPars= m_source->GetFitPars();
@@ -789,7 +789,7 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 		INFO_LOG("sourceName="<<sourceName<<", nComponents="<<nComponents_index);	
 	#endif	
 
-	cout<<"ComputeSourceComponentSEDs: pto 4"<<endl;
+	//cout<<"ComputeSourceComponentSEDs: pto 4"<<endl;
 
 	
 	double beamArea= m_source->GetBeamFluxIntegral();
@@ -800,7 +800,7 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 		return -1;
 	}
 
-	cout<<"ComputeSourceComponentSEDs: pto 5"<<endl;
+	//cout<<"ComputeSourceComponentSEDs: pto 5"<<endl;
 
 	//Get source metadata
 	ImgMetaData* metadata= m_source->GetImageMetaData();
@@ -811,7 +811,7 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 		return -1;
 	}
 	
-	cout<<"ComputeSourceComponentSEDs: pto 6"<<endl;
+	//cout<<"ComputeSourceComponentSEDs: pto 6"<<endl;
 	
 	//Get source frequency
 	double Nu= metadata->Freq;
@@ -837,7 +837,6 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 
 	
 	//Loop over source components
-	
 	for(size_t i=0;i<m_componentMatchIndexes.size();i++)
 	{
 		std::vector<double> lgNu_list;
@@ -863,12 +862,12 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 		bool isMatchComponentFluxSummed= false;	
 
 		//Skip if no component match	
-		cout<<"ComputeSourceComponentSEDs: pto 7"<<endl;
+		//cout<<"ComputeSourceComponentSEDs: pto 7"<<endl;
 		if(!HasSourceComponentMatch(i)){
-			cout<<"ComputeSourceComponentSEDs: pto 8"<<endl;
+			//cout<<"ComputeSourceComponentSEDs: pto 8"<<endl;
 			m_sourceComponentSED[i]->SetPoint(0,lgNu,lgFlux);
 			m_sourceComponentSED[i]->SetPointError(0,0,0,lgFluxErr,lgFluxErr);
-			cout<<"ComputeSourceComponentSEDs: pto 9"<<endl;
+			//cout<<"ComputeSourceComponentSEDs: pto 9"<<endl;
 			continue;
 		}
 
