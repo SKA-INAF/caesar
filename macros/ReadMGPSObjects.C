@@ -15,12 +15,14 @@ AstroObject* gAstroObject= 0;
 TTree* gOutputTree= 0;
 TFile* gOutputFile= 0;
 std::string gOutputFileName= "output.root";
+std::string gRegionOutFileName= "sources.reg";
 
 //Functions
 int Init();
 int ReadRegions();
 int ReadObjects();
 int SelectObjects();
+int SaveDS9Regions(std::string filename);
 int Save();
 
 int ReadMGPSObjects(std::string simbadFileName,std::string regionFileName="",std::string outputFileName="output.root")
@@ -72,6 +74,7 @@ int ReadMGPSObjects(std::string simbadFileName,std::string regionFileName="",std
 	//==      SAVE
 	//===================================
 	Save();
+	SaveDS9Regions(gRegionOutFileName);
 
 	return 0;
 
@@ -136,7 +139,7 @@ int SelectObjects()
 		return 0;		
 	}
 
-	//Loop over sources
+	//Loop over objects
 	for(size_t i=0;i<gAstroObjects.size();i++)
 	{
 		double x= gAstroObjects[i]->x;
@@ -165,6 +168,54 @@ int SelectObjects()
 
 }//close SelectObjects()
 
+
+int SaveDS9Regions(std::string filename)
+{
+	// Set DS9 header
+	std::string header= AstroUtils::GetDS9WCSTypeHeader(eJ2000);
+	
+	// Open file
+	FILE* fout= fopen(filename.c_str(),"w");
+	fprintf(fout,"global color=blue font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
+	fprintf(fout,"%s\n",header.c_str());
+
+	//Loop over objects
+	bool useImageCoords= false;
+	
+	for(size_t i=0;i<gAstroObjects_sel.size();i++)
+	{
+		double x0= gAstroObjects_sel[i]->x;
+		double y0= gAstroObjects_sel[i]->y;
+		std::string sname= gAstroObjects_sel[i]->name;
+
+		//Get ellipse
+		TEllipse* ellipse= gAstroObjects_sel[i]->GetFitEllipse();
+		if(!ellipse) continue;
+
+		double R1= ellipse->GetR1();
+		double R2= ellipse->GetR2();
+		double theta= ellipse->GetTheta();
+		double pa= theta;
+
+		//Get encoded string region
+		std::string regionText(Form("%s",sname.c_str()));
+		
+		std::stringstream sstream;
+		sstream<<"ellipse "<<x0<<" "<<y0<<" "<<R1<<"\" "<<R2<<"\" "<<pa<<" ";
+		sstream<<"# ";
+		sstream<<"text={"<<regionText<<"} ";
+		std::string region= sstream.str();
+
+		//Write region to file
+		fprintf(fout,"%s\n",region.c_str());
+
+	}//end loop objects
+
+	fclose(fout);
+
+	return 0;
+
+}//close SaveDS9Regions()
 
 int Save()
 {

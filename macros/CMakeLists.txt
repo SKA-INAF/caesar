@@ -15,6 +15,7 @@ file(GLOB MACRO_FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/SetSourceMetadata.C
 	${CMAKE_CURRENT_SOURCE_DIR}/ReadSimbadObjects.C
 	${CMAKE_CURRENT_SOURCE_DIR}/ReadMGPSObjects.C
+	${CMAKE_CURRENT_SOURCE_DIR}/WriteSourceJsonCatalog.C
 	#${CMAKE_CURRENT_SOURCE_DIR}/SelectSimSourcesInMosaic.C
 )
 
