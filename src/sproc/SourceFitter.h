@@ -1325,6 +1325,14 @@ class SourceComponentPars : public TObject {
 			ypos= FitPars["y0"];
 		}
 
+		/**
+		* \brief Get peak flux
+		*/
+		double GetPeakFlux()
+		{
+			return FitPars["A"];
+		}
+
 	private:
 
 		/**
@@ -1756,6 +1764,20 @@ class SourceFitPars : public TObject {
 			}
 			pars[componentId].GetPosition(xpos,ypos);
 			return 0;
+		}
+
+		/**
+		* \brief Get component peak flux
+		*/
+		double GetComponentPeakFlux(int componentId)
+		{
+			if(componentId<0 || componentId>=nComponents) {
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist, returning zero peak flux!");
+				#endif
+				return 0;
+			}
+			return pars[componentId].GetPeakFlux();
 		}
 
 		/**
