@@ -97,6 +97,10 @@ class AstroObject : public TObject
 		double yerr;
 		std::string refs;//catalog references
 		bool confirmed;//whether the object is confirmed or not
+		
+		bool hasFrequencyInfo;
+		double nu;
+		double dnu;
 
 		bool hasFluxInfo;
 		double fluxDensity;//Jy/beam
@@ -120,6 +124,7 @@ class AstroObject : public TObject
 
 #ifdef __MAKECINT__
 #pragma link C++ class AstroObject+;
+#pragma link C++ class AstroObject*+;
 #pragma link C++ class vector<AstroObject>+;
 #pragma link C++ class vector<AstroObject*>+;
 #endif

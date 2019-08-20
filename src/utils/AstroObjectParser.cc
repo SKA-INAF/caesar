@@ -744,6 +744,11 @@ int AstroObjectParser::ParseMGPSObjectData(AstroObject& astroObject,std::string 
 	astroObject.pa= atof(pa_str.c_str());
 	astroObject.hasEllipseInfo= true;
 
+	//Set frequency to MGPS frequency
+	astroObject.nu= 0.843;
+	astroObject.dnu= 0;//unknown
+	astroObject.hasFrequencyInfo= true;
+
 	/*
 	//Parse deconv ellipse info
 	bmaj_str= fields[12];

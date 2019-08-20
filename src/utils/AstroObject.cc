@@ -104,6 +104,10 @@ void AstroObject::Init()
 	bmin_deconv= 0;
 	pa_deconv= 0;
 
+	hasFrequencyInfo= false;
+	nu= 0;
+	dnu= 0;
+
 }//close Init()
 
 
