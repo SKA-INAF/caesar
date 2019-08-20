@@ -57,6 +57,7 @@ void Usage(char* exeName)
 	cout<<"-i, --input=[INPUT_FILE] \t Input file in ROOT format to be cross-matched with catalogs"<<endl;
 	cout<<"-C, --catalogs=[CATALOG_FILE] \t Input file list name (ascii format) containing all catalog files in ROOT format to be cross-matched each other"<<endl;
 	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (root format) in which to store source match info"<<endl;
+	cout<<"-j, --saveAllSources \t Save all sources (default: save only source matches)"<<endl;
 	cout<<"-n, --nx=[NX] \t Number of divisions along X (default=4)"<<endl;
 	cout<<"-N, --ny=[NY] \t Number of divisions along Y (default=4)"<<endl;
 	cout<<"-m, --matchSourcesByFlux \t Match sources by flux (default=false)"<<endl;
@@ -78,10 +79,6 @@ void Usage(char* exeName)
 	cout<<"-s, --selectedType=[TYPE] \t True source types to be crossmatched (1=COMPACT, 2=POINT-LIKE, 3=EXTENDED, 4=COMPACT_WITH_EXTENDED) (default=-1)"<<endl;
 	cout<<"-F, --filterBySimType \t Consider only true sources with given sim type when searching the match (default=no)"<<endl;
 	cout<<"-S, --selectedSimType=[TYPE] \t True source sim types to be crossmatched (eRingLike=1,eBubbleLike=2,eEllipseLike=3,eDiskLike=4,eBlobLike=5) (default=-1)"<<endl;
-	cout<<"-j, --no-compactSourceCorrelation \t Disable correlation search for compact sources (default=enabled)"<<endl;
-	cout<<"-J, --no-extendedSourceCorrelation \t Disable correlation search for extended sources (default=enabled)"<<endl;
-	//cout<<"-c, --correctFlux \t Correct rec integrated flux by beam area (default=no correction)"<<endl;
-
 	cout<<"-g, --shuffleSources \t Randomize sources and catalog sources in an annulus centred on their original position (default=no)"<<endl;
 	cout<<"-r, --shuffleRmin=[Rmin] \t Minimum annulus radius for source shuffling (default=30)"<<endl;
 	cout<<"-R, --shuffleRmax=[Rmax] \t Maximum annulus radius for source shuffling (default=50)"<<endl;
@@ -97,7 +94,8 @@ static const struct option options_tab[] = {
 	{ "input", required_argument, 0, 'i' },
 	{ "catalogs", required_argument, 0, 'C' },
 	{ "verbosity", required_argument, 0, 'v'},
-	{ "output", optional_argument, 0, 'o' },	
+	{ "output", required_argument, 0, 'o' },	
+	{ "saveAllSources", no_argument, 0, 'j' },	
 	{ "nx", required_argument, 0, 'n' },
 	{ "ny", required_argument, 0, 'N' },
 	{ "matchSourcesByFlux", no_argument, 0, 'm'},
@@ -120,8 +118,6 @@ static const struct option options_tab[] = {
 	{ "filterBySimType", no_argument, 0, 'F'},
 	{ "selectedType", required_argument, 0, 's'},	
 	{ "selectedSimType", required_argument, 0, 'S'},
-	{ "no-compactSourceCorrelation", no_argument, 0, 'j'},
-	{ "no-extendedSourceCorrelation", no_argument, 0, 'J'},	
 	{ "shuffleSources", no_argument, 0, 'g'},	
 	{ "shuffleRmin", required_argument, 0, 'r'},
 	{ "shuffleRmax", required_argument, 0, 'R'},
@@ -149,12 +145,11 @@ float compMatchOverlapThr= 0.8;//fraction of overlap above which source fit comp
 float compMatchOverlapLowThr= 0.2;//fraction of overlap above which source fit component and region are matched
 bool applySourceComponentAreaRatioThr= false;
 bool correctFlux= false;
+bool saveAllSources= false;
 bool selectSourceByType= false;//default=all true sources searched 
 std::vector<int> stypes;
 std::vector<int> ssimtypes;
 bool selectSourceBySimType= false;//default=all true sources searched 
-bool enableCompactSourceCorrelation= true;
-bool enableExtendedSourceCorrelation= true;
 bool applyFluxOverlapThreshold= false;
 bool applySourceAreaRatioThr= false;
 double fluxOverlapThr= 0.5;
@@ -505,7 +500,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:C:o:v:n:N:mM:POLlA:T:t:e:pba:d:cfFs:S:jJx:X:w:y:Y:k:gr:R:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:C:o:v:n:N:mM:POLlA:T:t:e:pba:d:cfFs:S:x:X:w:y:Y:k:gr:R:j",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -531,6 +526,11 @@ int ParseOptions(int argc, char *argv[])
 			{
 				outputFileName= std::string(optarg);	
 				break;	
+			}
+			case 'j':
+			{
+				saveAllSources= true;
+				break;
 			}
 			case 'n':	
 			{
@@ -634,16 +634,7 @@ int ParseOptions(int argc, char *argv[])
 				ssimtypes.push_back(ssimtype);	
 				break;
 			}	
-			case 'j':
-			{
-				enableCompactSourceCorrelation= false;
-				break;
-			}	
-			case 'J':
-			{
-				enableExtendedSourceCorrelation= false;
-				break;
-			}
+			
 			case 'L':
 			{
 				applySourceAreaRatioThr= true;
@@ -821,6 +812,9 @@ int ComputeSpectralIndices()
 	#endif
 	for(size_t i=0;i<sourceMatchDataCollection.size();i++)
 	{
+		//Skip if no match found
+		if(!sourceMatchDataCollection[i]->HasSourceMatch()) continue;
+
 		//Compute source SED and spectral index
 		if(sourceMatchDataCollection[i]->ComputeSourceSEDs()<0){
 			#ifdef LOGGING_ENABLED
@@ -1178,6 +1172,9 @@ int FindSourceMatchesInTiles()
 			//Add source match data to collection
 			if(sourceMatchData->HasSourceMatch()){
 				nMatchedSources++;
+			}
+			
+			if(saveAllSources || sourceMatchData->HasSourceMatch()){
 				#ifdef LOGGING_ENABLED
 					DEBUG_LOG("Add source match data for source "<<inputSource->GetName()<<" to collection...");
 				#endif
