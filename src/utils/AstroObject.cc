@@ -79,6 +79,7 @@ void AstroObject::Init()
 {
 	index= -1;
 	name= "";
+	id_str= "";
 	id= eUNKNOWN_OBJECT;
 	subid= eUNKNOWN_OBJECT;
 	x= 0;

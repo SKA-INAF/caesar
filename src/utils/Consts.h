@@ -366,6 +366,11 @@ enum AstroObjectType
 	eNEBULA=15,
 	eSTAR_FORMING_REGION=16,
 	eCLOUD=17,
+	eGAMMA_RAY_BURST=18,
+	eSTAR_BINARY=19,
+	eHI_SHELL=20,
+	eNOVA=21,
+	eTRANSIENT_EVENT=22,	
 	
 	//Generic unclassified objects by wavelength
 	eRADIO_OBJ=100,

@@ -78,6 +78,9 @@ std::map<std::string,int> InitSimbadObjIdMap() {
 		std::pair<std::string,int> ("rB",eRADIO_OBJ),
 		std::pair<std::string,int> ("Mas",eRADIO_OBJ),
 
+		//UV source object
+		std::pair<std::string,int> ("UV",eUV_OBJ),
+
 		//Infrared source object
 		std::pair<std::string,int> ("IR",eIR_OBJ),
     std::pair<std::string,int> ("FIR",eIR_OBJ),
@@ -90,7 +93,8 @@ std::map<std::string,int> InitSimbadObjIdMap() {
 
 		//Gamma source object
     std::pair<std::string,int> ("gam",eGAMMA_OBJ),
-   
+   	std::pair<std::string,int> ("gB",eGAMMA_RAY_BURST),
+		
 		//Star objects
 		std::pair<std::string,int> ("*",eSTAR),
 		std::pair<std::string,int> ("**",eSTAR),
@@ -157,6 +161,11 @@ std::map<std::string,int> InitSimbadObjIdMap() {
 		std::pair<std::string,int> ("sr*",eSTAR),	
 		std::pair<std::string,int> ("SN*",eSTAR),		
 		std::pair<std::string,int> ("su*",eSTAR),		
+		std::pair<std::string,int> ("s?r",eSTAR),
+		std::pair<std::string,int> ("AB?",eSTAR),
+		std::pair<std::string,int> ("LP?",eSTAR),
+		std::pair<std::string,int> ("pA?",eSTAR),	
+		std::pair<std::string,int> ("BD?",eSTAR),	
 
 		//Galaxy objects
 		std::pair<std::string,int> ("G",eGALAXY),
@@ -194,6 +203,7 @@ std::map<std::string,int> InitSimbadObjIdMap() {
 		std::pair<std::string,int> ("SNR",eSNR),
 		std::pair<std::string,int> ("bub",eBUBBLE),
 		std::pair<std::string,int> ("MoC",eMOLECULAR_CLOUD),
+		std::pair<std::string,int> ("cor",eMOLECULAR_CLOUD),
 		std::pair<std::string,int> ("Pl?",ePLANET),
 		std::pair<std::string,int> ("Pl",ePLANET),
 
@@ -224,6 +234,13 @@ std::map<std::string,int> InitSimbadObjIdMap() {
 		std::pair<std::string,int> ("SFR",eSTAR_FORMING_REGION),
 		std::pair<std::string,int> ("Cld",eCLOUD),
     std::pair<std::string,int> ("HVC",eCLOUD),
+		std::pair<std::string,int> ("PoC",eCLOUD),
+		std::pair<std::string,int> ("Sy*",eSTAR_BINARY),
+		std::pair<std::string,int> ("Sy?",eSTAR_BINARY),
+		std::pair<std::string,int> ("sh",eHI_SHELL),
+		std::pair<std::string,int> ("No",eNOVA),
+		std::pair<std::string,int> ("No?",eNOVA),
+		std::pair<std::string,int> ("ev",eTRANSIENT_EVENT),
 		
 
 	};
@@ -258,6 +275,9 @@ std::map<std::string,int> InitSimbadObjSubIdMap() {
     std::pair<std::string,int> ("FIR",eIR_OBJ),
     std::pair<std::string,int> ("NIR",eIR_OBJ),
 
+		//UV source object
+		std::pair<std::string,int> ("UV",eUV_OBJ),
+
 		//X source object
     std::pair<std::string,int> ("X",eX_OBJ),
 		std::pair<std::string,int> ("UX?",eX_OBJ),
@@ -265,7 +285,8 @@ std::map<std::string,int> InitSimbadObjSubIdMap() {
 
 		//Gamma source object
     std::pair<std::string,int> ("gam",eGAMMA_OBJ),
-   
+   	std::pair<std::string,int> ("gB",eGAMMA_RAY_BURST),
+		
 		//Star objects
 		std::pair<std::string,int> ("*",eSTAR),
 		std::pair<std::string,int> ("*iC",eSTAR_IN_CLUSTER),
@@ -293,7 +314,8 @@ std::map<std::string,int> InitSimbadObjSubIdMap() {
 		std::pair<std::string,int> ("WD*",eSTAR_WD),		
 		std::pair<std::string,int> ("ZZ*",eSTAR_PWD),		
 		std::pair<std::string,int> ("LM*",eSTAR_LM),		
-		std::pair<std::string,int> ("BD*",eSTAR_BD),		
+		std::pair<std::string,int> ("BD*",eSTAR_BD),
+		std::pair<std::string,int> ("BD?",eSTAR_BD),		
 		std::pair<std::string,int> ("N*",eSTAR_NEUTRON),		
 		std::pair<std::string,int> ("OH*",eSTAR_OH),		
 		std::pair<std::string,int> ("CH*",eSTAR_CH),		
@@ -330,7 +352,12 @@ std::map<std::string,int> InitSimbadObjSubIdMap() {
 		std::pair<std::string,int> ("Mi*",eSTAR_VARIABLE),		
 		std::pair<std::string,int> ("sr*",eSTAR_VARIABLE),	
 		std::pair<std::string,int> ("SN*",eSTAR_SUPERNOVA),		
-		std::pair<std::string,int> ("su*",eSTAR_SUBSTELLAR),		
+		std::pair<std::string,int> ("su*",eSTAR_SUBSTELLAR),
+		std::pair<std::string,int> ("s?r",eSTAR_RSG),
+		std::pair<std::string,int> ("AB?",eSTAR_AB),	
+		std::pair<std::string,int> ("LP?",eSTAR_VARIABLE),	
+		std::pair<std::string,int> ("pA?",eSTAR_PAGB),
+		
 
 		//Galaxy objects
 		std::pair<std::string,int> ("G",eGALAXY),
@@ -368,6 +395,7 @@ std::map<std::string,int> InitSimbadObjSubIdMap() {
 		std::pair<std::string,int> ("SNR",eSNR),
 		std::pair<std::string,int> ("bub",eBUBBLE),
 		std::pair<std::string,int> ("MoC",eMOLECULAR_CLOUD),
+		std::pair<std::string,int> ("cor",eMOLECULAR_CLOUD),
 		std::pair<std::string,int> ("Pl?",ePLANET),
 		std::pair<std::string,int> ("Pl",ePLANET),
 
@@ -398,6 +426,14 @@ std::map<std::string,int> InitSimbadObjSubIdMap() {
 		std::pair<std::string,int> ("SFR",eSTAR_FORMING_REGION),
 		std::pair<std::string,int> ("Cld",eCLOUD),
     std::pair<std::string,int> ("HVC",eCLOUD),
+		std::pair<std::string,int> ("PoC",eCLOUD),
+		std::pair<std::string,int> ("Sy*",eSTAR_BINARY),
+		std::pair<std::string,int> ("Sy?",eSTAR_BINARY),
+		std::pair<std::string,int> ("sh",eHI_SHELL),
+		std::pair<std::string,int> ("No",eNOVA),
+		std::pair<std::string,int> ("No?",eNOVA),
+		std::pair<std::string,int> ("ev",eTRANSIENT_EVENT),
+		
 	};
 	return tmp;
 
@@ -537,6 +573,7 @@ int AstroObjectParser::ParseSimbadObjectData(AstroObject& astroObject,std::strin
 		}
 	}
 
+	astroObject.id_str= id_str;
 	astroObject.id= id;
 
 	//Parse object minor identifier
@@ -689,6 +726,7 @@ int AstroObjectParser::ParseMGPSObjectData(AstroObject& astroObject,std::string 
 	astroObject.name= name_str;
 	
 	//Set object identifier to RADIO source 
+	astroObject.id_str= "";
 	astroObject.id= eRADIO_OBJ;
 	astroObject.subid= eRADIO_OBJ;
 

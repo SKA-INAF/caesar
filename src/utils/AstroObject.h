@@ -89,6 +89,7 @@ class AstroObject : public TObject
 
 		long int index;
 		std::string name;//object name
+		std::string id_str;
 		int id;//major object identifier
 		int subid;//minor object identifier
 		double x;//RA
@@ -118,7 +119,7 @@ class AstroObject : public TObject
 		double bmin_deconv;//arcsec
 		double pa_deconv;//deg
 
-	ClassDef(AstroObject,1)
+	ClassDef(AstroObject,2)
 
 };//close class AstroObject
 
