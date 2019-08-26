@@ -35,6 +35,7 @@
 #include <TTree.h>
 #include <TEllipse.h>
 #include <TRandom.h>
+#include <TRandom3.h>
 
 
 #include <iostream>
@@ -383,7 +384,7 @@ int ComputeSpectralIndices();
 int ReadData(std::string filename);
 int ReadCatalogData(std::string filelist);
 int ReadSourceData(std::string filename,int collectionIndex);
-int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int collectionIndex,int sourceIndex,int nestedSourceIndex=-1,WCS* wcs=0,int coordSystem=0,double offsetX=0,double offsetY=0);
+int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int collectionIndex,int sourceIndex,int nestedSourceIndex=-1,WCS* wcs=0,int coordSystem=0,bool shuffleData=false,double offsetX=0,double offsetY=0);
 bool HaveSourceComponentMatch(SourceComponentMatchPars& scompmatchpars,ComponentPars* pars1,ComponentPars* pars2);
 bool HaveSourceIslandMatch(SourceMatchPars& smatchpars,SourcePars* pars1,SourcePars* pars2);
 void Save();
@@ -737,6 +738,9 @@ int Init(){
 	matchOptionTree->Branch("nMatchedSourceComponentsPerCatalog",&nMatchedSourceComponentsPerCatalog);
 	matchOptionTree->Branch("nMatchedSourceComponentCatalogMultiplicity",&nMatchedSourceComponentCatalogMultiplicity);
 
+	//Set random seed
+	gRandom = new TRandom3(0);
+	gRandom->SetSeed(0);
 	
 	return 0;
 
@@ -1784,6 +1788,8 @@ int ReadData(std::string filename)
 			double theta= gRandom->Uniform(0,2*TMath::Pi());
 			offsetX= r*cos(theta);
 			offsetY= r*sin(theta);
+			offsetX/= 3600;//convert in deg
+			offsetY/= 3600;//convert in deg
 		}
 
 		//Compute source position in WCS coords (needed to compute source min/max coords)
@@ -1804,7 +1810,7 @@ int ReadData(std::string filename)
 		
 		//Fill source pars
 		std::vector<SourcePars*> thisPars;
-		if(FillSourcePars(thisPars,source,catalogIndex,sourceIndex,-1,wcs,wcsType,offsetX,offsetY)<0){
+		if(FillSourcePars(thisPars,source,catalogIndex,sourceIndex,-1,wcs,wcsType,shuffleSources,offsetX,offsetY)<0){
 			#ifdef LOGGING_ENABLED	
 				ERROR_LOG("Failed to fill pars for source no. "<<i+1<<" (name="<<source->GetName()<<", collectionIndex="<<catalogIndex<<")!");
 			#endif
@@ -2057,10 +2063,12 @@ int ReadSourceData(std::string filename,int catalogIndex)
 			double theta= gRandom->Uniform(0,2*TMath::Pi());
 			offsetX= r*cos(theta);
 			offsetY= r*sin(theta);
+			offsetX/= 3600;//convert in deg
+			offsetY/= 3600;//convert in deg
 		}
 
 		//Fill source pars
-		if(FillSourcePars(m_catalog_source_pars[catalogIndex],source,catalogIndex,sourceIndex,-1,wcs,wcsType,offsetX,offsetY)<0){
+		if(FillSourcePars(m_catalog_source_pars[catalogIndex],source,catalogIndex,sourceIndex,-1,wcs,wcsType,false,offsetX,offsetY)<0){
 			#ifdef LOGGING_ENABLED	
 				ERROR_LOG("Failed to fill pars for source no. "<<i+1<<" (name="<<source->GetName()<<", collectioIndex="<<catalogIndex<<")!");
 			#endif
@@ -2126,7 +2134,7 @@ int ReadSourceData(std::string filename,int catalogIndex)
 
 }//close ReadSourceData()
 
-int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogIndex,int sourceIndex,int nestedSourceIndex,WCS* wcs,int coordSystem,double offsetX,double offsetY)
+int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogIndex,int sourceIndex,int nestedSourceIndex,WCS* wcs,int coordSystem,bool shuffleData,double offsetX,double offsetY)
 {
 	//####  METHOD ##############################
 	//Distinguish different source cases
@@ -2172,7 +2180,7 @@ int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogInd
 	}
 
 	//Shuffle contour using offset
-	if(shuffleSources){
+	if(shuffleData){
 		contour->ApplyOffset(offsetX,offsetY);
 	}
 	
@@ -2236,7 +2244,7 @@ int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogInd
 			if(correctFlux) fluxDensity/= beamArea;
 
 			//Apply offset to ellipse (if shuffle source is enabled)
-			if(shuffleSources){
+			if(shuffleData){
 				double Cx= fitEllipses[k]->GetX1();
 				double Cy= fitEllipses[k]->GetY1();
 				fitEllipses[k]->SetX1(Cx + offsetX);
@@ -2269,7 +2277,7 @@ int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogInd
 	if(hasNestedSources){
 		std::vector<Source*> nestedSources= aSource->GetNestedSources();
 		for(size_t j=0;j<nestedSources.size();j++){
-			if(FillSourcePars(pars,nestedSources[j],catalogIndex,sourceIndex,j,wcs,coordSystem,offsetX,offsetY)<0){
+			if(FillSourcePars(pars,nestedSources[j],catalogIndex,sourceIndex,j,wcs,coordSystem,shuffleData,offsetX,offsetY)<0){
 				#ifdef LOGGING_ENABLED
 					ERROR_LOG("Failed to get nested source pars for source "<<sourceName<<"!");
 				#endif
