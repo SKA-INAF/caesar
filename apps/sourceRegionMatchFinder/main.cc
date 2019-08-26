@@ -73,6 +73,7 @@ void Usage(char* exeName){
 	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (ROOT format) where to store matched sources (default=sources.root)"<<endl;
 	cout<<"-R, --region-output=[REGION_OUTPUT_FILE] \t Output DS9 region file name where to store selected sources (default=sources.reg)"<<endl;
 	cout<<"-C, --catalog-output=[CATALOG_OUTPUT_FILE] \t Output catalog file name where to store selected sources (default=catalog.dat)"<<endl;
+	cout<<"-f, --no-flagchange \t Do not change source and component flags on the basis of match results (default=change)"<<endl;
 	cout<<"-v, --verbosity=[LEVEL] \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	
 	cout<<"=============================="<<endl;
@@ -102,6 +103,7 @@ static const struct option options_tab[] = {
 	{ "output", required_argument, 0, 'o' },
 	{ "region-output", required_argument, 0, 'R' },
 	{ "catalog-output", required_argument, 0, 'C' },
+	{ "no-flagchange", no_argument, 0, 'f' },
 	{ "verbosity", required_argument, 0, 'v'},
   {(char*)0, (int)0, (int*)0, (int)0}
 };
@@ -115,6 +117,7 @@ std::string regionComponentsOutputFileName= "sources_fitcomp.reg";
 std::string catalogOutputFileName= "catalog.dat";
 std::string catalogComponentsOutputFileName= "catalog_fitcomp.dat";
 std::vector<int> stypes;
+bool changeFlag= true;
 bool matchSourcesByPos= false;
 bool matchSourcesByOverlap= false;
 bool applySourceAreaRatioThr= false;
@@ -466,7 +469,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:r:s:n:m:cPOLpblT:A:t:a:e:d:o:R:C:v:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:r:s:n:m:cPOLpblT:A:t:a:e:d:o:R:C:fv:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -585,6 +588,11 @@ int ParseOptions(int argc, char *argv[])
 				catalogOutputFileName= std::string(optarg);	
 				break;	
 			}
+			case 'f':	
+			{
+				changeFlag= false;	
+				break;	
+			}
 			case 'v':	
 			{
 				verbosity= atoi(optarg);	
@@ -598,8 +606,6 @@ int ParseOptions(int argc, char *argv[])
     }//close switch
 	}//close while
  
-	//for(size_t i=0;i<stypes.size();i++) cout<<"stype["<<i<<"]="<<stypes[i]<<endl;	
-
 	//=======================
 	//== Init Logger 
 	//=======================
@@ -1147,7 +1153,8 @@ int FillSourcePars(Source* aSource,int sourceIndex,int nestedSourceIndex)
 
 			//Add component to source pars
 			sourcePars->AddComponentPars(thisComponentPars);	
-		}//close if	
+		}//end loop components
+
 	}//close if has fit info
 
 	//## Add source data to tile
@@ -1815,19 +1822,20 @@ int FindSourceMatchesInTiles()
 			//## Tag source according to match results
 			//## Set to unknown flag if not assigned to any region
 			if(nMatches<=0){
-				source->SetFlag(eFake);
+				if(changeFlag) source->SetFlag(eFake);
 				if(hasFitInfo){
 					SourceFitPars fitPars= source->GetFitPars();
 					for(int l=0;l<nFitComponents;l++) {
 						bool isSelected= fitPars.IsSelectedComponent(l);
 						if(!isSelected) continue;
-						fitPars.SetComponentFlag(l,eFake);
+						if(changeFlag) fitPars.SetComponentFlag(l,eFake);
 					}
 					source->SetFitPars(fitPars);
 				}
 
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") and its component as fake (no match found)");
+					if(changeFlag) INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") and its component as fake (no match found)");
+					else INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") and its component (no match found)");
 				#endif
 
 				//Skip further processing
@@ -1835,18 +1843,20 @@ int FindSourceMatchesInTiles()
 			}
 			else if(nMatches==1){
 				nMatchedSources++;
-				source->SetFlag(eReal);
+				if(changeFlag) source->SetFlag(eReal);
 				source->SetType(ePointLike);
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and point-like (1 match found)");
+					if(changeFlag) INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and point-like (1 match found)");
+					else INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as point-like (1 match found)");
 				#endif
 			}
 			else if(nMatches>1){
 				nMatchedSources++;
-				source->SetFlag(eReal);
+				if(changeFlag) source->SetFlag(eReal);
 				source->SetType(eCompact);
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and compact ("<<nMatches<<" match found)");
+					if(changeFlag) INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and compact ("<<nMatches<<" match found)");
+					else INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as compact ("<<nMatches<<" match found)");
 				#endif
 			}
 
@@ -1871,27 +1881,30 @@ int FindSourceMatchesInTiles()
 					//Tag source component
 					SourceFitPars fitPars= source->GetFitPars();
 					if(nComponentMatches<=0){
-						fitPars.SetComponentFlag(l,eFake);
+						if(changeFlag) fitPars.SetComponentFlag(l,eFake);
 						fitPars.SetComponentType(l,eUnknownType);
 
 						#ifdef LOGGING_ENABLED
-							INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as fake (no match found)");
+							if(changeFlag) INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as fake (no match found)");
+							else INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") (no match found)");
 						#endif
 					}
 					else if(nComponentMatches==1){
 						nMatchedSourceComponents++;
-						fitPars.SetComponentFlag(l,eReal);
+						if(changeFlag) fitPars.SetComponentFlag(l,eReal);
 						fitPars.SetComponentType(l,ePointLike);
 						#ifdef LOGGING_ENABLED
-							INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and point-like (1 match found)");
+							if(changeFlag) INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and point-like (1 match found)");
+							else INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as point-like (1 match found)");
 						#endif
 					}
 					else if(nComponentMatches>1){
 						nMatchedSourceComponents++;
-						fitPars.SetComponentFlag(l,eReal);
+						if(changeFlag) fitPars.SetComponentFlag(l,eReal);
 						fitPars.SetComponentType(l,eCompact);
 						#ifdef LOGGING_ENABLED
-							INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and compact ("<<nComponentMatches<<" match found)");
+							if(changeFlag) INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and compact ("<<nComponentMatches<<" match found)");
+							else INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as compact ("<<nComponentMatches<<" match found)");
 						#endif
 					}
 					source->SetFitPars(fitPars);
