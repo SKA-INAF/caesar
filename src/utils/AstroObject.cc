@@ -28,6 +28,7 @@
 #include <AstroObject.h>
 #include <MathUtils.h>
 #include <CodeUtils.h>
+#include <AstroUtils.h>
 
 
 #ifdef LOGGING_ENABLED
@@ -95,6 +96,9 @@ void AstroObject::Init()
 	flux= 0;
 	fluxErr= 0;
 
+	hasSizeInfo= false;
+	radius= 0;
+
 	hasEllipseInfo= false;
 	bmaj= 0;
 	bmin= 0;
@@ -135,5 +139,61 @@ TEllipse* AstroObject::GetFitEllipse()
 	return ellipse;
 
 }//close GetFitEllipse()
+
+
+std::string AstroObject::GetDS9Region(std::string text,std::string color,std::vector<std::string> tags)
+{
+	std::string regionText= "";
+	std::stringstream ss;
+	std::string regionName= text;
+
+	//If no region text is given use region name
+	if(regionName=="") regionName= name;
+
+	//If no external tags are given use id
+	std::vector<std::string> regionTags= tags;
+	if(regionTags.empty()){
+		std::stringstream sstream;
+		sstream<<"id"<<id; 
+		regionTags.push_back(sstream.str());
+	}
+
+	//Set region shape
+	if(hasEllipseInfo && bmaj>0 && bmin>0) {
+		//regionText= AstroUtils::EllipseToDS9Region(ellipse,regionName,color,regionTags,useImageCoords);
+
+		double R1= bmaj/2;
+		double R2= bmin/2;
+		double theta= pa+90;
+		ss<<"ellipse("<<x<<","<<y<<","<<R1<<"\","<<R2<<"\","<<theta<<") ";
+
+	}
+	else{
+		//No ellipse pars available, check if radius is available	
+		double r= 1;//dummy radius	
+		if(hasSizeInfo && radius>0){
+			ss<<"circle("<<x<<","<<y<<","<<radius<<"\""<<") ";
+		}
+		else{
+			//No radius available use dummy radius
+			ss<<"circle("<<x<<","<<y<<","<<r<<"\""<<") ";
+		}
+		
+	}//close else
+
+	ss<<"# ";
+	ss<<"text={"<<regionName<<"} ";
+	ss<<"color="<<color<<" ";
+	for(size_t k=0;k<regionTags.size();k++){
+		ss<<"tag={"<<regionTags[k]<<"} ";
+	}
+
+
+	regionText= ss.str();
+
+	return regionText;
+
+}//close GetDS9Region()
+
 
 }//close namespace

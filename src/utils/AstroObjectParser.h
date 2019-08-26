@@ -79,6 +79,18 @@ class AstroObjectParser : public TObject
 		*/
 		static int ParseSimbadData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='|');
 		/**
+		* \brief Get objects from NED ascii catalog
+		*/
+		static int ParseNedData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='|');
+		/**
+		* \brief Get objects from HASH ascii catalog
+		*/
+		static int ParseHASHData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='|');
+		/**
+		* \brief Get objects from Wise HII ascii catalog
+		*/
+		static int ParseWiseHIIData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='|');
+		/**
 		* \brief Get objects from MGPS ascii catalog
 		*/
 		static int ParseMGPSData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='|');
@@ -89,6 +101,18 @@ class AstroObjectParser : public TObject
 		* \brief Parse SIMBAD ascii catalog line
 		*/
 		static int ParseSimbadObjectData(AstroObject& astroObject,std::string data,char delimiter='|');
+		/**
+		* \brief Parse NED ascii catalog line
+		*/
+		static int ParseNedObjectData(AstroObject& astroObject,std::string data,char delimiter='|');	
+		/**
+		* \brief Parse HASH ascii catalog line
+		*/
+		static int ParseHASHObjectData(AstroObject& astroObject,std::string data,char delimiter='|');
+		/**
+		* \brief Parse Wise HII ascii catalog line
+		*/
+		static int ParseWiseHIIObjectData(AstroObject& astroObject,std::string data,char delimiter='|');
 		/**
 		* \brief Parse MGPS ascii catalog line
 		*/
@@ -102,6 +126,9 @@ class AstroObjectParser : public TObject
 
 		static std::map<std::string,int> m_simbadObjIdMap;
 		static std::map<std::string,int> m_simbadObjSubIdMap;
+
+		static std::map<std::string,int> m_nedObjIdMap;
+		static std::map<std::string,int> m_nedObjSubIdMap;
 
 
 	ClassDef(AstroObjectParser,1)

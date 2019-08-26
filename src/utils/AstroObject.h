@@ -78,6 +78,11 @@ class AstroObject : public TObject
 		* \brief Get fit ellipse (if ellipse info are available)
 		*/
 		TEllipse* GetFitEllipse();
+		/**
+		* \brief Get DS9 region
+		*/
+		std::string GetDS9Region(std::string text="",std::string color="white",std::vector<std::string> tags={});
+		
 		
 	protected:
 		/**
@@ -109,6 +114,9 @@ class AstroObject : public TObject
 		double flux;//Jy
 		double fluxErr;//Jy
 
+		bool hasSizeInfo;
+		double radius;
+
 		bool hasEllipseInfo;
 		double bmaj;//arcsec
 		double bmin;//arcsec
@@ -119,7 +127,7 @@ class AstroObject : public TObject
 		double bmin_deconv;//arcsec
 		double pa_deconv;//deg
 
-	ClassDef(AstroObject,2)
+	ClassDef(AstroObject,3)
 
 };//close class AstroObject
 

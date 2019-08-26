@@ -297,6 +297,7 @@ std::map<std::string,int> InitSimbadObjSubIdMap() {
 		std::pair<std::string,int> ("Pe*",eSTAR_PECULIAR),		
 		std::pair<std::string,int> ("HB*",eSTAR_HB),
 		std::pair<std::string,int> ("Y*O",eSTAR_YSO),
+		std::pair<std::string,int> ("Y*?",eSTAR_YSO),
 		std::pair<std::string,int> ("Ae*",eSTAR_HERBIG),		
 		std::pair<std::string,int> ("Em*",eSTAR_EMISS_LINE),
 		std::pair<std::string,int> ("Be*",eSTAR_BE),
@@ -440,6 +441,207 @@ std::map<std::string,int> InitSimbadObjSubIdMap() {
 }//close InitSimbadObjSubIdMap()
 
 std::map<std::string,int> AstroObjectParser::m_simbadObjSubIdMap(InitSimbadObjSubIdMap()); 
+
+
+
+
+
+/**
+* \brief Init NED object identifier code map
+*/
+std::map<std::string,int> InitNEDObjIdMap() {
+
+	//Fill map items
+	std::map<std::string,int> tmp
+	{
+  	std::pair<std::string,int> ("?",eUNKNOWN_OBJECT),
+
+		//Radio source object
+    std::pair<std::string,int> ("RadioS",eRADIO_OBJ),//Radio source
+
+		//UV source object
+		std::pair<std::string,int> ("UvES",eUV_OBJ),//Ultraviolet excess source
+		std::pair<std::string,int> ("UvS",eUV_OBJ),//Ultraviolet source
+
+		//Infrared source object
+		std::pair<std::string,int> ("IrS",eIR_OBJ),//Infrared source
+
+		//X source object
+    std::pair<std::string,int> ("XrayS",eX_OBJ),//X-ray source
+
+		//Gamma source object
+    std::pair<std::string,int> ("GammaS",eGAMMA_OBJ),//Gamma-ray source
+   	
+		//Stars
+		std::pair<std::string,int> ("*",eSTAR),//Star
+		std::pair<std::string,int> ("**",eSTAR),//Double Star
+		std::pair<std::string,int> ("!*",eSTAR),//Galactic star
+		std::pair<std::string,int> ("!**",eSTAR),//Galactic double star
+		std::pair<std::string,int> ("Blue*",eSTAR),//Blue star
+		std::pair<std::string,int> ("!Blue*",eSTAR),//Galactic blue star
+		std::pair<std::string,int> ("C*",eSTAR),//Carbon star
+		std::pair<std::string,int> ("!C*",eSTAR),//Galactic carbon star
+		std::pair<std::string,int> ("Red*",eSTAR),//Red star
+		std::pair<std::string,int> ("!Red*",eSTAR),//Galactic red star
+		std::pair<std::string,int> ("exG*",eSTAR),//Extragalactic star not part of galaxy
+		std::pair<std::string,int> ("Flare*",eSTAR),//Flare star
+		std::pair<std::string,int> ("!Flare*",eSTAR),//Galactic flare star
+		std::pair<std::string,int> ("V*",eSTAR),//Variable star
+		std::pair<std::string,int> ("!V*",eSTAR),//Galactic variable star
+		std::pair<std::string,int> ("WD*",eSTAR),//White dwarf
+		std::pair<std::string,int> ("!WD*",eSTAR),//Galactic White dwarf
+		std::pair<std::string,int> ("WR*",eSTAR),//Wolf-Rayet star
+		std::pair<std::string,int> ("!WR*",eSTAR),//Galactic Wolf-Rayet star
+		std::pair<std::string,int> ("Psr",eSTAR),//Pulsar
+		std::pair<std::string,int> ("!Psr",eSTAR),//Galactic Pulsar
+		std::pair<std::string,int> ("SN",eSTAR),//Supernova
+		std::pair<std::string,int> ("!SN",eSTAR),//Galactic Supernova		
+		
+
+		//Other
+		std::pair<std::string,int> ("*Cl",eSTAR_CLUSTER),//Star cluster
+		std::pair<std::string,int> ("!*Cl",eSTAR_CLUSTER),//Galactic star cluster
+		std::pair<std::string,int> ("MCld",eMOLECULAR_CLOUD),//Molecular cloud
+		std::pair<std::string,int> ("!MCld",eMOLECULAR_CLOUD),//Galactic Molecular cloud
+		std::pair<std::string,int> ("HII",eHII),//HII region
+		std::pair<std::string,int> ("!HII",eHII),//Galactic HII region
+
+		std::pair<std::string,int> ("Neb",eNEBULA),//Nebula
+		std::pair<std::string,int> ("!Neb",eNEBULA),//Galactic Nebula
+		std::pair<std::string,int> ("RfN",eNEBULA),//Reflection Nebula
+		std::pair<std::string,int> ("!RfN",eNEBULA),//Galactic Reflection Nebula
+
+		std::pair<std::string,int> ("Nova",eNOVA),//Nova
+		std::pair<std::string,int> ("!Nova",eNOVA),//Galactic Nova
+
+		std::pair<std::string,int> ("PN",ePN),//Planetary Nebula
+		std::pair<std::string,int> ("!PN",ePN),//Galactic Planetary Nebula
+		std::pair<std::string,int> ("SNR",eSNR),//Supernova remnant
+		std::pair<std::string,int> ("!SNR",eSNR),//Galactic Supernova remnant
+
+		//Galaxy
+		std::pair<std::string,int> ("G",eGALAXY),//Galaxy
+		std::pair<std::string,int> ("QSO",eGALAXY),//Quasi-stellar object
+
+		//Galaxy group
+		std::pair<std::string,int> ("GGroup",eGALAXY_GROUP),//Group of galaxies
+		std::pair<std::string,int> ("QGroup",eGALAXY_GROUP),//Group of QSOs
+		std::pair<std::string,int> ("GPair",eGALAXY_GROUP),//Galaxy pair
+		std::pair<std::string,int> ("GTrpl",eGALAXY_GROUP),//Galaxy triple
+		std::pair<std::string,int> ("GClstr",eGALAXY_CLUSTER),//Cluster of galaxies
+		
+		//Remaining types
+		//*Ass	Stellar association
+		//AbLS	Absorption line system
+		//EmLS	Emission line source
+		//EmObj	Emission object
+		//!EmObj	Galactic emission line object
+		//VisS	Visual source
+		//Other	Other classification (e.g. comet; plate defect)
+		//Q_Lens	Lensed image of a QSO
+		//G_Lens	Lensed image of a galaxy
+		//PofG	Part of galaxy
+		
+	};
+	return tmp;
+
+}//close InitNEDObjIdMap()
+std::map<std::string,int> AstroObjectParser::m_nedObjIdMap(InitNEDObjIdMap()); 
+
+
+
+
+/**
+* \brief Init NED object minor identifier code map
+*/
+std::map<std::string,int> InitNEDObjSubIdMap() {
+
+	//Fill map items
+	std::map<std::string,int> tmp
+	{
+  	std::pair<std::string,int> ("?",eUNKNOWN_OBJECT),
+
+		//Radio source object
+    std::pair<std::string,int> ("RadioS",eRADIO_OBJ),//Radio source
+
+		//UV source object
+		std::pair<std::string,int> ("UvES",eUV_OBJ),//Ultraviolet excess source
+		std::pair<std::string,int> ("UvS",eUV_OBJ),//Ultraviolet source
+
+		//Infrared source object
+		std::pair<std::string,int> ("IrS",eIR_OBJ),//Infrared source
+
+		//X source object
+    std::pair<std::string,int> ("XrayS",eX_OBJ),//X-ray source
+
+		//Gamma source object
+    std::pair<std::string,int> ("GammaS",eGAMMA_OBJ),//Gamma-ray source
+   	
+		//Stars
+		std::pair<std::string,int> ("*",eSTAR),//Star
+		std::pair<std::string,int> ("**",eSTAR),//Double Star
+		std::pair<std::string,int> ("!*",eSTAR),//Galactic star
+		std::pair<std::string,int> ("!**",eSTAR),//Galactic double star
+		std::pair<std::string,int> ("Blue*",eSTAR_BSG),//Blue star
+		std::pair<std::string,int> ("!Blue*",eSTAR_BSG),//Galactic blue star
+		std::pair<std::string,int> ("C*",eSTAR_C),//Carbon star
+		std::pair<std::string,int> ("!C*",eSTAR_C),//Galactic carbon star
+		std::pair<std::string,int> ("Red*",eSTAR_RSG),//Red star
+		std::pair<std::string,int> ("!Red*",eSTAR_RSG),//Galactic red star
+		std::pair<std::string,int> ("exG*",eSTAR),//Extragalactic star not part of galaxy
+		std::pair<std::string,int> ("Flare*",eSTAR_FLARE),//Flare star
+		std::pair<std::string,int> ("!Flare*",eSTAR_FLARE),//Galactic flare star
+		std::pair<std::string,int> ("V*",eSTAR_VARIABLE),//Variable star
+		std::pair<std::string,int> ("!V*",eSTAR_VARIABLE),//Galactic variable star
+		std::pair<std::string,int> ("WD*",eSTAR_WD),//White dwarf
+		std::pair<std::string,int> ("!WD*",eSTAR_WD),//Galactic White dwarf
+		std::pair<std::string,int> ("WR*",eSTAR_WR),//Wolf-Rayet star
+		std::pair<std::string,int> ("!WR*",eSTAR_WR),//Galactic Wolf-Rayet star
+		std::pair<std::string,int> ("Psr",eSTAR_PULSAR),//Pulsar
+		std::pair<std::string,int> ("!Psr",eSTAR_PULSAR),//Galactic Pulsar
+		std::pair<std::string,int> ("SN",eSTAR_SUPERNOVA),//Supernova
+		std::pair<std::string,int> ("!SN",eSTAR_SUPERNOVA),//Galactic Supernova		
+		
+
+		//Other
+		std::pair<std::string,int> ("*Cl",eSTAR_CLUSTER),//Star cluster
+		std::pair<std::string,int> ("!*Cl",eSTAR_CLUSTER),//Galactic star cluster
+		std::pair<std::string,int> ("MCld",eMOLECULAR_CLOUD),//Molecular cloud
+		std::pair<std::string,int> ("!MCld",eMOLECULAR_CLOUD),//Galactic Molecular cloud
+		std::pair<std::string,int> ("HII",eHII),//HII region
+		std::pair<std::string,int> ("!HII",eHII),//Galactic HII region
+
+		std::pair<std::string,int> ("Neb",eNEBULA),//Nebula
+		std::pair<std::string,int> ("!Neb",eNEBULA),//Galactic Nebula
+		std::pair<std::string,int> ("RfN",eNEBULA),//Reflection Nebula
+		std::pair<std::string,int> ("!RfN",eNEBULA),//Galactic Reflection Nebula
+
+		std::pair<std::string,int> ("Nova",eNOVA),//Nova
+		std::pair<std::string,int> ("!Nova",eNOVA),//Galactic Nova
+
+		std::pair<std::string,int> ("PN",ePN),//Planetary Nebula
+		std::pair<std::string,int> ("!PN",ePN),//Galactic Planetary Nebula
+		std::pair<std::string,int> ("SNR",eSNR),//Supernova remnant
+		std::pair<std::string,int> ("!SNR",eSNR),//Galactic Supernova remnant
+
+		//Galaxy
+		std::pair<std::string,int> ("G",eGALAXY),//Galaxy
+		std::pair<std::string,int> ("QSO",eGALAXY),//Quasi-stellar object
+
+		//Galaxy group
+		std::pair<std::string,int> ("GGroup",eGALAXY_GROUP),//Group of galaxies
+		std::pair<std::string,int> ("QGroup",eGALAXY_GROUP),//Group of QSOs
+		std::pair<std::string,int> ("GPair",eGALAXY_GROUP),//Galaxy pair
+		std::pair<std::string,int> ("GTrpl",eGALAXY_GROUP),//Galaxy triple
+		std::pair<std::string,int> ("GClstr",eGALAXY_CLUSTER),//Cluster of galaxies
+
+	};
+	return tmp;
+
+}//close InitNEDObjSubIdMap()
+
+std::map<std::string,int> AstroObjectParser::m_nedObjSubIdMap(InitNEDObjSubIdMap()); 
+
 
 
 //===========================
@@ -805,6 +1007,436 @@ int AstroObjectParser::ParseMGPSObjectData(AstroObject& astroObject,std::string 
 
 }//close ParseMGPSObjectData()
 
+
+int AstroObjectParser::ParseNedData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter)
+{
+	// Init data
+	astroObjects.clear();	
+
+	// Read region file and get region text lines
+	std::vector<std::string> raw_data;
+	if(Read(raw_data,filename)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read region data from file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+
+	// Check lines
+	if(raw_data.empty()){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Empty data list read from file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+	
+
+	// Extract astro objects from parsed lines
+	bool parseErr= false;
+
+	for(size_t i=0;i<raw_data.size();i++)
+	{
+		AstroObject* astroObject= new AstroObject;
+		if(ParseNedObjectData(*astroObject,raw_data[i],delimiter)<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to parse astro object from data line no. "<<i+1<<", stop parsing and return error!");
+			#endif
+			parseErr= true;
+			break;
+		}		
+
+		//Append region to list
+		astroObjects.push_back(astroObject);
+
+	
+	}//end loop data
+
+	//Clear data in case of errors
+	if(parseErr){
+		CodeUtils::DeletePtrCollection<AstroObject>(astroObjects);
+		return -1;
+	}
+	
+	return 0;
+
+}//close ParseNedData()
+
+int AstroObjectParser::ParseNedObjectData(AstroObject& astroObject,std::string data,char delimiter)
+{
+	//============================
+	//==    NED FORMAT
+	//============================
+	//- Field 0: Object number (not needed)
+	//- Field 1: Object name
+	//- Field 2-3: Object coordinates (RA & DEC)
+	//- Field 4: Object identifier
+	//=============================
+
+	//Check input
+	if(data==""){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty catalog line given, nothing to be parsed!");
+		#endif
+		return -1;
+	}
+	
+	
+	//Split line using delimiter
+	std::vector<std::string> fields= CodeUtils::SplitStringOnPattern(data,delimiter);
+	size_t nRequestedFields= 5;
+
+	if(fields.empty() || fields.size()!=nRequestedFields){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty or invalid number of fields parsed ("<<fields.size()<<" found when "<<nRequestedFields<<" expected)!");
+		#endif
+		return -1;
+	}
+
+
+	//Parse index
+	std::string index_str= fields[0];
+	CodeUtils::RemovePatternInString(index_str,"\t");
+	CodeUtils::StripBlankSpaces(index_str);
+	astroObject.index= atol(index_str.c_str());
+
+	//Parse object name
+	std::string name_str= fields[1];
+	CodeUtils::RemovePatternInString(name_str,"\t");
+	astroObject.name= name_str;
+	
+	
+	//Parse object identifier
+	std::string id_str= fields[4];
+	CodeUtils::StripBlankSpaces(id_str);
+	
+	std::map<std::string,int>::iterator it= m_nedObjIdMap.find(id_str);
+	int id= eUNKNOWN_OBJECT;
+	if(!m_nedObjIdMap.empty() && it!=m_nedObjIdMap.end()){
+		id= it->second;
+	}
+	
+	//If unknown id, check for star (should contain *)
+	if(id==eUNKNOWN_OBJECT){
+		if(CodeUtils::HasPatternInString(id_str,"*")){
+			id= eSTAR;
+		}
+	}
+
+	astroObject.id_str= id_str;
+	astroObject.id= id;
+
+	//Parse object minor identifier
+	std::string subid_str= fields[4];
+	CodeUtils::StripBlankSpaces(subid_str);
+	
+	it= m_nedObjSubIdMap.find(subid_str);
+	int subid= eUNKNOWN_OBJECT;
+	if(!m_nedObjSubIdMap.empty() && it!=m_nedObjSubIdMap.end()){
+		subid= it->second;
+	}
+	
+	//If unknown id, check for star (should contain *)
+	if(subid==eUNKNOWN_OBJECT){
+		if(CodeUtils::HasPatternInString(subid_str,"*")){
+			subid= eSTAR;
+		}
+	}
+
+	astroObject.subid= subid;
+
+
+	//NED does not distinguish between candidates or confirmed, so assume are all confirmed
+	astroObject.confirmed= true;
+	
+
+	//Parse coordinates
+	std::string ra_str= fields[2];
+	CodeUtils::StripBlankSpaces(ra_str);
+	astroObject.x= atof(ra_str.c_str());
+
+	std::string dec_str= fields[3];
+	CodeUtils::StripBlankSpaces(dec_str);
+	astroObject.y= atof(dec_str.c_str());
+	
+	return 0;
+
+}//close ParseNedObjectData()
+
+
+int AstroObjectParser::ParseHASHData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter)
+{
+	// Init data
+	astroObjects.clear();	
+
+	// Read region file and get region text lines
+	std::vector<std::string> raw_data;
+	if(Read(raw_data,filename)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read region data from file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+
+	// Check lines
+	if(raw_data.empty()){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Empty data list read from file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+	
+
+	// Extract astro objects from parsed lines
+	bool parseErr= false;
+
+	for(size_t i=0;i<raw_data.size();i++)
+	{
+		AstroObject* astroObject= new AstroObject;
+		if(ParseHASHObjectData(*astroObject,raw_data[i],delimiter)<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to parse astro object from data line no. "<<i+1<<", stop parsing and return error!");
+			#endif
+			parseErr= true;
+			break;
+		}		
+
+		//Append region to list
+		astroObjects.push_back(astroObject);
+
+	
+	}//end loop data
+
+	//Clear data in case of errors
+	if(parseErr){
+		CodeUtils::DeletePtrCollection<AstroObject>(astroObjects);
+		return -1;
+	}
+	
+	return 0;
+
+}//close ParseHASHData()
+
+int AstroObjectParser::ParseHASHObjectData(AstroObject& astroObject,std::string data,char delimiter)
+{
+	//============================
+	//==    HASH FORMAT
+	//============================
+	//- Field 0: Object number (not needed)
+	//- Field 1: Object gal name (not needed)
+	//- Field 2: Object name
+	//- Field 3: Object flag (T=confirmed, L=likely, P=possible)
+	//- Field 4-5: Object coordinates (RA & DEC)
+	//- Field 6-7-8: Bmaj/Bmin/Pa
+	//=============================
+
+
+	//Check input
+	if(data==""){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty catalog line given, nothing to be parsed!");
+		#endif
+		return -1;
+	}
+	
+	
+	//Split line using delimiter
+	std::vector<std::string> fields= CodeUtils::SplitStringOnPattern(data,delimiter);
+	size_t nRequestedFields= 9;
+
+	if(fields.empty() || fields.size()!=nRequestedFields){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty or invalid number of fields parsed ("<<fields.size()<<" found when "<<nRequestedFields<<" expected)!");
+		#endif
+		return -1;
+	}
+
+
+	//Parse index
+	std::string index_str= fields[0];
+	CodeUtils::RemovePatternInString(index_str,"\t");
+	CodeUtils::StripBlankSpaces(index_str);
+	astroObject.index= atol(index_str.c_str());
+
+	//Parse object name
+	std::string name_str= fields[2];
+	CodeUtils::RemovePatternInString(name_str,"\t");
+	astroObject.name= name_str;
+	
+	
+	//Set object identifier to PN
+	astroObject.id_str= "";
+	astroObject.id= ePN;
+	astroObject.subid= ePN;
+
+	
+	//Parse confirmed field
+	std::string flag_str= fields[3];
+	CodeUtils::RemovePatternInString(flag_str,"\t");
+	CodeUtils::StripBlankSpaces(flag_str);
+	
+	if(flag_str=="T"){
+		astroObject.confirmed= true;
+	}
+	else if(flag_str=="P" || flag_str=="L"){
+		astroObject.confirmed= false;
+	}
+	else{
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Unknown PN flag found ("<<flag_str<<")");
+		#endif
+	}
+
+	//Parse coordinates
+	std::string ra_str= fields[4];
+	CodeUtils::StripBlankSpaces(ra_str);
+	astroObject.x= atof(ra_str.c_str());
+
+	std::string dec_str= fields[5];
+	CodeUtils::StripBlankSpaces(dec_str);
+	astroObject.y= atof(dec_str.c_str());
+
+	//Parse ellipse fields
+	std::string bmaj_str= fields[6];
+	std::string bmin_str= fields[7];
+	std::string pa_str= fields[8];
+	CodeUtils::StripBlankSpaces(bmaj_str);
+	CodeUtils::StripBlankSpaces(bmin_str);
+	CodeUtils::StripBlankSpaces(pa_str);
+	
+	if(bmaj_str!="" && bmin_str!="" && pa_str!=""){
+		astroObject.hasEllipseInfo= true;
+		astroObject.bmaj= atof(bmaj_str.c_str());
+		astroObject.bmin= atof(bmin_str.c_str());
+		astroObject.pa= atof(pa_str.c_str());
+	}
+	
+	
+	return 0;
+
+}//close ParseHASHObjectData()
+
+
+int AstroObjectParser::ParseWiseHIIData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter)
+{
+	// Init data
+	astroObjects.clear();	
+
+	// Read region file and get region text lines
+	std::vector<std::string> raw_data;
+	if(Read(raw_data,filename)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read region data from file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+
+	// Check lines
+	if(raw_data.empty()){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Empty data list read from file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+	
+
+	// Extract astro objects from parsed lines
+	bool parseErr= false;
+
+	for(size_t i=0;i<raw_data.size();i++)
+	{
+		AstroObject* astroObject= new AstroObject;
+		if(ParseWiseHIIObjectData(*astroObject,raw_data[i],delimiter)<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to parse astro object from data line no. "<<i+1<<", stop parsing and return error!");
+			#endif
+			parseErr= true;
+			break;
+		}		
+
+		//Append region to list
+		astroObjects.push_back(astroObject);
+
+	
+	}//end loop data
+
+	//Clear data in case of errors
+	if(parseErr){
+		CodeUtils::DeletePtrCollection<AstroObject>(astroObjects);
+		return -1;
+	}
+	
+	return 0;
+
+}//close ParseWiseHIIData()
+
+int AstroObjectParser::ParseWiseHIIObjectData(AstroObject& astroObject,std::string data,char delimiter)
+{
+	//============================
+	//==    HASH FORMAT
+	//============================
+	//- Field 0: Object name
+	//- Field 1-2: Object coordinates (RA & DEC)
+	//- Field 3: Radius 
+	//=============================
+
+
+	//Check input
+	if(data==""){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty catalog line given, nothing to be parsed!");
+		#endif
+		return -1;
+	}
+	
+	
+	//Split line using delimiter
+	std::vector<std::string> fields= CodeUtils::SplitStringOnPattern(data,delimiter);
+	size_t nRequestedFields= 4;
+
+	if(fields.empty() || fields.size()!=nRequestedFields){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty or invalid number of fields parsed ("<<fields.size()<<" found when "<<nRequestedFields<<" expected)!");
+		#endif
+		return -1;
+	}
+
+
+	//Parse object name
+	std::string name_str= fields[0];
+	CodeUtils::RemovePatternInString(name_str,"\t");
+	astroObject.name= name_str;
+	
+	
+	//Set object identifier to HII
+	astroObject.id_str= "";
+	astroObject.id= eHII;
+	astroObject.subid= eHII;
+
+	
+	//Set confirmed to true. No field is given in the catalogue
+	astroObject.confirmed= true;
+
+	//Parse coordinates
+	std::string ra_str= fields[1];
+	CodeUtils::StripBlankSpaces(ra_str);
+	astroObject.x= atof(ra_str.c_str());
+
+	std::string dec_str= fields[2];
+	CodeUtils::StripBlankSpaces(dec_str);
+	astroObject.y= atof(dec_str.c_str());
+
+	//Parse radius
+	std::string radius_str= fields[3];
+	CodeUtils::StripBlankSpaces(radius_str);
+	if(radius_str!=""){
+		astroObject.hasSizeInfo= true;
+		astroObject.radius= atof(radius_str.c_str());
+	}
+	
+	
+	return 0;
+
+}//close ParseWiseHIIObjectData()
 
 int AstroObjectParser::Read(std::vector<std::string>& data,std::string filename)
 {
