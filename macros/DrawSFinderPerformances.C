@@ -186,19 +186,26 @@ std::vector<double> LgFluxBins_ext= {
 };
 */
 
-/*
-std::vector<double> SourceScaleBins_ext= {
-	0,0.25,0.5,0.75,1,1.25,1.5,1.75,2,2.25,2.5,2.75,3,3.25,3.5,3.75,4,4.25
-};
-*/
+
+
 std::vector<double> SourceScaleBins_ext= {
 	0,0.2,0.4,0.6,0.8,1,1.2,1.4,1.6,1.8,2,2.2,2.4,2.6,2.8,3.,3.2,3.4,3.6,3.8,4.
 };
+
+
 /*
 std::vector<double> SourceScaleBins_ext= {
-	0,0.5,1,1.5,2,2.5,3,3.5,4,4.5
+	0,0.1,0.25,0.5,1,2,5,10,20,30,40,50,60,70,80,90,100,125,150,175,200
 };
 */
+/*
+std::vector<double> SourceScaleBins_ext= {
+	-1,-0.5,-0.25,0,0.25,0.5,0.75,1,1.25,1.5,1.75,2,2.25
+};
+*/
+
+
+
 //- Output file
 TFile* outputFile= 0;
 
@@ -1813,21 +1820,26 @@ int FillAnalysisHisto()
 
 		//Get data 
 		double lgFlux_true= log10(sourceTrueFlux);
+		double lgFlux_rec= log10(sourceFlux);
 		double xOffset= sourcePosX-sourceTruePosX;
 		double yOffset= sourcePosY-sourceTruePosY;
 		double FluxPull= sourceFlux/sourceTrueFlux-1;
 		double redChi2= fitChi2/fitNDF;
 	
 		//## Apply minimal cuts
-		//- Select flux bin
+		//- Select true flux bin
 		int gBin= NTrueSourceHisto_compact->FindBin(lgFlux_true);
 		if(NTrueSourceHisto_compact->IsBinUnderflow(gBin) || NTrueSourceHisto_compact->IsBinOverflow(gBin)) continue;
+
+		//- Select rec flux bin	
+		//int gBin= NRecSourceHisto_compact_fit->FindBin(lgFlux_rec);
+		//if(NRecSourceHisto_compact_fit->IsBinUnderflow(gBin) || NRecSourceHisto_compact_fit->IsBinOverflow(gBin)) continue;
 
 
 		//Fill histos & vectors for minimal selection data
 		NRecSourceHisto_compact_fit->Fill(lgFlux_true,1);
-		//NRecSourceVSSignificanceHisto_compact_fit->Fill(sourceTrueSNR,1);
 		FluxList_compact_fit[gBin-1].push_back(lgFlux_true);
+		//FluxList_compact_fit[gBin-1].push_back(lgFlux_rec);
 		xPosPullList_compact_fit[gBin-1].push_back(xOffset);
 		yPosPullList_compact_fit[gBin-1].push_back(yOffset);
 		FluxDensityPullList_compact_fit[gBin-1].push_back(FluxPull);
@@ -1864,6 +1876,7 @@ int FillAnalysisHisto()
 		nSources_presel++;
 		NRecSourceHisto_compact_fit_presel->Fill(lgFlux_true,1);
 		FluxList_compact_fit_presel[gBin-1].push_back(lgFlux_true);
+		//FluxList_compact_fit_presel[gBin-1].push_back(lgFlux_rec);
 		xPosPullList_compact_fit_presel[gBin-1].push_back(xOffset);
 		yPosPullList_compact_fit_presel[gBin-1].push_back(yOffset);
 		FluxDensityPullList_compact_fit_presel[gBin-1].push_back(FluxPull);
@@ -1886,9 +1899,9 @@ int FillAnalysisHisto()
       if(passed) {
 				nSources_cutsel++;
 				NRecSourceHisto_compact_fit_cutsel->Fill(lgFlux_true,1);
-				//NRecSourceVSSignificanceHisto_compact_fit_cutsel->Fill(sourceTrueSNR,1);
-	
+				
 				FluxList_compact_fit_cutsel[gBin-1].push_back(lgFlux_true);
+				//FluxList_compact_fit_cutsel[gBin-1].push_back(lgFlux_rec);			
 				xPosPullList_compact_fit_cutsel[gBin-1].push_back(xOffset);
 				yPosPullList_compact_fit_cutsel[gBin-1].push_back(yOffset);
 				FluxDensityPullList_compact_fit_cutsel[gBin-1].push_back(FluxPull);
@@ -1900,9 +1913,9 @@ int FillAnalysisHisto()
       if(passed) {
 				nSources_nnsel++;
 				NRecSourceHisto_compact_fit_nnsel->Fill(lgFlux_true,1);
-				//NRecSourceVSSignificanceHisto_compact_fit_nnsel->Fill(sourceTrueSNR,1);
-	
+				
 				FluxList_compact_fit_nnsel[gBin-1].push_back(lgFlux_true);
+				//FluxList_compact_fit_nnsel[gBin-1].push_back(lgFlux_rec);
 				xPosPullList_compact_fit_nnsel[gBin-1].push_back(xOffset);
 				yPosPullList_compact_fit_nnsel[gBin-1].push_back(yOffset);
 				FluxDensityPullList_compact_fit_nnsel[gBin-1].push_back(FluxPull);
@@ -2528,8 +2541,11 @@ int AnalyzeData(std::string filename){
 		double nBeams_true= (double)(NPix)/beamArea_true;
 		double Z_true= fluxDensity_true/(opt.noiseLevel_true*sqrt(nBeams_true));
 		//double Z_true= fluxDensity_true/(AvgRMS*sqrt(nBeams_true));
-		double lgSourceScale_true= log10(SimMaxScale_true);	
-	
+		//double lgSourceScale_true= log10(SimMaxScale_true);	
+		//double lgSourceScale_true= log10(SimMaxScale_true/opt.Bmaj);
+		//double lgSourceScale_true= SimMaxScale_true/opt.Bmaj;
+		double lgSourceScale_true= log10(nBeams_true);		
+
 		//Apply selection cuts to true source
 		//- Skip true source if overlapping with another true source
 		if(!trueExtSourceSelectionFlags[i]) {
@@ -2653,9 +2669,13 @@ int AnalyzeData(std::string filename){
 
 		//Fill rec info
 		double lgFlux_rec= log10(fluxDensity_rec/beamArea_rec);
-		double lgSourceScale_rec= log10(sourceMaxScale_rec);
-		//double nBeams_rec= (double)(NPix_rec)/beamArea_rec;
-		double nBeams_rec= 1;//ADD NPIXRec to ROOT TTRee
+		double nBeams_rec= (double)(NPix_rec)/beamArea_rec;
+		//double nBeams_rec= 1;//ADD NPIXRec to ROOT TTRee
+		//double lgSourceScale_rec= log10(sourceMaxScale_rec);
+		//double lgSourceScale_rec= log10(sourceMaxScale_rec/opt.Bmaj);
+		//double lgSourceScale_rec= sourceMaxScale_rec/opt.Bmaj;
+		double lgSourceScale_rec= log10(nBeams_rec);		
+	
 		double Z_rec= (fluxDensity_rec/beamArea_rec)/(opt.noiseLevel_true*sqrt(nBeams_rec));
 		NRecSourceHisto_reliability_ext->Fill(lgFlux_rec,1);
 		NRecSourceVSScaleHisto_reliability_ext->Fill(lgFlux_rec,lgSourceScale_rec,1);
@@ -2680,13 +2700,16 @@ void Draw()
 
 	//Set palette
 	//gStyle->SetPalette(kDarkBodyRadiator);
-	//gStyle->SetPalette(kTemperatureMap);
-	gStyle->SetPalette(kGreyScale);
+	gStyle->SetPalette(kTemperatureMap);
+	//gStyle->SetPalette(kGreyScale);
 
 
 	gStyle->SetNumberContours(999);
 	//gStyle->SetOptLogx();
 	//gStyle->SetErrorX(0.0001);
+
+	Int_t kLightGray = 1756;
+	TColor* lightGray= new TColor(kLightGray,0.941176,0.937255,0.937255);
 
 
 	//double xMin_draw= LgFluxBins[0];
@@ -2729,13 +2752,17 @@ void Draw()
 	EffPlotBkg->GetYaxis()->SetTitle("Completeness");
 	EffPlotBkg->Draw();
 
-	double Eff_detectionAreaX[]= {xMin_draw,log10(5*opt.noiseLevel_true)};
+	
+
+	double Eff_detectionAreaX[]= {xMin_draw+0.001,log10(5*opt.noiseLevel_true)};
 	double Eff_detectionAreaY[]= {0,0};
 	TGraph* Eff_sigmaDetectionArea = new TGraph(2,Eff_detectionAreaX,Eff_detectionAreaY);
-  Eff_sigmaDetectionArea->SetLineColor(kGray+2);
+  //Eff_sigmaDetectionArea->SetLineColor(kGray+2);
+	Eff_sigmaDetectionArea->SetLineColor(kBlack);
   Eff_sigmaDetectionArea->SetLineWidth(15001);
-  Eff_sigmaDetectionArea->SetFillStyle(3005);	
-	Eff_sigmaDetectionArea->SetFillColor(kGray);
+  //Eff_sigmaDetectionArea->SetFillStyle(3005);	
+	//Eff_sigmaDetectionArea->SetFillColor(kGray);
+	Eff_sigmaDetectionArea->SetFillColor(kLightGray);
 	Eff_sigmaDetectionArea->Draw("C");
 
 	TGraphAsymmErrors* EfficiencyGraph_compact_fit= Efficiency_compact_fit->CreateGraph(); 
@@ -2786,6 +2813,8 @@ void Draw()
 	EfficiencyGraph_compact_fit_nnsel->SetLineColor(kGreen+1);
 	EfficiencyGraph_compact_fit_nnsel->Draw("PLZ same");
 
+	gPad->RedrawAxis();
+
 	TLegend* EffPlotLegend= new TLegend(0.6,0.7,0.7,0.8);
 	EffPlotLegend->SetFillColor(0);
 	EffPlotLegend->SetTextSize(0.045);
@@ -2796,6 +2825,8 @@ void Draw()
 	EffPlotLegend->AddEntry(EfficiencyGraph_compact_fit_nnsel,"NN sel","PL");
 	EffPlotLegend->AddEntry(Eff_sigmaDetectionArea,"5#sigma detection limit","F");
 	EffPlotLegend->Draw("same");
+
+	
 
 
 	//- Efficiency plot extended source
@@ -2813,7 +2844,7 @@ void Draw()
 	TGraph* Eff_sigmaDetectionArea_ext = new TGraph(2,Eff_detectionAreaX,Eff_detectionAreaY);
   Eff_sigmaDetectionArea_ext->SetLineColor(kGray+2);
   Eff_sigmaDetectionArea_ext->SetLineWidth(15001);
-  Eff_sigmaDetectionArea_ext->SetFillStyle(3005);	
+  //Eff_sigmaDetectionArea_ext->SetFillStyle(3005);	
 	Eff_sigmaDetectionArea_ext->SetFillColor(kGray);
 	Eff_sigmaDetectionArea_ext->Draw("C");
 
@@ -2870,7 +2901,8 @@ void Draw()
 	EfficiencyVSScaleHisto_ext->SetMaximum(1.0001);
 	EfficiencyVSScaleHisto_ext->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
 	EfficiencyVSScaleHisto_ext->GetXaxis()->SetTitleSize(0.06);
-	EfficiencyVSScaleHisto_ext->GetYaxis()->SetTitle("log_{10}(size/arcsec)");
+	//EfficiencyVSScaleHisto_ext->GetYaxis()->SetTitle("log_{10}(size/arcsec)");
+	EfficiencyVSScaleHisto_ext->GetYaxis()->SetTitle("log_{10}(size/b_{maj})");
 	EfficiencyVSScaleHisto_ext->GetYaxis()->SetTitleSize(0.06);
 	EfficiencyVSScaleHisto_ext->GetZaxis()->SetTitle("Completeness");
 	EfficiencyVSScaleHisto_ext->GetZaxis()->SetTitleSize(0.05);
@@ -3025,6 +3057,8 @@ void Draw()
 	ReliabilityGraph_compact_fit_nnsel->SetLineColor(kGreen+1);
 	ReliabilityGraph_compact_fit_nnsel->Draw("PZL same");
 	
+	gPad->RedrawAxis();
+
 	TLegend* ReliabilityPlotLegend= new TLegend(0.6,0.7,0.7,0.8);
 	ReliabilityPlotLegend->SetFillColor(0);
 	ReliabilityPlotLegend->SetTextSize(0.045);
@@ -3036,6 +3070,7 @@ void Draw()
 	ReliabilityPlotLegend->AddEntry(Eff_sigmaDetectionArea,"5#sigma detection limit","F");
 	ReliabilityPlotLegend->Draw("same");
 
+	
 
 	//Extended
 	double minReliabilityX_ext_draw= -4;
@@ -3095,9 +3130,10 @@ void Draw()
 	TH2D* ReliabilityVSScaleHisto_ext= (TH2D*)ReliabilityVSScale_ext->CreateHistogram();
 	ReliabilityVSScaleHisto_ext->SetMinimum(-0.0001);
 	ReliabilityVSScaleHisto_ext->SetMaximum(1.0001);
-	ReliabilityVSScaleHisto_ext->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+	ReliabilityVSScaleHisto_ext->GetXaxis()->SetTitle("log_{10}(S_{meas}/Jy)");
 	ReliabilityVSScaleHisto_ext->GetXaxis()->SetTitleSize(0.06);
-	ReliabilityVSScaleHisto_ext->GetYaxis()->SetTitle("log_{10}(size/arcsec)");
+	//ReliabilityVSScaleHisto_ext->GetYaxis()->SetTitle("log_{10}(size/arcsec)");
+	ReliabilityVSScaleHisto_ext->GetYaxis()->SetTitle("log_{10}(size/b_{maj})");
 	ReliabilityVSScaleHisto_ext->GetYaxis()->SetTitleSize(0.06);
 	ReliabilityVSScaleHisto_ext->GetZaxis()->SetTitle("Reliability");
 	ReliabilityVSScaleHisto_ext->GetZaxis()->SetTitleSize(0.05);
@@ -3106,8 +3142,8 @@ void Draw()
 	//===============================================
 	//==          DRAW POSITIONAL ACCURACY
 	//===============================================
-	double minPosAccuracy_draw= -4;
-	double maxPosAccuracy_draw= 4;
+	double minPosAccuracy_draw= -3;
+	double maxPosAccuracy_draw= 3;
 	double minPosAccuracyX_draw= -4;
 	double maxPosAccuracyX_draw= 0.4;
 	double minPosResolution_draw= 0;
@@ -3132,7 +3168,7 @@ void Draw()
 	PosAccuracyPlotBkg->GetXaxis()->SetTitleSize(0.08);
 	PosAccuracyPlotBkg->GetXaxis()->SetTitleOffset(0.85);
 	PosAccuracyPlotBkg->GetXaxis()->SetLabelSize(0.06);
-	PosAccuracyPlotBkg->GetYaxis()->SetTitle("<RA>, <Dec> ('')");
+	PosAccuracyPlotBkg->GetYaxis()->SetTitle("<#Delta RA>, <#Delta Dec> ('')");
 	PosAccuracyPlotBkg->GetYaxis()->SetTitleSize(0.08);
 	PosAccuracyPlotBkg->GetYaxis()->SetTitleOffset(0.8);
 	PosAccuracyPlotBkg->GetYaxis()->SetLabelSize(0.06);
@@ -3141,8 +3177,9 @@ void Draw()
 	TGraph* PosAccuracy_sigmaDetectionArea = new TGraph(2,PosAccuracy_detectionAreaX,PosAccuracy_detectionAreaY);
   PosAccuracy_sigmaDetectionArea->SetLineColor(kGray+2);
   PosAccuracy_sigmaDetectionArea->SetLineWidth(15001);
-  PosAccuracy_sigmaDetectionArea->SetFillStyle(3005);	
-	PosAccuracy_sigmaDetectionArea->SetFillColor(kGray);
+  //PosAccuracy_sigmaDetectionArea->SetFillStyle(3005);	
+	//PosAccuracy_sigmaDetectionArea->SetFillColor(kGray);
+	PosAccuracy_sigmaDetectionArea->SetFillColor(kLightGray);	
 	PosAccuracy_sigmaDetectionArea->Draw("C");
 
 	xPosAccuracyGraph_compact_fit->SetMarkerStyle(8);
@@ -3199,13 +3236,14 @@ void Draw()
 	refLine_posAccuracy->SetLineStyle(kDashed);
 	refLine_posAccuracy->Draw("same");
 
+	gPad->RedrawAxis();
 
 	TLegend* PosAccuracyPlotLegend= new TLegend(0.6,0.7,0.7,0.8);
 	PosAccuracyPlotLegend->SetFillColor(0);
 	PosAccuracyPlotLegend->SetTextSize(0.05);
 	PosAccuracyPlotLegend->SetTextFont(52);
-	PosAccuracyPlotLegend->AddEntry(xPosAccuracyGraph_compact_fit,"<RA>","PL");
-	PosAccuracyPlotLegend->AddEntry(yPosAccuracyGraph_compact_fit,"<Dec>","PL");
+	PosAccuracyPlotLegend->AddEntry(xPosAccuracyGraph_compact_fit,"<#Delta RA>","PL");
+	PosAccuracyPlotLegend->AddEntry(yPosAccuracyGraph_compact_fit,"<#Delta Dec>","PL");
 	PosAccuracyPlotLegend->AddEntry(PosAccuracy_sigmaDetectionArea,"5#sigma detection limit","F");
 	PosAccuracyPlotLegend->Draw("same");
 
@@ -3222,7 +3260,8 @@ void Draw()
 	PosAccuracyPlotBkg2->GetXaxis()->SetTitleSize(0.08);
 	PosAccuracyPlotBkg2->GetXaxis()->SetTitleOffset(0.85);
 	PosAccuracyPlotBkg2->GetXaxis()->SetLabelSize(0.06);
-	PosAccuracyPlotBkg2->GetYaxis()->SetTitle("#sigma(RA), #sigma(Dec)  ('')");
+	//PosAccuracyPlotBkg2->GetYaxis()->SetTitle("#sigma(#Delta RA), #sigma(#Delta Dec)  ('')");
+	PosAccuracyPlotBkg2->GetYaxis()->SetTitle("IQR(#Delta RA)/2, IQR(#Delta Dec)/2  ('')");
 	PosAccuracyPlotBkg2->GetYaxis()->SetTitleSize(0.08);
 	PosAccuracyPlotBkg2->GetYaxis()->SetTitleOffset(0.8);
 	PosAccuracyPlotBkg2->GetYaxis()->SetLabelSize(0.06);
@@ -3231,8 +3270,9 @@ void Draw()
 	TGraph* PosResolution_sigmaDetectionArea = new TGraph(2,PosResolution_detectionAreaX,PosResolution_detectionAreaY);
   PosResolution_sigmaDetectionArea->SetLineColor(kGray+2);
   PosResolution_sigmaDetectionArea->SetLineWidth(15001);
-  PosResolution_sigmaDetectionArea->SetFillStyle(3005);	
-	PosResolution_sigmaDetectionArea->SetFillColor(kGray);
+  //PosResolution_sigmaDetectionArea->SetFillStyle(3005);	
+	//PosResolution_sigmaDetectionArea->SetFillColor(kGray);
+	PosResolution_sigmaDetectionArea->SetFillColor(kLightGray);
 	PosResolution_sigmaDetectionArea->Draw("C");
 
 	xPosResolutionGraph_compact_fit->SetMarkerStyle(8);
@@ -3279,16 +3319,21 @@ void Draw()
 	expPosYSigmaFcn_plus->SetLineStyle(kDotted);
 	expPosYSigmaFcn_plus->Draw("C same");
 
+	gPad->RedrawAxis();
 
 	TLegend* PosAccuracyPlotLegend2= new TLegend(0.5,0.5,0.7,0.7);
 	PosAccuracyPlotLegend2->SetFillColor(0);
 	PosAccuracyPlotLegend2->SetTextSize(0.05);
 	PosAccuracyPlotLegend2->SetTextFont(52);
-	PosAccuracyPlotLegend2->AddEntry(xPosResolutionGraph_compact_fit,"#sigma_{RA}","PL");
-	PosAccuracyPlotLegend2->AddEntry(yPosResolutionGraph_compact_fit,"#sigma_{Dec}","PL");
+	//PosAccuracyPlotLegend2->AddEntry(xPosResolutionGraph_compact_fit,"#sigma_{RA}","PL");
+	//PosAccuracyPlotLegend2->AddEntry(yPosResolutionGraph_compact_fit,"#sigma_{Dec}","PL");
+	PosAccuracyPlotLegend2->AddEntry(xPosResolutionGraph_compact_fit,"SIQR(RA)","PL");
+	PosAccuracyPlotLegend2->AddEntry(yPosResolutionGraph_compact_fit,"SIQR(Dec)","PL");
 	PosAccuracyPlotLegend2->AddEntry(PosResolution_sigmaDetectionArea,"5#sigma detection limit","F");
-	PosAccuracyPlotLegend2->AddEntry(expPosXSigmaFcn_plus,"#sigma_{RA}^{ideal}","L");
-	PosAccuracyPlotLegend2->AddEntry(expPosYSigmaFcn_plus,"#sigma_{Dec}^{ideal}","L");
+	//PosAccuracyPlotLegend2->AddEntry(expPosXSigmaFcn_plus,"#sigma_{RA}^{ideal}","L");
+	//PosAccuracyPlotLegend2->AddEntry(expPosYSigmaFcn_plus,"#sigma_{Dec}^{ideal}","L");
+	PosAccuracyPlotLegend2->AddEntry(expPosXSigmaFcn_plus,"SIQR_{ideal}(RA)","L");
+	PosAccuracyPlotLegend2->AddEntry(expPosYSigmaFcn_plus,"SIQR_{ideal}(Dec)","L");
 	PosAccuracyPlotLegend2->Draw("same");
 
 	TPad* clearLabelPad = new TPad("clearLabelPad", "clearLabelPad",0.05201342,0.479021,0.08557047,0.5314685);
@@ -3366,7 +3411,8 @@ void Draw()
 	PosAccuracyPlotBkg_ext->GetXaxis()->SetTitleSize(0.08);
 	PosAccuracyPlotBkg_ext->GetXaxis()->SetTitleOffset(0.85);
 	PosAccuracyPlotBkg_ext->GetXaxis()->SetLabelSize(0.06);
-	PosAccuracyPlotBkg_ext->GetYaxis()->SetTitle("<RA>, <Dec> ('')");
+	//PosAccuracyPlotBkg_ext->GetYaxis()->SetTitle("<RA>, <Dec> ('')");
+	PosAccuracyPlotBkg_ext->GetYaxis()->SetTitle("Position bias ('')");
 	PosAccuracyPlotBkg_ext->GetYaxis()->SetTitleSize(0.08);
 	PosAccuracyPlotBkg_ext->GetYaxis()->SetTitleOffset(0.8);
 	PosAccuracyPlotBkg_ext->GetYaxis()->SetLabelSize(0.06);	
@@ -3412,7 +3458,9 @@ void Draw()
 	PosAccuracyPlotBkg2_ext->GetXaxis()->SetTitleSize(0.08);
 	PosAccuracyPlotBkg2_ext->GetXaxis()->SetTitleOffset(0.85);
 	PosAccuracyPlotBkg2_ext->GetXaxis()->SetLabelSize(0.06);
-	PosAccuracyPlotBkg2_ext->GetYaxis()->SetTitle("#sigma(RA), #sigma(Dec)  ('')");
+	//PosAccuracyPlotBkg2_ext->GetYaxis()->SetTitle("#sigma(RA), #sigma(Dec)  ('')");
+	//PosAccuracyPlotBkg2_ext->GetYaxis()->SetTitle("IQR(RA), IQR(Dec)  ('')");
+	PosAccuracyPlotBkg2_ext->GetYaxis()->SetTitle("Position resolution  ('')");
 	PosAccuracyPlotBkg2_ext->GetYaxis()->SetTitleSize(0.08);
 	PosAccuracyPlotBkg2_ext->GetYaxis()->SetTitleOffset(0.8);
 	PosAccuracyPlotBkg2_ext->GetYaxis()->SetLabelSize(0.06);
@@ -3435,8 +3483,10 @@ void Draw()
 	PosAccuracyPlotLegend2_ext->SetFillColor(0);
 	PosAccuracyPlotLegend2_ext->SetTextSize(0.05);
 	PosAccuracyPlotLegend2_ext->SetTextFont(52);
-	PosAccuracyPlotLegend2_ext->AddEntry(xPosResolutionGraph_ext,"#sigma_{RA}","PL");
-	PosAccuracyPlotLegend2_ext->AddEntry(yPosResolutionGraph_ext,"#sigma_{Dec}","PL");
+	//PosAccuracyPlotLegend2_ext->AddEntry(xPosResolutionGraph_ext,"#sigma_{RA}","PL");
+	//PosAccuracyPlotLegend2_ext->AddEntry(yPosResolutionGraph_ext,"#sigma_{Dec}","PL");
+	PosAccuracyPlotLegend2_ext->AddEntry(xPosResolutionGraph_ext,"SIQR(RA)","PL");
+	PosAccuracyPlotLegend2_ext->AddEntry(yPosResolutionGraph_ext,"SIQR(Dec)","PL");
 	PosAccuracyPlotLegend2_ext->Draw("same");
 
 	TPad* clearLabelPad_ext = new TPad("clearLabelPad_ext", "clearLabelPad_ext",0.05201342,0.479021,0.08557047,0.5314685);
@@ -3477,7 +3527,10 @@ void Draw()
 
 	TH2D* FluxAccuracyPlotBkg= new TH2D("FluxAccuracyPlotBkg","",100,minFluxAccuracyX_draw,maxFluxAccuracyX_draw,100,minFluxAccuracy_draw,maxFluxAccuracy_draw);
 	FluxAccuracyPlotBkg->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
-	FluxAccuracyPlotBkg->GetYaxis()->SetTitle("<#frac{S_{meas}-S_{gen}}{S_{gen}}>");
+	//FluxAccuracyPlotBkg->GetYaxis()->SetTitle("<#frac{S_{meas}-S_{gen}}{S_{gen}}>");
+	//FluxAccuracyPlotBkg->GetYaxis()->SetTitle("<#DeltaS/S>");
+	//FluxAccuracyPlotBkg->GetYaxis()->SetTitle("<#DeltaS/S>");
+	FluxAccuracyPlotBkg->GetYaxis()->SetTitle("Flux density bias");
 	FluxAccuracyPlotBkg->GetXaxis()->SetTitleSize(0.08);
 	FluxAccuracyPlotBkg->GetXaxis()->SetTitleOffset(0.85);
 	FluxAccuracyPlotBkg->GetXaxis()->SetLabelSize(0.06);
@@ -3490,8 +3543,9 @@ void Draw()
 	TGraph* sigmaDetectionArea = new TGraph(2,detectionAreaX,detectionAreaY);
   sigmaDetectionArea->SetLineColor(kGray+2);
   sigmaDetectionArea->SetLineWidth(15001);
-  sigmaDetectionArea->SetFillStyle(3005);	
-	sigmaDetectionArea->SetFillColor(kGray);
+  //sigmaDetectionArea->SetFillStyle(3005);	
+	//sigmaDetectionArea->SetFillColor(kGray);
+	sigmaDetectionArea->SetFillColor(kLightGray);
 	sigmaDetectionArea->Draw("C");
 
 	FluxDensityAccuracyGraphPoints_compact->SetMarkerColor(kGray);
@@ -3528,10 +3582,13 @@ void Draw()
 	refLine_fluxAccuracy->SetLineStyle(kDashed);
 	refLine_fluxAccuracy->Draw("same");
 
+	gPad->RedrawAxis();
+
 	TLegend* FluxAccuracyPlotLegend= new TLegend(0.6,0.7,0.7,0.8);
 	FluxAccuracyPlotLegend->SetFillColor(0);
 	FluxAccuracyPlotLegend->SetTextSize(0.045);
 	FluxAccuracyPlotLegend->SetTextFont(52);
+	FluxAccuracyPlotLegend->AddEntry(FluxDensityAccuracyGraph_compact_fit_presel,"<#DeltaS/S>","PL");
 	FluxAccuracyPlotLegend->AddEntry(sigmaDetectionArea,"5#sigma detection limit","F");
 	FluxAccuracyPlotLegend->Draw("same");
 
@@ -3545,7 +3602,9 @@ void Draw()
 
 	TH2D* FluxAccuracyPlotBkg2= new TH2D("FluxAccuracyPlotBkg2","",100,minFluxAccuracyX_draw,maxFluxAccuracyX_draw,100,minFluxResolution_draw,maxFluxResolution_draw);
 	FluxAccuracyPlotBkg2->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
-	FluxAccuracyPlotBkg2->GetYaxis()->SetTitle("#sigma(#frac{S_{meas}-S_{gen}}{S_{gen}})");
+	//FluxAccuracyPlotBkg2->GetYaxis()->SetTitle("#sigma(#frac{S_{meas}-S_{gen}}{S_{gen}})");	
+	//FluxAccuracyPlotBkg2->GetYaxis()->SetTitle("#sigma(#DeltaS/S)");
+	FluxAccuracyPlotBkg2->GetYaxis()->SetTitle("Flux density resolution");
 	FluxAccuracyPlotBkg2->GetXaxis()->SetTitleSize(0.08);
 	FluxAccuracyPlotBkg2->GetXaxis()->SetTitleOffset(0.85);
 	FluxAccuracyPlotBkg2->GetXaxis()->SetLabelSize(0.06);
@@ -3557,8 +3616,9 @@ void Draw()
 	TGraph* sigmaDetectionArea2 = new TGraph(2,detectionAreaX_reso,detectionAreaY_reso);
   sigmaDetectionArea2->SetLineColor(kGray+2);
   sigmaDetectionArea2->SetLineWidth(15001);
-  sigmaDetectionArea2->SetFillStyle(3005);	
-	sigmaDetectionArea2->SetFillColor(kGray);
+  //sigmaDetectionArea2->SetFillStyle(3005);	
+	//sigmaDetectionArea2->SetFillColor(kGray);
+	sigmaDetectionArea2->SetFillColor(kLightGray);
 	sigmaDetectionArea2->Draw("C");
 
 	FluxDensityResolutionGraph_compact_fit->SetMarkerStyle(8);
@@ -3613,10 +3673,13 @@ void Draw()
 	fluxDensityErrLine_3sigma_minus->SetLineWidth(2);
 	//fluxDensityErrLine_3sigma_minus->Draw("l same");
 
+	gPad->RedrawAxis();
+
 	TLegend* FluxAccuracyPlotLegend2= new TLegend(0.6,0.7,0.7,0.8);
 	FluxAccuracyPlotLegend2->SetFillColor(0);
 	FluxAccuracyPlotLegend2->SetTextSize(0.045);
 	FluxAccuracyPlotLegend2->SetTextFont(52);
+	FluxAccuracyPlotLegend2->AddEntry(FluxDensityResolutionGraph_compact_fit_presel,"SIQR(#DeltaS/S)","PL");
 	FluxAccuracyPlotLegend2->AddEntry(fluxDensityErrLine_1sigma_plus,"1#sigma_{rms}","L");
 	FluxAccuracyPlotLegend2->AddEntry(fluxDensityErrLine_3sigma_plus,"3#sigma_{rms}","L");
 	FluxAccuracyPlotLegend2->AddEntry(sigmaDetectionArea,"5#sigma detection limit","F");
@@ -3694,7 +3757,8 @@ void Draw()
 
 	TH2D* FluxAccuracyPlotBkg_ext= new TH2D("FluxAccuracyPlotBkg_ext","",100,minFluxAccuracyX_ext_draw,maxFluxAccuracyX_ext_draw,100,minFluxAccuracy_ext_draw,maxFluxAccuracy_ext_draw);
 	FluxAccuracyPlotBkg_ext->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
-	FluxAccuracyPlotBkg_ext->GetYaxis()->SetTitle("<#frac{S_{meas}-S_{gen}}{S_{gen}}>");
+	//FluxAccuracyPlotBkg_ext->GetYaxis()->SetTitle("<#frac{S_{meas}-S_{gen}}{S_{gen}}>");
+	FluxAccuracyPlotBkg_ext->GetYaxis()->SetTitle("Flux density bias");
 	FluxAccuracyPlotBkg_ext->GetXaxis()->SetTitleSize(0.08);
 	FluxAccuracyPlotBkg_ext->GetXaxis()->SetTitleOffset(0.85);
 	FluxAccuracyPlotBkg_ext->GetXaxis()->SetLabelSize(0.06);
@@ -3715,6 +3779,15 @@ void Draw()
 	refLine_fluxDensityAccuracy_ext->SetLineStyle(kDashed);
 	refLine_fluxDensityAccuracy_ext->Draw("same");
 
+	gPad->RedrawAxis();
+
+	TLegend* FluxAccuracyPlotLegend_ext= new TLegend(0.6,0.7,0.7,0.8);
+	FluxAccuracyPlotLegend_ext->SetFillColor(0);
+	FluxAccuracyPlotLegend_ext->SetTextSize(0.045);
+	FluxAccuracyPlotLegend_ext->SetTextFont(52);
+	FluxAccuracyPlotLegend_ext->AddEntry(FluxDensityAccuracyGraph_ext,"<#DeltaS/S>","PL");
+	FluxAccuracyPlotLegend_ext->Draw("same");
+
 	//- Flux resolution
 	TPad* FluxAccuracyPlotPad2_ext= new TPad("FluxAccuracyPlotPad2_ext","FluxAccuracyPlotPad2_ext",0,0.01,1,0.5);
 	FluxAccuracyPlotPad2_ext->SetTopMargin(0);
@@ -3725,7 +3798,8 @@ void Draw()
 
 	TH2D* FluxAccuracyPlotBkg2_ext= new TH2D("FluxAccuracyPlotBkg2_ext","",100,minFluxAccuracyX_ext_draw,maxFluxAccuracyX_ext_draw,100,minFluxResolution_ext_draw,maxFluxResolution_ext_draw);
 	FluxAccuracyPlotBkg2_ext->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
-	FluxAccuracyPlotBkg2_ext->GetYaxis()->SetTitle("#sigma(#frac{S_{meas}-S_{gen}}{S_{gen}})");
+	//FluxAccuracyPlotBkg2_ext->GetYaxis()->SetTitle("#sigma(#frac{S_{meas}-S_{gen}}{S_{gen}})");	
+	FluxAccuracyPlotBkg2_ext->GetYaxis()->SetTitle("Flux density resolution");
 	FluxAccuracyPlotBkg2_ext->GetXaxis()->SetTitleSize(0.08);
 	FluxAccuracyPlotBkg2_ext->GetXaxis()->SetTitleOffset(0.85);
 	FluxAccuracyPlotBkg2_ext->GetXaxis()->SetLabelSize(0.06);
@@ -3740,6 +3814,14 @@ void Draw()
 	FluxDensityResolutionGraph_ext->SetLineColor(kBlack);
 	FluxDensityResolutionGraph_ext->Draw("EPZ same");
 
+	gPad->RedrawAxis();
+
+	TLegend* FluxAccuracyPlotLegend2_ext= new TLegend(0.6,0.7,0.7,0.8);
+	FluxAccuracyPlotLegend2_ext->SetFillColor(0);
+	FluxAccuracyPlotLegend2_ext->SetTextSize(0.045);
+	FluxAccuracyPlotLegend2_ext->SetTextFont(52);
+	FluxAccuracyPlotLegend2_ext->AddEntry(FluxDensityResolutionGraph_ext,"SIQR(#DeltaS/S)","PL");
+	FluxAccuracyPlotLegend2_ext->Draw("same");
 
 	TPad* clearLabelPad2_ext = new TPad("clearLabelPad2_ext", "clearLabelPad_ext",0.05201342,0.479021,0.08557047,0.5314685);
   clearLabelPad2_ext->SetBorderMode(0);

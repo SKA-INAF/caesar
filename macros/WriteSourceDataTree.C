@@ -7,7 +7,7 @@ using namespace std;
 using namespace Caesar;
 
 
-void WriteSourceDataTrees(std::string filename="",std::string outfilename="sourceDataTree.root",std::string outfilename_comp="sourceCompDataTree.root")
+void WriteSourceDataTree(std::string filename="",std::string outfilename="sourceDataTree.root",std::string outfilename_comp="sourceCompDataTree.root")
 {
 	//## Read input file
 	TFile* inputFile= new TFile(filename.c_str(),"READ");
