@@ -359,15 +359,15 @@ int DrawImagingPerformances(std::string fileName){
 
 	fluxAccuracy_extended->SetMarkerSize(1.5);
 	fluxAccuracy_extended->SetMarkerStyle(21);
-	fluxAccuracy_extended->SetMarkerColor(kBlack);
-	fluxAccuracy_extended->SetLineColor(kBlack);
+	fluxAccuracy_extended->SetMarkerColor(kRed);
+	fluxAccuracy_extended->SetLineColor(kRed);
 	fluxAccuracy_extended->Draw("PZ same");
 
 	
 	fluxAccuracy_compactextended->SetMarkerSize(1.7);
-	fluxAccuracy_compactextended->SetMarkerStyle(26);
-	fluxAccuracy_compactextended->SetMarkerColor(kBlack);
-	fluxAccuracy_compactextended->SetLineColor(kBlack);
+	fluxAccuracy_compactextended->SetMarkerStyle(22);
+	fluxAccuracy_compactextended->SetMarkerColor(kGreen+1);
+	fluxAccuracy_compactextended->SetLineColor(kGreen+1);
 	fluxAccuracy_compactextended->Draw("PZ same");
 
 	refLine_fluxAccuracy->Draw("same");
