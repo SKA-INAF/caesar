@@ -40,7 +40,7 @@
 #include <TTree.h>
 #include <TEllipse.h>
 #include <TRandom.h>
-
+#include <TRandom3.h>
 
 #include <iostream>
 #include <vector>
@@ -61,7 +61,7 @@ void Usage(char* exeName)
   cout<<"-h, --help \t Show help message and exit"<<endl;
 	cout<<"-i, --input=[INPUT_FILE] \t Input file in ROOT format to be cross-matched with catalogs"<<endl;
 	cout<<"-C, --catalogs=[CATALOG_FILE] \t Input file list name (ascii format) containing all catalog files in ROOT format to be cross-matched each other"<<endl;
-	cout<<"-c, --catalogType=[CATALOG_TYPE] \t Catalog type id {1=SIMBAD, 2=NED, 3=MGPS} (default=SIMBAD)"<<endl;
+	cout<<"-c, --catalogType=[CATALOG_TYPE] \t Catalog type id {1=SIMBAD, 2=NED, 3=MGPS, 4=HASH, 5=WISE-HII} (default=SIMBAD)"<<endl;
 	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (root format) in which to store source match info"<<endl;
 	cout<<"-n, --nx=[NX] \t Number of divisions along X (default=4)"<<endl;
 	cout<<"-N, --ny=[NY] \t Number of divisions along Y (default=4)"<<endl;
@@ -76,12 +76,13 @@ void Usage(char* exeName)
 	cout<<"-a, --compMatchOverlapThr \t Source fit component contour overlap fraction (wrt to total area) threshold (default=0.8)"<<endl;
 	cout<<"-d, --compMatchOverlapLowThr \t Source fit component contour overlap fraction (wrt to total area) low threshold (default=0.2)"<<endl;
 	cout<<"-l, --applyComponentAreaRatioThr \t If enabled and if source fit component is fully enclosed inside another (or viceversa) a match requires that the source1/source2 area ratio is higher than the component overlap threshold. If disabled, assume a match whenever a source component is fully enclosed in a source (or viceversa) (default=false)"<<endl;
-	cout<<"-f, --filterByType \t Consider only true sources with given type when searching the match (default=no)"<<endl;
-	cout<<"-s, --selectedType=[TYPE] \t True source types to be crossmatched (1=COMPACT, 2=POINT-LIKE, 3=EXTENDED, 4=COMPACT_WITH_EXTENDED) (default=-1)"<<endl;
-	
+	cout<<"-f, --filterByType \t Consider only sources with given type when searching the match (default=no)"<<endl;
+	cout<<"-s, --selectedType=[TYPE] \t Source types to be crossmatched (1=COMPACT, 2=POINT-LIKE, 3=EXTENDED, 4=COMPACT_WITH_EXTENDED) (default=-1)"<<endl;
+	cout<<"-F, --filterObjectByType \t Consider only object with given type when searching the match (default=no)"<<endl;
+	cout<<"-S, --selectedObjectType=[TYPE] \t Object types to be crossmatched (default=-1)"<<endl;
 	cout<<"-g, --shuffleSources \t Randomize sources and catalog sources in an annulus centred on their original position (default=no)"<<endl;
-	cout<<"-r, --shuffleRmin=[Rmin] \t Minimum annulus radius for source shuffling (default=30)"<<endl;
-	cout<<"-R, --shuffleRmax=[Rmax] \t Maximum annulus radius for source shuffling (default=50)"<<endl;
+	cout<<"-r, --shuffleRmin=[Rmin] \t Minimum annulus radius in arcsec for source shuffling (default=30 arcsec)"<<endl;
+	cout<<"-R, --shuffleRmax=[Rmax] \t Maximum annulus radius in arcsec for source shuffling (default=50 arcsec)"<<endl;
 	
 	cout<<"-v, --verbosity=[LEVEL] \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	
@@ -111,6 +112,8 @@ static const struct option options_tab[] = {
 	{ "applyComponentAreaRatioThr", no_argument, 0, 'l'},	
 	{ "filterByType", no_argument, 0, 'f'},
 	{ "selectedType", required_argument, 0, 's'},
+	{ "filterObjectByType", no_argument, 0, 'F'},
+	{ "selectedObjectType", required_argument, 0, 'S'},
 	{ "shuffleSources", no_argument, 0, 'g'},	
 	{ "shuffleRmin", required_argument, 0, 'r'},
 	{ "shuffleRmax", required_argument, 0, 'R'},
@@ -137,6 +140,8 @@ bool applySourceComponentAreaRatioThr= false;
 bool correctFlux= false;
 bool selectSourceByType= false;//default=all true sources searched 
 std::vector<int> stypes;
+bool selectObjectByType= false;//default=all object searched 
+std::vector<int> otypes;
 bool applyFluxOverlapThreshold= false;
 bool applySourceAreaRatioThr= false;
 double fluxOverlapThr= 0.5;
@@ -156,7 +161,9 @@ enum CatalogType
 {
 	eSIMBAD=1,
 	eNED=2,
-	eMGPS=3
+	eMGPS=3,
+	eHASH=4,
+	eWISE_HII=5
 };
 int catalogType= 1;
 
@@ -173,8 +180,11 @@ double sourcePosX_wcs= 0;
 double sourcePosY_wcs= 0;
 double sourceFluxDensity= 0;
 double sourceFlux= 0;
+double sourceFluxDensityErr= 0;
+double sourceFluxErr= 0;
 int nMatchedObjects= 0;
 std::vector<double> fluxDiff;
+std::vector<int> matchedObjectMultiplicity;
 std::vector<AstroObject*> matchedObjects;
 int nTotSourceComponents= 0;
 int nMatchedSourceComponents= 0;
@@ -194,6 +204,8 @@ struct ComponentPars
 		fitEllipse= nullptr;
 		fluxDensity= 0;
 		flux= 0;
+		fluxDensityErr= 0;
+		fluxErr= 0;
 		X0= 0;
 		Y0= 0;
 		X0_wcs= 0;
@@ -215,6 +227,8 @@ struct ComponentPars
 	double Y0;
 	double fluxDensity;//fitted flux density
 	double flux;//fitted flux
+	double fluxDensityErr;//fitted flux density err
+	double fluxErr;//fitted flux
 	TEllipse* fitEllipse;
 	bool isSelected;//is selected component
 };
@@ -442,20 +456,6 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	//=============================
-	//== Compute Spectral Indices
-	//=============================
-	#ifdef LOGGING_ENABLED
-		INFO_LOG("Computing spectral indices of matched sources ...");
-	#endif
-	if(ComputeSpectralIndices()<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Computing spectral indices of matched sources failed!");
-		#endif
-		return -1;
-	}
-	
-
 	//=======================
 	//== Save
 	//=======================
@@ -487,7 +487,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:C:c:o:v:qQ:n:N:mM:Llt:e:pba:d:fs:gr:R:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:C:c:o:v:qQ:n:N:mM:Llt:e:pba:d:fs:FS:gr:R:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -595,8 +595,17 @@ int ParseOptions(int argc, char *argv[])
 				stypes.push_back(stype);	
 				break;	
 			}	
-			
-			
+			case 'F':
+			{
+				selectObjectByType= true;
+				break;
+			}
+			case 'S':	
+			{
+				int type= atoi(optarg);
+				otypes.push_back(type);	
+				break;	
+			}	
 			case 'L':
 			{
 				applySourceAreaRatioThr= true;
@@ -645,7 +654,9 @@ int ParseOptions(int argc, char *argv[])
 	//=======================
 	if( catalogType!=eSIMBAD &&
 			catalogType!=eNED &&
-			catalogType!=eMGPS
+			catalogType!=eMGPS &&
+			catalogType!=eHASH &&
+			catalogType!=eWISE_HII
 	){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Invalid/unsupported catalog type given (type="<<catalogType<<")!");
@@ -681,10 +692,13 @@ int Init(){
 	matchedSourceInfo->Branch("x_wcs",&sourcePosX_wcs);
 	matchedSourceInfo->Branch("y_wcs",&sourcePosY_wcs);
 	matchedSourceInfo->Branch("fluxDensity",&sourceFluxDensity);
+	matchedSourceInfo->Branch("fluxDensityErr",&sourceFluxDensityErr);	
 	matchedSourceInfo->Branch("flux",&sourceFlux);
+	matchedSourceInfo->Branch("fluxErr",&sourceFluxErr);
 	matchedSourceInfo->Branch("nMatchedObjects",&nMatchedObjects);
 	matchedSourceInfo->Branch("matchedObjects",&matchedObjects);
-	matchedSourceInfo->Branch("fluxDiff",&fluxDiff);
+	//matchedSourceInfo->Branch("fluxDiff",&fluxDiff);
+	matchedSourceInfo->Branch("matchedObjectMultiplicity",&matchedObjectMultiplicity);
 	
 
 	//Init match option TTree
@@ -705,7 +719,10 @@ int Init(){
 	matchOptionTree->Branch("nMatchedSourceComponentsPerCatalog",&nMatchedSourceComponentsPerCatalog);
 	matchOptionTree->Branch("nMatchedSourceComponentCatalogMultiplicity",&nMatchedSourceComponentCatalogMultiplicity);
 
-	
+	//Set random seed
+	gRandom = new TRandom3(0);
+	gRandom->SetSeed(0);
+
 	return 0;
 
 }//close Init()
@@ -773,35 +790,6 @@ int InitGrid(float xmin,float xmax,float xstep,float ymin,float ymax,float ystep
 }//close InitGrid()
 
 
-int ComputeSpectralIndices()
-{
-	/*
-	#ifdef LOGGING_ENABLED
-		INFO_LOG("Computing spectral indices...");
-	#endif
-	for(size_t i=0;i<sourceMatchDataCollection.size();i++)
-	{
-		//Compute source SED and spectral index
-		if(sourceMatchDataCollection[i]->ComputeSourceSEDs()<0){
-			#ifdef LOGGING_ENABLED
-				WARN_LOG("Failed to compute spectral indices for source match data no. "<<i+1<<"!");
-			#endif
-		}
-
-		//Compute source component SEDs and relative spectral indices
-		if(sourceMatchDataCollection[i]->ComputeSourceComponentSEDs()<0){
-			#ifdef LOGGING_ENABLED
-				WARN_LOG("Failed to compute source component spectral indices for source match data no. "<<i+1<<"!");
-			#endif
-		}
-
-	}//end loop match data
-	*/
-
-	return 0;
-
-}//close ComputeSpectralIndices()
-
 
 
 
@@ -810,6 +798,19 @@ int FindSourceMatchesInTiles()
 	//Init counters	
 	nTotSourceComponents= 0;
 	nMatchedSourceComponents= 0;
+	std::map<std::string,int> matchedSourceNMatchMap;
+
+	struct MatchInfo 
+	{
+		MatchInfo(){
+			cpars= 0;
+			objs.clear();
+		}
+		ComponentPars* cpars;
+		std::vector<AstroObject*> objs;
+	};
+	std::vector<MatchInfo*> matchInfoCollection;
+	MatchInfo* matchInfo= 0;
 
 	//Loop over tiles and find matches with regions in the same tile and in neighbor tiles
 	for(size_t i=0;i<tileDataList.size();i++)
@@ -840,22 +841,11 @@ int FindSourceMatchesInTiles()
 			nTotSourceComponents++;
 			std::vector<int> matchCounter(NCatalogs,0);
 			bool matchFound= false;
-
-			//Set TTree data
-			matchedObjects.clear();
-			fluxDiff.clear();
 			nMatchedObjects= 0;
-			sourceName= componentPars->sname;
-			sourcePosX= componentPars->X0;
-			sourcePosY= componentPars->Y0;
-			sourcePosX_wcs= componentPars->X0_wcs;
-			sourcePosY_wcs= componentPars->Y0_wcs;
-			sourceFluxDensity= componentPars->fluxDensity;
-			sourceFlux= componentPars->flux;
-	
-			matchedSourceInfo->Branch("nMatchedObjects",&nMatchedObjects);
-			matchedSourceInfo->Branch("matchedObjects",&matchedObjects);
-		matchedSourceInfo->Branch("fluxDiff",&fluxDiff);
+
+			//Create MatchInfo 
+			matchInfo= new MatchInfo;
+			matchInfo->cpars= componentPars;
 
 			//==============================================
 			//===        CATALOG LOOP
@@ -893,12 +883,15 @@ int FindSourceMatchesInTiles()
 						continue;
 					}
 					matchFound= true;
-					matchCounter[s]++;
-					matchedObjects.push_back(catalogObject);
+					matchCounter[s]++;	
+					matchedSourceNMatchMap[catalogObject->name]++;
+					//matchedObjects.push_back(catalogObject);
 					nMatchedObjects++;
 
-					double dflux= sourceFlux- catalogObject->flux;
-					fluxDiff.push_back(dflux);
+					//double dflux= sourceFlux- catalogObject->flux;
+					//fluxDiff.push_back(dflux);
+
+					(matchInfo->objs).push_back(catalogObject);
 
 				}//end (k index) loop objects in catalog
 
@@ -938,11 +931,14 @@ int FindSourceMatchesInTiles()
 						}
 						matchFound= true;
 						matchCounter[s]++;
-						matchedObjects.push_back(catalogObject);
+						matchedSourceNMatchMap[catalogObject->name]++;
+						//matchedObjects.push_back(catalogObject);
 						nMatchedObjects++;
 
-						double dflux= sourceFlux- catalogObject->flux;
-						fluxDiff.push_back(dflux);
+						//double dflux= sourceFlux- catalogObject->flux;
+						//fluxDiff.push_back(dflux);
+
+						(matchInfo->objs).push_back(catalogObject);
 
 					}//end (k index) loop objects in catalog
 				}//end (n index) loop neighbor tiles
@@ -974,7 +970,8 @@ int FindSourceMatchesInTiles()
 	
 			//Fill Tree
 			if(nMatchedObjects>0){
-				matchedSourceInfo->Fill();
+				//matchedSourceInfo->Fill();
+				matchInfoCollection.push_back(matchInfo);
 			}
 
 		}//end (j index) loop component pars in this tile
@@ -994,409 +991,49 @@ int FindSourceMatchesInTiles()
 	cout<<nMatchedSourceComponentCatalogMultiplicity[nMatchedSourceComponentCatalogMultiplicity.size()-1]<<"}"<<endl;
 	cout<<"===================="<<endl;
 
-
-	/*
-	nTotSources= 0;
-	nMatchedSources= 0;
-	nTotSourceComponents= 0;
-	nMatchedSourceComponents= 0;
-	
-
-	//Loop over tiles and find matches with regions in the same tile and in neighbor tiles
-	for(size_t i=0;i<tileDataList.size();i++)
+	//Fill TTree
+	for(size_t i=0;i<matchInfoCollection.size();i++)
 	{
-		long int NSourcePars= tileDataList[i]->GetNSourcePars();
-		long int NCatalogs= tileDataList[i]->GetNSourceCatalogs();
-		std::vector<size_t> neighbors= tileDataList[i]->neighborTileIndexes;
-
-		//Init counters
-		if(nMatchedSourcesPerCatalog.empty()){
-			nMatchedSourcesPerCatalog= std::vector<int>(NCatalogs,0);
-		}
-		if(nMatchedSourceCatalogMultiplicity.empty()){
-			nMatchedSourceCatalogMultiplicity= std::vector<int>(NCatalogs+1,0);
-		}
-		if(nMatchedSourceComponentsPerCatalog.empty()){
-			nMatchedSourceComponentsPerCatalog= std::vector<int>(NCatalogs,0);
-		}
-		if(nMatchedSourceComponentCatalogMultiplicity.empty()){
-			nMatchedSourceComponentCatalogMultiplicity= std::vector<int>(NCatalogs+1,0);
-		}
-
-		for(long int j=0;j<NSourcePars;j++) 
-		{		
-			//Get source info
-			SourcePars* sourcePars= (tileDataList[i]->sourcePars)[j];
-			std::vector<ComponentPars*> componentPars= sourcePars->componentPars;
-			long int sourceIndex= sourcePars->sourceIndex;
-			long int nestedSourceIndex= sourcePars->nestedSourceIndex;
-			Source* source= 0;
-			if(nestedSourceIndex==-1) source= m_sources[sourceIndex];
-			else source= m_sources[sourceIndex]->GetNestedSource(nestedSourceIndex);
-			
-			if(!source){
-				#ifdef LOGGING_ENABLED
-					WARN_LOG("No source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<") found, this should not occur, skip source!");
-				#endif
-				continue;
-			}
-
-			#ifdef LOGGING_ENABLED
-			if(j%100==0) INFO_LOG("#"<<j+1<<"/"<<NSourcePars<<" sources to be matched in tile no. "<<i+1<<" against "<<NCatalogs<<" catalogs ...");
-			#endif
-
-			//Create source match data for this source
-			inputSource= new Source;
-			*inputSource= *source;
-			sourceMatchData= new SourceMatchData(inputSource,NCatalogs,cloneSource);
-	
-			//Get source fit info
-			bool hasFitInfo= source->HasFitInfo();
-			int nFitComponents= 0;
-			int nSelFitComponents= 0;
-			if(hasFitInfo) {
-				SourceFitPars fitPars= source->GetFitPars();
-				nFitComponents= fitPars.GetNComponents();
-				nSelFitComponents= fitPars.GetNSelComponents();
-			}
-
-			//Count total number of sources & components					
-			nTotSources++;
-			nTotSourceComponents+= nSelFitComponents;
-			std::vector<int> sourceMatchCounter(NCatalogs,0);
-			std::vector<std::vector<int>> compMatchCounter;
-			for(size_t c=0;c<componentPars.size();c++){
-				compMatchCounter.push_back(std::vector<int>());
-				for(int p=0;p<NCatalogs;p++){
-					compMatchCounter[c].push_back(0);
-				}
-			}
-
-			//==============================================
-			//===        CATALOG LOOP
-			//==============================================
-			//Loop over source catalogs in the same tile
-			for(long int s=0;s<NCatalogs;s++)
-			{
-				int nMatches= 0;	
-									
-				long int NSourceParsInCatalog= tileDataList[i]->GetNSourceParsInCatalog(s);
-				if(NSourceParsInCatalog<=0) continue;
-
-				#ifdef LOGGING_ENABLED
-					DEBUG_LOG("#"<<NSourcePars<<" sources to be cross-matched against #"<<NSourceParsInCatalog<<" sources (catalog #"<<s+1<<") in tile no. "<<i+1<<" ...");
-				#endif
-
-				//==============================================
-				//===      CATALOG SOURCE LOOP (SAME TILE)
-				//==============================================	
-				for(long int k=0;k<NSourceParsInCatalog;k++)
-				{
-					//Get catalog source
-					SourcePars* sourceCatalogPars= tileDataList[i]->GetSourceCatalogPars(s,k);
-					if(!sourceCatalogPars){
-						#ifdef LOGGING_ENABLED
-							ERROR_LOG("Null ptr to source catalog pars (catalog no. "<<s+1<<", source pars no. "<<k+1<<")!");
-						#endif
-						return -1;
-					}
-					long int sourceIndex_catalog= sourceCatalogPars->sourceIndex;
-					long int nestedSourceIndex_catalog= sourceCatalogPars->nestedSourceIndex;
-					Source* source_catalog= 0;
-					if(nestedSourceIndex_catalog==-1) source_catalog= m_catalog_sources[s][sourceIndex_catalog];
-					else source_catalog= m_catalog_sources[s][sourceIndex_catalog]->GetNestedSource(nestedSourceIndex_catalog);
-			
-					if(!source_catalog){
-						#ifdef LOGGING_ENABLED
-							WARN_LOG("No catalog source (catalog="<<s+1<<", index="<<sourceIndex_catalog<<", nestedIndex="<<nestedSourceIndex_catalog<<") found in tile no. "<<i+1<<", this should not occur, skip source!");
-						#endif
-						continue;
-					}
+		ComponentPars* componentPars= matchInfoCollection[i]->cpars;
 		
-					//Check source match
-					SourceMatchPars smatchpars;
-					bool hasMatch= HaveSourceIslandMatch(smatchpars,sourcePars,sourceCatalogPars);
-					if(!hasMatch) {
-						continue;
-					}
-						
-					//Add matched source 
-					matchedSource= new Source;
-					*matchedSource= *source_catalog;
-					int status= sourceMatchData->AddMatchedSourceToGroup(s,matchedSource,cloneSource);
-					if(status<0){
-						#ifdef LOGGING_ENABLED
-							WARN_LOG("Failed to add matched source to group!");
-						#endif		
-						continue;
-					}
+		//Set TTree data
+		matchedObjects.clear();
+		fluxDiff.clear();
+		matchedObjectMultiplicity.clear();
+		nMatchedObjects= 0;
+		sourceName= componentPars->sname;
+		sourcePosX= componentPars->X0;
+		sourcePosY= componentPars->Y0;
+		sourcePosX_wcs= componentPars->X0_wcs;
+		sourcePosY_wcs= componentPars->Y0_wcs;
+		sourceFluxDensity= componentPars->fluxDensity;
+		sourceFlux= componentPars->flux;
+		sourceFluxDensityErr= componentPars->fluxDensityErr;
+		sourceFluxErr= componentPars->fluxErr;
 
-					sourceMatchPars= new SourceMatchPars;
-					*sourceMatchPars= smatchpars;
-					if(sourceMatchData->AddMatchedSourcePars(s,sourceMatchPars)<0){
-						#ifdef LOGGING_ENABLED
-							WARN_LOG("Failed to add matched source pars!");
-						#endif
-						continue;
-					}
-						
+		for(size_t j=0;j<(matchInfoCollection[i]->objs).size();j++)
+		{
+			AstroObject* obj= (matchInfoCollection[i]->objs)[j];
+			std::string name= obj->name;
+			int mult= matchedSourceNMatchMap[name];
 
-					int matchedSourceIndex= nMatches; 
-					nMatches++;
-					sourceMatchCounter[s]++;
-					
-					
-					//Search component matches	
-					std::vector<ComponentPars*> sourceCatalogComponentPars= sourceCatalogPars->componentPars;
+			matchedObjects.push_back(obj);
+			nMatchedObjects++;
+			double dflux= sourceFlux- obj->flux;
+			fluxDiff.push_back(dflux);
+			matchedObjectMultiplicity.push_back(mult);
 
-					for(size_t l=0;l<componentPars.size();l++)
-					{
-						ComponentPars* cpars= componentPars[l];
-						int fitComponentIndex= cpars->fitComponentIndex;
-				
-						for(size_t t=0;t<sourceCatalogComponentPars.size();t++)
-						{
-							ComponentPars* cpars_catalog= sourceCatalogComponentPars[t];
-							int fitComponentIndex_catalog= cpars_catalog->fitComponentIndex;
-							
-							SourceComponentMatchPars cmatchpars;
-							bool hasComponentMatch= HaveSourceComponentMatch(cmatchpars,cpars,cpars_catalog);
-							if(!hasComponentMatch) continue;
-								
-							#ifdef LOGGING_ENABLED
-								INFO_LOG("SOURCE "<<inputSource->GetName()<<" (COMP"<<fitComponentIndex<<"): Matched source component (cat="<<s<<", sindex="<<matchedSourceIndex<<", cindex="<<fitComponentIndex_catalog<<")");
-							#endif
+		}//end loop matched objects
 
-							status= sourceMatchData->AddMatchedComponentIndex(fitComponentIndex,s,matchedSourceIndex,fitComponentIndex_catalog);
-							if(status<0){
-								#ifdef LOGGING_ENABLED
-									WARN_LOG("Failed to add matched source component to group!");
-								#endif	
-								continue;
-							}
+		//Fill TTree 
+		matchedSourceInfo->Fill();
 
-							sourceComponentMatchPars= new SourceComponentMatchPars;
-							*sourceComponentMatchPars= cmatchpars;
-							status= sourceMatchData->AddMatchedSourceComponentPars(fitComponentIndex,s,sourceComponentMatchPars);
-							if(status<0){
-								#ifdef LOGGING_ENABLED
-									WARN_LOG("Failed to add matched source component pars to group!");
-								#endif	
-								continue;
-							}
+	}//end loop matched components
 
-							compMatchCounter[l][s]++;			
-						}//end (t index) loop components in this catalog source 
-					}//end (l index) loop source components
-					
-
-				}//end (k index) loop catalog sources in this tile
-
-
-				//==============================================
-				//===     CATALOG SOURCE LOOP (NEIGHBOUR TILES)
-				//==============================================	
-				for(size_t n=0;n<neighbors.size();n++)	
-				{
-					size_t neighborIndex= neighbors[n];
-					if(i==neighborIndex) continue;//skip same tile
-
-					long int NSourceParsInCatalog_neighbor= tileDataList[neighborIndex]->GetNSourceParsInCatalog(s);
-					if(NSourceParsInCatalog_neighbor<=0) continue;
-
-					#ifdef LOGGING_ENABLED
-						DEBUG_LOG("#"<<NSourcePars<<" sources to be cross-matched against #"<<NSourceParsInCatalog_neighbor<<" sources (catalog #"<<s+1<<") in tile no. "<<neighborIndex<<" ...");
-					#endif	
-				
-					for(long int k=0;k<NSourceParsInCatalog_neighbor;k++)
-					{
-						//Get catalog source
-						SourcePars* sourceCatalogPars= tileDataList[neighborIndex]->GetSourceCatalogPars(s,k);
-
-						if(!sourceCatalogPars){
-							#ifdef LOGGING_ENABLED
-								ERROR_LOG("Null ptr to source catalog pars (catalog no. "<<s+1<<", source pars no. "<<k+1<<"!");
-							#endif
-							return -1;
-						}
-
-						long int sourceIndex_catalog= sourceCatalogPars->sourceIndex;
-						long int nestedSourceIndex_catalog= sourceCatalogPars->nestedSourceIndex;
-						Source* source_catalog= 0;
-						if(nestedSourceIndex_catalog==-1) source_catalog= m_catalog_sources[s][sourceIndex_catalog];
-						else source_catalog= m_catalog_sources[s][sourceIndex_catalog]->GetNestedSource(nestedSourceIndex_catalog);
-			
-						if(!source_catalog){
-							#ifdef LOGGING_ENABLED
-								WARN_LOG("No catalog source (catalog="<<s+1<<", index="<<sourceIndex_catalog<<", nestedIndex="<<nestedSourceIndex_catalog<<") found in tile no. "<<i+1<<", this should not occur, skip source!");
-							#endif
-							continue;
-						}
-
-						//Check source match
-						SourceMatchPars smatchpars;
-						bool hasMatch= HaveSourceIslandMatch(smatchpars,sourcePars,sourceCatalogPars);
-						if(!hasMatch) {
-							continue;
-						}
-						
-						//Add matched source & pars
-						matchedSource= new Source;
-						*matchedSource= *source_catalog;
-						int status= sourceMatchData->AddMatchedSourceToGroup(s,matchedSource,cloneSource);
-						if(status<0){
-							#ifdef LOGGING_ENABLED
-								WARN_LOG("Failed to add matched source to group!");
-							#endif
-							continue;
-						}
-		
-						sourceMatchPars= new SourceMatchPars;
-						*sourceMatchPars= smatchpars;
-						if(sourceMatchData->AddMatchedSourcePars(s,sourceMatchPars)<0){
-							#ifdef LOGGING_ENABLED
-								WARN_LOG("Failed to add matched source pars!");
-							#endif
-							continue;
-						}
-						
-
-						int matchedSourceIndex= nMatches; 
-						nMatches++;	
-						sourceMatchCounter[s]++;
-		
-						
-						//Search component matches
-						std::vector<ComponentPars*> sourceCatalogComponentPars= sourceCatalogPars->componentPars;
-
-						for(size_t l=0;l<componentPars.size();l++){
-							ComponentPars* cpars= componentPars[l];
-							int fitComponentIndex= cpars->fitComponentIndex;
-							
-							for(size_t t=0;t<sourceCatalogComponentPars.size();t++){
-								ComponentPars* cpars_catalog= sourceCatalogComponentPars[t];
-								int fitComponentIndex_catalog= cpars_catalog->fitComponentIndex;
-							
-								SourceComponentMatchPars cmatchpars;
-								bool hasComponentMatch= HaveSourceComponentMatch(cmatchpars,cpars,cpars_catalog);
-								if(!hasComponentMatch) continue;
-								
-								#ifdef LOGGING_ENABLED
-									INFO_LOG("SOURCE "<<inputSource->GetName()<<" (COMP"<<fitComponentIndex<<"): Matched source component (cat="<<s<<", sindex="<<matchedSourceIndex<<", cindex="<<fitComponentIndex_catalog<<")");
-								#endif
-
-								status= sourceMatchData->AddMatchedComponentIndex(fitComponentIndex,s,matchedSourceIndex,fitComponentIndex_catalog);
-								if(status<0){
-									#ifdef LOGGING_ENABLED
-										WARN_LOG("Failed to add matched source component to group!");
-									#endif	
-									continue;
-								}
-
-								sourceComponentMatchPars= new SourceComponentMatchPars;
-								*sourceComponentMatchPars= cmatchpars;
-								status= sourceMatchData->AddMatchedSourceComponentPars(fitComponentIndex,s,sourceComponentMatchPars);
-								if(status<0){
-									#ifdef LOGGING_ENABLED
-										WARN_LOG("Failed to add matched source component pars to group!");
-									#endif	
-									continue;
-								}
-
-								compMatchCounter[l][s]++;
-
-							}//end loop components in this catalog source 
-						}//end loop source components
-						
-
-					}//end (k index) loop sources in neighbor tiles (s catalog)
-				}//end (n index) loop neighbor tiles
-
-				#ifdef LOGGING_ENABLED
-					INFO_LOG("Source "<<inputSource->GetName()<<": #"<<nMatches<<" matches found for catalog no. "<<s+1<<" ...");
-				#endif
-
-			}//end (s index) loop catalogs 
-
-
-			//Add source match data to collection
-			if(sourceMatchData->HasSourceMatch()){
-				nMatchedSources++;
-				#ifdef LOGGING_ENABLED
-					DEBUG_LOG("Add source match data for source "<<inputSource->GetName()<<" to collection...");
-				#endif
-				sourceMatchDataCollection.push_back(sourceMatchData);
-			}
-
-			//Update counters
-			#ifdef LOGGING_ENABLED
-				DEBUG_LOG("Update source match counters...");
-			#endif
-			std::vector<int> sourceMatchMultiplicityCounter(NCatalogs,0);
-			for(size_t c=0;c<sourceMatchCounter.size();c++){
-				if(sourceMatchCounter[c]>0) {
-					nMatchedSourcesPerCatalog[c]++;
-					sourceMatchMultiplicityCounter[c]++;
-				}
-			}
-			for(size_t c=0;c<compMatchCounter.size();c++){
-				std::vector<int> catalogMultiplicityCounter(compMatchCounter[c].size(),0);
-				for(size_t p=0;p<compMatchCounter[c].size();p++){
-					if(compMatchCounter[c][p]>0) {
-						nMatchedSourceComponentsPerCatalog[p]++;
-						catalogMultiplicityCounter[p]++;
-					}
-				}
-				int compMultiplicity= std::accumulate(catalogMultiplicityCounter.begin(), catalogMultiplicityCounter.end(), 0);
-				if(compMultiplicity>0) nMatchedSourceComponents++;
-				nMatchedSourceComponentCatalogMultiplicity[compMultiplicity]++;
-			}
-			
-			//Compute catalog match multiplicity
-			#ifdef LOGGING_ENABLED
-				DEBUG_LOG("Compute catalog match multiplicity...");
-			#endif
-			int multiplicity= std::accumulate(sourceMatchMultiplicityCounter.begin(), sourceMatchMultiplicityCounter.end(), 0);
-			nMatchedSourceCatalogMultiplicity[multiplicity]++;
 	
-			#ifdef LOGGING_ENABLED
-				DEBUG_LOG("Source match multiplicity="<<multiplicity);
-			#endif
-
-			
-		}//end loop source pars in this tile
-	}//end loop tiles
-
-	#ifdef LOGGING_ENABLED
-		INFO_LOG("#"<<sourceMatchDataCollection.size()<<" source match data added to collection...");
-	#endif
-	
-	cout<<"== MATCH RESULTS =="<<endl;
-	cout<<"#matched/tot sources="<<nMatchedSources<<"/"<<nTotSources<<endl;
-	for(size_t i=0;i<nMatchedSourcesPerCatalog.size();i++){
-		cout<<"--> CAT"<<i+1<<": #match/tot="<<nMatchedSourcesPerCatalog[i]<<"/"<<nTotSources<<endl;
-	}
-	cout<<"source match multiplicity {";
-	for(size_t i=0;i<nMatchedSourceCatalogMultiplicity.size()-1;i++){
-		cout<<nMatchedSourceCatalogMultiplicity[i]<<",";
-	}
-	cout<<nMatchedSourceCatalogMultiplicity[nMatchedSourceCatalogMultiplicity.size()-1]<<"}"<<endl;
-	cout<<"#matched/tot source components="<<nMatchedSourceComponents<<"/"<<nTotSourceComponents<<endl;
-	for(size_t i=0;i<nMatchedSourceComponentsPerCatalog.size();i++){
-		cout<<"--> CAT"<<i+1<<": #match/tot="<<nMatchedSourceComponentsPerCatalog[i]<<"/"<<nTotSourceComponents<<endl;
-	}
-	cout<<"source component match multiplicity {";
-	for(size_t i=0;i<nMatchedSourceComponentCatalogMultiplicity.size()-1;i++){
-		cout<<nMatchedSourceComponentCatalogMultiplicity[i]<<",";
-	}
-	cout<<nMatchedSourceComponentCatalogMultiplicity[nMatchedSourceComponentCatalogMultiplicity.size()-1]<<"}"<<endl;
-	cout<<"===================="<<endl;
-
-
 	//Fill Tree
 	matchOptionTree->Fill();
 
-	*/
 	return 0;
 
 }//close FindSourceMatchesInTiles()
@@ -1776,6 +1413,8 @@ int ReadData(std::string filename)
 			double theta= gRandom->Uniform(0,2*TMath::Pi());
 			offsetX= r*cos(theta);
 			offsetY= r*sin(theta);
+			offsetX/= 3600;//convert in deg
+			offsetY/= 3600;//convert in deg
 		}
 
 		//Compute source position in WCS coords (needed to compute source min/max coords)
@@ -1967,6 +1606,15 @@ int ReadAstroObjectData(std::string filename,int catalogIndex)
 	else if(catalogType==eSIMBAD){
 		AstroObjectParser::ParseSimbadData(astroObjects,filename,'|');
 	}
+	else if(catalogType==eNED){
+		AstroObjectParser::ParseNedData(astroObjects,filename,'|');
+	}
+	else if(catalogType==eHASH){
+		AstroObjectParser::ParseHASHData(astroObjects,filename,'|');
+	}
+	else if(catalogType==eWISE_HII){
+		AstroObjectParser::ParseWiseHIIData(astroObjects,filename,'|');
+	}
 	else{
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Invalid/unsupported catalog type (type="<<catalogType<<")!");
@@ -1996,8 +1644,16 @@ int ReadAstroObjectData(std::string filename,int catalogIndex)
 		double y= astroObjects[i]->y;
 
 		//Select by object identifier
-		//...
-		//...
+		if(selectObjectByType){
+			bool skipObject= true;
+			for(size_t j=0;j<otypes.size();j++){
+				if( otypes[j]==-1 || id==otypes[j]) {
+					skipObject= false;
+					break;
+				}
+			}
+			if(skipObject) continue;
+		}
 
 		//Select objects in regions
 		if(selectObjectsInRegions)
@@ -2138,7 +1794,9 @@ int FillSourceComponentPars(std::vector<ComponentPars*>& pars,Source* aSource,in
 			double Y0= 0;
 			fitPars.GetComponentPosition(X0,Y0,k);
 			double fluxDensity= fitPars.GetComponentFluxDensity(k);
+			double fluxDensityErr= fitPars.GetComponentFluxDensityErr(k);
 			double flux= fluxDensity/beamArea;
+			double fluxErr= fluxDensityErr/beamArea;
 
 			//Apply offset to ellipse (if shuffle source is enabled)
 			double Cx= fitEllipses[k]->GetX1();
@@ -2160,6 +1818,8 @@ int FillSourceComponentPars(std::vector<ComponentPars*>& pars,Source* aSource,in
 			thisComponentPars->fitEllipse= fitEllipses[k];
 			thisComponentPars->fluxDensity= fluxDensity;	
 			thisComponentPars->flux= flux;
+			thisComponentPars->fluxDensityErr= fluxDensityErr;	
+			thisComponentPars->fluxErr= fluxErr;
 			thisComponentPars->isSelected= isSelected;
 
 			//Append this source pars to collection
