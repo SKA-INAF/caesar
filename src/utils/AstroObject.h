@@ -109,6 +109,8 @@ class AstroObject : public TObject
 		double dnu;
 
 		bool hasFluxInfo;
+		double peakFlux;//Jy/beam
+		double peakFluxErr;//Jy/beam
 		double fluxDensity;//Jy/beam
 		double fluxDensityErr;//Jy/beam
 		double flux;//Jy
@@ -127,7 +129,7 @@ class AstroObject : public TObject
 		double bmin_deconv;//arcsec
 		double pa_deconv;//deg
 
-	ClassDef(AstroObject,3)
+	ClassDef(AstroObject,4)
 
 };//close class AstroObject
 

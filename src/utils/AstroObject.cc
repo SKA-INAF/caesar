@@ -91,6 +91,8 @@ void AstroObject::Init()
 	confirmed= false;
 
 	hasFluxInfo= false;
+	peakFlux= 0;
+	peakFluxErr= 0;
 	fluxDensity= 0;
 	fluxDensityErr= 0;
 	flux= 0;

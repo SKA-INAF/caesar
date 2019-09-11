@@ -31,6 +31,7 @@
 #include <SourceFitter.h>
 #include <TaskData.h>
 #include <Contour.h>
+#include <AstroObject.h>
 
 #include <Source.pb.h>
 #include <TaskData.pb.h>
@@ -130,8 +131,23 @@ class Serializer : public TObject {
 		* \brief Serialize source fit pars to protobuf
 		*/	
 		static int EncodeSourceFitParsToProtobuf(CaesarPB::SourceFitPars& sourceFitPars_pb,SourceFitPars& sourceFitPars);
+		/**
+		* \brief Serialize spectral index data to protobuf
+		*/
+		static int EncodeSpectralIndexDataToProtobuf(CaesarPB::SpectralIndexData& spectralIndexData_pb,const SpectralIndexData& spectralIndexData);
+		/**
+		* \brief Serialize spectral index collection to protobuf
+		*/
+		static int EncodeSpectralIndexDataCollectionToProtobuf(CaesarPB::SpectralIndexDataCollection& spectralIndexDataCollection_pb,const std::vector<SpectralIndexData>& spectralIndexDataCollection);
+		/**
+		* \brief Serialize astronomical object to protobuf
+		*/
+		static int EncodeAstroObjectToProtobuf(CaesarPB::AstroObject& astroObject_pb,const AstroObject& astroObject);
+		/**
+		* \brief Serialize astro object collection to protobuf
+		*/
+		static int EncodeAstroObjectCollectionToProtobuf(CaesarPB::AstroObjectCollection& astroObjectCollection_pb,const std::vector<AstroObject>& astroObjectCollection);
 
-		
 		/**
 		* \brief Deserialize protobuf metadata object
 		*/
@@ -168,6 +184,22 @@ class Serializer : public TObject {
 		* \brief Deserialize protobuf source fit pars object
 		*/
 		static int EncodeProtobufToSourceFitPars(SourceFitPars& sourceFitPars,const CaesarPB::SourceFitPars& sourceFitPars_pb);
+		/**
+		* \brief Deserialize protobuf spectral index data object
+		*/
+		static int EncodeProtobufToSpectralIndexData(SpectralIndexData& spectralIndexData,const CaesarPB::SpectralIndexData& spectralIndexData_pb);
+		/**
+		* \brief Deserialize protobuf spectral index data collection object
+		*/
+		static int EncodeProtobufToSpectralIndexDataCollection(std::vector<SpectralIndexData>& spectralIndexDataCollection,const CaesarPB::SpectralIndexDataCollection& spectralIndexDataCollection_pb);
+		/**
+		* \brief Deserialize protobuf astro object object
+		*/
+		static int EncodeProtobufToAstroObject(AstroObject& astroObject,const CaesarPB::AstroObject& astroObject_pb);
+		/**
+		* \brief Deserialize protobuf astro object collection object
+		*/
+		static int EncodeProtobufToAstroObjectCollection(std::vector<AstroObject>& astroObjectCollection,const CaesarPB::AstroObjectCollection& astroObjectCollection_pb);
 
 		//## WORKER DATA SERIALIZATION ###
 		/**

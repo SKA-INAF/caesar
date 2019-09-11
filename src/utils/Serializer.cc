@@ -250,6 +250,101 @@ int Serializer::EncodeSourceFitParsToProtobuf(CaesarPB::SourceFitPars& sourceFit
 }//close EncodeSourceFitParsToProtobuf()
 
 
+
+int Serializer::EncodeSpectralIndexDataToProtobuf(CaesarPB::SpectralIndexData& spectralIndexData_pb,const SpectralIndexData& spectralIndexData)
+{
+	spectralIndexData_pb.set_hasspectralindex(spectralIndexData.hasSpectralIndex);
+	spectralIndexData_pb.set_ismultisourcematchindex(spectralIndexData.isMultiSourceMatchIndex);
+	spectralIndexData_pb.set_spectralindex(spectralIndexData.spectralIndex);
+	spectralIndexData_pb.set_spectralindexerr(spectralIndexData.spectralIndexErr);
+	spectralIndexData_pb.set_isspectralindexfit(spectralIndexData.isSpectralIndexFit);
+	spectralIndexData_pb.set_spectralfitchi2(spectralIndexData.spectralFitChi2);
+	spectralIndexData_pb.set_spectralfitndf(spectralIndexData.spectralFitNDF);
+	
+	return 0;
+
+}//close EncodeSpectralIndexDataToProtobuf()
+
+
+
+int Serializer::EncodeSpectralIndexDataCollectionToProtobuf(CaesarPB::SpectralIndexDataCollection& spectralIndexDataCollection_pb,const std::vector<SpectralIndexData>& spectralIndexDataCollection)
+{
+	//Fill source collections
+	for(size_t i=0;i<spectralIndexDataCollection.size();i++){
+		CaesarPB::SpectralIndexData* thisSpectralIndexDataPB = spectralIndexDataCollection_pb.add_spectralindexdatalist();
+		//const CaesarPB::Source& thisSourcePB= sources_pb.sources(i);
+		if(EncodeSpectralIndexDataToProtobuf(*thisSpectralIndexDataPB,spectralIndexDataCollection[i])<0){
+			std::stringstream errMsg;
+			errMsg<<"Encoding of spectral index data no. "<<i+1<<" in collection to protobuf failed!";
+			throw std::runtime_error(errMsg.str().c_str());
+		}
+	}
+
+	return 0;
+
+}//close EncodeSpectralIndexDataCollectionToProtobuf()
+
+
+
+int Serializer::EncodeAstroObjectToProtobuf(CaesarPB::AstroObject& astroObject_pb,const AstroObject& astroObject)
+{
+	astroObject_pb.set_index(astroObject.index);
+	astroObject_pb.set_name(astroObject.name);
+	astroObject_pb.set_id_str(astroObject.id_str);
+	astroObject_pb.set_id(astroObject.id);
+	astroObject_pb.set_subid(astroObject.subid);
+	astroObject_pb.set_x(astroObject.x);
+	astroObject_pb.set_y(astroObject.y);
+	astroObject_pb.set_xerr(astroObject.xerr);
+	astroObject_pb.set_yerr(astroObject.yerr);
+	astroObject_pb.set_refs(astroObject.refs);
+	astroObject_pb.set_confirmed(astroObject.confirmed);
+
+	astroObject_pb.set_hasfrequencyinfo(astroObject.hasFrequencyInfo);
+	astroObject_pb.set_nu(astroObject.nu);
+	astroObject_pb.set_dnu(astroObject.dnu);
+	
+	astroObject_pb.set_hasfluxinfo(astroObject.hasFluxInfo);
+	astroObject_pb.set_peakflux(astroObject.peakFlux);
+	astroObject_pb.set_peakfluxerr(astroObject.peakFluxErr);
+	astroObject_pb.set_fluxdensity(astroObject.fluxDensity);
+	astroObject_pb.set_fluxdensityerr(astroObject.fluxDensityErr);
+	astroObject_pb.set_flux(astroObject.flux);
+	astroObject_pb.set_fluxerr(astroObject.fluxErr);
+
+	astroObject_pb.set_hassizeinfo(astroObject.hasSizeInfo);
+	astroObject_pb.set_radius(astroObject.radius);
+		
+	astroObject_pb.set_hasellipseinfo(astroObject.hasEllipseInfo);
+	astroObject_pb.set_bmaj(astroObject.bmaj);
+	astroObject_pb.set_bmin(astroObject.bmin);
+	astroObject_pb.set_pa(astroObject.pa);
+		
+	astroObject_pb.set_hasdeconvellipseinfo(astroObject.hasDeconvEllipseInfo);
+	astroObject_pb.set_bmaj_deconv(astroObject.bmaj_deconv);
+	astroObject_pb.set_bmin_deconv(astroObject.bmin_deconv);
+	astroObject_pb.set_pa_deconv(astroObject.pa_deconv);
+
+	return 0;
+
+}//close EncodeAstroObjectToProtobuf()
+
+int Serializer::EncodeAstroObjectCollectionToProtobuf(CaesarPB::AstroObjectCollection& astroObjectCollection_pb,const std::vector<AstroObject>& astroObjectCollection)
+{
+	//Fill source collections
+	for(size_t i=0;i<astroObjectCollection.size();i++){
+		CaesarPB::AstroObject* thisAstroObjectPB = astroObjectCollection_pb.add_astroobjectlist();
+		if(EncodeAstroObjectToProtobuf(*thisAstroObjectPB,astroObjectCollection[i])<0){
+			std::stringstream errMsg;
+			errMsg<<"Encoding of astro object no. "<<i+1<<" in collection to protobuf failed!";
+			throw std::runtime_error(errMsg.str().c_str());
+		}
+	}
+
+	return 0;
+
+}//close EncodeAstroObjectCollectionToProtobuf()
+
 int Serializer::EncodeMetaDataToProtobuf(CaesarPB::ImgMetaData& metadata_pb,ImgMetaData* metadata)
 {
 	if(!metadata) return -1;
@@ -663,8 +758,36 @@ int Serializer::EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* sourc
 		if(EncodeSourceFitParsToProtobuf(*fitPars_pb,fitPars)<0){
 			throw std::runtime_error("Failed to encode source fit pars!");
 		}
+		source_pb.set_allocated_m_fitpars(fitPars_pb);
+
 		
+		//Set spectral index data field
+		source_pb.set_m_hasspectralindexdata(source->HasSpectralIndexData());
 		
+		SpectralIndexData spectralIndexData= source->GetSpectralIndexData();
+		CaesarPB::SpectralIndexData* spectralIndexData_pb= new CaesarPB::SpectralIndexData;
+		if(EncodeSpectralIndexDataToProtobuf(*spectralIndexData_pb,spectralIndexData)<0){
+			throw std::runtime_error("Failed to encode spectral index data!");
+		}
+		source_pb.set_allocated_m_spectralindexdata(spectralIndexData_pb);
+
+		//Set component spectral index data	
+		source_pb.set_m_hascomponentspectralindexdata(source->HasComponentSpectralIndexData());
+		std::vector<SpectralIndexData> componentSpectralIndexData= source->GetComponentSpectralIndexData();
+		CaesarPB::SpectralIndexDataCollection* spectralIndexDataCollection_pb= new CaesarPB::SpectralIndexDataCollection;
+		if(EncodeSpectralIndexDataCollectionToProtobuf(*spectralIndexDataCollection_pb,componentSpectralIndexData)<0){
+			throw std::runtime_error("Failed to encode component spectral index data!");
+		}
+		source_pb.set_allocated_m_componentspectralindexdata(spectralIndexDataCollection_pb);
+				
+		//Set astro object data
+		std::vector<AstroObject> astroObjectCollection= source->GetAstroObjects();
+		CaesarPB::AstroObjectCollection* astroObjectCollection_pb= new CaesarPB::AstroObjectCollection;
+		if(EncodeAstroObjectCollectionToProtobuf(*astroObjectCollection_pb,astroObjectCollection)<0){
+			throw std::runtime_error("Failed to encode astro object data!");
+		}
+		source_pb.set_allocated_m_astroobjects(astroObjectCollection_pb);
+	
 		//Set blob field
 		CaesarPB::Blob* blob= new CaesarPB::Blob;
 		if(EncodeBlobToProtobuf(*blob,source)<0){
@@ -1120,6 +1243,138 @@ int Serializer::EncodeProtobufToSourceFitPars(SourceFitPars& sourceFitPars,const
 
 
 
+int Serializer::EncodeProtobufToSpectralIndexData(SpectralIndexData& spectralIndexData,const CaesarPB::SpectralIndexData& spectralIndexData_pb)
+{
+	try {	
+		if(spectralIndexData_pb.has_hasspectralindex()) spectralIndexData.hasSpectralIndex= spectralIndexData_pb.hasspectralindex();	
+		if(spectralIndexData_pb.has_ismultisourcematchindex()) spectralIndexData.isMultiSourceMatchIndex= spectralIndexData_pb.ismultisourcematchindex();
+		if(spectralIndexData_pb.has_spectralindex()) spectralIndexData.spectralIndex= spectralIndexData_pb.spectralindex();
+		if(spectralIndexData_pb.has_spectralindexerr()) spectralIndexData.spectralIndexErr= spectralIndexData_pb.spectralindexerr();
+		if(spectralIndexData_pb.has_isspectralindexfit()) spectralIndexData.isSpectralIndexFit= spectralIndexData_pb.isspectralindexfit();
+		if(spectralIndexData_pb.has_spectralfitchi2()) spectralIndexData.spectralFitChi2= spectralIndexData_pb.spectralfitchi2();
+		if(spectralIndexData_pb.has_spectralfitndf()) spectralIndexData.spectralFitNDF= spectralIndexData_pb.spectralfitndf();
+		
+	}//close try block
+	catch(std::exception const & e) {
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Encoding protobuf to spectral index data failed with status "<<e.what());
+		#endif
+		return -1;
+	}
+	return 0;
+
+}//close EncodeProtobufToSpectralIndexData()
+
+
+int Serializer::EncodeProtobufToSpectralIndexDataCollection(std::vector<SpectralIndexData>& spectralIndexDataCollection,const CaesarPB::SpectralIndexDataCollection& spectralIndexDataCollection_pb)
+{
+	//Clear collection
+	spectralIndexDataCollection.clear();
+
+	//Fill collection
+	try 
+	{		
+		for(int i=0;i<spectralIndexDataCollection_pb.spectralindexdatalist_size();i++)
+		{
+			const CaesarPB::SpectralIndexData& spectralIndexData_pb = spectralIndexDataCollection_pb.spectralindexdatalist(i);
+			SpectralIndexData* spectralIndexData= new SpectralIndexData;
+			if(EncodeProtobufToSpectralIndexData(*spectralIndexData,spectralIndexData_pb)<0){
+				throw std::runtime_error("Failed to encode spectral index data collection item!");
+			}
+			spectralIndexDataCollection.push_back(*spectralIndexData);
+
+		}//end loop spectral index data
+
+	}//close try block
+	catch(std::exception const & e) {
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Encoding protobuf to spectral index data collection failed with status "<<e.what());
+		#endif
+		return -1;
+	}
+	return 0;
+
+}//close EncodeProtobufToSpectralIndexDataCollection()
+
+
+int Serializer::EncodeProtobufToAstroObject(AstroObject& astroObject,const CaesarPB::AstroObject& astroObject_pb)
+{
+	try {	
+		if(astroObject_pb.has_index()) astroObject.index= astroObject_pb.index();	
+		if(astroObject_pb.has_name()) astroObject.name= astroObject_pb.name();	
+		if(astroObject_pb.has_id_str()) astroObject.id_str= astroObject_pb.id_str();	
+		if(astroObject_pb.has_id()) astroObject.id= astroObject_pb.id();	
+		if(astroObject_pb.has_subid()) astroObject.subid= astroObject_pb.subid();	
+		if(astroObject_pb.has_x()) astroObject.x= astroObject_pb.x();	
+		if(astroObject_pb.has_y()) astroObject.y= astroObject_pb.y();		
+		if(astroObject_pb.has_xerr()) astroObject.xerr= astroObject_pb.xerr();		
+		if(astroObject_pb.has_yerr()) astroObject.yerr= astroObject_pb.yerr();	
+		if(astroObject_pb.has_refs()) astroObject.refs= astroObject_pb.refs();	
+		if(astroObject_pb.has_confirmed()) astroObject.confirmed= astroObject_pb.confirmed();	
+		if(astroObject_pb.has_hasfrequencyinfo()) astroObject.hasFrequencyInfo= astroObject_pb.hasfrequencyinfo();	
+		if(astroObject_pb.has_nu()) astroObject.nu= astroObject_pb.nu();	
+		if(astroObject_pb.has_dnu()) astroObject.dnu= astroObject_pb.dnu();	
+		if(astroObject_pb.has_hasfluxinfo()) astroObject.hasFluxInfo= astroObject_pb.hasfluxinfo();	
+		if(astroObject_pb.has_peakflux()) astroObject.peakFlux= astroObject_pb.peakflux();	
+		if(astroObject_pb.has_peakfluxerr()) astroObject.peakFluxErr= astroObject_pb.peakfluxerr();	
+		if(astroObject_pb.has_fluxdensity()) astroObject.fluxDensity= astroObject_pb.fluxdensity();	
+		if(astroObject_pb.has_fluxdensityerr()) astroObject.fluxDensityErr= astroObject_pb.fluxdensityerr();	
+		if(astroObject_pb.has_flux()) astroObject.flux= astroObject_pb.flux();	
+		if(astroObject_pb.has_fluxerr()) astroObject.fluxErr= astroObject_pb.fluxerr();	
+		if(astroObject_pb.has_hassizeinfo()) astroObject.hasSizeInfo= astroObject_pb.hassizeinfo();	
+		if(astroObject_pb.has_radius()) astroObject.radius= astroObject_pb.radius();	
+		if(astroObject_pb.has_hasellipseinfo()) astroObject.hasEllipseInfo= astroObject_pb.hasellipseinfo();	
+		if(astroObject_pb.has_bmaj()) astroObject.bmaj= astroObject_pb.bmaj();	
+		if(astroObject_pb.has_bmin()) astroObject.bmin= astroObject_pb.bmin();	
+		if(astroObject_pb.has_pa()) astroObject.pa= astroObject_pb.pa();	
+		if(astroObject_pb.has_hasdeconvellipseinfo()) astroObject.hasDeconvEllipseInfo= astroObject_pb.hasdeconvellipseinfo();	
+		if(astroObject_pb.has_bmaj_deconv()) astroObject.bmaj_deconv= astroObject_pb.bmaj_deconv();	
+		if(astroObject_pb.has_bmin_deconv()) astroObject.bmin_deconv= astroObject_pb.bmin_deconv();	
+		if(astroObject_pb.has_pa_deconv()) astroObject.pa_deconv= astroObject_pb.pa_deconv();	
+			
+	}//close try block
+	catch(std::exception const & e) {
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Encoding protobuf to astro object failed with status "<<e.what());
+		#endif
+		return -1;
+	}
+	return 0;
+
+}//close EncodeProtobufToAstroObject()
+
+
+int Serializer::EncodeProtobufToAstroObjectCollection(std::vector<AstroObject>& astroObjectCollection,const CaesarPB::AstroObjectCollection& astroObjectCollection_pb)
+{
+	//Clear collection
+	astroObjectCollection.clear();
+
+	//Fill collection
+	try 
+	{		
+		for(int i=0;i<astroObjectCollection_pb.astroobjectlist_size();i++)
+		{
+			const CaesarPB::AstroObject& astroObject_pb = astroObjectCollection_pb.astroobjectlist(i);
+			AstroObject* astroObject= new AstroObject;
+			if(EncodeProtobufToAstroObject(*astroObject,astroObject_pb)<0){
+				throw std::runtime_error("Failed to encode astro object collection item!");
+			}
+			astroObjectCollection.push_back(*astroObject);
+
+		}//end loop spectral index data
+
+	}//close try block
+	catch(std::exception const & e) {
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Encoding protobuf to astro object collection failed with status "<<e.what());
+		#endif
+		return -1;
+	}
+	return 0;
+
+}//close EncodeProtobufToAstroObjectCollection()
+
+
 int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& source_pb){
 
 	try {
@@ -1139,6 +1394,7 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 			source.SetTrueInfo(source_pb.m_s_true(),source_pb.m_x0_true(),source_pb.m_y0_true());
 		}
 
+		//Set fit pars
 		if(source_pb.has_m_hasfitinfo()){
 			const CaesarPB::SourceFitPars fitPars_pb= source_pb.m_fitpars();
 			Caesar::SourceFitPars fitPars;
@@ -1155,7 +1411,53 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 		}
 
 		if(source_pb.has_m_fitstatus()) source.SetFitStatus(source_pb.m_fitstatus());
+
+		//Set spectral index data
+		if(source_pb.has_m_hasspectralindexdata()){
+			const CaesarPB::SpectralIndexData spectralIndexData_pb= source_pb.m_spectralindexdata();
+			Caesar::SpectralIndexData spectralIndexData;
+			int status= EncodeProtobufToSpectralIndexData(spectralIndexData,spectralIndexData_pb);
+			if(status<0){
+				std::stringstream errMsg;
+				errMsg<<"Spectral index data encoding from protobuf failed!";
+				throw std::runtime_error(errMsg.str().c_str());
+			}
+			source.SetSpectralIndexData(spectralIndexData);
+		}
+		else{
+			source.SetHasSpectralIndexData(false);
+		}
 		
+		//Set component spectral index data
+		if(source_pb.has_m_hascomponentspectralindexdata()){
+			const CaesarPB::SpectralIndexDataCollection spectralIndexDataCollection_pb= source_pb.m_componentspectralindexdata();
+			std::vector<Caesar::SpectralIndexData> spectralIndexDataCollection;
+			int status= EncodeProtobufToSpectralIndexDataCollection(spectralIndexDataCollection,spectralIndexDataCollection_pb);
+			if(status<0){
+				std::stringstream errMsg;
+				errMsg<<"Spectral index data collection encoding from protobuf failed!";
+				throw std::runtime_error(errMsg.str().c_str());
+			}
+			source.SetComponentSpectralIndexData(spectralIndexDataCollection);
+		}
+		else{
+			source.SetHasComponentSpectralIndexData(false);
+		}
+		
+		//Set astro objects
+		if(source_pb.has_m_astroobjects()){
+			const CaesarPB::AstroObjectCollection astroObjectCollection_pb= source_pb.m_astroobjects();
+			std::vector<Caesar::AstroObject> astroObjectCollection;
+			int status= EncodeProtobufToAstroObjectCollection(astroObjectCollection,astroObjectCollection_pb);
+			if(status<0){
+				std::stringstream errMsg;
+				errMsg<<"Astro object collection encoding from protobuf failed!";
+				throw std::runtime_error(errMsg.str().c_str());
+			}
+			source.SetAstroObjects(astroObjectCollection);
+		}
+
+
 		//Set blob fields
 		if(source_pb.has_blob()){
 			const CaesarPB::Blob& blob_pb= source_pb.blob();

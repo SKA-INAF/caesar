@@ -91,9 +91,21 @@ class AstroObjectParser : public TObject
 		*/
 		static int ParseWiseHIIData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='|');
 		/**
+		* \brief Get objects from ATNF PSR ascii catalog
+		*/
+		static int ParseATNFPsrData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='|');
+		/**
+		* \brief Get objects from Wolf-Rayet ascii catalog
+		*/
+		static int ParseWRCatData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='|');
+		/**
 		* \brief Get objects from MGPS ascii catalog
 		*/
 		static int ParseMGPSData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='|');
+		/**
+		* \brief Get objects from Selavy ascii catalog
+		*/
+		static int ParseSelavyData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter=' ');
 	
 
 	protected:
@@ -114,9 +126,21 @@ class AstroObjectParser : public TObject
 		*/
 		static int ParseWiseHIIObjectData(AstroObject& astroObject,std::string data,char delimiter='|');
 		/**
+		* \brief Parse ATNF PSR ascii catalog line
+		*/
+		static int ParseATNFPsrObjectData(AstroObject& astroObject,std::string data,char delimiter='|');
+		/**
+		* \brief Parse Wolf-Rayet ascii catalog line
+		*/
+		static int ParseWRCatObjectData(AstroObject& astroObject,std::string data,char delimiter='|');
+		/**
 		* \brief Parse MGPS ascii catalog line
 		*/
 		static int ParseMGPSObjectData(AstroObject& astroObject,std::string data,char delimiter='|');
+		/**
+		* \brief Parse Selavy component ascii catalog line
+		*/
+		static int ParseSelavyObjectData(AstroObject& astroObject,std::string data,char delimiter=' ');
 		/**
 		* \brief Read catalog ascii data
 		*/
