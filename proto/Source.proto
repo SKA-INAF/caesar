@@ -14,7 +14,9 @@ message Timestamp {
   optional int32 nanos = 2;
 }
 
-
+//==============================
+//==   IMG METADATA
+//==============================
 message ImgMetaData {
 	//Image size
 	optional int32 Nx= 1;
@@ -62,6 +64,9 @@ message ImgMetaData {
 
 }//close ImgMetaData schema
 
+//==============================
+//==   PIXEL
+//==============================
 message Pixel {
 	optional int64 id= 1;
 	enum PixelType {
@@ -84,11 +89,17 @@ message Pixel {
 
 }//close Pixel schema
 
+//==============================
+//==   POINT
+//==============================
 message Point {
 	optional float x= 1;
 	optional float y= 2;
 }
 
+//==============================
+//==   CONTOUR
+//==============================
 message Contour {
 	optional bool HasParameters= 1;
 	optional float Area= 2;
@@ -158,6 +169,9 @@ message Contour {
 
 }//close Contour schema
 
+//==============================
+//==   BLOB
+//==============================
 message Blob {
 	//Main params
 	optional bool HasPixelsAtEdge= 1;
@@ -258,6 +272,9 @@ message Dict {
 	optional float val= 2; 
 }
 
+//==============================
+//==   SOURCE COMPONENT PARS
+//==============================
 message SourceComponentPars {
 	repeated Dict FitPars= 1;
 	repeated Dict FitParsErr= 2;
@@ -308,6 +325,9 @@ message SourceComponentPars {
 
 }//close SourceComponentPars()
 
+//==============================
+//==   SOURCE FIT PARS
+//==============================
 message SourceFitPars {
 	
 	optional int32 nComponents= 1;
@@ -340,6 +360,9 @@ message SourceFitPars {
 
 }//close SourceFitPars()
 
+//==============================
+//==   SOURCE
+//==============================
 message Source {
 	optional Blob blob= 1;
 	optional int32 Type= 2;
@@ -364,7 +387,16 @@ message Source {
 	optional bool m_HasFitInfo= 15;
 	optional SourceFitPars m_fitPars= 16;
 	optional int32 m_fitStatus= 17;
+
+	//Spectral index data
+	optional bool m_hasSpectralIndexData= 18;
+	optional SpectralIndexData m_spectralIndexData= 19;
+	optional bool m_hasComponentSpectralIndexData= 20;
+	optional SpectralIndexDataCollection m_componentSpectralIndexData= 21;
 	
+	//Astro objects
+	optional AstroObjectCollection m_astroObjects= 22;
+
 }//close Source schema
 
 message SourceCollection {
@@ -372,4 +404,73 @@ message SourceCollection {
 	repeated Source sources= 1;
 
 }//close SourceCollection schema
+
+//==============================
+//==   SPECTRAL INDEX DATA
+//==============================
+message SpectralIndexData 
+{
+	optional bool hasSpectralIndex= 1;
+	optional bool isMultiSourceMatchIndex= 2;
+	optional double spectralIndex= 3;
+	optional double spectralIndexErr= 4;
+	optional bool isSpectralIndexFit= 5;
+	optional double spectralFitChi2= 6;
+	optional double spectralFitNDF= 7;
+
+}//close SpectralIndexData
+
+message SpectralIndexDataCollection
+{
+	repeated SpectralIndexData spectralIndexDataList= 1;
+}
+
+//==============================
+//==   ASTRO OBJECT
+//==============================
+message AstroObject 
+{
+	optional int64 index= 1;
+	optional string name= 2;
+	optional string id_str= 3;
+	optional int32 id= 4;
+	optional int32 subid= 5;
+	optional double x= 6;
+	optional double y= 7;	
+	optional double xerr= 8;
+	optional double yerr= 9;
+	optional string refs= 10;
+	optional bool confirmed= 11;
+
+	optional bool hasFrequencyInfo= 12;
+	optional double nu= 13;
+	optional double dnu= 14;
+
+	optional bool hasFluxInfo= 15;
+	optional double peakFlux= 16;
+	optional double peakFluxErr= 17;
+	optional double fluxDensity= 18;
+	optional double fluxDensityErr= 19;
+	optional double flux= 20;
+	optional double fluxErr= 21;
+
+	optional bool hasSizeInfo= 22;
+	optional double radius= 23;
+
+	optional bool hasEllipseInfo= 24;
+	optional double bmaj= 25;
+	optional double bmin= 26;
+	optional double pa= 27;
+		
+	optional bool hasDeconvEllipseInfo= 28;
+	optional double bmaj_deconv= 29;
+	optional double bmin_deconv= 30;
+	optional double pa_deconv= 31;
+
+}//close AstroObject
+
+message AstroObjectCollection
+{
+	repeated AstroObject astroObjectList= 1;
+}
 
