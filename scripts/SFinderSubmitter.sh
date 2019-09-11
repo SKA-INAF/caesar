@@ -20,7 +20,6 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "*** MANDATORY ARGS ***"
 	echo "--filelist=[FILELIST] - Ascii file with list of image files (.fits/.root, full path) to be processed" 
 	echo "--inputfile=[FILENAME] - Input file name to be searched (.fits/.root). If the --filelist option is given this option is skipped."
-	echo "--envfile=[ENV_FILE] - File (.sh) with list of environment variables to be loaded by each processing node"
 	echo ""
 
 	echo "*** OPTIONAL ARGS ***"
@@ -224,6 +223,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo ""
 	
 	echo "=== SFINDER RUN OPTIONS ==="	
+	echo "--envfile=[ENV_FILE] - File (.sh) with list of environment variables to be loaded by each processing node"
 	echo "--loglevel=[LOG_LEVEL] - Logging level string {INFO, DEBUG, WARN, ERROR, OFF} (default=INFO)"
 	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"
 	echo "--addrunindex - Append a run index to submission script (in case of list execution) (default=no)"
@@ -1111,10 +1111,10 @@ if [ "$BATCH_SYSTEM" != "PBS" ] && [ "$BATCH_SYSTEM" != "SLURM" ]; then
   exit 1
 fi
 
-if [ "$ENV_FILE" = "" ]; then
-  echo "ERROR: Empty ENV_FILE arg!"
-  exit 1
-fi
+#if [ "$ENV_FILE" = "" ]; then
+#  echo "ERROR: Empty ENV_FILE arg!"
+#  exit 1
+#fi
 
 if [ "$CONTAINER_IMG" = "" ] && [ "$RUN_IN_CONTAINER" = true ]; then
   echo "ERROR: Empty CONTAINER_IMG argument (hint: you must specify a container image if run in container option is activated)!"
@@ -1640,11 +1640,13 @@ generate_exec_script(){
 
       echo " "
 
-      echo 'echo ""'
-      echo 'echo "INFO: Source the software environment vars in file '"$ENV_FILE"' ..."'
-      echo "source $ENV_FILE"
-      echo 'echo ""'
-      
+			if [ "$ENV_FILE" != "" ]; then
+				echo 'echo ""'
+      	echo 'echo "INFO: Source the software environment vars in file '"$ENV_FILE"' ..."'
+      	echo "source $ENV_FILE"
+      	echo 'echo ""'
+			fi
+       
       echo "JOBDIR=$BASEDIR"
      
       echo " "
@@ -1804,7 +1806,7 @@ else
 
 
 	## Define executable & args variables and generate script
-	shfile="Run_$filename_base_noext"'.sh'
+	shfile="run_$filename_base_noext"'.sh'
 	
 	##EXE="$CAESAR_DIR/scripts/RunSFinderMPI.sh"
 	##EXE_ARGS="--nproc=$NPROC_TOT --config=$configfile $RUN_IN_CONTAINER_FLAG $CONTAINER_IMG_FLAG"
