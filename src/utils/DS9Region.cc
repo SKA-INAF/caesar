@@ -145,7 +145,7 @@ TEllipse* DS9PolygonRegion::GetEllipse()
 	}
 
 	//Compute rotated bounding box
-	cv::RotatedRect MinBoundingRect= cv::minAreaRect(points);
+	cv::RotatedRect MinBoundingRect= cv::minAreaRect(points_cv);
 
 	double MinBoundingRect_height= MinBoundingRect.size.height;
 	double MinBoundingRect_width= MinBoundingRect.size.width;
