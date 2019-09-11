@@ -14,6 +14,8 @@ set(
 	SourceGroup.h
 	SpectralIndexData.h
 	SourceMatchData.h
+	SourceComponentPars.h
+	SourceFitPars.h
 	SourceFitter.h
 	SourceExporter.h
 	SourceSelector.h
@@ -27,6 +29,8 @@ set(
 	${SRC_DIR}/SourceGroup.cc
 	${SRC_DIR}/SpectralIndexData.cc
 	${SRC_DIR}/SourceMatchData.cc	
+	${SRC_DIR}/SourceComponentPars.cc
+	${SRC_DIR}/SourceFitPars.cc
 	${SRC_DIR}/SourceFitter.cc
 	${SRC_DIR}/SourceExporter.cc
 	${SRC_DIR}/SourceSelector.cc

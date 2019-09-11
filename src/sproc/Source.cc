@@ -38,6 +38,9 @@
 	#include <Logger.h>
 #endif
 
+#include <SpectralIndexData.h>
+#include <AstroObject.h>
+
 #include <TObject.h>
 #include <TMatrixD.h>
 #include <TPad.h>
@@ -133,7 +136,32 @@ void Source::Copy(TObject &obj) const
 	((Source&)obj).m_HasFitInfo= m_HasFitInfo;
 	((Source&)obj).m_fitPars= m_fitPars;
 	((Source&)obj).m_fitStatus= m_fitStatus;
+
+	//Spectral index data
+	((Source&)obj).m_hasSpectralIndexData= m_hasSpectralIndexData;
+	((Source&)obj).m_spectralIndexData= m_spectralIndexData;
+	((Source&)obj).m_hasComponentSpectralIndexData= m_hasComponentSpectralIndexData;
+	((Source&)obj).m_componentSpectralIndexData= m_componentSpectralIndexData;
+
+	//Astro object data
+	((Source&)obj).m_astroObjects= m_astroObjects;
+	/*
+	for(size_t i=0;i<(((Source&)obj).m_astroObjects).size();i++){
+		if( (((Source&)obj).m_astroObjects)[i] ){
+			delete (((Source&)obj).m_astroObjects)[i];
+			(((Source&)obj).m_astroObjects)[i]= 0;
+		}
+	}
+	(((Source&)obj).m_astroObjects).clear();
 	
+	AstroObject* astroObject= 0;
+	for(unsigned int i=0;i<m_astroObjects.size();i++){
+		astroObject= new AstroObject;
+		*(((Source&)obj).m_astroObjects)= *(astroObject);
+		(((Source&)obj).m_astroObjects).push_back( ((Source&)obj).m_astroObjects );
+	}
+	*/
+
 	//Delete first a previously existing vector
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("Delete existing nested source list ...");
@@ -195,6 +223,14 @@ void Source::Init(){
 	//Init fit info
 	m_HasFitInfo= false;
 	m_fitStatus= eFitUnknownStatus;
+
+	//Init spectral index data
+	m_hasSpectralIndexData= false;
+	m_hasComponentSpectralIndexData= false;
+	m_componentSpectralIndexData.clear();
+
+	//Init astro objects
+	m_astroObjects.clear();
 
 }//close Init()
 

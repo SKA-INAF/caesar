@@ -34,6 +34,9 @@
 	#include <Logger.h>
 #endif
 
+#include <SpectralIndexData.h>
+#include <AstroObject.h>
+
 #include <TObject.h>
 #include <TMatrixD.h>
 
@@ -645,7 +648,83 @@ class Source : public Blob {
 		*/
 		int GetSpectralAxisInfo(double& val,double& dval,std::string& units);
 
-		
+		/**
+		* \brief Has spectral index data
+		*/
+		bool HasSpectralIndexData(){return m_hasSpectralIndexData;}
+		/**
+		* \brief Set has spectral index data flag
+		*/
+		void SetHasSpectralIndexData(bool val){m_hasSpectralIndexData= val;}
+		/**
+		* \brief Get spectral index data
+		*/
+		SpectralIndexData& GetSpectralIndexData(){return m_spectralIndexData;}
+
+		/**
+		* \brief Set spectral index data 
+		*/
+		void SetSpectralIndexData(SpectralIndexData& data){
+			m_spectralIndexData= data;
+			m_hasSpectralIndexData= true;
+		}
+		/**
+		* \brief Has component spectral index data
+		*/
+		bool HasComponentSpectralIndexData(){return m_hasComponentSpectralIndexData;}
+		/**
+		* \brief Set has spectral index data flag
+		*/
+		void SetHasComponentSpectralIndexData(bool val){m_hasComponentSpectralIndexData= val;}
+		/**
+		* \brief Get component spectral index data
+		*/
+		std::vector<SpectralIndexData>& GetComponentSpectralIndexData(){return m_componentSpectralIndexData;}
+		/**
+		* \brief Set component spectral index data 
+		*/
+		void SetComponentSpectralIndexData(std::vector<SpectralIndexData>& data){
+			m_componentSpectralIndexData= data;
+			m_hasComponentSpectralIndexData= true;
+		}
+		/**
+		* \brief Has astro object data
+		*/
+		bool HasAstroObjects(){return !m_astroObjects.empty();}
+		/**
+		* \brief Get astro objects data
+		*/
+		std::vector<AstroObject>& GetAstroObjects(){return m_astroObjects;}
+		/**
+		* \brief Set astro objects data
+		*/
+		void SetAstroObjects(std::vector<AstroObject>& data){m_astroObjects=data;}
+		/**
+		* \brief Add astro objects data
+		*/
+		int AddAstroObject(AstroObject& astroObject)
+		{
+			//Add if no objects present
+			if(m_astroObjects.empty()){
+				m_astroObjects.push_back(astroObject);
+			}
+
+			//Search if object is already present 
+			auto it= std::find_if(
+				m_astroObjects.begin(),
+				m_astroObjects.end(), 
+				[&astroObject](const AstroObject& obj) { 
+        	return obj.name == astroObject.name; 
+				}
+			);
+
+			if(it==m_astroObjects.end()){
+				m_astroObjects.push_back(astroObject);
+			}
+
+			return 0;
+
+		}//close AddAstroObject()
 
 	protected:
 		/**
@@ -698,7 +777,16 @@ class Source : public Blob {
 		SourceFitPars m_fitPars;
 		int m_fitStatus;
 
-		ClassDef(Source,3)
+		//Spectral index data	
+		bool m_hasSpectralIndexData;
+		SpectralIndexData m_spectralIndexData;
+		bool m_hasComponentSpectralIndexData;
+		std::vector<SpectralIndexData> m_componentSpectralIndexData;
+
+		//Astro object cross-match data
+		std::vector<AstroObject> m_astroObjects;
+
+		ClassDef(Source,5)
 
 	public:
 		

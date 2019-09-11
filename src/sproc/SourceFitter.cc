@@ -26,6 +26,8 @@
 */
 
 #include <SourceFitter.h>
+#include <SourceFitPars.h>
+#include <SourceComponentPars.h>
 
 #include <Image.h>
 #include <Source.h>
@@ -105,8 +107,7 @@
 using namespace std;
 using namespace std::placeholders;
 
-ClassImp(Caesar::SourceComponentPars)
-ClassImp(Caesar::SourceFitPars)
+
 ClassImp(Caesar::SourceFitter)
 ClassImp(Caesar::SourceFitter::SourceFitData)
 
