@@ -61,7 +61,7 @@ void Usage(char* exeName)
   cout<<"-h, --help \t Show help message and exit"<<endl;
 	cout<<"-i, --input=[INPUT_FILE] \t Input file in ROOT format to be cross-matched with catalogs"<<endl;
 	cout<<"-C, --catalogs=[CATALOG_FILE] \t Input file list name (ascii format) containing all catalog files in ROOT format to be cross-matched each other"<<endl;
-	cout<<"-c, --catalogType=[CATALOG_TYPE] \t Catalog type id {1=SIMBAD, 2=NED, 3=MGPS, 4=HASH, 5=WISE-HII} (default=SIMBAD)"<<endl;
+	cout<<"-c, --catalogType=[CATALOG_TYPE] \t Catalog type id {1=SIMBAD, 2=NED, 3=MGPS, 4=HASH, 5=WISE-HII, 6=ATNF-PSR, 7=WOLF-RAYET, 8=SELAVY} (default=SIMBAD)"<<endl;
 	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (root format) in which to store source match info"<<endl;
 	cout<<"-n, --nx=[NX] \t Number of divisions along X (default=4)"<<endl;
 	cout<<"-N, --ny=[NY] \t Number of divisions along Y (default=4)"<<endl;
@@ -159,11 +159,14 @@ double shuffleRMax= 50;
 
 enum CatalogType 
 {
-	eSIMBAD=1,
-	eNED=2,
-	eMGPS=3,
-	eHASH=4,
-	eWISE_HII=5
+	eSIMBAD_CATALOG=1,
+	eNED_CATALOG=2,
+	eMGPS_CATALOG=3,
+	eHASH_CATALOG=4,
+	eWISE_HII_CATALOG=5,
+	eATNF_PSR_CATALOG=6,
+	eWOLF_RAYET_CATALOG=7,
+	eSELAVY_CATALOG=8,
 };
 int catalogType= 1;
 
@@ -652,11 +655,14 @@ int ParseOptions(int argc, char *argv[])
 	//=======================
 	//== Check options
 	//=======================
-	if( catalogType!=eSIMBAD &&
-			catalogType!=eNED &&
-			catalogType!=eMGPS &&
-			catalogType!=eHASH &&
-			catalogType!=eWISE_HII
+	if( catalogType!=eSIMBAD_CATALOG &&
+			catalogType!=eNED_CATALOG &&
+			catalogType!=eMGPS_CATALOG &&
+			catalogType!=eHASH_CATALOG &&
+			catalogType!=eWISE_HII_CATALOG &&
+			catalogType!=eATNF_PSR_CATALOG &&
+			catalogType!=eWOLF_RAYET_CATALOG &&
+			catalogType!=eSELAVY_CATALOG
 	){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Invalid/unsupported catalog type given (type="<<catalogType<<")!");
@@ -1600,20 +1606,29 @@ int ReadAstroObjectData(std::string filename,int catalogIndex)
 	#endif
 	int status= 0;
 	std::vector<AstroObject*> astroObjects;
-	if(catalogType==eMGPS){
+	if(catalogType==eMGPS_CATALOG){
 		AstroObjectParser::ParseMGPSData(astroObjects,filename,'|');
 	}
-	else if(catalogType==eSIMBAD){
+	else if(catalogType==eSELAVY_CATALOG){
+		AstroObjectParser::ParseSelavyData(astroObjects,filename,' ');
+	}
+	else if(catalogType==eSIMBAD_CATALOG){
 		AstroObjectParser::ParseSimbadData(astroObjects,filename,'|');
 	}
-	else if(catalogType==eNED){
+	else if(catalogType==eNED_CATALOG){
 		AstroObjectParser::ParseNedData(astroObjects,filename,'|');
 	}
-	else if(catalogType==eHASH){
+	else if(catalogType==eHASH_CATALOG){
 		AstroObjectParser::ParseHASHData(astroObjects,filename,'|');
 	}
-	else if(catalogType==eWISE_HII){
+	else if(catalogType==eWISE_HII_CATALOG){
 		AstroObjectParser::ParseWiseHIIData(astroObjects,filename,'|');
+	}
+	else if(catalogType==eATNF_PSR_CATALOG){
+		AstroObjectParser::ParseATNFPsrData(astroObjects,filename,'|');
+	}
+	else if(catalogType==eWOLF_RAYET_CATALOG){
+		AstroObjectParser::ParseWRCatData(astroObjects,filename,'|');
 	}
 	else{
 		#ifdef LOGGING_ENABLED
