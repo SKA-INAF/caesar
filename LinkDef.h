@@ -351,6 +351,8 @@
 #pragma link C++ class Caesar::AstroObjectParser+;
 #pragma link C++ class vector<Caesar::AstroObjectParser>+;
 #pragma link C++ class vector<Caesar::AstroObjectParser*>+;
+#pragma link C++ class vector<vector<Caesar::AstroObjectParser>>+;
+#pragma link C++ class vector<vector<Caesar::AstroObjectParser*>>+;
 
 //== CUT PARSER ==
 #pragma link C++ class Caesar::Cut+;
