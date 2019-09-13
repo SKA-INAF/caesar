@@ -144,23 +144,21 @@ void Source::Copy(TObject &obj) const
 	((Source&)obj).m_componentSpectralIndexData= m_componentSpectralIndexData;
 
 	//Astro object data
+	((Source&)obj).m_hasAstroObjectData= m_hasAstroObjectData;
 	((Source&)obj).m_astroObjects= m_astroObjects;
-	/*
-	for(size_t i=0;i<(((Source&)obj).m_astroObjects).size();i++){
-		if( (((Source&)obj).m_astroObjects)[i] ){
-			delete (((Source&)obj).m_astroObjects)[i];
-			(((Source&)obj).m_astroObjects)[i]= 0;
-		}
-	}
-	(((Source&)obj).m_astroObjects).clear();
+	((Source&)obj).m_hasComponentAstroObjectData= m_hasComponentAstroObjectData;
+	((Source&)obj).m_componentAstroObjects= m_componentAstroObjects;
+
+	//Set object class ids
+	((Source&)obj).ObjClassId= ObjClassId;
+	((Source&)obj).ObjClassSubId= ObjClassSubId;
+	((Source&)obj).ObjLocationId= ObjLocationId;
 	
-	AstroObject* astroObject= 0;
-	for(unsigned int i=0;i<m_astroObjects.size();i++){
-		astroObject= new AstroObject;
-		*(((Source&)obj).m_astroObjects)= *(astroObject);
-		(((Source&)obj).m_astroObjects).push_back( ((Source&)obj).m_astroObjects );
-	}
-	*/
+	//Set object component class ids
+	((Source&)obj).componentObjLocationIds= componentObjLocationIds;
+	((Source&)obj).componentObjClassIds= componentObjClassIds;
+	((Source&)obj).componentObjClassSubIds= componentObjClassSubIds;
+	
 
 	//Delete first a previously existing vector
 	#ifdef LOGGING_ENABLED
@@ -230,7 +228,20 @@ void Source::Init(){
 	m_componentSpectralIndexData.clear();
 
 	//Init astro objects
+	m_hasAstroObjectData= false;
 	m_astroObjects.clear();
+	m_hasComponentAstroObjectData= false;
+	m_componentAstroObjects.clear();
+
+	//Init object class ids
+	ObjLocationId= eUNKNOWN_OBJECT_LOCATION;
+	ObjClassId= eUNKNOWN_OBJECT;
+	ObjClassSubId= eUNKNOWN_OBJECT;
+
+	//Init component object class ids
+	componentObjLocationIds.clear();
+	componentObjClassIds.clear();
+	componentObjClassSubIds.clear();
 
 }//close Init()
 
@@ -1744,6 +1755,171 @@ int Source::GetSpectralAxisInfo(double& val,double& dval,std::string& units)
 	return 0;
 
 }//close GetSpectralAxisInfo()
+
+
+int Source::ComputeObjClassId()
+{
+	return ComputeObjClassId(ObjClassId,ObjClassSubId,m_astroObjects);
+}
+
+
+int Source::ComputeComponentObjClassId()
+{
+	//Check if has fit component
+	if(!m_HasFitInfo || m_componentAstroObjects.empty()){
+		return 0;
+	}
+
+	//Check for mismatch between number of fit components & astro object collection size
+	int nComponents= m_fitPars.GetNComponents();
+	int collectionSize= static_cast<int>(m_componentAstroObjects.size());
+	if(collectionSize!=nComponents){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Mismatch between number of fit components stored (="<<nComponents<<") and component object collection size (="<<collectionSize<<")!");
+		#endif
+		return -1;
+	}
+
+	//Loop over components and compute 
+	componentObjClassIds.clear();
+	componentObjClassSubIds.clear();
+
+	for(size_t i=0;i<m_componentAstroObjects.size();i++)
+	{
+		int classId= eUNKNOWN_OBJECT;
+		int classSubId= eUNKNOWN_OBJECT; 
+		ComputeObjClassId(classId,classSubId,m_componentAstroObjects[i]);
+		componentObjClassIds.push_back(classId);
+		componentObjClassSubIds.push_back(classSubId);
+	}
+
+
+	return 0;
+
+}//close ComputeComponentObjClassId()
+
+
+int Source::ComputeObjClassId(int& classId,int& classSubId,std::vector<AstroObject>& astroObjects)
+{
+	//Set to unknown if no astro object data present
+	if(astroObjects.empty()){
+		classId= eUNKNOWN_OBJECT; 
+		classSubId= eUNKNOWN_OBJECT; 
+		return 0;
+	}
+
+	//Set to obj type if only one object data present
+	//otherwise set to the major type.
+	int nObjs= static_cast<int>(astroObjects.size());
+	if(nObjs==1){
+		classId= astroObjects[0].id;
+		classSubId= astroObjects[0].subid;
+	}
+	else{
+		std::vector<int> objIds;
+		std::vector<int> objSubIds;		
+		for(int i=0;i<nObjs;i++){
+			objIds.push_back(astroObjects[i].id);
+			objSubIds.push_back(astroObjects[i].subid);	
+		}
+		int nmodes_id= 0;
+		int mode_id= CodeUtils::FindVectorMode(objIds.begin(),objIds.end(),nmodes_id);
+		int nmodes_subid= 0;
+		int mode_subid= CodeUtils::FindVectorMode(objSubIds.begin(),objSubIds.end(),nmodes_subid);
+		if(nmodes_id==1) classId= mode_id;
+		else classId= eMULTI_CLASS_OBJECT;
+		if(nmodes_subid==1) classSubId= mode_subid;
+		else classSubId= eMULTI_CLASS_OBJECT;
+	}
+
+	return 0;
+
+}//close ComputeObjClassId()
+
+int Source::AddAstroObject(AstroObject& astroObject)
+{
+	//Add if no objects present and compute obj class id
+	if(m_astroObjects.empty()){
+		m_astroObjects.push_back(astroObject);
+		m_hasAstroObjectData= true;
+		ComputeObjClassId();
+		return 0;
+	}
+
+	//Search if object is already present 
+	auto it= std::find_if(
+		m_astroObjects.begin(),
+		m_astroObjects.end(), 
+		[&astroObject](const AstroObject& obj) { 
+    	return obj.name == astroObject.name; 
+		}
+	);
+
+	//Add to collection if not present and re-compute class id
+	if(it==m_astroObjects.end()){
+		m_astroObjects.push_back(astroObject);
+		m_hasAstroObjectData= true;
+		ComputeObjClassId();
+	}
+
+	return 0;
+
+}//close AddAstroObject()
+
+int Source::AddComponentAstroObject(int componentIndex,AstroObject& astroObject)
+{
+	//Check if has fit components
+	if(!m_HasFitInfo){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Source "<<this->GetName()<<" has no fit components, no astro object will be added!");
+		#endif
+		return -1;
+	}
+
+	//Check if component index is in range
+	int nComponents= m_fitPars.GetNComponents();
+	if(componentIndex<0 || componentIndex>=nComponents){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Invalid component index ("<<componentIndex<<") given when nComponents="<<nComponents<<", no astro object will be added!");
+		#endif
+		return -1;
+	}
+
+	//If collection size is empty allocate space for all components
+	if(m_componentAstroObjects.empty()){
+		for(int i=0;i<nComponents;i++){
+			m_componentAstroObjects.push_back( std::vector<AstroObject>() );
+		}
+	}
+
+	//Add if no objects present and compute obj class id
+	if(m_componentAstroObjects[componentIndex].empty()){
+		m_componentAstroObjects[componentIndex].push_back(astroObject);
+		m_hasComponentAstroObjectData= true;
+		ComputeComponentObjClassId();
+		return 0;
+	}
+
+	//Search if object is already present 
+	auto it= std::find_if(
+		m_componentAstroObjects[componentIndex].begin(),
+		m_componentAstroObjects[componentIndex].end(), 
+		[&astroObject](const AstroObject& obj) { 
+    	return obj.name == astroObject.name; 
+		}
+	);
+
+	//Add to collection if not present and re-compute class id
+	if(it==m_componentAstroObjects[componentIndex].end()){
+		m_componentAstroObjects[componentIndex].push_back(astroObject);
+		m_hasComponentAstroObjectData= true;
+		ComputeComponentObjClassId();
+	}
+	
+	return 0;
+
+}//close AddComponentAstroObject()
+
 
 }//close namespace
 

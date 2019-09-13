@@ -690,7 +690,11 @@ class Source : public Blob {
 		/**
 		* \brief Has astro object data
 		*/
-		bool HasAstroObjects(){return !m_astroObjects.empty();}
+		bool HasAstroObjects(){return m_hasAstroObjectData;}
+		/**
+		* \brief Has astro object data
+		*/
+		void SetHasAstroObjects(bool choice){m_hasAstroObjectData= choice;}
 		/**
 		* \brief Get astro objects data
 		*/
@@ -698,33 +702,49 @@ class Source : public Blob {
 		/**
 		* \brief Set astro objects data
 		*/
-		void SetAstroObjects(std::vector<AstroObject>& data){m_astroObjects=data;}
+		void SetAstroObjects(std::vector<AstroObject>& data){
+			m_astroObjects= data;
+			m_hasAstroObjectData= true;
+			ComputeObjClassId();
+		}
 		/**
 		* \brief Add astro objects data
 		*/
-		int AddAstroObject(AstroObject& astroObject)
-		{
-			//Add if no objects present
-			if(m_astroObjects.empty()){
-				m_astroObjects.push_back(astroObject);
-			}
+		int AddAstroObject(AstroObject& astroObject);
 
-			//Search if object is already present 
-			auto it= std::find_if(
-				m_astroObjects.begin(),
-				m_astroObjects.end(), 
-				[&astroObject](const AstroObject& obj) { 
-        	return obj.name == astroObject.name; 
-				}
-			);
+		/**
+		* \brief Has component astro object data
+		*/
+		bool HasComponentAstroObjects(){return m_hasComponentAstroObjectData;}
+		/**
+		* \brief Has astro object data
+		*/
+		void SetHasComponentAstroObjects(bool choice){m_hasComponentAstroObjectData= choice;}
+		/**
+		* \brief Get astro objects data
+		*/
+		std::vector<std::vector<AstroObject>>& GetComponentAstroObjects(){return m_componentAstroObjects;}
+		/**
+		* \brief Set astro objects data
+		*/
+		void SetComponentAstroObjects(std::vector<std::vector<AstroObject>>& data){
+			m_componentAstroObjects= data;
+			m_hasComponentAstroObjectData= true;
+			ComputeComponentObjClassId();
+		}
+		/**
+		* \brief Add component astro objects data
+		*/
+		int AddComponentAstroObject(int componentIndex,AstroObject& astroObject);
 
-			if(it==m_astroObjects.end()){
-				m_astroObjects.push_back(astroObject);
-			}
-
-			return 0;
-
-		}//close AddAstroObject()
+		/**
+		* \brief Compute object class id from astro object data (if available)
+		*/
+		int ComputeObjClassId();
+		/**
+		* \brief Compute component object class id from astro object data (if available)
+		*/
+		int ComputeComponentObjClassId();
 
 	protected:
 		/**
@@ -737,7 +757,10 @@ class Source : public Blob {
 		*/
 		int GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WCS* wcs=0,int coordSystem=eJ2000);
 
-
+		/**
+		* \brief Compute object class id from astro object data (if available)
+		*/
+		int ComputeObjClassId(int& id,int& subid,std::vector<AstroObject>& data);
 
 	private:
 	
@@ -753,6 +776,16 @@ class Source : public Blob {
 		int Flag;
 		int SimType;
 		float SimMaxScale;//in arcsec
+
+		//Object type
+		int ObjLocationId;
+		int ObjClassId;
+		int ObjClassSubId;
+
+		//Component object type
+		std::vector<int> componentObjLocationIds;
+		std::vector<int> componentObjClassIds;
+		std::vector<int> componentObjClassSubIds;
 
 	private:
 		double m_BeamFluxIntegral;
@@ -784,9 +817,12 @@ class Source : public Blob {
 		std::vector<SpectralIndexData> m_componentSpectralIndexData;
 
 		//Astro object cross-match data
+		bool m_hasAstroObjectData;
 		std::vector<AstroObject> m_astroObjects;
-
-		ClassDef(Source,5)
+		bool m_hasComponentAstroObjectData;
+		std::vector<std::vector<AstroObject>> m_componentAstroObjects;
+		
+		ClassDef(Source,7)
 
 	public:
 		

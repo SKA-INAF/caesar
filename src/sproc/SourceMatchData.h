@@ -602,6 +602,11 @@ class SourceMatchData : public TObject {
 		* \brief Compute source component SED and spectral index
 		*/
 		int ComputeSourceComponentSEDs();
+		
+		/**
+		* \brief Get source spectral index data
+		*/
+		SpectralIndexData& GetSpectralIndexData(){return m_spectralIndexData;}
 		/**
 		* \brief Get source spectral index
 		*/

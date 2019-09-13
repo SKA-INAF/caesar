@@ -358,19 +358,19 @@ bool SourceMatchData::HasSourceMatch()
 
 bool SourceMatchData::HasSourceComponentMatch(int componentId)
 {
-	cout<<"HasSourceComponentMatch(): pto 1"<<endl;
+	//cout<<"HasSourceComponentMatch(): pto 1"<<endl;
 	if(m_componentMatchIndexes.empty()) return false;
 	if(componentId<0 || componentId>=(int)(m_componentMatchIndexes.size())) return false;
-	cout<<"HasSourceComponentMatch(): pto 2"<<endl;
+	//cout<<"HasSourceComponentMatch(): pto 2"<<endl;
 	if(m_componentMatchIndexes[componentId].empty()) return false;
-	cout<<"HasSourceComponentMatch(): pto 3 (N="<<m_componentMatchIndexes[componentId].size()<<")"<<endl;
+	//cout<<"HasSourceComponentMatch(): pto 3 (N="<<m_componentMatchIndexes[componentId].size()<<")"<<endl;
 			
 	bool hasMatch= false;
 	for(size_t j=0;j<m_componentMatchIndexes[componentId].size();j++){
-		cout<<"HasSourceComponentMatch(): pto 4"<<endl;
+		//cout<<"HasSourceComponentMatch(): pto 4"<<endl;
 		int nIndexes= m_componentMatchIndexes[componentId][j].GetNIndexes();
 		//std::vector<ComponentMatchIndex> index_list= m_componentMatchIndexes[componentId][j].GetIndexes();
-		cout<<"HasSourceComponentMatch(): pto 5"<<endl;
+		//cout<<"HasSourceComponentMatch(): pto 5"<<endl;
 		//if(!index_list.empty()){
 		if(nIndexes>0){
 			hasMatch= true;
@@ -490,14 +490,14 @@ int SourceMatchData::GetMatchedSourceNames(std::vector<std::string>& snames,int 
 		return -1;
 	}
 
-	cout<<"pto 0"<<endl;
+	//cout<<"pto 0"<<endl;
 	if(m_matchedSources[catalogIndex]->GetSourceNames(snames)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to get matched source names!");
 		#endif
 		return -1;
 	}
-	cout<<"pto 1"<<endl;
+	//cout<<"pto 1"<<endl;
 
 	return 0;
 }
@@ -653,14 +653,14 @@ int SourceMatchData::ComputeSourceSEDs()
 			#endif
 		}
 		std::stringstream ss;
-		cout<<"ComputeSourceSEDs: pto 1"<<endl;
+		//cout<<"ComputeSourceSEDs: pto 1"<<endl;
 		if(!snames.empty()){
 			ss<<"{";
-			cout<<"ComputeSourceSEDs: pto 2"<<endl;
+			//cout<<"ComputeSourceSEDs: pto 2"<<endl;
 			for(size_t j=0;j<snames.size()-1;j++) ss<<snames[j]<<",";
-			cout<<"ComputeSourceSEDs: pto 3"<<endl;
+			//cout<<"ComputeSourceSEDs: pto 3"<<endl;
 			ss<<snames[snames.size()-1]<<"}";
-			cout<<"ComputeSourceSEDs: pto 4"<<endl; 
+			//cout<<"ComputeSourceSEDs: pto 4"<<endl; 
 		}
 
 		//Get frequency
