@@ -348,6 +348,7 @@ enum CutType {
 enum AstroObjectType 
 {
 	//Major categories
+	eMULTI_CLASS_OBJECT=-1,
 	eUNKNOWN_OBJECT=0,
 	eSTAR=1,
 	eGALAXY=2,
@@ -421,6 +422,13 @@ enum AstroObjectType
 	
 };//close AstroObjectType enum codes
 
+enum AstroObjectLocation 
+{
+	eUNKNOWN_OBJECT_LOCATION=0,
+	eGALACTIC_OBJECT=1,
+	eEXTRAGALACTIC_OBJECT=2
+};
+
 #ifdef __MAKECINT__
 #pragma link C++ enum WCSType+;
 #pragma link C++ enum ImgFilters+;
@@ -440,6 +448,7 @@ enum AstroObjectType
 #pragma link C++ enum ContourOverlapFlag+;
 #pragma link C++ enum FitMinimizer+;
 #pragma link C++ enum AstroObjectType+;
+#pragma link C++ enum AstroObjectLocation+;
 #endif
 
 //====================================

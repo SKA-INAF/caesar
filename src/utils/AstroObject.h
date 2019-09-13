@@ -57,6 +57,8 @@
 
 namespace Caesar {
 
+class Contour;
+
 //=================================
 //==    ASTRO OBJECT CLASS
 //=================================
@@ -78,6 +80,10 @@ class AstroObject : public TObject
 		* \brief Get fit ellipse (if ellipse info are available)
 		*/
 		TEllipse* GetFitEllipse();
+		/**
+		* \brief Compute contour from fitted ellipse
+		*/
+		Contour* GetContour(bool computePars=true);
 		/**
 		* \brief Get DS9 region
 		*/

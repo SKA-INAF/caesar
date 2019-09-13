@@ -594,6 +594,42 @@ class CodeUtils : public TObject {
 		
 
 		/**
+		* \brief Find vector index at which the cumulative sum is smaller then given value 
+		*/
+		template<class InputIt, class T = typename std::iterator_traits<InputIt>::value_type>
+		static T FindVectorMode(InputIt begin, InputIt end,int& nmodes)
+		{
+    	std::map<T, int> counts;
+    	for (InputIt it = begin; it != end; ++it) {
+      	if (counts.find(*it) != counts.end()) {
+        	++counts[*it];
+        }
+        else {
+        	counts[*it] = 1;
+        }
+    	}
+   	 	auto modeItem= std::max_element(counts.begin(), counts.end(),
+      	[] (const std::pair<T, int>& pair1, const std::pair<T, int>& pair2) 
+				{return pair1.second < pair2.second;});
+		
+			T mode= modeItem->first;
+			int modeFreq= modeItem->second;
+	
+			nmodes= std::count_if(
+				counts.begin(),
+				counts.end(),
+				[&modeFreq](std::pair<T,int> p){
+					return p.second==modeFreq;
+				}
+			);
+		
+			return mode;
+
+		}//close FindVectorMode()
+
+		
+
+		/**
 		* \brief String find and replace
 		*/
 		static void StringFindAndReplace(std::string& str, const std::string& oldstr, const std::string& newstr){

@@ -788,6 +788,33 @@ int Serializer::EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* sourc
 		}
 		source_pb.set_allocated_m_astroobjects(astroObjectCollection_pb);
 	
+		//Set component astro object data
+		std::vector<std::vector<AstroObject>> componentAstroObjectCollection= source->GetComponentAstroObjects();
+		for(size_t i=0;i<componentAstroObjectCollection.size();i++)
+		{
+			CaesarPB::AstroObjectCollection* astroObjectCollection_pb= source_pb.add_m_componentastroobjects();
+			if(EncodeAstroObjectCollectionToProtobuf(*astroObjectCollection_pb,componentAstroObjectCollection[i])<0){
+				throw std::runtime_error("Failed to encode astro object data!");
+			}
+
+		}//end loop component astro objects
+
+		//Set object class ids
+		source_pb.set_objlocationid(source->ObjLocationId);
+		source_pb.set_objclassid(source->ObjClassId);
+		source_pb.set_objclasssubid(source->ObjClassSubId);
+
+		//Set component object class ids
+		for(size_t i=0;i<(source->componentObjLocationIds).size();i++){
+			source_pb.add_componentobjlocationid((source->componentObjLocationIds)[i]);
+		}
+		for(size_t i=0;i<(source->componentObjClassIds).size();i++){
+			source_pb.add_componentobjclassid((source->componentObjClassIds)[i]);
+		}
+		for(size_t i=0;i<(source->componentObjClassSubIds).size();i++){
+			source_pb.add_componentobjclasssubid((source->componentObjClassSubIds)[i]);
+		}
+	
 		//Set blob field
 		CaesarPB::Blob* blob= new CaesarPB::Blob;
 		if(EncodeBlobToProtobuf(*blob,source)<0){
@@ -1456,7 +1483,57 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 			}
 			source.SetAstroObjects(astroObjectCollection);
 		}
+		else{
+			source.SetHasAstroObjects(false);
+		}
 
+		//Set component astro objects
+		std::vector<std::vector<Caesar::AstroObject>> componentAstroObjectCollection;		
+		for(int i=0;i<source_pb.m_componentastroobjects_size();i++)
+		{
+			componentAstroObjectCollection.push_back( std::vector<Caesar::AstroObject>() );
+
+			const CaesarPB::AstroObjectCollection astroObjectCollection_pb= source_pb.m_componentastroobjects(i);			
+			int status= EncodeProtobufToAstroObjectCollection(componentAstroObjectCollection[i],astroObjectCollection_pb);
+			if(status<0){
+				std::stringstream errMsg;
+				errMsg<<"Encoding from protobuf of astro object collection for component no. "<<i+1<<" failed!";
+				throw std::runtime_error(errMsg.str().c_str());
+			}
+		}//end loop component astro objects
+		if(!componentAstroObjectCollection.empty()){
+			source.SetComponentAstroObjects(componentAstroObjectCollection);
+		}
+		else{
+			source.SetHasComponentAstroObjects(false);
+		}	
+
+
+		//Set object class ids
+		if(source_pb.has_objlocationid()) source.ObjLocationId= source_pb.objlocationid();
+		if(source_pb.has_objclassid()) source.ObjClassId= source_pb.objclassid();		
+		if(source_pb.has_objclasssubid()) source.ObjClassSubId= source_pb.objclasssubid();
+
+		//Set component object class ids
+		std::vector<int> compObjLocationIds;
+		std::vector<int> compObjClassIds;
+		std::vector<int> compObjClassSubIds;
+		for(int i=0;i<source_pb.componentobjlocationid_size();i++){
+			int objLocationId = source_pb.componentobjlocationid(i);
+			compObjLocationIds.push_back(objLocationId);
+		}
+		for(int i=0;i<source_pb.componentobjclassid_size();i++){
+			int objClassId = source_pb.componentobjclassid(i);
+			compObjClassIds.push_back(objClassId);
+		}
+		for(int i=0;i<source_pb.componentobjclasssubid_size();i++){
+			int objClassSubId = source_pb.componentobjclasssubid(i);
+			compObjClassSubIds.push_back(objClassSubId);
+		}
+		source.componentObjLocationIds= compObjLocationIds;
+		source.componentObjClassIds= compObjClassIds;
+		source.componentObjClassSubIds= compObjClassSubIds;
+		
 
 		//Set blob fields
 		if(source_pb.has_blob()){

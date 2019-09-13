@@ -29,7 +29,7 @@
 #include <MathUtils.h>
 #include <CodeUtils.h>
 #include <AstroUtils.h>
-
+#include <Contour.h>
 
 #ifdef LOGGING_ENABLED
 	#include <Logger.h>
@@ -142,6 +142,49 @@ TEllipse* AstroObject::GetFitEllipse()
 
 }//close GetFitEllipse()
 
+
+Contour* AstroObject::GetContour(bool computePars)
+{
+	//Check if ellipse info are available
+	if(!hasEllipseInfo){
+		return nullptr;
+	}
+	
+	//Compute ellipse pars
+	double X0= x;
+	double Y0= y;
+	double a= bmaj/2;
+	double b= bmin/2;
+	double theta= pa+90;
+
+	//Create contour
+	Contour* contour= new Contour;
+
+	//Fill contour
+	double t= 0;
+	double t_step= 2;
+	double t_max= 360;
+	double theta_rad= theta*TMath::DegToRad();
+
+	while(true){
+		if(t>=t_max) break;	
+		double t_rad= t*TMath::DegToRad();
+		double x= X0 + a*cos(t_rad)*cos(theta_rad) - b*sin(t_rad)*sin(theta_rad);
+		double y= Y0 + a*cos(t_rad)*sin(theta_rad) + b*sin(t_rad)*cos(theta_rad);
+		contour->AddPoint(TVector2(x,y));
+		t+= t_step;		
+	}//end loop 
+	
+	//Compute contour parameters
+	if(computePars && contour->ComputeParameters()<0){	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("One/more failures occurred while computing contour parameters!");
+		#endif
+	}
+
+	return contour;
+
+}//close GetContour()
 
 std::string AstroObject::GetDS9Region(std::string text,std::string color,std::vector<std::string> tags)
 {
