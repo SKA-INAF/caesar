@@ -394,8 +394,19 @@ message Source {
 	optional bool m_hasComponentSpectralIndexData= 20;
 	optional SpectralIndexDataCollection m_componentSpectralIndexData= 21;
 	
+	//Object class ids
+	optional int32 ObjLocationId= 22;
+	optional int32 ObjClassId= 23;
+	optional int32 ObjClassSubId= 24;
+	repeated int32 componentObjLocationId= 25;
+	repeated int32 componentObjClassId= 26;
+	repeated int32 componentObjClassSubId= 27;
+
 	//Astro objects
-	optional AstroObjectCollection m_astroObjects= 22;
+	optional bool m_hasAstroObjectData= 28;
+	optional AstroObjectCollection m_astroObjects= 29;
+	optional bool m_hasComponentAstroObjectData= 30;
+	repeated AstroObjectCollection m_componentAstroObjects= 31;
 
 }//close Source schema
 
