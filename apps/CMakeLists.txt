@@ -16,6 +16,7 @@ add_subdirectory(sourceSelector)
 add_subdirectory(sourceCountsUnfolder)
 add_subdirectory(sourceCatalogsMatchFinder)
 add_subdirectory(sourceAstroCatalogsMatchFinder)
+add_subdirectory(sourceTreeWriter)
 
 set (INCLUDE_DIRS ${INCLUDE_DIRS} PARENT_SCOPE)
 set (Task_ReadImg_SRCS ${Task_ReadImg_SRCS} PARENT_SCOPE)
@@ -36,4 +37,5 @@ set (Task_SourceSelector_SRCS ${Task_SourceSelector_SRCS} PARENT_SCOPE)
 set (Task_SourceCountsUnfolder_SRCS ${Task_SourceCountsUnfolder_SRCS} PARENT_SCOPE)
 set (Task_SourceCatalogsMatchFinder_SRCS ${Task_SourceCatalogsMatchFinder_SRCS} PARENT_SCOPE)
 set (Task_SourceAstroCatalogsMatchFinder_SRCS ${Task_SourceAstroCatalogsMatchFinder_SRCS} PARENT_SCOPE)
+set (Task_SourceTreeWriter_SRCS ${Task_SourceTreeWriter_SRCS} PARENT_SCOPE)
 

@@ -422,6 +422,10 @@ if(BUILD_APPS)
 	target_link_libraries(SourceAstroCatalogsMatchFinderExe Caesar ${LINKED_LIBS})
 	set_target_properties(SourceAstroCatalogsMatchFinderExe PROPERTIES OUTPUT_NAME SourceAstroCatalogsMatchFinder)
 
+	add_executable(SourceTreeWriterExe ${Task_SourceTreeWriter_SRCS})
+	target_link_libraries(SourceTreeWriterExe Caesar ${LINKED_LIBS})
+	set_target_properties(SourceTreeWriterExe PROPERTIES OUTPUT_NAME SourceTreeWriter)
+
 	if(ENABLE_MPI AND MPI_FOUND)
 		include_directories(${MPI_CXX_INCLUDE_PATH})
 		add_executable(FindSourceMPIExe ${Task_FindSourceMPI_SRCS})
@@ -621,6 +625,7 @@ if(BUILD_APPS)
 		SourceCountsUnfolder
 		SourceCatalogsMatchFinder
 		SourceAstroCatalogsMatchFinder
+		SourceTreeWriter
 	)
 	if(ENABLE_MPI)
 		list(APPEND EXE_FILES FindSourceMPI)
