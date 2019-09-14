@@ -63,12 +63,19 @@ void Usage(char* exeName)
 	cout<<"-C, --catalogs=[CATALOG_FILE] \t Input file list name (ascii format) containing all catalog files in ROOT format to be cross-matched each other"<<endl;
 	cout<<"-c, --catalogType=[CATALOG_TYPE] \t Catalog type id {1=SIMBAD, 2=NED, 3=MGPS, 4=HASH, 5=WISE-HII, 6=ATNF-PSR, 7=WOLF-RAYET, 8=SELAVY} (default=SIMBAD)"<<endl;
 	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (root format) in which to store source match info"<<endl;
+	cout<<"-J, --soutput=[OUTPUT_FILE] \t Output file name (root format) in which to store source catalog with spectral index info added"<<endl;
 	cout<<"-n, --nx=[NX] \t Number of divisions along X (default=4)"<<endl;
 	cout<<"-N, --ny=[NY] \t Number of divisions along Y (default=4)"<<endl;
 	cout<<"-q, --selectObjectsInRegions \t Select catalog object inside given DS9 regions (default=no)"<<endl;
 	cout<<"-Q, --regionFile \t DS9 region filename used to select catalog objects"<<endl;
 	cout<<"-m, --matchSourcesByFlux \t Match sources by flux (default=false)"<<endl;
 	cout<<"-M, --matchFluxRelDiffThr \t Flux relative difference threshold (default=0.5)"<<endl;
+
+	cout<<"-O, --matchByOverlap \t Match source islands by contour overlap fraction (NB: skip if below thr) (default=false)"<<endl;
+	cout<<"-A, --matchOverlapThr \t Source island contour overlap fraction (wrt to total area) threshold (default=0.5)"<<endl;
+	cout<<"-P, --matchByPos \t Match source islands by position centroid distance (default=false)"<<endl;
+	cout<<"-T, --matchPosThr=[POS_THESHOLD] \t Source island centroid distance in arcsec below which we have a match (default=2.5)"<<endl;
+	
 	cout<<"-p, --matchComponentByPos \t Match source fit components by position centroid distance (default=false)"<<endl;
 	cout<<"-b, --matchComponentByOverlap \t Match source fit component by contour overlap fraction (NB: skip if below thr) (default=false)"<<endl;
 	cout<<"-t, --compMatchPosThr=[POS_THESHOLD] \t Source fit component-region centroid distance in arcsec below which we have a match (default=2.5)"<<endl;
@@ -97,12 +104,17 @@ static const struct option options_tab[] = {
 	{ "catalogType", required_argument, 0, 'c' },	
 	{ "verbosity", required_argument, 0, 'v'},
 	{ "output", required_argument, 0, 'o' },	
+	{ "soutput", required_argument, 0, 'J' },	
 	{ "selectObjectsInRegions", no_argument, 0, 'q' },	
 	{ "regionFile", required_argument, 0, 'Q' },	
 	{ "nx", required_argument, 0, 'n' },
 	{ "ny", required_argument, 0, 'N' },
 	{ "matchSourcesByFlux", no_argument, 0, 'm'},
 	{ "matchFluxRelDiffThr", required_argument, 0, 'M'},
+	{ "matchByOverlap", no_argument, 0, 'O'},	
+	{ "matchOverlapThr", required_argument, 0, 'A'},
+	{ "matchByPos", no_argument, 0, 'P'},
+	{ "matchPosThr", required_argument, 0, 'T'},
 	{ "matchComponentByPos", no_argument, 0, 'p'},
 	{ "matchComponentByOverlap", no_argument, 0, 'b'},	
 	{ "compMatchPosThr", required_argument, 0, 't'},
@@ -128,6 +140,12 @@ bool selectObjectsInRegions= false;
 std::string regionFileName= "";
 int verbosity= 4;//INFO level
 bool useWCSSimpleGeometry= true;
+
+bool matchSourcesByOverlap= false;
+float matchOverlapThr= 0.5;//fraction of overlap above which two sources are matched
+bool matchSourcesByPos= false;
+float matchPosThr= 2.5;//dist in arcsec below which two sources can be matched
+
 bool matchSourcesByFlux= false;
 float matchFluxRelDiffThr= 0.5;//50%
 bool matchSourceComponentsByPos= false;
@@ -172,10 +190,15 @@ int catalogType= 1;
 
 
 //Globar vars
+TFile* inputFile= 0;
 TFile* outputFile= 0;
-std::string outputFileName= "MatchOutput.root";
+std::string outputFileName= "sources.root";
+TTree* outputTree= 0;
+TFile* matchOutputFile= 0;
+std::string matchOutputFileName= "MatchOutput.root";
 TTree* matchedSourceInfo= 0;
-TTree* matchOptionTree= 0;
+TTree* matchedSourceComponentInfo= 0;
+TTree* matchSummaryTree= 0;
 std::string sourceName= "";
 double sourcePosX= 0;
 double sourcePosY= 0;
@@ -189,11 +212,18 @@ int nMatchedObjects= 0;
 std::vector<double> fluxDiff;
 std::vector<int> matchedObjectMultiplicity;
 std::vector<AstroObject*> matchedObjects;
+int nTotSources= 0;
+int nMatchedSources= 0;
 int nTotSourceComponents= 0;
 int nMatchedSourceComponents= 0;
 int nCatalogs= 0;
+std::vector<int> nMatchedSourcesPerCatalog;
+std::vector<int> nMatchedSourceCatalogMultiplicity;
 std::vector<int> nMatchedSourceComponentsPerCatalog;
 std::vector<int> nMatchedSourceComponentCatalogMultiplicity;
+
+
+
 
 //====================================
 //     ComponentPars struct
@@ -236,7 +266,52 @@ struct ComponentPars
 	bool isSelected;//is selected component
 };
 
-
+//====================================
+//     SourcePars struct
+//====================================
+struct SourcePars 
+{
+	SourcePars(int _catalogIndex,int _sourceIndex,int _nestedSourceIndex=-1)
+		: catalogIndex(_catalogIndex), sourceIndex(_sourceIndex), nestedSourceIndex(_nestedSourceIndex)
+	{
+		sname= "";	
+		contour= nullptr;
+		S= 0;
+		fluxDensity= 0;
+		flux= 0;
+		fluxDensityErr= 0;
+		fluxErr= 0;
+		X0= 0;
+		Y0= 0;
+		X0_wcs= 0;
+		Y0_wcs= 0;
+		//componentPars.clear();
+	}
+	~SourcePars(){
+		CodeUtils::DeletePtr<Contour>(contour);
+		//CodeUtils::DeletePtrCollection<ComponentPars>(componentPars);
+	}
+	/*
+	void AddComponentPars(ComponentPars* pars){
+		componentPars.push_back(pars);
+	}
+	*/
+	int catalogIndex;
+	int sourceIndex;
+	int nestedSourceIndex;
+	std::string sname;
+	double X0;
+	double Y0;
+	double X0_wcs;
+	double Y0_wcs;
+	Contour* contour;
+	double S;//pixel-integrated flux
+	double fluxDensity;//fitted flux density
+	double flux;//fitted flux
+	double fluxDensityErr;//fitted flux density err
+	double fluxErr;//fitted flux
+	//std::vector<ComponentPars*> componentPars;
+};
 
 
 //====================================
@@ -251,12 +326,14 @@ struct TileData
 		neighborTileIndexes.clear();
 		sourceComponentPars.clear();
 		catalogObjects.clear();
+		sourcePars.clear();
 	}
 
 	//Destructor 
 	~TileData()
 	{
 		CodeUtils::DeletePtrCollection<ComponentPars>(sourceComponentPars);
+		CodeUtils::DeletePtrCollection<SourcePars>(sourcePars);
 
 		for(size_t i=0;i<catalogObjects.size();i++){
 			for(size_t j=0;j<catalogObjects[i].size();j++){
@@ -291,13 +368,25 @@ struct TileData
 	}
 
 	//Add source pars
+	int AddSourcePars(SourcePars* pars){
+		if(!pars) return -1;
+		sourcePars.push_back(pars);
+		return 0;
+	}
+
+	//Get number of source pars in this tile
+	long int GetNSourcePars(){
+		return static_cast<long int>(sourcePars.size());
+	}
+
+	//Add source component pars
 	int AddSourceComponentPars(ComponentPars* pars){
 		if(!pars) return -1;
 		sourceComponentPars.push_back(pars);
 		return 0;
 	}
 
-	//Get number of sources pars in this tile
+	//Get number of sources component pars in this tile
 	long int GetNSourceComponentPars(){
 		return static_cast<long int>(sourceComponentPars.size());
 	}
@@ -346,6 +435,9 @@ struct TileData
 	//List of neighbors tiles
 	std::vector<size_t> neighborTileIndexes;
 
+	//Source island pars for this tile
+	std::vector<SourcePars*> sourcePars;
+
 	//Source component pars for this tile
 	std::vector<ComponentPars*> sourceComponentPars;
 
@@ -357,6 +449,8 @@ struct TileData
 std::vector<TileData*> tileDataList;
 
 std::vector<Source*> m_sources;
+Source* m_source= 0;
+std::vector<SourcePars*> m_sourcePars;
 std::vector<ComponentPars*> m_sourceComponentPars;
 std::vector<std::vector<AstroObject*>> m_catalogObjects;
 std::vector<DS9Region*> m_regions;
@@ -368,14 +462,18 @@ int ParseOptions(int argc, char *argv[]);
 std::string GetStringLogLevel(int verbosity);
 int InitGrid(float xmin,float xmax,float xstep,float ymin,float ymax,float ystep);
 int FindSourceMatchesInTiles();
+int FindSourceComponentMatchesInTiles();
 int ComputeSpectralIndices();
 int ReadRegions();
 int ReadData(std::string filename);
 int ReadCatalogData(std::string filelist);
 int ReadAstroObjectData(std::string filename,int collectionIndex);
-int FillSourceComponentPars(std::vector<ComponentPars*>& pars,Source* aSource,int collectionIndex,int sourceIndex,int nestedSourceIndex=-1,WCS* wcs=0,int coordSystem=0,double offsetX=0,double offsetY=0);
+int FillSourcePars(std::vector<SourcePars*>& spars,std::vector<ComponentPars*>& cpars,Source* aSource,int collectionIndex,int sourceIndex,int nestedSourceIndex=-1,WCS* wcs=0,int coordSystem=0,double offsetX=0,double offsetY=0);
 bool HaveSourceComponentMatch(SourceComponentMatchPars& scompmatchpars,ComponentPars* cpars,AstroObject* obj);
+bool HaveSourceIslandMatch(SourceMatchPars& smatchpars,SourcePars* spars,AstroObject* obj);
 void Save();
+int SaveSources();
+int CloneObjectsInFile(std::vector<std::string> excludedObjNames);
 int Init();
 
 int main(int argc, char *argv[])
@@ -450,11 +548,24 @@ int main(int argc, char *argv[])
 	//== Find source matches
 	//=======================
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Correlating source catalogs to find matches...");
+		INFO_LOG("Finding source island matches with astro catalog...");
 	#endif
 	if(FindSourceMatchesInTiles()<0){
 		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Correlating source data to find matches failed!");
+			ERROR_LOG("Finding source island matches with astro catalog failed!");
+		#endif
+		return -1;
+	}
+
+	//==================================
+	//== Find source component matches
+	//==================================
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Finding source component matches with astro catalog");
+	#endif
+	if(FindSourceComponentMatchesInTiles()<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Finding source component matches with astro catalog failed!");
 		#endif
 		return -1;
 	}
@@ -490,7 +601,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:C:c:o:v:qQ:n:N:mM:Llt:e:pba:d:fs:FS:gr:R:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:C:c:o:v:qQ:n:N:mM:OA:PT:Llt:e:pba:d:fs:FS:gr:R:J:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -518,6 +629,11 @@ int ParseOptions(int argc, char *argv[])
 				break;	
 			}
 			case 'o':	
+			{
+				matchOutputFileName= std::string(optarg);	
+				break;	
+			}
+			case 'J':	
 			{
 				outputFileName= std::string(optarg);	
 				break;	
@@ -555,6 +671,26 @@ int ParseOptions(int argc, char *argv[])
 			case 'M':
 			{
 				matchFluxRelDiffThr= atof(optarg);
+				break;
+			}
+			case 'O':
+			{
+				matchSourcesByOverlap= true;
+				break;
+			}
+			case 'A':
+			{
+				matchOverlapThr= atof(optarg);
+				break;
+			}	
+			case 'P':
+			{
+				matchSourcesByPos= true;
+				break;
+			}
+			case 'T':
+			{
+				matchPosThr= atof(optarg);
 				break;
 			}
 			case 'p':
@@ -676,6 +812,8 @@ int ParseOptions(int argc, char *argv[])
 	#ifdef LOGGING_ENABLED	
 		INFO_LOG("catalogType="<<catalogType);
 		INFO_LOG("matchSourcesByFlux? "<<matchSourcesByFlux<<", matchFluxRelDiffThr="<<matchFluxRelDiffThr);
+		INFO_LOG("matchSourcesByPos? "<<matchSourcesByPos<<", matchPosThr(arcsec)="<<matchPosThr);
+		INFO_LOG("matchSourcesByOverlap? "<<matchSourcesByOverlap<<", matchOverlapThr="<<matchOverlapThr);
 		INFO_LOG("matchSourceComponentsByPos? "<<matchSourceComponentsByPos<<", compMatchPosThr(arcsec)="<<compMatchPosThr<<", compMatchPosHighThr(arcsec)="<<compMatchPosHighThr);
 		INFO_LOG("matchSourceComponentsByOverlap? "<<matchSourceComponentsByOverlap<<", compMatchOverlapThr="<<compMatchOverlapThr<<", compMatchOverlapLowThr="<<compMatchOverlapLowThr);
 		INFO_LOG("applySourceComponentAreaRatioThr? "<<applySourceComponentAreaRatioThr);
@@ -685,12 +823,20 @@ int ParseOptions(int argc, char *argv[])
 
 }//close ParseOptions()
 
-int Init(){
-
+int Init()
+{
 	//Open output file
 	if(!outputFile) outputFile= new TFile(outputFileName.c_str(),"RECREATE");
+	
+	//Init output source TTree
+	if(!outputTree) outputTree= new TTree("SourceInfo","SourceInfo");
+	m_source= 0;
+	outputTree->Branch("Source",&m_source);
 
-	//Init source cube TTree
+	//Open match output file
+	if(!matchOutputFile) matchOutputFile= new TFile(matchOutputFileName.c_str(),"RECREATE");
+	
+	//Init source match TTree
 	if(!matchedSourceInfo) matchedSourceInfo= new TTree("SourceMatchInfo","SourceMatchInfo");
 	matchedSourceInfo->Branch("name",&sourceName);
 	matchedSourceInfo->Branch("x",&sourcePosX);
@@ -705,25 +851,48 @@ int Init(){
 	matchedSourceInfo->Branch("matchedObjects",&matchedObjects);
 	//matchedSourceInfo->Branch("fluxDiff",&fluxDiff);
 	matchedSourceInfo->Branch("matchedObjectMultiplicity",&matchedObjectMultiplicity);
+
+	//Init source component match TTree
+	if(!matchedSourceComponentInfo) matchedSourceComponentInfo= new TTree("SourceComponentMatchInfo","SourceComponentMatchInfo");
+	matchedSourceComponentInfo->Branch("name",&sourceName);
+	matchedSourceComponentInfo->Branch("x",&sourcePosX);
+	matchedSourceComponentInfo->Branch("y",&sourcePosY);
+	matchedSourceComponentInfo->Branch("x_wcs",&sourcePosX_wcs);
+	matchedSourceComponentInfo->Branch("y_wcs",&sourcePosY_wcs);
+	matchedSourceComponentInfo->Branch("fluxDensity",&sourceFluxDensity);
+	matchedSourceComponentInfo->Branch("fluxDensityErr",&sourceFluxDensityErr);	
+	matchedSourceComponentInfo->Branch("flux",&sourceFlux);
+	matchedSourceComponentInfo->Branch("fluxErr",&sourceFluxErr);
+	matchedSourceComponentInfo->Branch("nMatchedObjects",&nMatchedObjects);
+	matchedSourceComponentInfo->Branch("matchedObjects",&matchedObjects);
+	//matchedSourceComponentInfo->Branch("fluxDiff",&fluxDiff);
+	matchedSourceComponentInfo->Branch("matchedObjectMultiplicity",&matchedObjectMultiplicity);
 	
 
 	//Init match option TTree
-	if(!matchOptionTree) matchOptionTree= new TTree("MatchSummary","MatchSummary");
-	matchOptionTree->Branch("matchSourceComponentsByPos",&matchSourceComponentsByPos);
-	matchOptionTree->Branch("compMatchPosThr",&compMatchPosThr);
-	matchOptionTree->Branch("compMatchPosHighThr",&compMatchPosHighThr);
-	matchOptionTree->Branch("matchSourceComponentsByOverlap",&matchSourceComponentsByOverlap);
-	matchOptionTree->Branch("compMatchOverlapThr",&compMatchOverlapThr);
-	matchOptionTree->Branch("compMatchOverlapLowThr",&compMatchOverlapLowThr);
-	matchOptionTree->Branch("selectSourceByType",&selectSourceByType);
-	matchOptionTree->Branch("applySourceAreaRatioThr",&applySourceAreaRatioThr);
-	matchOptionTree->Branch("applySourceComponentAreaRatioThr",&applySourceComponentAreaRatioThr);
-
-	matchOptionTree->Branch("nTotSourceComponents",&nTotSourceComponents);
-	matchOptionTree->Branch("nMatchedSourceComponents",&nMatchedSourceComponents);
-	matchOptionTree->Branch("nCatalogs",&nCatalogs);
-	matchOptionTree->Branch("nMatchedSourceComponentsPerCatalog",&nMatchedSourceComponentsPerCatalog);
-	matchOptionTree->Branch("nMatchedSourceComponentCatalogMultiplicity",&nMatchedSourceComponentCatalogMultiplicity);
+	if(!matchSummaryTree) matchSummaryTree= new TTree("MatchSummary","MatchSummary");
+	matchSummaryTree->Branch("matchSourcesByPos",&matchSourcesByPos);
+	matchSummaryTree->Branch("matchPosThr",&matchPosThr);
+	matchSummaryTree->Branch("matchSourcesByOverlap",&matchSourcesByOverlap);
+	matchSummaryTree->Branch("matchOverlapThr",&matchOverlapThr);
+	matchSummaryTree->Branch("matchSourceComponentsByPos",&matchSourceComponentsByPos);
+	matchSummaryTree->Branch("compMatchPosThr",&compMatchPosThr);
+	matchSummaryTree->Branch("compMatchPosHighThr",&compMatchPosHighThr);
+	matchSummaryTree->Branch("matchSourceComponentsByOverlap",&matchSourceComponentsByOverlap);
+	matchSummaryTree->Branch("compMatchOverlapThr",&compMatchOverlapThr);
+	matchSummaryTree->Branch("compMatchOverlapLowThr",&compMatchOverlapLowThr);
+	matchSummaryTree->Branch("selectSourceByType",&selectSourceByType);
+	matchSummaryTree->Branch("applySourceAreaRatioThr",&applySourceAreaRatioThr);
+	matchSummaryTree->Branch("applySourceComponentAreaRatioThr",&applySourceComponentAreaRatioThr);
+	matchSummaryTree->Branch("nCatalogs",&nCatalogs);
+	matchSummaryTree->Branch("nTotSources",&nTotSources);
+	matchSummaryTree->Branch("nMatchedSources",&nMatchedSources);
+	matchSummaryTree->Branch("nMatchedSourcesPerCatalog",&nMatchedSourcesPerCatalog);
+	matchSummaryTree->Branch("nMatchedSourceCatalogMultiplicity",&nMatchedSourceCatalogMultiplicity);
+	matchSummaryTree->Branch("nTotSourceComponents",&nTotSourceComponents);
+	matchSummaryTree->Branch("nMatchedSourceComponents",&nMatchedSourceComponents);
+	matchSummaryTree->Branch("nMatchedSourceComponentsPerCatalog",&nMatchedSourceComponentsPerCatalog);
+	matchSummaryTree->Branch("nMatchedSourceComponentCatalogMultiplicity",&nMatchedSourceComponentCatalogMultiplicity);
 
 	//Set random seed
 	gRandom = new TRandom3(0);
@@ -796,10 +965,256 @@ int InitGrid(float xmin,float xmax,float xstep,float ymin,float ymax,float ystep
 }//close InitGrid()
 
 
-
-
-
 int FindSourceMatchesInTiles()
+{
+	//Init counters
+	nTotSources= 0;
+	nMatchedSources= 0;
+	std::map<std::string,int> matchedSourceNMatchMap;
+
+	struct MatchInfo 
+	{
+		MatchInfo(){
+			spars= 0;
+			objs.clear();
+		}
+		SourcePars* spars;
+		std::vector<AstroObject*> objs;
+	};
+	std::vector<MatchInfo*> matchInfoCollection;
+	MatchInfo* matchInfo= 0;
+
+	//Loop over tiles and find matches with regions in the same tile and in neighbor tiles
+	for(size_t i=0;i<tileDataList.size();i++)
+	{
+		long int NSourcePars= tileDataList[i]->GetNSourcePars();
+		long int NCatalogs= tileDataList[i]->GetNCatalogObjects();
+		std::vector<size_t> neighbors= tileDataList[i]->neighborTileIndexes;
+		
+		//Init counters
+		if(nMatchedSourcesPerCatalog.empty()){
+			nMatchedSourcesPerCatalog= std::vector<int>(NCatalogs,0);
+		}
+		if(nMatchedSourceCatalogMultiplicity.empty()){
+			nMatchedSourceCatalogMultiplicity= std::vector<int>(NCatalogs+1,0);
+		}
+
+		for(long int j=0;j<NSourcePars;j++) 
+		{		
+			//Get source component 
+			SourcePars* sourcePars= (tileDataList[i]->sourcePars)[j];
+			
+			#ifdef LOGGING_ENABLED
+			if(j%100==0) INFO_LOG("#"<<j+1<<"/"<<NSourcePars<<" source islands to be matched in tile no. "<<i+1<<" against "<<NCatalogs<<" catalogs ...");
+			#endif
+
+			//Count total number of sources					
+			nTotSources++;
+			std::vector<int> matchCounter(NCatalogs,0);
+			bool matchFound= false;
+			nMatchedObjects= 0;
+
+			//Create MatchInfo 
+			matchInfo= new MatchInfo;
+			matchInfo->spars= sourcePars;
+
+			//==============================================
+			//===        CATALOG LOOP
+			//==============================================
+			//Loop over source catalogs in the same tile
+			for(long int s=0;s<NCatalogs;s++)
+			{
+				int nMatches= 0;	
+									
+				long int NObjectsInCatalog= tileDataList[i]->GetNObjectsInCatalog(s);
+				if(NObjectsInCatalog<=0) continue;
+
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("#"<<NSourcePars<<" sources to be cross-matched against #"<<NObjectsInCatalog<<" objects (catalog #"<<s+1<<") in tile no. "<<i+1<<" ...");
+				#endif
+
+				//==============================================
+				//===      CATALOG SOURCE LOOP (SAME TILE)
+				//==============================================	
+				for(long int k=0;k<NObjectsInCatalog;k++)
+				{
+					//Get catalog object
+					AstroObject* catalogObject= tileDataList[i]->GetCatalogObject(s,k);
+					if(!catalogObject){
+						#ifdef LOGGING_ENABLED
+							ERROR_LOG("Null ptr to catalog object (catalog no. "<<s+1<<", object no. "<<k+1<<")!");
+						#endif
+						return -1;
+					}
+
+					//Check match
+					SourceMatchPars smatchpars;
+					bool hasMatch= HaveSourceIslandMatch(smatchpars,sourcePars,catalogObject);
+					if(!hasMatch) {
+						continue;
+					}
+					matchFound= true;
+					matchCounter[s]++;	
+					matchedSourceNMatchMap[catalogObject->name]++;
+					nMatchedObjects++;
+
+					(matchInfo->objs).push_back(catalogObject);
+					
+				}//end (k index) loop objects in catalog
+				
+				//==============================================
+				//===     CATALOG SOURCE LOOP (NEIGHBOUR TILES)
+				//==============================================	
+				for(size_t n=0;n<neighbors.size();n++)	
+				{
+					size_t neighborIndex= neighbors[n];
+					if(i==neighborIndex) continue;//skip same tile
+
+					long int NObjectsInCatalog_neighbor= tileDataList[neighborIndex]->GetNObjectsInCatalog(s);
+					if(NObjectsInCatalog_neighbor<=0) continue;
+
+					#ifdef LOGGING_ENABLED
+						DEBUG_LOG("#"<<NSourcePars<<" sources to be cross-matched against #"<<NObjectsInCatalog_neighbor<<" catalog objects (catalog #"<<s+1<<") in tile no. "<<neighborIndex<<" ...");
+					#endif	
+				
+					for(long int k=0;k<NObjectsInCatalog_neighbor;k++)
+					{
+						//Get catalog object
+						AstroObject* catalogObject= tileDataList[neighborIndex]->GetCatalogObject(s,k);
+
+						if(!catalogObject){
+							#ifdef LOGGING_ENABLED
+								ERROR_LOG("Null ptr to catalog object (catalog no. "<<s+1<<", object no. "<<k+1<<"!");
+							#endif
+							return -1;
+						}
+						
+						//Check source match
+						SourceMatchPars smatchpars;
+						bool hasMatch= HaveSourceIslandMatch(smatchpars,sourcePars,catalogObject);
+						if(!hasMatch) {
+							continue;
+						}
+						matchFound= true;
+						matchCounter[s]++;
+						matchedSourceNMatchMap[catalogObject->name]++;
+						nMatchedObjects++;
+
+						(matchInfo->objs).push_back(catalogObject);
+
+					}//end (k index) loop objects in catalog
+				}//end (n index) loop neighbor tiles
+	
+			}//end (s index) loop catalogs
+
+			//Update counters
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Update source match counters...");
+			#endif
+			if(matchFound){
+				nMatchedSources++;
+			}
+			std::vector<int> sourceMatchMultiplicityCounter(NCatalogs,0);
+			for(size_t c=0;c<matchCounter.size();c++){
+				if(matchCounter[c]>0) {
+					nMatchedSourcesPerCatalog[c]++;
+					sourceMatchMultiplicityCounter[c]++;
+				}
+			}
+
+			//Compute catalog match multiplicity
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Compute catalog match multiplicity...");
+			#endif
+			int multiplicity= std::accumulate(sourceMatchMultiplicityCounter.begin(), sourceMatchMultiplicityCounter.end(), 0);
+			nMatchedSourceCatalogMultiplicity[multiplicity]++;
+	
+			//Fill Tree
+			if(nMatchedObjects>0){
+				matchInfoCollection.push_back(matchInfo);
+			}
+
+		}//end (j index) loop source in tile
+
+	}//end (i index) loop tiles
+
+	cout<<"== ISLAND MATCH RESULTS =="<<endl;
+	cout<<"#matched/tot sources="<<nMatchedSources<<"/"<<nTotSources<<endl;
+	for(size_t i=0;i<nMatchedSourcesPerCatalog.size();i++){
+		cout<<"--> CAT"<<i+1<<": #match/tot="<<nMatchedSourcesPerCatalog[i]<<"/"<<nTotSources<<endl;
+	}
+	cout<<"source match multiplicity {";
+	for(size_t i=0;i<nMatchedSourceCatalogMultiplicity.size()-1;i++){
+		cout<<nMatchedSourceCatalogMultiplicity[i]<<",";
+	}
+	cout<<nMatchedSourceCatalogMultiplicity[nMatchedSourceCatalogMultiplicity.size()-1]<<"}"<<endl;
+	cout<<"===================="<<endl;
+
+	
+	//Fill TTree
+	for(size_t i=0;i<matchInfoCollection.size();i++)
+	{
+		SourcePars* sourcePars= matchInfoCollection[i]->spars;
+		int sourceIndex= sourcePars->sourceIndex;
+		int nestedSourceIndex= sourcePars->nestedSourceIndex;
+		std::vector<AstroObject> objs;
+		
+		//Set TTree data
+		matchedObjects.clear();
+		fluxDiff.clear();
+		matchedObjectMultiplicity.clear();
+		nMatchedObjects= 0;
+		sourceName= sourcePars->sname;
+		sourcePosX= sourcePars->X0;
+		sourcePosY= sourcePars->Y0;
+		sourcePosX_wcs= sourcePars->X0_wcs;
+		sourcePosY_wcs= sourcePars->Y0_wcs;
+		sourceFluxDensity= sourcePars->fluxDensity;
+		sourceFlux= sourcePars->flux;
+		sourceFluxDensityErr= sourcePars->fluxDensityErr;
+		sourceFluxErr= sourcePars->fluxErr;
+
+		for(size_t j=0;j<(matchInfoCollection[i]->objs).size();j++)
+		{
+			AstroObject* obj= (matchInfoCollection[i]->objs)[j];
+			std::string name= obj->name;
+			int mult= matchedSourceNMatchMap[name];
+
+			matchedObjects.push_back(obj);
+			objs.push_back(*obj);
+
+			nMatchedObjects++;
+			double dflux= sourceFlux- obj->flux;
+			fluxDiff.push_back(dflux);
+			matchedObjectMultiplicity.push_back(mult);
+
+		}//end loop matched objects
+
+		//Fill TTree 
+		matchedSourceInfo->Fill();
+
+		//Set match object in source
+		Source* source= 0;
+		if(nestedSourceIndex==-1) {
+			source= m_sources[sourceIndex];
+		}
+		else {
+			source= m_sources[sourceIndex]->GetNestedSource(nestedSourceIndex);
+		}
+		if(source){
+			for(size_t j=0;j<objs.size();j++){
+				source->AddAstroObject(objs[j]);
+			}
+		}
+
+	}//end loop matched sources
+
+	return 0;
+
+}//close FindSourceMatchesInTiles()
+
+
+int FindSourceComponentMatchesInTiles()
 {
 	//Init counters	
 	nTotSourceComponents= 0;
@@ -865,7 +1280,7 @@ int FindSourceMatchesInTiles()
 				if(NObjectsInCatalog<=0) continue;
 
 				#ifdef LOGGING_ENABLED
-					DEBUG_LOG("#"<<NSourceComponentPars<<" sources to be cross-matched against #"<<NObjectsInCatalog<<" objects (catalog #"<<s+1<<") in tile no. "<<i+1<<" ...");
+					DEBUG_LOG("#"<<NSourceComponentPars<<" source components to be cross-matched against #"<<NObjectsInCatalog<<" objects (catalog #"<<s+1<<") in tile no. "<<i+1<<" ...");
 				#endif
 
 				//==============================================
@@ -954,7 +1369,7 @@ int FindSourceMatchesInTiles()
 
 			//Update counters
 			#ifdef LOGGING_ENABLED
-				DEBUG_LOG("Update source match counters...");
+				DEBUG_LOG("Update source component match counters...");
 			#endif
 			if(matchFound){
 				nMatchedSourceComponents++;
@@ -969,14 +1384,13 @@ int FindSourceMatchesInTiles()
 
 			//Compute catalog match multiplicity
 			#ifdef LOGGING_ENABLED
-				DEBUG_LOG("Compute catalog match multiplicity...");
+				DEBUG_LOG("Compute catalog component match multiplicity...");
 			#endif
 			int multiplicity= std::accumulate(sourceComponentMatchMultiplicityCounter.begin(), sourceComponentMatchMultiplicityCounter.end(), 0);
 			nMatchedSourceComponentCatalogMultiplicity[multiplicity]++;
 	
 			//Fill Tree
 			if(nMatchedObjects>0){
-				//matchedSourceInfo->Fill();
 				matchInfoCollection.push_back(matchInfo);
 			}
 
@@ -985,7 +1399,7 @@ int FindSourceMatchesInTiles()
 	}//end (i index) loop tiles
 
 
-	cout<<"== MATCH RESULTS =="<<endl;
+	cout<<"== COMPONENT MATCH RESULTS =="<<endl;
 	cout<<"#matched/tot source components="<<nMatchedSourceComponents<<"/"<<nTotSourceComponents<<endl;
 	for(size_t i=0;i<nMatchedSourceComponentsPerCatalog.size();i++){
 		cout<<"--> CAT"<<i+1<<": #match/tot="<<nMatchedSourceComponentsPerCatalog[i]<<"/"<<nTotSourceComponents<<endl;
@@ -1001,7 +1415,11 @@ int FindSourceMatchesInTiles()
 	for(size_t i=0;i<matchInfoCollection.size();i++)
 	{
 		ComponentPars* componentPars= matchInfoCollection[i]->cpars;
-		
+		int sourceIndex= componentPars->sourceIndex;
+		int nestedSourceIndex= componentPars->nestedSourceIndex;
+		int componentIndex= componentPars->fitComponentIndex;
+		std::vector<AstroObject> objs;
+
 		//Set TTree data
 		matchedObjects.clear();
 		fluxDiff.clear();
@@ -1028,24 +1446,207 @@ int FindSourceMatchesInTiles()
 			double dflux= sourceFlux- obj->flux;
 			fluxDiff.push_back(dflux);
 			matchedObjectMultiplicity.push_back(mult);
+			objs.push_back(*obj);
 
 		}//end loop matched objects
 
 		//Fill TTree 
-		matchedSourceInfo->Fill();
+		matchedSourceComponentInfo->Fill();
+
+		
+		//Set match object in source
+		Source* source= 0;
+		if(nestedSourceIndex==-1) {
+			source= m_sources[sourceIndex];
+		}
+		else {
+			source= m_sources[sourceIndex]->GetNestedSource(nestedSourceIndex);
+		}
+		if(source){
+			for(size_t j=0;j<objs.size();j++){
+				source->AddComponentAstroObject(componentIndex,objs[j]);
+			}
+		}
+		
 
 	}//end loop matched components
 
-	
-	//Fill Tree
-	matchOptionTree->Fill();
-
 	return 0;
 
-}//close FindSourceMatchesInTiles()
+}//close FindSourceComponentMatchesInTiles()
 
 
+bool HaveSourceIslandMatch(SourceMatchPars& smatchpars,SourcePars* spars,AstroObject* obj)
+{
+	//## Check data
+	if(!spars || !obj){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr given for source pars and/or catalog object!");
+		#endif
+		return false;
+	}
 
+	//## Check contours
+	Contour* cont1= spars->contour;
+	Contour* cont2= obj->GetContour(true);
+	if(matchSourcesByOverlap)
+	{
+		if(!cont1 || !cont2){		
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("One/both contour are nullptr!");
+			#endif
+			return false;
+		}
+		// Check if contour pars were computed
+		if(!cont1->HasParameters || !cont2->HasParameters){
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("One/both contours have no computed parameters!");
+			#endif
+			return false;
+		}
+	}//close if check contour
+
+	//## Fill match parameters
+	// - Centroid dstance
+	double Xc_1= spars->X0_wcs;
+	double Yc_1= spars->Y0_wcs;
+	double Xc_2= obj->x;
+	double Yc_2= obj->y;
+	double posThr= matchPosThr/3600.;//convert threshold in deg (contour are given in deg)
+	double posDist_Euclidean= MathUtils::GetEuclideanDist(Xc_1,Yc_1,Xc_2,Yc_2);
+	double posDist_Haversine= AstroUtils::GetWCSPointDist_Haversine(Xc_1,Yc_1,Xc_2,Yc_2);
+	double posDist= 0.;
+	if(useWCSSimpleGeometry) posDist= posDist_Euclidean;
+	else posDist= posDist_Haversine;
+	
+	//- Contour overlaps
+	double contArea_1= 0;
+	double contArea_2= 0;
+	double overlapArea= 0;
+	int overlapFlag;
+	double overlapAreaFraction_1= 0;
+	double overlapAreaFraction_2= 0;
+
+	if(cont1 && cont2){
+		int status= MathUtils::ComputeContourArea(contArea_1,cont1);
+		if(status<0 && matchSourcesByOverlap){
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to compute contour 1 area!");
+			#endif
+			return false;
+		}
+	
+		status= MathUtils::ComputeContourArea(contArea_2,cont2);
+		if(status<0 && matchSourcesByOverlap){
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to compute contour 2 area!");
+			#endif
+			return false;
+		} 
+		
+		status= MathUtils::ComputeContourOverlapArea(overlapArea,overlapFlag,cont1,cont2);
+		if(status<0 && matchSourcesByOverlap){
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to compute contour overlap area!");
+			#endif
+			return false;
+		}
+		overlapAreaFraction_1= overlapArea/contArea_1;
+		overlapAreaFraction_2= overlapArea/contArea_2;
+
+	}//close if contours
+
+	// - Flux diff
+	double flux_1= spars->flux;
+	double flux_2= obj->flux;
+	double fluxRelDiff= 0;
+	if(flux_2>0){
+		fluxRelDiff= (flux_1-flux_2)/flux_2;
+	}
+	
+	smatchpars.posDist_Euclidean= posDist_Euclidean;
+	smatchpars.posDist_Haversine= posDist_Haversine;
+	smatchpars.contourOverlapArea= overlapArea;
+	smatchpars.contourArea1= contArea_1;
+	smatchpars.contourArea2= contArea_2;
+	smatchpars.contourOverlapFlag= overlapFlag;
+	smatchpars.contourOverlapAreaRatio1= overlapAreaFraction_1;
+	smatchpars.contourOverlapAreaRatio2= overlapAreaFraction_2;
+	smatchpars.fluxRelDiff= fluxRelDiff;
+	
+	//## Compare contour centroids 
+	if(matchSourcesByPos){	
+		
+		if(fabs(posDist)>posThr) {	
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("NO POS MATCH: Source {name="<<spars->sname<<", pos("<<Xc_1<<","<<Yc_1<<")}, CatalogObject {name="<<obj->name<<", pos("<<Xc_2<<","<<Yc_2<<")}, dist(arcsec)="<<posDist*3600.);
+			#endif
+			return false;
+		}
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("POS MATCH: Source {name="<<spars->sname<<", pos("<<Xc_1<<","<<Yc_1<<")}, CatalogObject {name="<<obj->name<<", pos("<<Xc_2<<","<<Yc_2<<")}, dist(arcsec)="<<posDist*3600.);
+		#endif
+	}
+
+	//## Compute contour overlap
+	if(matchSourcesByOverlap){
+		
+		//Check cases
+		//1) Disjoint contours
+		//2) Contour 1 inside contour 2 (overlap=Area1)
+		//3) Contour 2 inside contour 1 (overlap=Area2)
+		
+		if(overlapFlag==eCONT_NOT_OVERLAPPING){
+			#ifdef LOGGING_ENABLED	
+				DEBUG_LOG("NO CONTOUR OVERLAP: Source {name="<<spars->sname<<", pos("<<Xc_1<<","<<Yc_1<<"), area="<<contArea_1<<"}, CatalogObject {name="<<obj->name<<", pos("<<Xc_2<<","<<Yc_2<<"), area="<<contArea_2<<"}, overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+			#endif
+			return false;
+		}
+
+		
+		else if(overlapFlag==eCONT1_INSIDE_CONT2){
+			if(applySourceAreaRatioThr && overlapAreaFraction_2<matchOverlapThr){
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("CONT1 INSIDE CONT2 (OVERLAP BELOW THR): Source {name="<<spars->sname<<", pos("<<Xc_1<<","<<Yc_1<<"), area="<<contArea_1<<"}, CatalogObject {name="<<obj->name<<", pos("<<Xc_2<<","<<Yc_2<<"), area="<<contArea_2<<"}, overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+				#endif
+				return false;
+			}
+		}
+
+		
+		else if(overlapFlag==eCONT2_INSIDE_CONT1){
+			if(applySourceAreaRatioThr && overlapAreaFraction_1<matchOverlapThr){
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("CONT2 INSIDE CONT1 (OVERLAP BELOW THR): Source {name="<<spars->sname<<", pos("<<Xc_1<<","<<Yc_1<<"), area="<<contArea_1<<"}, CatalogObject {name="<<obj->name<<", pos("<<Xc_2<<","<<Yc_2<<"), area="<<contArea_2<<"}, overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+				#endif
+				return false;
+			}
+		}
+		
+		else if(overlapFlag==eCONT_OVERLAPPING){
+			if(overlapAreaFraction_1<matchOverlapThr || overlapAreaFraction_2<matchOverlapThr){
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("CONT OVERLAP BELOW THR: Source {name="<<spars->sname<<", pos("<<Xc_1<<","<<Yc_1<<"), area="<<contArea_1<<"}, CatalogObject {name="<<obj->name<<", pos("<<Xc_2<<","<<Yc_2<<"), area="<<contArea_2<<"}, overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+				#endif
+				return false;
+			}
+		}
+
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("CONTOUR OVERLAP MATCH: Source {name="<<spars->sname<<", pos("<<Xc_1<<","<<Yc_1<<"), area="<<contArea_1<<"}, CatalogObject {name="<<obj->name<<", pos("<<Xc_2<<","<<Yc_2<<"), area="<<contArea_2<<"}, overlapArea="<<overlapArea<<", overlapAreaFraction_1="<<overlapAreaFraction_1<<", overlapAreaFraction_2="<<overlapAreaFraction_2);
+		#endif
+		
+	}//close if
+
+	//## Check flux rel difference (if requested)	
+	if(matchSourcesByFlux){
+		if( fabs(fluxRelDiff)>matchFluxRelDiffThr ) return false;
+	}
+	
+
+	return true;
+
+}//close HaveSourceIslandMatch()
 
 
 
@@ -1160,8 +1761,8 @@ bool HaveSourceComponentMatch(SourceComponentMatchPars& scompmatchpars,Component
 	);
 	
 	//## Compute ellipse flux diff
-	double flux_1= cpars->fluxDensity;
-	double flux_2= obj->fluxDensity;
+	double flux_1= cpars->flux;
+	double flux_2= obj->flux;
 	double fluxRelDiff= 0;
 	if(flux_2>0){
 		fluxRelDiff= (flux_1-flux_2)/flux_2;
@@ -1333,7 +1934,7 @@ int ReadRegions()
 int ReadData(std::string filename)
 {
 	//Open files
-	TFile* inputFile= new TFile(filename.c_str(),"READ");
+	inputFile= new TFile(filename.c_str(),"READ");
 	if(!inputFile){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to open file "<<filename<<"!");
@@ -1361,7 +1962,8 @@ int ReadData(std::string filename)
 	double sourceXmax= -1.e+99;
 	double sourceYmin= 1.e+99;
 	double sourceYmax= -1.e+99;
-	std::vector<ComponentPars*> pars;
+	std::vector<SourcePars*> spars;
+	std::vector<ComponentPars*> cpars;
 	int catalogIndex= -1;
 	int sourceIndex= 0;
 	
@@ -1440,8 +2042,9 @@ int ReadData(std::string filename)
 		if(Y0_wcs<sourceYmin) sourceYmin= Y0_wcs;	
 		
 		//Fill source pars
-		std::vector<ComponentPars*> thisPars;
-		if(FillSourceComponentPars(thisPars,source,catalogIndex,sourceIndex,-1,wcs,wcsType,offsetX,offsetY)<0){
+		std::vector<ComponentPars*> thisComponentPars;
+		std::vector<SourcePars*> thisSourcePars;
+		if(FillSourcePars(thisSourcePars,thisComponentPars,source,catalogIndex,sourceIndex,-1,wcs,wcsType,offsetX,offsetY)<0){
 			#ifdef LOGGING_ENABLED	
 				ERROR_LOG("Failed to fill pars for source no. "<<i+1<<" (name="<<source->GetName()<<", collectionIndex="<<catalogIndex<<")!");
 			#endif
@@ -1449,7 +2052,8 @@ int ReadData(std::string filename)
 		}
 
 		//Add pars to pars
-		pars.insert(pars.end(),thisPars.begin(),thisPars.end());
+		cpars.insert(cpars.end(),thisComponentPars.begin(),thisComponentPars.end());
+		spars.insert(spars.end(),thisSourcePars.begin(),thisSourcePars.end());
 
 		//Add sources to list
 		m_sources.push_back(source);
@@ -1458,11 +2062,12 @@ int ReadData(std::string filename)
 	}//end loop sources
 
 	//Append source pars to main collection
-	m_sourceComponentPars.insert(m_sourceComponentPars.end(),pars.begin(),pars.end());
+	m_sourceComponentPars.insert(m_sourceComponentPars.end(),cpars.begin(),cpars.end());
+	m_sourcePars.insert(m_sourcePars.end(),spars.begin(),spars.end());
 
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Source min/max WCS coordinate range: (Xmin,Xmax)=("<<sourceXmin<<","<<sourceXmax<<"), (Ymin,Ymax)=("<<sourceYmin<<","<<sourceYmax<<")");
-		INFO_LOG("#"<<m_sources.size()<<" sources to be cross-matched (#"<<m_sourceComponentPars.size()<<" source pars added) ...");
+		INFO_LOG("#"<<m_sources.size()<<" sources to be cross-matched (#"<<m_sourceComponentPars.size()<<" source components) ...");
 	#endif
 
 	//Delete WCS for this collection
@@ -1490,7 +2095,7 @@ int ReadData(std::string filename)
 	}
 
 
-	//## Add source data to tile
+	//## Add source component data to tile
 	for(size_t i=0;i<m_sourceComponentPars.size();i++)
 	{
 		double X0_wcs= m_sourceComponentPars[i]->X0_wcs;
@@ -1505,9 +2110,45 @@ int ReadData(std::string filename)
 
 		if(tileIndex>=0 && tileIndex<(long int)(tileDataList.size())){//Add to tile data
 			#ifdef LOGGING_ENABLED
-				DEBUG_LOG("Adding source (name="<<sourceName<<", pos("<<X0_wcs<<","<<Y0_wcs<<") to list...");
+				DEBUG_LOG("Adding source component (name="<<sourceName<<", pos("<<X0_wcs<<","<<Y0_wcs<<") to list...");
 			#endif
 			tileDataList[tileIndex]->AddSourceComponentPars(m_sourceComponentPars[i]);
+		}
+		else{
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Cannot find tile index or invalid tile index found (index="<<tileIndex<<", tilesize="<<tileDataList.size()<<") for source component (name="<<sourceName<<", pos("<<X0_wcs<<","<<Y0_wcs<<"), check tile index calculation!");
+			#endif
+			continue;
+		}
+	}//end loop pars
+
+	//Printing num source components in each tile
+	for(size_t i=0;i<tileDataList.size();i++){
+		long int nSourceComponentPars= tileDataList[i]->GetNSourceComponentPars();
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Tile no. "<<i+1<<": #"<<nSourceComponentPars<<" source components to be matched...");
+		#endif
+	}
+
+
+	//## Add source island data to tile
+	for(size_t i=0;i<m_sourcePars.size();i++)
+	{
+		double X0_wcs= m_sourcePars[i]->X0_wcs;
+		double Y0_wcs= m_sourcePars[i]->Y0_wcs;
+		std::string sourceName= m_sourcePars[i]->sname;
+
+		long int tileIndex= MathUtils::FindGrid2DBin(
+			X0_wcs,Y0_wcs,
+			nTilesX,tileXmin,tileXmax,tileXstep,
+			nTilesY,tileYmin,tileYmax,tileYstep
+		);
+
+		if(tileIndex>=0 && tileIndex<(long int)(tileDataList.size())){//Add to tile data
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Adding source (name="<<sourceName<<", pos("<<X0_wcs<<","<<Y0_wcs<<") to list...");
+			#endif
+			tileDataList[tileIndex]->AddSourcePars(m_sourcePars[i]);
 		}
 		else{
 			#ifdef LOGGING_ENABLED
@@ -1519,9 +2160,9 @@ int ReadData(std::string filename)
 
 	//Printing num sources in each tile
 	for(size_t i=0;i<tileDataList.size();i++){
-		long int nSourceComponentPars= tileDataList[i]->GetNSourceComponentPars();
+		long int nSourcePars= tileDataList[i]->GetNSourcePars();
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("Tile no. "<<i+1<<": #"<<nSourceComponentPars<<" source components to be matched...");
+			INFO_LOG("Tile no. "<<i+1<<": #"<<nSourcePars<<" source islands to be matched...");
 		#endif
 	}
 
@@ -1737,7 +2378,7 @@ int ReadAstroObjectData(std::string filename,int catalogIndex)
 
 }//close ReadAstroObjectData()
 
-int FillSourceComponentPars(std::vector<ComponentPars*>& pars,Source* aSource,int catalogIndex,int sourceIndex,int nestedSourceIndex,WCS* wcs,int coordSystem,double offsetX,double offsetY)
+int FillSourcePars(std::vector<SourcePars*>& spars,std::vector<ComponentPars*>& cpars,Source* aSource,int catalogIndex,int sourceIndex,int nestedSourceIndex,WCS* wcs,int coordSystem,double offsetX,double offsetY)
 {
 	//####  METHOD ##############################
 	//Distinguish different source cases
@@ -1766,22 +2407,61 @@ int FillSourceComponentPars(std::vector<ComponentPars*>& pars,Source* aSource,in
 	bool hasFitInfo= aSource->HasFitInfo();
 	bool hasNestedSources= aSource->HasNestedSources();
 	double beamArea= aSource->GetBeamFluxIntegral();
+	double S= aSource->GetS();	
+	if(correctFlux) S/= beamArea;
 	bool useFWHM= true;
 	bool convertToWCS= true;
 	int pixOffset= 0;
 
+	//Get 0th contour converted to WCS & relative centroid
+	bool computeContourPars= true;
+	Contour* contour= aSource->GetWCSContour(0,wcs,coordSystem,pixOffset,computeContourPars);
+	if(!contour){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute WCS contour for source "<<sourceName<<"!");
+		#endif
+		return -1;
+	}
+
+	//Shuffle contour using offset
+	if(shuffleSources){
+		contour->ApplyOffset(offsetX,offsetY);
+	}
+	TVector2 contourCentroid= contour->Centroid;
+
+	
+	//## Fill source pars for island first
+	SourcePars* sourcePars= new SourcePars(catalogIndex,sourceIndex,nestedSourceIndex);
+	sourcePars->sname= sourceName;
+	sourcePars->contour= contour;
+	sourcePars->S= S;
+	sourcePars->X0_wcs= contourCentroid.X();
+	sourcePars->Y0_wcs= contourCentroid.Y();
+
 	//## Fill source fit components
 	if(hasFitInfo)
 	{
-		//Get fitted pars & ellipse converted to WCS
+		//Set fitted flux density
 		SourceFitPars fitPars= aSource->GetFitPars();
 		int nComponents= fitPars.GetNComponents();
+		double fluxDensity= fitPars.GetFluxDensity();
+		double fluxDensityErr= fitPars.GetFluxDensityErr();
+		double flux= fluxDensity/beamArea;
+		double fluxErr= fluxDensityErr/beamArea;
+		sourcePars->fluxDensity= fluxDensity;
+		sourcePars->fluxDensityErr= fluxDensityErr;
+		sourcePars->flux= flux;
+		sourcePars->fluxErr= fluxErr;
+
+		//Get fitted pars & ellipse converted to WCS
 		std::vector<TEllipse*> fitEllipses;
 		if(aSource->GetFitEllipses(fitEllipses,useFWHM,convertToWCS,wcs,coordSystem,pixOffset,useWCSSimpleGeometry)<0){
 			#ifdef LOGGING_ENABLED
 				ERROR_LOG("Failed to compute WCS ellipse for fitted components of source "<<sourceName<<"!");
 			#endif
-			CodeUtils::DeletePtrCollection<ComponentPars>(pars);
+			CodeUtils::DeletePtr<Contour>(contour);
+			CodeUtils::DeletePtrCollection<SourcePars>(spars);
+			CodeUtils::DeletePtrCollection<ComponentPars>(cpars);
 			return -1;
 		}
 
@@ -1790,8 +2470,10 @@ int FillSourceComponentPars(std::vector<ComponentPars*>& pars,Source* aSource,in
 			#ifdef LOGGING_ENABLED
 				ERROR_LOG("Number of fit components shall be equal to fitted ellipses (this should not occur)!");
 			#endif
+			CodeUtils::DeletePtr<Contour>(contour);
+			CodeUtils::DeletePtrCollection<SourcePars>(spars);
+			CodeUtils::DeletePtrCollection<ComponentPars>(cpars);
 			CodeUtils::DeletePtrCollection<TEllipse>(fitEllipses);
-			CodeUtils::DeletePtrCollection<ComponentPars>(pars);
 			return -1;
 		}
 
@@ -1808,10 +2490,10 @@ int FillSourceComponentPars(std::vector<ComponentPars*>& pars,Source* aSource,in
 			double X0= 0;
 			double Y0= 0;
 			fitPars.GetComponentPosition(X0,Y0,k);
-			double fluxDensity= fitPars.GetComponentFluxDensity(k);
-			double fluxDensityErr= fitPars.GetComponentFluxDensityErr(k);
-			double flux= fluxDensity/beamArea;
-			double fluxErr= fluxDensityErr/beamArea;
+			fluxDensity= fitPars.GetComponentFluxDensity(k);
+			fluxDensityErr= fitPars.GetComponentFluxDensityErr(k);
+			flux= fluxDensity/beamArea;
+			fluxErr= fluxDensityErr/beamArea;
 
 			//Apply offset to ellipse (if shuffle source is enabled)
 			double Cx= fitEllipses[k]->GetX1();
@@ -1838,18 +2520,19 @@ int FillSourceComponentPars(std::vector<ComponentPars*>& pars,Source* aSource,in
 			thisComponentPars->isSelected= isSelected;
 
 			//Append this source pars to collection
-			pars.push_back(thisComponentPars);
+			cpars.push_back(thisComponentPars);
 
 		}//end loop components
 	}//close if has fit info
 
-	
+	//Append source pars to collection
+	spars.push_back(sourcePars);
 	
 	//## Fill pars for nested sources (if any)
 	if(hasNestedSources){
 		std::vector<Source*> nestedSources= aSource->GetNestedSources();
 		for(size_t j=0;j<nestedSources.size();j++){
-			if(FillSourceComponentPars(pars,nestedSources[j],catalogIndex,sourceIndex,j,wcs,coordSystem,offsetX,offsetY)<0){
+			if(FillSourcePars(spars,cpars,nestedSources[j],catalogIndex,sourceIndex,j,wcs,coordSystem,offsetX,offsetY)<0){
 				#ifdef LOGGING_ENABLED
 					ERROR_LOG("Failed to get nested source pars for source "<<sourceName<<"!");
 				#endif
@@ -1864,20 +2547,137 @@ int FillSourceComponentPars(std::vector<ComponentPars*>& pars,Source* aSource,in
 
 void Save()
 {
-	//Save TTree to file
-	if(outputFile && outputFile->IsOpen())
+	//Fill Summary Tree
+	if(matchSummaryTree) matchSummaryTree->Fill();
+
+	//Save match TTree to file
+	if(matchOutputFile && matchOutputFile->IsOpen())
 	{		
-		outputFile->cd();
+		matchOutputFile->cd();
 		if(matchedSourceInfo){
 			matchedSourceInfo->Write();
 		}
-		if(matchOptionTree){
-			matchOptionTree->Write();
+		if(matchedSourceComponentInfo){
+			matchedSourceComponentInfo->Write();
 		}
-		outputFile->Close();
+		if(matchSummaryTree){
+			matchSummaryTree->Write();
+		}
+		matchOutputFile->Close();
 	}
 
+	//Save source TTree to file
+	if(outputFile && outputFile->IsOpen()){
+		outputFile->cd();		
+		
+		//Clone all objects present in input file but the Source TTree
+		CloneObjectsInFile({"SourceInfo"});
+
+		//Write selected source TTree
+		SaveSources();
+
+		//Close file
+		outputFile->Close();
+
+	}//close if
+
 }//close Save()
+
+
+int SaveSources()
+{
+	//Check output file is open
+	if(!outputFile || !outputFile->IsOpen()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Output ROOT file not allocated or open!");
+		#endif
+		return -1;
+	}
+	if(!outputTree){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Output ROOT source TTree not allocated!");
+		#endif
+		return -1;
+	}
+
+	//Loop over selected sources and write TTree to output file
+	for(size_t i=0;i<m_sources.size();i++){
+		m_source= m_sources[i];
+		outputTree->Fill();
+	}
+
+	outputTree->Write();
+
+	return 0;
+
+}//close SaveSources()
+
+int CloneObjectsInFile(std::vector<std::string> excludedObjNames)
+{	
+	//Check if input file is open
+	if(!inputFile || !inputFile->IsOpen()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Input file is not open!");
+		#endif
+		return -1;
+	}
+
+	//Check if output file is open
+	if(!outputFile || !outputFile->IsOpen()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Output file is not open!");
+		#endif
+		return -1;
+	}
+
+	//Loop on all entries present in input file
+	TKey* key;
+  TIter nextkey(inputFile->GetListOfKeys());
+	
+	while ((key = (TKey*)nextkey())) 
+	{
+		std::string className= key->GetClassName();
+		std::string keyName= key->GetName();
+    TClass* cl = gROOT->GetClass(className.c_str());
+    if (!cl) continue;
+	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Processing object key "<<keyName<<" (name="<<className<<")...");
+		#endif
+
+		bool excludeObj= false;
+		for(size_t i=0;i<excludedObjNames.size();i++){
+			if(keyName==excludedObjNames[i]){
+				excludeObj= true;
+				break;
+			}
+		}
+		if(excludeObj) {
+			INFO_LOG("Object "<<keyName<<" exluded from the list of objects that will be saved ...");
+			continue;
+		}
+
+		if (cl->InheritsFrom(TTree::Class())) {
+    	TTree* T= (TTree*)inputFile->Get(key->GetName());
+
+			//Write to output file
+			outputFile->cd();
+      TTree* newT= T->CloneTree(-1,"fast");
+      newT->Write();
+			
+		}//close if TTree object
+		else{
+			TObject* obj= key->ReadObj();
+      outputFile->cd();
+      obj->Write();
+      delete obj;			
+		}
+
+	}//end loop objects
+
+	return 0;
+
+}//close CloneObjectsInFile()
 
 std::string GetStringLogLevel(int verbosity){
 

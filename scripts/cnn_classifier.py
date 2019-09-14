@@ -984,6 +984,19 @@ def main():
 	print("INFO: Classifying train data ...")
 	(predictions_labels_train, predictions_train)= model.predict(inputs_train)
 
+	for i in range(predictions_labels_train.shape[0]):
+		#target= ','.join(map(str, outputs_labels_train[i,:]))
+		target= ','.join(map(str, flipped_outputs_labels_train[i,:]))	
+		pred= ','.join(map(str, predictions_labels_train[i,:]))
+		print("DEBUG: Train labels entry no. %d: target=[%s], pred=[%s]" % (i+1,target,pred) )
+
+	for i in range(predictions_train.shape[0]):
+		#target= ','.join(map(str, outputs_train[i,:]))
+		target= ','.join(map(str, flipped_outputs_train[i,:]))
+		pred= ','.join(map(str, predictions_train[i,:]))
+		print("DEBUG: Train spars entry no. %d: target=[%s], pred=[%s]" % (i+1,target,pred) )
+
+
 	#- Computing true & false detections
 	nsamples_train= outputs_labels_train.shape[0]
 	detThr= 0.5
@@ -1045,16 +1058,7 @@ def main():
 	print("INFO: NN Train Results: Completeness(det/tot=%d/%d)=%s, Reliability(true/rec=%d/%d)=%s" % (nobjs_true,nobjs_tot,str(completeness_train),nobjs_rec_true,nobjs_rec,str(reliability_train)))
 		
 
-	#for i in range(predictions_labels_train.shape[0]):
-	#	target= ','.join(map(str, outputs_labels_train[i,:]))
-	#	pred= ','.join(map(str, predictions_labels_train[i,:]))
-	#	print("INFO: Train labels entry no. %d: target=[%s], pred=[%s]" % (i+1,target,pred) )
-
-	#for i in range(predictions_train.shape[0]):
-	#	target= ','.join(map(str, outputs_train[i,:]))
-	#	pred= ','.join(map(str, predictions_train[i,:]))
-	#	print("INFO: Train spars entry no. %d: target=[%s], pred=[%s]" % (i+1,target,pred) )
-
+	
 
 	print("INFO: Classifying test data ...")
 	(predictions_labels_test, predictions_test)= model.predict(inputs_test)

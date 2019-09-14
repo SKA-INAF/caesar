@@ -57,7 +57,8 @@ void Usage(char* exeName)
   cout<<"-h, --help \t Show help message and exit"<<endl;
 	cout<<"-i, --input=[INPUT_FILE] \t Input file in ROOT format to be cross-matched with catalogs"<<endl;
 	cout<<"-C, --catalogs=[CATALOG_FILE] \t Input file list name (ascii format) containing all catalog files in ROOT format to be cross-matched each other"<<endl;
-	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (root format) in which to store source match info"<<endl;
+	cout<<"-o, --output=[MATCH_OUTPUT_FILE] \t Output file name (root format) in which to store source match info"<<endl;
+	cout<<"-J, --soutput=[OUTPUT_FILE] \t Output file name (root format) in which to store source catalog with spectral index info added"<<endl;
 	cout<<"-j, --saveAllSources \t Save all sources (default: save only source matches)"<<endl;
 	cout<<"-n, --nx=[NX] \t Number of divisions along X (default=4)"<<endl;
 	cout<<"-N, --ny=[NY] \t Number of divisions along Y (default=4)"<<endl;
@@ -95,7 +96,8 @@ static const struct option options_tab[] = {
 	{ "input", required_argument, 0, 'i' },
 	{ "catalogs", required_argument, 0, 'C' },
 	{ "verbosity", required_argument, 0, 'v'},
-	{ "output", required_argument, 0, 'o' },	
+	{ "output", required_argument, 0, 'o' },
+	{ "soutput", required_argument, 0, 'J' },	
 	{ "saveAllSources", no_argument, 0, 'j' },	
 	{ "nx", required_argument, 0, 'n' },
 	{ "ny", required_argument, 0, 'N' },
@@ -168,12 +170,17 @@ double shuffleRMax= 50;
 
 
 //Globar vars
+TFile* inputFile= 0;
 TFile* outputFile= 0;
-std::string outputFileName= "MatchOutput.root";
+std::string outputFileName= "sources.root";
+TTree* outputTree= 0;
+TFile* matchOutputFile= 0;
+std::string matchOutputFileName= "MatchOutput.root";
 TTree* matchedSourceInfo= 0;
 SourceMatchData* sourceMatchData= 0;
 Source* matchedSource= 0;
 Source* inputSource= 0;
+Source* m_source= 0;
 std::vector<SourceMatchData*> sourceMatchDataCollection;
 TTree* matchOptionTree= 0;
 bool cloneSource= false;
@@ -388,6 +395,8 @@ int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int collection
 bool HaveSourceComponentMatch(SourceComponentMatchPars& scompmatchpars,ComponentPars* pars1,ComponentPars* pars2);
 bool HaveSourceIslandMatch(SourceMatchPars& smatchpars,SourcePars* pars1,SourcePars* pars2);
 void Save();
+int SaveSources();
+int CloneObjectsInFile(std::vector<std::string> excludedObjNames);
 int Init();
 
 int main(int argc, char *argv[])
@@ -501,7 +510,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:C:o:v:n:N:mM:POLlA:T:t:e:pba:d:cfFs:S:x:X:w:y:Y:k:gr:R:j",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:C:o:v:n:N:mM:POLlA:T:t:e:pba:d:cfFs:S:x:X:w:y:Y:k:gr:R:jJ:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -524,6 +533,11 @@ int ParseOptions(int argc, char *argv[])
 				break;	
 			}
 			case 'o':	
+			{
+				matchOutputFileName= std::string(optarg);	
+				break;	
+			}
+			case 'J':	
 			{
 				outputFileName= std::string(optarg);	
 				break;	
@@ -702,7 +716,15 @@ int Init(){
 
 	//Open output file
 	if(!outputFile) outputFile= new TFile(outputFileName.c_str(),"RECREATE");
+	
+	//Init output source TTree
+	if(!outputTree) outputTree= new TTree("SourceInfo","SourceInfo");
+	m_source= 0;
+	outputTree->Branch("Source",&m_source);
 
+	//Open match output file
+	if(!matchOutputFile) matchOutputFile= new TFile(matchOutputFileName.c_str(),"RECREATE");
+	
 	//Init source cube TTree
 	if(!matchedSourceInfo) matchedSourceInfo= new TTree("SourceMatchInfo","SourceMatchInfo");
 	matchedSourceInfo->Branch("SourceMatchData",&sourceMatchData);
@@ -816,18 +838,31 @@ int ComputeSpectralIndices()
 	#endif
 	for(size_t i=0;i<sourceMatchDataCollection.size();i++)
 	{
+		//Get source
+		Source* source= sourceMatchDataCollection[i]->GetSource();
+
 		//Skip if no match found
 		if(!sourceMatchDataCollection[i]->HasSourceMatch()) continue;
 
 		//Compute source SED and spectral index
-		if(sourceMatchDataCollection[i]->ComputeSourceSEDs()<0){
+		int status= sourceMatchDataCollection[i]->ComputeSourceSEDs();
+		if(status==0){//Set spectral index in source
+			SpectralIndexData spectralIndexData= sourceMatchDataCollection[i]->GetSpectralIndexData();
+			source->SetSpectralIndexData(spectralIndexData);
+		}
+		else {
 			#ifdef LOGGING_ENABLED
 				WARN_LOG("Failed to compute spectral indices for source match data no. "<<i+1<<"!");
 			#endif
 		}
 
 		//Compute source component SEDs and relative spectral indices
-		if(sourceMatchDataCollection[i]->ComputeSourceComponentSEDs()<0){
+		status= sourceMatchDataCollection[i]->ComputeSourceComponentSEDs();
+		if(status==0){
+			std::vector<SpectralIndexData> componentSpectralIndexData= sourceMatchDataCollection[i]->GetSourceComponentSpectralIndexData();
+			source->SetComponentSpectralIndexData(componentSpectralIndexData);
+		}
+		else{
 			#ifdef LOGGING_ENABLED
 				WARN_LOG("Failed to compute source component spectral indices for source match data no. "<<i+1<<"!");
 			#endif
@@ -1689,8 +1724,8 @@ bool HaveSourceComponentMatch(SourceComponentMatchPars& scompmatchpars,Component
 
 int ReadData(std::string filename)
 {
-	//Open files
-	TFile* inputFile= new TFile(filename.c_str(),"READ");
+	//Open file
+	inputFile= new TFile(filename.c_str(),"READ");
 	if(!inputFile){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to open file "<<filename<<"!");
@@ -2292,12 +2327,12 @@ int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogInd
 
 void Save()
 {
-	//Save TTree to file
-	if(outputFile && outputFile->IsOpen()){
+	//Save match TTree to file
+	if(matchOutputFile && matchOutputFile->IsOpen()){
 		#ifdef LOGGING_ENABLED
 			INFO_LOG("Saving #"<<sourceMatchDataCollection.size()<<" source match data to file...");
 		#endif
-		outputFile->cd();
+		matchOutputFile->cd();
 		if(matchedSourceInfo){		
 			for(size_t i=0;i<sourceMatchDataCollection.size();i++){
 				sourceMatchData= sourceMatchDataCollection[i];
@@ -2308,9 +2343,120 @@ void Save()
 		if(matchOptionTree){
 			matchOptionTree->Write();
 		}
-		outputFile->Close();
+		matchOutputFile->Close();
 	}
+
+	//Save source TTree to file
+	if(outputFile && outputFile->IsOpen()){
+		outputFile->cd();		
+		
+		//Clone all objects present in input file but the Source TTree
+		CloneObjectsInFile({"SourceInfo"});
+
+		//Write selected source TTree
+		SaveSources();
+
+		//Close file
+		outputFile->Close();
+
+	}//close if
+
 }//close Save()
+
+int SaveSources()
+{
+	//Check output file is open
+	if(!outputFile || !outputFile->IsOpen()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Output ROOT file not allocated or open!");
+		#endif
+		return -1;
+	}
+	if(!outputTree){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Output ROOT source TTree not allocated!");
+		#endif
+		return -1;
+	}
+
+	//Loop over selected sources and write TTree to output file
+	for(size_t i=0;i<sourceMatchDataCollection.size();i++){
+		m_source= sourceMatchDataCollection[i]->GetSource();
+		outputTree->Fill();
+	}
+
+	outputTree->Write();
+
+	return 0;
+
+}//close SaveSources()
+
+int CloneObjectsInFile(std::vector<std::string> excludedObjNames)
+{	
+	//Check if input file is open
+	if(!inputFile || !inputFile->IsOpen()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Input file is not open!");
+		#endif
+		return -1;
+	}
+
+	//Check if output file is open
+	if(!outputFile || !outputFile->IsOpen()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Output file is not open!");
+		#endif
+		return -1;
+	}
+
+	//Loop on all entries present in input file
+	TKey* key;
+  TIter nextkey(inputFile->GetListOfKeys());
+	
+	while ((key = (TKey*)nextkey())) 
+	{
+		std::string className= key->GetClassName();
+		std::string keyName= key->GetName();
+    TClass* cl = gROOT->GetClass(className.c_str());
+    if (!cl) continue;
+	
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Processing object key "<<keyName<<" (name="<<className<<")...");
+		#endif
+
+		bool excludeObj= false;
+		for(size_t i=0;i<excludedObjNames.size();i++){
+			if(keyName==excludedObjNames[i]){
+				excludeObj= true;
+				break;
+			}
+		}
+		if(excludeObj) {
+			INFO_LOG("Object "<<keyName<<" exluded from the list of objects that will be saved ...");
+			continue;
+		}
+
+		if (cl->InheritsFrom(TTree::Class())) {
+    	TTree* T= (TTree*)inputFile->Get(key->GetName());
+
+			//Write to output file
+			outputFile->cd();
+      TTree* newT= T->CloneTree(-1,"fast");
+      newT->Write();
+			
+		}//close if TTree object
+		else{
+			TObject* obj= key->ReadObj();
+      outputFile->cd();
+      obj->Write();
+      delete obj;			
+		}
+
+	}//end loop objects
+
+	return 0;
+
+}//close CloneObjectsInFile()
 
 std::string GetStringLogLevel(int verbosity){
 
