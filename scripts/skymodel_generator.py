@@ -19,13 +19,14 @@ import math
 
 ## ASTRO
 from scipy import ndimage
+from sklearn.utils import check_random_state
 ##import pyfits
 from astropy.io import fits
 from astropy.units import Quantity
 from astropy.modeling.parameters import Parameter
 from astropy.modeling.core import Fittable2DModel
 from astropy.modeling.models import Box2D, Gaussian2D, Ring2D, Ellipse2D, TrapezoidDisk2D, Disk2D, AiryDisk2D, Sersic2D
-from photutils.datasets import make_noise_image
+#from photutils.datasets import make_noise_image
 from astropy import wcs
 
 ## ROOT
@@ -482,10 +483,25 @@ class SkyMapSimulator(object):
 		sigma= fwhm/(2.*np.sqrt(2.*np.log(2.)))
 		return sigma
 
+	def make_gaus_noise_image(shape, mean=None, stddev=None,random_state=None):
+		""" Generate gaussian noise numpy array """
+
+		if mean is None:
+			raise ValueError('"mean" must be input')
+		if stddev is None:
+			raise ValueError('"stddev" must be input for Gaussian noise')
+
+		prng = check_random_state(random_state)
+		image = prng.normal(loc=mean, scale=stddev, size=shape)
+  
+		return image
+
+
 	def generate_bkg(self):
 		""" Generate bkg data """
 		shape = (self.ny, self.nx)
-		bkg_data = make_noise_image(shape, type='gaussian', mean=self.bkg_level, stddev=self.bkg_rms)
+		#bkg_data = make_noise_image(shape, type='gaussian', mean=self.bkg_level, stddev=self.bkg_rms)
+		bkg_data = make_gaus_noise_image(shape, mean=self.bkg_level, stddev=self.bkg_rms)
 		return bkg_data
     
 	def generate_blob(self,ampl,x0,y0,sigmax,sigmay,theta,trunc_thr=0.01):
