@@ -482,7 +482,7 @@ class SkyMapSimulator(object):
 		sigma= fwhm/(2.*np.sqrt(2.*np.log(2.)))
 		return sigma
 
-	def check_random_state(seed):
+	def check_random_state(self,seed):
 		""" Turn seed into a np.random.RandomState instance """
 		if seed is None or seed is np.random:
 			return np.random.mtrand._rand
@@ -492,7 +492,7 @@ class SkyMapSimulator(object):
 			return seed
 		raise ValueError('%r cannot be used to seed a numpy.random.RandomState instance' % seed)
 
-	def make_gaus_noise_image(shape, mean=None, stddev=None,random_state=None):
+	def make_gaus_noise_image(self,shape, mean=None, stddev=None,random_state=None):
 		""" Generate gaussian noise numpy array """
 
 		if mean is None:
@@ -500,7 +500,7 @@ class SkyMapSimulator(object):
 		if stddev is None:
 			raise ValueError('"stddev" must be input for Gaussian noise')
 
-		prng = check_random_state(random_state)
+		prng = self.check_random_state(random_state)
 		image = prng.normal(loc=mean, scale=stddev, size=shape)
   
 		return image
@@ -510,7 +510,7 @@ class SkyMapSimulator(object):
 		""" Generate bkg data """
 		shape = (self.ny, self.nx)
 		#bkg_data = make_noise_image(shape, type='gaussian', mean=self.bkg_level, stddev=self.bkg_rms)
-		bkg_data = make_gaus_noise_image(shape, mean=self.bkg_level, stddev=self.bkg_rms)
+		bkg_data = self.make_gaus_noise_image(shape, mean=self.bkg_level, stddev=self.bkg_rms)
 		return bkg_data
     
 	def generate_blob(self,ampl,x0,y0,sigmax,sigmay,theta,trunc_thr=0.01):
