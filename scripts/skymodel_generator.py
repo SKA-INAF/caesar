@@ -791,7 +791,10 @@ class SkyMapSimulator(object):
 		"""
 		# Compute number of sources to be generated given map area in pixels
 		#area= (self.nx*self.ny)*self.pixsize/(3600.*3600.) # in deg^2
-		area= ((self.nx-2*self.marginx)*(self.ny-2*self.marginy))*self.pixsize/(3600.*3600.) # in deg^2
+		dx_deg= (self.nx-2*self.marginx)*self.pixsize/3600.
+		dy_deg= (self.ny-2*self.marginy)*self.pixsize/3600.
+		#area= ((self.nx-2*self.marginx)*(self.ny-2*self.marginy))*self.pixsize/(3600.*3600.) # in deg^2
+		area= dx_deg*dy_deg
 
 		if self.nsources>0:
 			nsources= self.nsources
