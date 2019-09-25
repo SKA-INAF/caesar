@@ -581,12 +581,12 @@ class SkyMapSimulator(object):
 		f= trunc_thr 
 		if self.truncate_models:
 			totFlux= (float)(np.sum(data,axis=None))
-			print('Blob total flux=%s' % str(totFlux))
+			#print('Blob total flux=%s' % str(totFlux))
 
 			data_vect_sorted= np.ravel(data)
 			data_csum= np.cumsum(data_vect_sorted)/totFlux
 			fluxThr= data_vect_sorted[np.argmin(data_csum<f)]
-			print('Blob fluxThr=%s' % str(fluxThr))
+			#print('Blob fluxThr=%s' % str(fluxThr))
 			data[data<fluxThr] = 0		
 
 		## Truncate data at minimum significance
