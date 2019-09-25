@@ -19,7 +19,6 @@ import math
 
 ## ASTRO
 from scipy import ndimage
-from sklearn.utils import check_random_state
 ##import pyfits
 from astropy.io import fits
 from astropy.units import Quantity
@@ -482,6 +481,16 @@ class SkyMapSimulator(object):
 		""" """
 		sigma= fwhm/(2.*np.sqrt(2.*np.log(2.)))
 		return sigma
+
+	def check_random_state(seed):
+		""" Turn seed into a np.random.RandomState instance """
+		if seed is None or seed is np.random:
+			return np.random.mtrand._rand
+		if isinstance(seed, (numbers.Integral, np.integer)):
+			return np.random.RandomState(seed)
+		if isinstance(seed, np.random.RandomState):
+			return seed
+		raise ValueError('%r cannot be used to seed a numpy.random.RandomState instance' % seed)
 
 	def make_gaus_noise_image(shape, mean=None, stddev=None,random_state=None):
 		""" Generate gaussian noise numpy array """
