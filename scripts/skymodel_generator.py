@@ -973,7 +973,7 @@ class SkyMapSimulator(object):
 			taken_pixels= np.where(sources_data[source_mask_indexes]!=0) # get list of taken pixels in main mask corresponding to this source
 			has_taken_pixels= np.any(taken_pixels)
 			if has_taken_pixels:
-				print 'INFO: Source pixels have been already taken by a previous generated source, regenerate...'
+				print('INFO: Source pixels have been already taken by a previous generated source, regenerate...')
 				continue
 				
 			# Add to extended source data and mask
