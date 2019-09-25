@@ -833,7 +833,7 @@ class SkyMapSimulator(object):
 		if self.zmin_ext<self.zmax_ext:
 			randomize_flux= True
 
-		print 'INFO: Generating #',nsources,' extended sources in map...'
+		print('INFO: Generating #%d extended sources in map...' % nsources)
 
 		print('INFO: zmin_ext=%s, zmax_ext=%s, Smin=%s, Smax=%s' % (str(self.zmin_ext),str(self.zmax_ext),str(S_min),str(S_max)) )
 
