@@ -729,7 +729,7 @@ class SkyMapSimulator(object):
 		if self.zmin<self.zmax:
 			randomize_flux= True
 
-		print 'INFO: Generating #',nsources,' compact sources in map...'
+		print('INFO: Generating #%d compact sources in map...' % nsources)
 
 		# Compute blob sigma pars given beam info
 		sigmax= self.compute_beam_sigma(self.beam_bmaj)
