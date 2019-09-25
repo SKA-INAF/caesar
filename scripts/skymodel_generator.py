@@ -94,6 +94,17 @@ def get_args():
 	parser.add_argument('-zmin', '--zmin', dest='zmin', required=False, type=float, default=1, action='store',help='Minimum source significance level in sigmas above the bkg (default=1)')
 	parser.add_argument('-zmax', '--zmax', dest='zmax', required=False, type=float, default=30, action='store',help='Maximum source significance level in sigmas above the bkg (default=30)')
 	parser.add_argument('-source_density', '--source_density', dest='source_density', required=False, type=float, default=1000, action='store',help='Compact source density (default=1000)')
+	parser.add_argument('-bmaj_min', '--bmaj_min', dest='bmaj_min', required=False, type=float, default=4, action='store',help='Gaussian components min bmaj in arcsec (default=4)')
+	parser.add_argument('-bmaj_max', '--bmaj_max', dest='bmaj_max', required=False, type=float, default=10, action='store',help='Gaussian components max bmaj in arcsec (default=10)')
+	parser.add_argument('-bmin_min', '--bmin_min', dest='bmin_min', required=False, type=float, default=4, action='store',help='Gaussian components  min bmin in arcsec (default=4)')
+	parser.add_argument('-bmin_max', '--bmin_max', dest='bmin_max', required=False, type=float, default=10, action='store',help='Gaussian components  max bmin in arcsec (default=10)')
+	parser.add_argument('-pa_min', '--pa_min', dest='pa_min', required=False, type=float, default=-90, action='store',help='Gaussian components  min position angle in deg (default=0)')
+	parser.add_argument('-pa_max', '--pa_max', dest='pa_max', required=False, type=float, default=90, action='store',help='Gaussian components  max position angle in deg (default=180)')
+	parser.add_argument('-Smin', '--Smin', dest='Smin', required=False, type=float, default=1.e-6, action='store',help='Minimum source flux in Jy (default=1.e-6)')
+	parser.add_argument('-Smax', '--Smax', dest='Smax', required=False, type=float, default=1, action='store',help='Maximum source flux in Jy (default=1)')	
+	parser.add_argument('-Smodel', '--Smodel', dest='Smodel', required=False, type=str, default='uniform', action='store',help='Source flux generation model (default=uniform)')
+	parser.add_argument('-Sslope', '--Sslope', dest='Sslope', required=False, type=float, default=1.6, action='store',help='Slope par in expo source flux generation model (default=1.6)')
+	
 
 	# - EXTENDED SOURCES
 	parser.add_argument('--extsources', dest='enable_extsources', action='store_true')	
@@ -213,6 +224,7 @@ class RingSector2D(Fittable2DModel):
 ###########################
 ##     SIMULATOR CLASS
 ###########################
+SIGMA_TO_FWHM= np.sqrt(8*np.log(2))
 
 class SkyMapSimulator(object):
 
@@ -266,6 +278,17 @@ class SkyMapSimulator(object):
 		self.zmin= 1 # in sigmas 
 		self.zmax= 30 # in sigmas
 		self.npixels_min= 5
+
+		self.beam_bpa_min= -90 # deg
+		self.beam_bpa_max= 90 # deg
+		self.beam_bmaj_min= 4	# arcsec
+		self.beam_bmaj_max= 10 # arcsec
+		self.beam_bmin_min= 4	# arcsec 
+		self.beam_bmin_max= 10 # arcsec
+		self.Smin= 1.e-6 # in Jy 
+		self.Smax= 1 # in Jy
+		self.Smodel= 'uniform'
+		self.Sslope= 1.6
 		
 		## Extended source parameters
 		self.simulate_ext_sources= True
@@ -416,6 +439,34 @@ class SkyMapSimulator(object):
 	def set_source_density(self,density):
 		""" Set compact source density in deg^-2 """
 		self.source_density= density
+
+	def set_source_flux_rand_model(self,model):
+		""" Set the source flux random model """
+		self.Smodel= model
+
+	def set_source_flux_rand_exp_slope(self,slope):
+		""" Set the source flux expo model slope par """
+		self.Sslope= slope	
+	
+	def set_source_flux_range(self,Smin,Smax):
+		""" Set source flux range """
+		self.Smin= Smin
+		self.Smax= Smax
+
+	def set_beam_bmaj_range(self,bmaj_min,bmaj_max):
+		""" Set beam bmaj range """
+		self.beam_bmaj_min= bmaj_min
+		self.beam_bmaj_max= bmaj_max	
+	
+	def set_beam_bmin_range(self,bmin_min,bmin_max):
+		""" Set beam bmin range """
+		self.beam_bmin_min= bmin_min
+		self.beam_bmin_max= bmin_max	
+
+	def set_beam_pa_range(self,pa_min,pa_max):
+		""" Set beam pa range """
+		self.beam_bpa_min= pa_min
+		self.beam_bpa_max= pa_max	
 
 	def set_ext_nsources(self,n):
 		""" Set number of extended sources to be generated """
@@ -746,13 +797,37 @@ class SkyMapSimulator(object):
 			nsources= self.nsources
 		else: # density generator
 			nsources= int(round(self.source_density*area))
-		S_min= (self.zmin*self.bkg_rms) + self.bkg_level
-		S_max= (self.zmax*self.bkg_rms) + self.bkg_level
-		lgS_min= np.log(S_min)
-		lgS_max= np.log(S_max)
+		#S_min= (self.zmin*self.bkg_rms) + self.bkg_level
+		#S_max= (self.zmax*self.bkg_rms) + self.bkg_level
+		#lgS_min= np.log(S_min)
+		#lgS_max= np.log(S_max)
+		#randomize_flux= False
+		#if self.zmin<self.zmax:
+		#	randomize_flux= True
+
+		S_min= self.Smin # Jy/pixel
+		S_max= self.Smax # Jy/pixel
+		lgS_min= np.log10(S_min)
+		lgS_max= np.log10(S_max)
 		randomize_flux= False
-		if self.zmin<self.zmax:
+		if self.Smin<self.Smax:
 			randomize_flux= True
+
+		## Set gaus pars generation
+		randomize_gaus= False
+		Bmaj_min= self.beam_bmaj_min
+		Bmaj_max= self.beam_bmaj_max
+		Bmin_min= self.beam_bmin_min
+		Bmin_max= self.beam_bmin_max
+		Pa_min= self.beam_bpa_min
+		Pa_max= self.beam_bpa_max	
+		if self.beam_bmaj_min<self.beam_bmaj_max:
+			randomize_gaus= True
+		if self.beam_bmin_min<self.beam_bmin_max:
+			randomize_gaus= True
+		if self.beam_bpa_min<self.beam_bpa_max:
+			randomize_gaus= True
+
 
 		print('INFO: Generating #%d compact sources in map...' % nsources)
 
@@ -780,14 +855,48 @@ class SkyMapSimulator(object):
 
 			## Compute amplitude given significance level and bkg
 			## Generate flux uniform in log
+			#if randomize_flux:
+			#	lgS= np.random.uniform(lgS_min,lgS_max)
+			#	S= np.exp(lgS)
+			#	z= (S-self.bkg_level)/self.bkg_rms
+			#else:
+			#	S= (self.zmin*self.bkg_rms) + self.bkg_level
+			#	z= self.zmin
+
+			## Compute amplitude given significance level and bkg
+			## Generate flux uniform or expo in log
+			## Flux are in Jy/pixel
 			if randomize_flux:
-				lgS= np.random.uniform(lgS_min,lgS_max)
-				S= np.exp(lgS)
-				z= (S-self.bkg_level)/self.bkg_rms
+				if self.Smodel=='uniform':
+					lgS= np.random.uniform(lgS_min,lgS_max)
+				elif self.Smodel=='exp':
+					x= np.random.exponential(scale=1./self.Sslope)
+					lgS= x + lgS_min
+					if lgS>lgS_max:
+						continue
+				else:
+					lgS= np.random.uniform(lgS_min,lgS_max)
+				S= np.power(10,lgS)
 			else:
-				S= (self.zmin*self.bkg_rms) + self.bkg_level
-				z= self.zmin
+				S= S_min
 	
+			z= (S-self.bkg_level)/self.bkg_rms
+	
+			## Generate gaus pars
+			if randomize_gaus:
+				bmin= random.uniform(Bmin_min,Bmin_max)
+				bmaj= random.uniform(bmin,Bmaj_max)
+				pa= random.uniform(Pa_min,Pa_max)
+			else:
+				bmin= self.beam_bmin_min
+				bmaj= self.beam_bmaj_min
+				pa= self.beam_bpa_min
+
+			sigmax= bmaj/(self.pixsize * SIGMA_TO_FWHM)
+			sigmay= bmaj/(self.pixsize * SIGMA_TO_FWHM)
+			theta = 90 + pa	# NB: BPA is the positional angle of the major axis measuring from North (up) counter clockwise, while theta is measured wrt to x axis		
+			source_max_scale= 2*max(bmaj,bmin)
+			
 			## Generate blob
 			t0 = time.time()
 			#blob_data= self.generate_blob(ampl=S,x0=x0,y0=y0,sigmax=sigmax/self.pixsize,sigmay=sigmay/self.pixsize,theta=theta,trunc_thr=self.trunc_model_zmin)
@@ -1289,6 +1398,16 @@ def main():
 	Zmax= args.zmax
 	source_density= args.source_density
 	nsources= args.nsources
+	Smodel= args.Smodel
+	Sslope= args.Sslope
+	Smin= args.Smin
+	Smax= args.Smax
+	bmaj_min= args.bmaj_min
+	bmaj_max= args.bmaj_max
+	bmin_min= args.bmin_min
+	bmin_max= args.bmin_max
+	pa_min= args.pa_min
+	pa_max= args.pa_max	
 
 	# - Extended source args
 	enable_extsources= args.enable_extsources
@@ -1367,8 +1486,14 @@ def main():
 	simulator.set_beam_info(Bmaj,Bmin,Bpa)	
 	simulator.enable_compact_sources(enable_compactsources)
 	simulator.set_nsources(nsources)
+	simulator.set_source_flux_rand_model(Smodel)
+	simulator.set_source_flux_rand_exp_slope(Sslope)
+	simulator.set_source_flux_range(Smin,Smax)
 	simulator.set_source_significance_range(Zmin,Zmax)
 	simulator.set_source_density(source_density)
+	simulator.set_beam_bmaj_range(bmaj_min,bmaj_max)
+	simulator.set_beam_bmin_range(bmin_min,bmin_max)
+	simulator.set_beam_pa_range(pa_min,pa_max)
 	simulator.enable_extended_sources(enable_extsources)
 	simulator.set_ext_nsources(ext_nsources)
 	simulator.set_ext_source_type(ext_source_type)
