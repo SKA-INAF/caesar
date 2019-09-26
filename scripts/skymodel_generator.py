@@ -705,7 +705,7 @@ class SkyMapSimulator(object):
 
 		return data
 
-	def make_caesar_source(self,source_data,source_name,source_id,source_type,source_sim_type,ampl=None,x0=None,y0=None,source_max_scale=None):
+	def make_caesar_source(self,source_data,source_name,source_id,source_type,source_sim_type,ampl=None,x0=None,y0=None,source_max_scale=None,offsetx=0,offsety=0):
 		""" Create Caesar source from source data array """
 
 		# Create Caesar source
@@ -723,7 +723,7 @@ class SkyMapSimulator(object):
 			iy= rowId
 			#iy= nRows-1-rowId
 			gbin= ix + iy*nCols
-			pixel= Caesar.Pixel(gbin,ix,iy,ix,iy,S)
+			pixel= Caesar.Pixel(gbin,ix,iy,ix+offsetx,iy+offsety,S)
 			source.AddPixel(pixel)
 
 			# Is at edge
@@ -744,6 +744,8 @@ class SkyMapSimulator(object):
 			data_binary= np.where(source_data!=0,1,0)
 			#print 'INFO: data_binary sum=%d', sum(data_binary)
 			[y0,x0]= ndimage.measurements.center_of_mass(data_binary)
+			x0+= offsetx
+			y0+= offsety	
 
 		if ampl is None:
 			print ('INFO: No source true flux given, computing integral from data...')
@@ -987,15 +989,16 @@ class SkyMapSimulator(object):
 
 
 			## Set model map
-			
 			mask_data[iy,ix]+= S
 
 			# Make Caesar source	
+			offset_x= x0
+			offset_y= y0
 			source_name= 'S' + str(index+1)
 			source_id= index+1
 			source_type= Caesar.ePointLike
 			t0 = time.time()
-			caesar_source= self.make_caesar_source(blob_data,source_name,source_id,source_type,Caesar.eBlobLike,ampl=S,x0=x0,y0=y0,source_max_scale=source_max_scale)
+			caesar_source= self.make_caesar_source(blob_data,source_name,source_id,source_type,Caesar.eBlobLike,ampl=S,x0=x0,y0=y0,source_max_scale=source_max_scale,offsetx=offset_x,offsety=offset_y)
 			t1 = time.time()
 			elapsed_time = t1-t0
 
