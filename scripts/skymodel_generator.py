@@ -985,7 +985,7 @@ class SkyMapSimulator(object):
 				ymax= self.ny
 				ymax_t= self.ny - iy + dy_t
 
-			sources_data[ymin:ymax, xmin:xmax] += blob_data[ymin_t:ymax_t, xmin_t:xmax_t]
+			sources_data[xmin:xmax,ymin:ymax] += blob_data[xmin_t:xmax_t,ymin_t:ymax_t]
 
 
 			## Set model map
