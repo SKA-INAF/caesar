@@ -91,6 +91,8 @@ def get_args():
 	parser.add_argument('--no-compactsources', dest='enable_compactsources', action='store_false')	
 	parser.set_defaults(enable_compactsources=True)	
 	parser.add_argument('-nsources', '--nsources', dest='nsources', required=False, type=int, default=0, action='store',help='Compact source number (if >0 overrides the density generation) (default=0)')
+	parser.add_argument('-nx_gen', '--nx_gen', dest='nx_gen', required=False, type=int, default=501, action='store',help='Blob image width in pixels')
+	parser.add_argument('-ny_gen', '--ny_gen', dest='ny_gen', required=False, type=int, default=501, action='store',help='Blob image height in pixels')
 	parser.add_argument('-zmin', '--zmin', dest='zmin', required=False, type=float, default=1, action='store',help='Minimum source significance level in sigmas above the bkg (default=1)')
 	parser.add_argument('-zmax', '--zmax', dest='zmax', required=False, type=float, default=30, action='store',help='Maximum source significance level in sigmas above the bkg (default=30)')
 	parser.add_argument('-source_density', '--source_density', dest='source_density', required=False, type=float, default=1000, action='store',help='Compact source density (default=1000)')
@@ -372,6 +374,11 @@ class SkyMapSimulator(object):
 		self.ctype1= x
 		self.ctype2= y
 	
+	def set_gen_blob_img_size(self,nx,ny):
+		""" Set size of blob image used for compact source generation (must be odd) """
+		self.nx_gen= nx
+		self.ny_gen= ny
+
 	def enable_compact_sources(self,choice):
 		""" Enable/disable compact source generation """
 		self.simulate_compact_sources= choice
@@ -1471,6 +1478,8 @@ def main():
 
 	# - Compact source args
 	enable_compactsources= args.enable_compactsources 
+	nx_gen= args.nx_gen
+	ny_gen= args.ny_gen
 	Bmaj= args.bmaj
 	Bmin= args.bmin
 	Bpa= args.bpa
@@ -1565,6 +1574,7 @@ def main():
 	simulator.set_bkg_pars(bkg_level,bkg_rms)
 	simulator.set_beam_info(Bmaj,Bmin,Bpa)	
 	simulator.enable_compact_sources(enable_compactsources)
+	simulator.set_gen_blob_img_size(nx_gen,ny_gen)
 	simulator.set_nsources(nsources)
 	simulator.set_source_flux_rand_model(Smodel)
 	simulator.set_source_flux_rand_exp_slope(Sslope)
