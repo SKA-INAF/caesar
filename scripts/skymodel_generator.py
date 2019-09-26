@@ -993,8 +993,10 @@ class SkyMapSimulator(object):
 			mask_data[iy,ix]+= S
 
 			# Make Caesar source	
-			offset_x= x0 - x0_tile_gen
-			offset_y= y0 - y0_tile_gen
+			#offset_x= x0 - x0_tile_gen
+			#offset_y= y0 - y0_tile_gen
+			offset_x= ix - x0_tile_gen
+			offset_y= iy - y0_tile_gen
 			source_name= 'S' + str(index+1)
 			source_id= index+1
 			source_type= Caesar.ePointLike
