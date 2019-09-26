@@ -269,6 +269,10 @@ class SkyMapSimulator(object):
 
 		## Compact source parameters
 		self.simulate_compact_sources= True
+		self.nx_gen= 1000
+		self.ny_gen= 1000
+		self.gridy_gen, self.gridx_gen = np.mgrid[0:ny_gen, 0:nx_gen]
+
 		self.nsources= 0 # default is density generator
 		self.source_density= 2000. # in sources/deg^2
 		self.beam_bmaj= 6.5 # in arcsec
@@ -575,7 +579,6 @@ class SkyMapSimulator(object):
 		"""
 		#modelFcn= Gaussian2D(ampl,x0,y0,sigmax,sigmay,theta=math.radians(theta)) 
 		data= Gaussian2D(ampl,x0,y0,sigmax,sigmay,theta=math.radians(theta))(self.gridx, self.gridy)
-		
 
 		## Truncate data such that sum(data)_trunc/sum(data)<f
 		f= trunc_thr 
@@ -595,6 +598,32 @@ class SkyMapSimulator(object):
 		#	data[data<ampl_min] = 0		
 
 		return data
+
+
+	def generate_blob_faster(self,ampl,x0,y0,sigmax,sigmay,theta,trunc_thr=0.01):
+		""" Generate a blob 
+				Arguments: 
+					ampl: peak flux in Jy
+					x0, y0: gaussian means in pixels
+					sigmax, sigmay: gaussian sigmas in pixels
+					theta: rotation in degrees
+					trunc_thr: truncation significance threshold
+		"""
+		data= Gaussian2D(ampl,x0,y0,sigmax,sigmay,theta=math.radians(theta))(self.gridx_gen, self.gridy_gen)
+
+		## Truncate data such that sum(data)_trunc/sum(data)<f
+		f= trunc_thr 
+		if self.truncate_models:
+			totFlux= (float)(np.sum(data,axis=None))
+			
+			data_vect_sorted= np.ravel(data)
+			data_csum= np.cumsum(data_vect_sorted)/totFlux
+			fluxThr= data_vect_sorted[np.argmin(data_csum<f)]
+			data[data<fluxThr] = 0		
+
+		return data
+
+
 
 	def generate_ring(self,ampl,x0,y0,radius,width):
 		""" Generate a ring 
@@ -902,8 +931,11 @@ class SkyMapSimulator(object):
 			
 			## Generate blob
 			t0 = time.time()
-			#blob_data= self.generate_blob(ampl=S,x0=x0,y0=y0,sigmax=sigmax/self.pixsize,sigmay=sigmay/self.pixsize,theta=theta,trunc_thr=self.trunc_model_zmin)
-			blob_data= self.generate_blob(ampl=S,x0=x0,y0=y0,sigmax=sigmax/self.pixsize,sigmay=sigmay/self.pixsize,theta=theta,trunc_thr=self.trunc_thr)
+			#blob_data= self.generate_blob(ampl=S,x0=x0,y0=y0,sigmax=sigmax/self.pixsize,sigmay=sigmay/self.pixsize,theta=theta,trunc_thr=self.trunc_thr)
+
+			x0_tile_gen= int(self.nx_gen/2.)
+			y0_tile_gen= int(self.ny_gen/2.)
+			blob_data= self.generate_blob_faster(ampl=S,x0=x0_tile_gen,y0=y0_tile_gen,sigmax=sigmax/self.pixsize,sigmay=sigmay/self.pixsize,theta=theta,trunc_thr=self.trunc_thr)
 			t1 = time.time()
 			elapsed_time = t1-t0
 
@@ -913,7 +945,43 @@ class SkyMapSimulator(object):
 			
 			print ('INFO: Generated blob no. %s in %s (s)' % (str(index),str(elapsed_time)) )				
 
-			sources_data+= blob_data
+			
+			## - Add blob to source data
+			#sources_data+= blob_data
+
+			xmin_t, xmax_t= 0, self.nx_gen
+			ymin_t, ymax_t= 0, self.ny_gen
+			dx_t= int(self.nx_gen/2.)
+			dy_t= int(self.ny_gen/2.)
+			xmin, ymin = (x0 - dx_t), (y0 - dy_t)
+			xmax, ymax = (x0 + dx_t + 1), (y0 + dy_t +1)
+			if xmin<0 and xmax<0:
+				print('WARN: Tile outside mat along x, skip and regenerate!')
+				continue
+			if xmin>nx and xmax>nx:
+				print('WARN: Tile outside mat along x, skip and regenerate!')
+				continue
+			if ymin<0 and ymax<0:
+				print('WARN: Tile outside mat along y, skip and regenerate!')
+				continue
+			if ymin>ny and ymax>ny:
+				print('WARN: Tile outside mat along y, skip and regenerate!')
+				continue
+			if xmin<0:
+				xmin= 0
+				xmin_t= dx_t-x0
+			if ymin<0:
+				ymin= 0
+				ymin_t= dy_t-y0
+			if xmax>self.nx:
+				xmax= self.nx
+				xmax_t= self.nx - x0 + dx_t
+			if ymax>self.ny:
+				ymax= self.ny
+				ymax_t= self.ny - y0 + dy_t
+
+			sources_data[ymin:ymax, xmin:xmax] += blob_data[ymin_t:ymax_t, xmin_t:xmax_t]
+
 
 			## Set model map
 			#ix= int(np.floor(x0))
@@ -956,8 +1024,11 @@ class SkyMapSimulator(object):
 		"""
 		
 		# Compute number of sources to be generated given map area in pixels
-		#area= (self.nx*self.ny)*self.pixsize/(3600.*3600.) # in deg^2
-		area= ((self.nx-2*self.marginx)*(self.ny-2*self.marginy))*self.pixsize/(3600.*3600.) # in deg^2
+		dx_deg= (self.nx-2*self.marginx)*self.pixsize/3600.
+		dy_deg= (self.ny-2*self.marginy)*self.pixsize/3600.
+		#area= ((self.nx-2*self.marginx)*(self.ny-2*self.marginy))*self.pixsize/(3600.*3600.) # in deg^2
+		area= dx_deg*dy_deg
+
 		if self.ext_nsources>0:
 			nsources= self.ext_nsources
 		else:
