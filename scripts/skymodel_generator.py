@@ -271,7 +271,7 @@ class SkyMapSimulator(object):
 		self.simulate_compact_sources= True
 		self.nx_gen= 1001
 		self.ny_gen= 1001
-		self.gridy_gen, self.gridx_gen = np.mgrid[0:ny_gen, 0:nx_gen]
+		self.gridy_gen, self.gridx_gen = np.mgrid[0:self.ny_gen, 0:self.nx_gen]
 
 		self.nsources= 0 # default is density generator
 		self.source_density= 2000. # in sources/deg^2
