@@ -958,13 +958,13 @@ class SkyMapSimulator(object):
 			if xmin<0 and xmax<0:
 				print('WARN: Tile outside mat along x, skip and regenerate!')
 				continue
-			if xmin>nx and xmax>nx:
+			if xmin>self.nx and xmax>self.nx:
 				print('WARN: Tile outside mat along x, skip and regenerate!')
 				continue
 			if ymin<0 and ymax<0:
 				print('WARN: Tile outside mat along y, skip and regenerate!')
 				continue
-			if ymin>ny and ymax>ny:
+			if ymin>self.ny and ymax>self.ny:
 				print('WARN: Tile outside mat along y, skip and regenerate!')
 				continue
 			if xmin<0:
