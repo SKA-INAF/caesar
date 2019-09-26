@@ -885,6 +885,9 @@ class SkyMapSimulator(object):
 			x0= np.random.uniform(self.marginx,self.nx-self.marginx-1)
 			y0= np.random.uniform(self.marginy,self.ny-self.marginy-1)
 
+			ix= int(np.round(x0))
+			iy= int(np.round(y0))
+
 			## Compute amplitude given significance level and bkg
 			## Generate flux uniform in log
 			#if randomize_flux:
@@ -953,8 +956,8 @@ class SkyMapSimulator(object):
 			ymin_t, ymax_t= 0, self.ny_gen
 			dx_t= int(self.nx_gen/2.)
 			dy_t= int(self.ny_gen/2.)
-			xmin, ymin = (x0 - dx_t), (y0 - dy_t)
-			xmax, ymax = (x0 + dx_t + 1), (y0 + dy_t +1)
+			xmin, ymin = (ix - dx_t), (iy - dy_t)
+			xmax, ymax = (ix + dx_t + 1), (iy + dy_t +1)
 			if xmin<0 and xmax<0:
 				print('WARN: Tile outside mat along x, skip and regenerate!')
 				continue
@@ -969,25 +972,22 @@ class SkyMapSimulator(object):
 				continue
 			if xmin<0:
 				xmin= 0
-				xmin_t= dx_t-x0
+				xmin_t= dx_t-ix
 			if ymin<0:
 				ymin= 0
-				ymin_t= dy_t-y0
+				ymin_t= dy_t-iy
 			if xmax>self.nx:
 				xmax= self.nx
-				xmax_t= self.nx - x0 + dx_t
+				xmax_t= self.nx - ix + dx_t
 			if ymax>self.ny:
 				ymax= self.ny
-				ymax_t= self.ny - y0 + dy_t
+				ymax_t= self.ny - iy + dy_t
 
 			sources_data[ymin:ymax, xmin:xmax] += blob_data[ymin_t:ymax_t, xmin_t:xmax_t]
 
 
 			## Set model map
-			#ix= int(np.floor(x0))
-			#iy= int(np.floor(y0))
-			ix= int(np.round(x0))
-			iy= int(np.round(y0))
+			
 			mask_data[iy,ix]+= S
 
 			# Make Caesar source	
