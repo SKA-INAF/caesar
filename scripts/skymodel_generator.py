@@ -985,15 +985,16 @@ class SkyMapSimulator(object):
 				ymax= self.ny
 				ymax_t= self.ny - iy + dy_t
 
-			sources_data[xmin:xmax,ymin:ymax] += blob_data[xmin_t:xmax_t,ymin_t:ymax_t]
+			#sources_data[xmin:xmax,ymin:ymax] += blob_data[xmin_t:xmax_t,ymin_t:ymax_t]
+			sources_data[ymin:ymax,xmin:xmax] += blob_data[ymin_t:ymax_t,xmin_t:xmax_t]
 
 
 			## Set model map
 			mask_data[iy,ix]+= S
 
 			# Make Caesar source	
-			offset_x= x0
-			offset_y= y0
+			offset_x= x0 - x0_tile_gen
+			offset_y= y0 - y0_tile_gen
 			source_name= 'S' + str(index+1)
 			source_id= index+1
 			source_type= Caesar.ePointLike
