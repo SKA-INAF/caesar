@@ -397,11 +397,19 @@ generate_run_script(){
       echo 'echo ""'
 			echo '  cd $JOBDIR'
 			
+			echo 'echo "INFO: Copying data file to job dir ..."'
+			echo "cp $filename $BASEDIR"
+      echo " "
+			
 			echo 'echo "INFO: Computing background & noise maps..."'
-			echo "BANE --cores=$NCORES $filename"
+			echo "BANE --cores=$NCORES $filename_base"
+
+      echo " "
 
 			echo 'echo "INFO: Extracting sources..."'
-			echo "aegean --cores=$NCORES --noise=$rms_file --background=$bkg_file --maxsummits=$FIT_MAX_COMPONENTS --seedclip=$SEED_THR --floodclip=$MERGE_THR --out=$catalog_file --table=$ds9_file,$catalog_tab_file $FILENAME"
+			echo "aegean --cores=$NCORES --noise=$rms_file --background=$bkg_file --maxsummits=$FIT_MAX_COMPONENTS --seedclip=$SEED_THR --floodclip=$MERGE_THR --out=$catalog_file --table=$ds9_file,$catalog_tab_file $filename_base"
+
+      echo " "
 				
       #if [ $REDIRECT_LOGS = true ]; then			
       #	echo "  $exe $exe_args >& $logfile"
