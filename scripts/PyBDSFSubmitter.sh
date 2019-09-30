@@ -38,7 +38,7 @@ if [ "$NARGS" -lt 2 ]; then
 
 	echo "=== SFINDER COMPACT SOURCE OPTIONS ==="
 	echo "--seedthr=[SEED_THR] - Seed threshold (in nsigmas) used in flood-fill (default=5 sigmas)"
-	echo "--mergethr=[MERGE_THR] - Merge threshold (in nsigmas) used in flood-fill (default=4 sigmas)"
+	echo "--mergethr=[MERGE_THR] - Merge threshold (in nsigmas) used in flood-fill (default=3 sigmas)"
 	echo ""
 	
 	echo "=== SFINDER SOURCE FITTING OPTIONS ==="
@@ -107,7 +107,7 @@ BKG_GRID_SIZE="101"
 
 ## SFINDER OPTIONS
 SEED_THR="5"
-MERGE_THR="4"
+MERGE_THR="3"
 
 ## SOURCE FIT OPTIONS
 FIT_MAX_COMPONENTS="5"
