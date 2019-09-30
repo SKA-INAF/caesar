@@ -408,7 +408,7 @@ generate_run_script(){
 			echo 'import bdsf'
 			echo " "
 
-			echo "input_image=$filename_base"
+			echo "input_image='""$filename_base""'"
       echo "img = bdsf.process_image(input_image,adaptive_rms_box=True,output_all=True,thresh_pix=$SEED_THR,thresh_isl=$MERGE_THR,ncores=$NCORES)"
 			echo " "
 
