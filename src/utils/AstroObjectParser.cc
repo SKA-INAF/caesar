@@ -1195,6 +1195,171 @@ int AstroObjectParser::ParseSelavyObjectData(AstroObject& astroObject,std::strin
 }//close ParseSelavyObjectData()
 
 
+int AstroObjectParser::ParseAegeanData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter)
+{
+	// Init data
+	astroObjects.clear();	
+
+	// Read region file and get region text lines
+	std::vector<std::string> raw_data;
+	if(Read(raw_data,filename)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read region data from file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+
+	// Check lines
+	if(raw_data.empty()){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Empty data list read from file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+	
+
+	// Extract astro objects from parsed lines
+	bool parseErr= false;
+
+	for(size_t i=0;i<raw_data.size();i++)
+	{
+		AstroObject* astroObject= new AstroObject;
+		if(ParseAegeanObjectData(*astroObject,raw_data[i],delimiter)<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to parse astro object from data line no. "<<i+1<<", stop parsing and return error!");
+			#endif
+			parseErr= true;
+			break;
+		}		
+
+		//Append region to list
+		astroObjects.push_back(astroObject);
+
+	}//end loop data
+
+	//Clear data in case of errors
+	if(parseErr){
+		CodeUtils::DeletePtrCollection<AstroObject>(astroObjects);
+		return -1;
+	}
+	
+	return 0;
+
+}//close ParseAegeanData()
+
+int AstroObjectParser::ParseAegeanObjectData(AstroObject& astroObject,std::string data,char delimiter)
+{
+	//============================
+	//==    SELAVY FORMAT
+	//============================
+	//- Field 24: Object name
+	//- Field 6: Ra
+	//- Field 8: Dec
+	//- Field 7: RaErr
+	//- Field 9: DecErr
+	//- Field XXX: Freq
+	//- Field 10: PeakFlux
+	//- Field 11: PeakFluxErr
+	//- Field 12: Flux
+	//- Field 13: FluxErr
+	//- Field 14,16,18: bmaj, bmin, pa
+	//- Field XXX: deconv bmaj, bmin, pa (NOT NEEDED)
+	//=============================
+
+	//#   island	source	background	local_rms	ra_str	dec_str	ra	err_ra	dec	err_dec	peak_flux	err_peak_flux	int_flux	err_int_flux	a	err_a	b	err_b	pa	err_pa	flags	residual_mean	residual_std	uuid	psf_a	psf_b	psf_pa
+
+	//Check input
+	if(data==""){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty catalog line given, nothing to be parsed!");
+		#endif
+		return -1;
+	}
+		
+	//Split line using delimiter
+	std::vector<std::string> fields;
+	if(delimiter==' ') fields= CodeUtils::SplitStringOnWhitespaces(data);
+	else fields= CodeUtils::SplitStringOnPattern(data,delimiter);
+	size_t nRequestedFields= 27;
+
+	if(fields.empty() || fields.size()!=nRequestedFields){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty or invalid number of fields parsed ("<<fields.size()<<" found when "<<nRequestedFields<<" expected)!");
+		#endif
+		return -1;
+	}
+
+	//Parse object name
+	std::string name_str= fields[24];
+	CodeUtils::RemovePatternInString(name_str,"\t");
+	astroObject.name= name_str;
+	
+	//Set object identifier to RADIO source 
+	astroObject.id_str= "";
+	astroObject.id= eRADIO_OBJ;
+	astroObject.subid= eRADIO_OBJ;
+
+	//Parse coordinates
+	std::string ra_str= fields[6];
+	CodeUtils::StripBlankSpaces(ra_str);
+	astroObject.x= atof(ra_str.c_str());
+
+	std::string dec_str= fields[8];
+	CodeUtils::StripBlankSpaces(dec_str);
+	astroObject.y= atof(dec_str.c_str());
+
+	//Parse coordinate errors
+	std::string raErr_str= fields[7];
+	CodeUtils::StripBlankSpaces(raErr_str);
+	astroObject.xerr= atof(raErr_str.c_str());
+
+	std::string decErr_str= fields[9];
+	CodeUtils::StripBlankSpaces(decErr_str);
+	astroObject.yerr= atof(decErr_str.c_str());
+
+	//Set frequency (MISSING FIELD IN CATALOGUE)
+	astroObject.hasFrequencyInfo= false;
+
+	//Parse flux and errors
+	std::string peakFlux_str= fields[10];
+	std::string peakFluxErr_str= fields[11];
+	std::string flux_str= fields[12];
+	std::string fluxErr_str= fields[13];
+	CodeUtils::StripBlankSpaces(peakFlux_str);
+	CodeUtils::StripBlankSpaces(peakFluxErr_str);
+	CodeUtils::StripBlankSpaces(flux_str);
+	CodeUtils::StripBlankSpaces(fluxErr_str);
+
+	astroObject.peakFlux= atof(peakFlux_str.c_str());
+	astroObject.peakFluxErr= atof(peakFluxErr_str.c_str());
+	astroObject.fluxDensity= atof(peakFlux_str.c_str());//set to peak flux (NOT VALID)
+	astroObject.fluxDensityErr= atof(peakFluxErr_str.c_str());//set to peak flux (NOT VALID)
+	astroObject.flux= atof(flux_str.c_str());
+	astroObject.fluxErr= atof(fluxErr_str.c_str());
+	astroObject.hasFluxInfo= true;
+
+
+	//Parse ellipse info
+	std::string bmaj_str= fields[14];
+	std::string bmin_str= fields[16];
+	std::string pa_str= fields[18];
+	CodeUtils::StripBlankSpaces(bmaj_str);
+	CodeUtils::StripBlankSpaces(bmin_str);
+	CodeUtils::StripBlankSpaces(pa_str);
+	astroObject.bmaj= atof(bmaj_str.c_str());
+	astroObject.bmin= atof(bmin_str.c_str());
+	astroObject.pa= atof(pa_str.c_str());
+	astroObject.hasEllipseInfo= true;
+
+	//Parse deconv ellipse info
+	astroObject.hasDeconvEllipseInfo= false;
+
+	return 0;
+
+}//close ParseAegeanObjectData()
+
+
+
 int AstroObjectParser::ParseNedData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter)
 {
 	// Init data

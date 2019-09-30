@@ -106,6 +106,10 @@ class AstroObjectParser : public TObject
 		* \brief Get objects from Selavy ascii catalog
 		*/
 		static int ParseSelavyData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter=' ');
+		/**
+		* \brief Get objects from Aegean ascii catalog
+		*/
+		static int ParseAegeanData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='\t');
 	
 
 	protected:
@@ -141,6 +145,10 @@ class AstroObjectParser : public TObject
 		* \brief Parse Selavy component ascii catalog line
 		*/
 		static int ParseSelavyObjectData(AstroObject& astroObject,std::string data,char delimiter=' ');
+		/**
+		* \brief Parse Aegean component ascii catalog line
+		*/
+		static int ParseAegeanObjectData(AstroObject& astroObject,std::string data,char delimiter='\t');
 		/**
 		* \brief Read catalog ascii data
 		*/
