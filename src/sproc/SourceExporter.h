@@ -67,6 +67,7 @@ struct SourceTreeData
 	std::string iau;//source iau name
 	long long nPix;//# pixels
 	int nFitComponents;//number of fit components
+	int nSelFitComponents;//number of selected fit components
 	int nNestedSources;//number of nested sources
 	double X0;//pos X0 in image coords
 	double Y0;//pos Y0 in image coords
@@ -97,6 +98,25 @@ struct SourceTreeData
 	int good;//source isGoodFlag
 	int depthLevel;//source depth level
 
+	/*
+	//Spectral index data
+	bool hasSpectralIndexData;
+	bool isMultiSourceMatchIndex;
+	double spectralIndex;
+	double spectralIndexErr;
+	bool isSpectralIndexFit;
+	double spectralFitChi2;
+	double spectralFitNDF;
+
+	//Astro object IDs
+	int objLocationId;
+	int objClassId;
+	int objClassSubId;
+
+	//Astro object cross-matched
+	//...
+	*/
+
 };//close SourceTreeData
 
 
@@ -115,6 +135,8 @@ struct SourceComponentTreeData
 	double X0_err_wcs;//Fitted component centroid error in world coordinates (deg) along x axis
 	double Y0_err_wcs;//Fitted component centroid error in world coordinates (deg) along y axis
 	double Nu;//Spectral axis value present in image header. If frequency it is given in GHz units.
+	double S;//Sum of island pixel fluxes in Jy/beam units
+	double Smax;//Max island pixel flux in Jy/beam units
 	double A;//Fitted component amplitude in Jy/beam units (not corrected by beam area)
 	double A_err;//Fitted component amplitude error in Jy/beam units (not corrected by beam area)
 	double fittedFlux;//Fitted component flux density in Jy/beam units (not corrected by beam area)
@@ -174,24 +196,24 @@ class SourceExporter : public TObject
 		//==      ASCII EXPORT
 		//=======================================
 		/**
-		* \brief Write ascii file from source collection
+		* \brief Write source collection to ascii file
 		*/
-		static int WriteToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
+		static int WriteToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool writeAdditionalSourceInfo=false,char delimiter='\t');
 		
 		/**
 		* \brief Get source ascii string
 		*/
-		static const std::vector<std::string> SourceToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
+		static const std::vector<std::string> SourceToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool writeAdditionalSourceInfo=false,char delimiter='\t');
 
 		/**
 		* \brief Write ascii file from source component collection
 		*/
-		static int WriteComponentsToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
+		static int WriteComponentsToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool writeAdditionalSourceInfo=false,char delimiter='\t');
 		
 		/**
 		* \brief Get source component ascii string
 		*/
-		static const std::vector<std::string> SourceComponentsToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
+		static const std::vector<std::string> SourceComponentsToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool writeAdditionalSourceInfo=false,char delimiter='\t');
 	
 		//=======================================
 		//==      JSON EXPORT

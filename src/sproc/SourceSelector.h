@@ -146,6 +146,15 @@ class SourceSelector : public TObject
 		* \brief Select source fitted components by centroid distance
 		*/
 		static bool SourceComponentCentroidDistanceCut(Source* aSource,Cut* cut);
+		/**
+		* \brief Select source fitted components by fit ellipse/beam eccentricity ratio
+		*/
+		static bool SourceComponentEccentricityRatioCut(Source* aSource,Cut* cut);
+		/**
+		* \brief Select source fitted components by fit ellipse/beam area ratio
+		*/
+		static bool SourceComponentAreaRatioCut(Source* aSource,Cut* cut);
+
 
 		/**
 		* \brief Select source by number of pixels

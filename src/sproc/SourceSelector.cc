@@ -642,74 +642,6 @@ bool SourceSelector::SourceComponentCentroidDistanceCut(Source* source,Cut* cut)
 {
 	if(cut && !cut->isEnabled()) return true;
 
-	/*
-	//Check if has fit 
-	bool hasFitInfo= source->HasFitInfo();
-	//if(!hasFitInfo) return false;
-	if(!hasFitInfo) return true;
-
-	SourceFitPars fitPars= source->GetFitPars();
-	int nComponents= source->GetNFitComponents();
-
-	//Check number of components
-	if(nComponents<=0) return false;//cut not passed with no components (this should not occur at this stage)
-	if(nComponents==1) return true;//cut always passed with just 1 one component
-
-	//Sort components by descending peak flux
-	std::vector<double> peakFluxes;
-	std::vector<double> peakFluxes_sorted;
-	std::vector<size_t> sorting_indexes;
-	for(int k=0;k<nComponents;k++){
-		double A= fitPars.GetParValue(k,"A");	
-		peakFluxes.push_back(A);
-	}
-	CodeUtils::sort_descending(peakFluxes,peakFluxes_sorted,sorting_indexes);
-
-
-	//Check if component centroid are separated by more than specified cut
-	std::set<int> removedIds;
-
-	for(size_t i=0;i<sorting_indexes.size();i++)
-	{
-		int componentId_i= sorting_indexes[i];
-		double x0_i= fitPars.GetParValue(componentId_i,"x0");	
-		double y0_i= fitPars.GetParValue(componentId_i,"y0");
-
-		for(size_t j=i+1;j<sorting_indexes.size();j++)
-		{
-			int componentId_j= sorting_indexes[j];
-			double x0_j= fitPars.GetParValue(componentId_j,"x0");	
-			double y0_j= fitPars.GetParValue(componentId_j,"y0");
-			double dx= fabs(x0_i-x0_j);
-			double dy= fabs(y0_i-y0_j);
-			bool passed_x= cut->isPassed(dx);
-			bool passed_y= cut->isPassed(dy);
-			bool passed= (passed_x && passed_y);
-			if(!passed){//remove fainter component is (i,j) are too close
-				removedIds.insert(componentId_j);
-			}
-		}//end loop components
-	}//end loop components
-
-	
-
-	//If no components are left, return false (not resetting fitPars here)
-	int nComponents_removed= static_cast<int>(removedIds.size());
-	int nComponents_sel= nComponents-nComponents_removed;
-	if(nComponents_sel<=0){
-		source->SetHasFitInfo(false);
-		return false;
-	}	
-
-	//Remove components not passing the cut and set update fitPars
-	std::vector<int> componentsToBeRemoved(removedIds.begin(),removedIds.end());
-	
-	if(!componentsToBeRemoved.empty()){
-		fitPars.RemoveComponents(componentsToBeRemoved); 
-		source->SetFitPars(fitPars);
-	}
-	*/
-
 	//Check if has fit 
 	bool hasFitInfo= source->HasFitInfo();
 	//if(!hasFitInfo) return false;
@@ -786,51 +718,14 @@ bool SourceSelector::SourceComponentCentroidDistanceCut(Source* source,Cut* cut)
 
 }//close SourceComponentCentroidDistanceCut()
 
+
 //===========================================
 //==   SOURCE COMPONENT PEAK FLUX CUT
 //===========================================
 bool SourceSelector::SourceComponentPeakFluxCut(Source* source,Cut* cut)
 {
 	if(cut && !cut->isEnabled()) return true;
-	/*
-	//Check if has fit 
-	bool hasFitInfo= source->HasFitInfo();
-	//if(!hasFitInfo) return false;
-	if(!hasFitInfo) return true;
-
-	double Smax= source->GetSmax();
-	SourceFitPars fitPars= source->GetFitPars();
-	int nComponents= source->GetNFitComponents();
-	int nComponents_sel= 0;
-	std::vector<int> componentsToBeRemoved;
-
-	//Check if component centroid is inside source island contour
-	for(int k=0;k<nComponents;k++)
-	{
-		double A= fitPars.GetParValue(k,"A");	
-		double peakFluxRatio= A/Smax;
-		bool passed= cut->isPassed(peakFluxRatio);
-		if(passed){
-			nComponents_sel++;
-		}
-		else{
-			componentsToBeRemoved.push_back(k);
-		}
-	}//end loop components
-
-	//If no components are left, return false (not resetting fitPars here)
-	if(nComponents_sel<=0){
-		source->SetHasFitInfo(false);
-		return false;
-	}	
-
-	//Remove components not passing the cut and set update fitPars
-	if(!componentsToBeRemoved.empty()){
-		fitPars.RemoveComponents(componentsToBeRemoved); 
-		source->SetFitPars(fitPars);
-	}
-	*/
-
+	
 	//Check if has fit 
 	bool hasFitInfo= source->HasFitInfo();
 	//if(!hasFitInfo) return false;
@@ -878,56 +773,7 @@ bool SourceSelector::SourceComponentPeakFluxCut(Source* source,Cut* cut)
 bool SourceSelector::SourceComponentPeakSignificanceCut(Source* source,Cut* cut)
 {
 	if(cut && !cut->isEnabled()) return true;
-	/*
-	//Check if has fit 
-	bool hasFitInfo= source->HasFitInfo();
-	//if(!hasFitInfo) return false;
-	if(!hasFitInfo) return true;
-
-	double nPixels= static_cast<double>(source->NPix);
-	double bkgSum= source->GetBkgSum();
-	double bkgRMSSum= source->GetBkgRMSSum();
-	double bkgMean= bkgSum/nPixels;
-	double rmsMean= bkgRMSSum/nPixels;
-	if(rmsMean==0){
-		#ifdef LOGGING_ENABLED
-			WARN_LOG("No bkg info stored, returning passed!");
-		#endif
-		return true;
-	}
-
-	SourceFitPars fitPars= source->GetFitPars();
-	int nComponents= source->GetNFitComponents();
-	int nComponents_sel= 0;
-	std::vector<int> componentsToBeRemoved;
-
-	//Check if component centroid is inside source island contour
-	for(int k=0;k<nComponents;k++)
-	{
-		double A= fitPars.GetParValue(k,"A");	
-		double Z= (A-bkgMean)/rmsMean;
-		bool passed= cut->isPassed(Z);
-		if(passed){
-			nComponents_sel++;
-		}
-		else{
-			componentsToBeRemoved.push_back(k);
-		}
-	}//end loop components
-
-	//If no components are left, return false (not resetting fitPars here)
-	if(nComponents_sel<=0){
-		source->SetHasFitInfo(false);
-		return false;
-	}	
-
-	//Remove components not passing the cut and set update fitPars
-	if(!componentsToBeRemoved.empty()){
-		fitPars.RemoveComponents(componentsToBeRemoved); 
-		source->SetFitPars(fitPars);
-	}
-	*/
-
+	
 	//Check if has fit 
 	bool hasFitInfo= source->HasFitInfo();
 	//if(!hasFitInfo) return false;
@@ -986,44 +832,7 @@ bool SourceSelector::SourceComponentPeakSignificanceCut(Source* source,Cut* cut)
 bool SourceSelector::SourceComponentTypeCut(Source* source,Cut* cut)
 {
 	if(cut && !cut->isEnabled()) return true;
-	/*
-	//Check if has fit 
-	bool hasFitInfo= source->HasFitInfo();
-	//if(!hasFitInfo) return false;
-	if(!hasFitInfo) return true;
-
-	SourceFitPars fitPars= source->GetFitPars();
-	int nComponents= source->GetNFitComponents();
-	int nComponents_sel= 0;
-	std::vector<int> componentsToBeRemoved;
-
-	//Check if component centroid is inside source island contour
-	for(int k=0;k<nComponents;k++)
-	{
-		int type;
-		fitPars.GetComponentType(type,k);
-		bool passed= cut->isPassed(type);
-		if(passed){
-			nComponents_sel++;
-		}
-		else{
-			componentsToBeRemoved.push_back(k);
-		}
-	}//end loop components
-
-	//If no components are left, return false (not resetting fitPars here)
-	if(nComponents_sel<=0){
-		source->SetHasFitInfo(false);
-		return false;
-	}	
-
-	//Remove components not passing the cut and set update fitPars
-	if(!componentsToBeRemoved.empty()){
-		fitPars.RemoveComponents(componentsToBeRemoved); 
-		source->SetFitPars(fitPars);
-	}
-	*/
-
+	
 	//Check if has fit 
 	bool hasFitInfo= source->HasFitInfo();
 	//if(!hasFitInfo) return false;
@@ -1069,43 +878,6 @@ bool SourceSelector::SourceComponentTypeCut(Source* source,Cut* cut)
 bool SourceSelector::SourceComponentFlagCut(Source* source,Cut* cut)
 {
 	if(cut && !cut->isEnabled()) return true;
-	/*
-	//Check if has fit 
-	bool hasFitInfo= source->HasFitInfo();
-	//if(!hasFitInfo) return false;
-	if(!hasFitInfo) return true;
-
-	SourceFitPars fitPars= source->GetFitPars();
-	int nComponents= source->GetNFitComponents();
-	int nComponents_sel= 0;
-	std::vector<int> componentsToBeRemoved;
-
-	//Check if component centroid is inside source island contour
-	for(int k=0;k<nComponents;k++)
-	{
-		int flag;
-		fitPars.GetComponentFlag(flag,k);
-		bool passed= cut->isPassed(flag);
-		if(passed){
-			nComponents_sel++;
-		}
-		else{
-			componentsToBeRemoved.push_back(k);
-		}
-	}//end loop components
-
-	//If no components are left, return false (not resetting fitPars here)
-	if(nComponents_sel<=0){
-		source->SetHasFitInfo(false);
-		return false;
-	}	
-
-	//Remove components not passing the cut and set update fitPars
-	if(!componentsToBeRemoved.empty()){
-		fitPars.RemoveComponents(componentsToBeRemoved); 
-		source->SetFitPars(fitPars);
-	}
-	*/
 
 	//Check if has fit 
 	bool hasFitInfo= source->HasFitInfo();
@@ -1146,6 +918,113 @@ bool SourceSelector::SourceComponentFlagCut(Source* source,Cut* cut)
 
 }//close SourceComponentFlagCut()
 
+
+bool SourceSelector::SourceComponentEccentricityRatioCut(Source* source,Cut* cut)
+{
+	if(cut && !cut->isEnabled()) return true;
+
+	//Check if has fit 
+	bool hasFitInfo= source->HasFitInfo();
+	//if(!hasFitInfo) return false;
+	if(!hasFitInfo) return true;
+
+	SourceFitPars fitPars= source->GetFitPars();
+	int nComponents= source->GetNFitComponents();
+	int nComponents_sel= 0;
+	
+	//Check if component ellipse eccentricity is in range
+	for(int k=0;k<nComponents;k++)
+	{
+		bool isSelected= fitPars.IsSelectedComponent(k);
+		if(!isSelected) continue;
+
+		double E= fitPars.GetComponentFitEllipseEccentricity(k);
+		double E_beam= fitPars.GetComponentBeamEllipseEccentricity(k);
+		
+		if(E==0 || E_beam==0){
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Fit ellipse and/or beam ellipse eccentricities are =0 (hint: check if they were computed), skipping check and accepting component...");
+			#endif
+			continue;
+		}
+
+		double E_ratio= E/E_beam;
+		bool passed= cut->isPassed(E_ratio);
+		if(passed){
+			nComponents_sel++;
+		}
+		else{
+			fitPars.SetSelectedComponent(k,false);
+		}
+
+	}//end loop components
+	
+	//Update fit pars
+	source->SetFitPars(fitPars);
+
+	//If no components are left, return false (not resetting fitPars here)
+	if(nComponents_sel<=0){
+		source->SetHasFitInfo(false);
+		return false;
+	}	
+
+	return true;
+
+}//close SourceComponentEccentricityRatioCut()
+
+
+bool SourceSelector::SourceComponentAreaRatioCut(Source* source,Cut* cut)
+{
+	if(cut && !cut->isEnabled()) return true;
+
+	//Check if has fit 
+	bool hasFitInfo= source->HasFitInfo();
+	//if(!hasFitInfo) return false;
+	if(!hasFitInfo) return true;
+
+	SourceFitPars fitPars= source->GetFitPars();
+	int nComponents= source->GetNFitComponents();
+	int nComponents_sel= 0;
+	
+	//Check if component ellipse eccentricity is in range
+	for(int k=0;k<nComponents;k++)
+	{
+		bool isSelected= fitPars.IsSelectedComponent(k);
+		if(!isSelected) continue;
+
+		double A= fitPars.GetComponentFitEllipseArea(k);
+		double A_beam= fitPars.GetComponentBeamEllipseArea(k);
+		
+		if(A==0 || A_beam==0){
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Fit ellipse and/or beam ellipse areas are =0 (hint: check if they were computed), skipping check and accepting component...");
+			#endif
+			continue;
+		}
+
+		double A_ratio= A/A_beam;
+		bool passed= cut->isPassed(A_ratio);
+		if(passed){
+			nComponents_sel++;
+		}
+		else{
+			fitPars.SetSelectedComponent(k,false);
+		}
+
+	}//end loop components
+	
+	//Update fit pars
+	source->SetFitPars(fitPars);
+
+	//If no components are left, return false (not resetting fitPars here)
+	if(nComponents_sel<=0){
+		source->SetHasFitInfo(false);
+		return false;
+	}	
+
+	return true;
+
+}//close SourceComponentAreaRatioCut()
 
 //===========================================
 //==         NPIXELS CUT
