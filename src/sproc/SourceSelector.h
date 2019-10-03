@@ -153,7 +153,7 @@ class SourceSelector : public TObject
 		/**
 		* \brief Select source fitted components by fit ellipse/beam area ratio
 		*/
-		static bool SourceComponentAreaRatioCut(Source* aSource,Cut* cut);
+		static bool SourceComponentBeamAreaRatioCut(Source* aSource,Cut* cut);
 
 
 		/**

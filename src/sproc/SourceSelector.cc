@@ -83,6 +83,8 @@ SourceSelector::CutFcnRegistry SourceSelector::m_cutFcnRegistry =
 	{"fitComponentIsolatedCentroid",SourceComponentCentroidDistanceCut},
 	{"fitComponentPeakFluxToMaxRatio",SourceComponentPeakFluxCut},
 	{"fitComponentPeakSignificance",SourceComponentPeakSignificanceCut},
+	{"fitComponentEccentricityRatio",SourceComponentEccentricityRatioCut},
+	{"fitComponentBeamAreaRatio",SourceComponentBeamAreaRatioCut},
 	{"fitComponentType",SourceComponentTypeCut},
 	{"fitComponentFlag",SourceComponentFlagCut}
 };
@@ -973,7 +975,7 @@ bool SourceSelector::SourceComponentEccentricityRatioCut(Source* source,Cut* cut
 }//close SourceComponentEccentricityRatioCut()
 
 
-bool SourceSelector::SourceComponentAreaRatioCut(Source* source,Cut* cut)
+bool SourceSelector::SourceComponentBeamAreaRatioCut(Source* source,Cut* cut)
 {
 	if(cut && !cut->isEnabled()) return true;
 
@@ -1024,7 +1026,7 @@ bool SourceSelector::SourceComponentAreaRatioCut(Source* source,Cut* cut)
 
 	return true;
 
-}//close SourceComponentAreaRatioCut()
+}//close SourceComponentBeamAreaRatioCut()
 
 //===========================================
 //==         NPIXELS CUT
