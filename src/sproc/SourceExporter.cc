@@ -1771,6 +1771,8 @@ int SourceExporter::WriteComponentsToROOT(std::string filename,const std::vector
 	dataTree->Branch("nPix",&sourceTreeData.nPix);
 	dataTree->Branch("componentId",&sourceTreeData.componentId);
 	dataTree->Branch("iau",&sourceTreeData.iau);	
+	dataTree->Branch("nFitComponents",&sourceTreeData.nFitComponents);
+	dataTree->Branch("nSelFitComponents",&sourceTreeData.nSelFitComponents);
 	dataTree->Branch("X0",&sourceTreeData.X0);
 	dataTree->Branch("Y0",&sourceTreeData.Y0);
 	dataTree->Branch("X0_err",&sourceTreeData.X0_err);
@@ -1905,7 +1907,10 @@ int SourceExporter::FillSourceComponentTree(TTree* dataTree,SourceComponentTreeD
 		//Retrieve fit pars
 		SourceFitPars fitPars= source->GetFitPars();
 		int nComponents= fitPars.GetNComponents();
-	
+		int nSelComponents= fitPars.GetNSelComponents();
+		sourceData.nFitComponents= nComponents;
+		sourceData.nSelFitComponents= nSelComponents;
+
 		//Get spectral axis info
 		sourceData.Nu= -999;
 		double dNu= -999;

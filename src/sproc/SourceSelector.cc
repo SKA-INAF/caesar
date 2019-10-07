@@ -83,6 +83,7 @@ SourceSelector::CutFcnRegistry SourceSelector::m_cutFcnRegistry =
 	{"fitComponentIsolatedCentroid",SourceComponentCentroidDistanceCut},
 	{"fitComponentPeakFluxToMaxRatio",SourceComponentPeakFluxCut},
 	{"fitComponentPeakSignificance",SourceComponentPeakSignificanceCut},
+	{"fitComponentPeakSNR",SourceComponentPeakSNRCut},
 	{"fitComponentEccentricityRatio",SourceComponentEccentricityRatioCut},
 	{"fitComponentBeamAreaRatio",SourceComponentBeamAreaRatioCut},
 	{"fitComponentType",SourceComponentTypeCut},
@@ -738,7 +739,7 @@ bool SourceSelector::SourceComponentPeakFluxCut(Source* source,Cut* cut)
 	int nComponents= source->GetNFitComponents();
 	int nComponents_sel= 0;
 	
-	//Check if component centroid is inside source island contour
+	//Check if component fitted peak flux is smaller than max island flux
 	for(int k=0;k<nComponents;k++)
 	{
 		bool isSelected= fitPars.IsSelectedComponent(k);
@@ -827,6 +828,63 @@ bool SourceSelector::SourceComponentPeakSignificanceCut(Source* source,Cut* cut)
 
 }//close SourceComponentPeakSignificanceCut()
 
+
+
+//==============================================
+//==   SOURCE COMPONENT PEAK SNR CUT
+//==============================================
+bool SourceSelector::SourceComponentPeakSNRCut(Source* source,Cut* cut)
+{
+	if(cut && !cut->isEnabled()) return true;
+	
+	//Check if has fit 
+	bool hasFitInfo= source->HasFitInfo();
+	//if(!hasFitInfo) return false;
+	if(!hasFitInfo) return true;
+
+	double nPixels= static_cast<double>(source->NPix);
+	double bkgRMSSum= source->GetBkgRMSSum();
+	double rmsMean= bkgRMSSum/nPixels;
+	if(rmsMean==0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No bkg info stored, returning passed!");
+		#endif
+		return true;
+	}
+
+	SourceFitPars fitPars= source->GetFitPars();
+	int nComponents= source->GetNFitComponents();
+	int nComponents_sel= 0;
+	
+	//Check if component centroid is inside source island contour
+	for(int k=0;k<nComponents;k++)
+	{
+		bool isSelected= fitPars.IsSelectedComponent(k);
+		if(!isSelected) continue;
+
+		double A= fitPars.GetParValue(k,"A");	
+		double SNR= A/rmsMean;
+		bool passed= cut->isPassed(SNR);
+		if(passed){
+			nComponents_sel++;
+		}
+		else{
+			fitPars.SetSelectedComponent(k,false);
+		}
+	}//end loop components
+
+	//Update fit pars
+	source->SetFitPars(fitPars);
+
+	//If no components are left, return false (not resetting fitPars here)
+	if(nComponents_sel<=0){
+		source->SetHasFitInfo(false);
+		return false;
+	}	
+
+	return true;
+
+}//close SourceComponentPeakSNRCut()
 
 //==============================================
 //==   SOURCE COMPONENT TYPE CUT

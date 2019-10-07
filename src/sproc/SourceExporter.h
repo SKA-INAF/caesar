@@ -126,6 +126,8 @@ struct SourceComponentTreeData
 	long long nPix;//Number of pixels in source
 	int componentId;//Fitted component id
 	std::string iau;//Fitted component name in IAU notation
+	int nFitComponents;//number of fit components in island
+	int nSelFitComponents;//number of selected fit components in island
 	double X0;//Fitted component centroid in image coordinates along x axis
 	double Y0;//Fitted component centroid in image coordinates along y axis
 	double X0_err;//Fitted component centroid error in image coordinates along x axis
