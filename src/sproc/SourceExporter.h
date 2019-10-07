@@ -98,6 +98,16 @@ struct SourceTreeData
 	int good;//source isGoodFlag
 	int depthLevel;//source depth level
 
+	double chi2;//Fit chisquare
+	double ndf;//Fit number of degrees of freedom
+	int fitQuality;//Fit quality flag (eBadFit=0,eLQFit=1,eMQFit=2,eHQFit=3)
+	double residualMean;
+	double residualRMS;
+	double residualMedian;
+	double residualMAD;
+	double residualMin;
+	double residualMax;
+
 	/*
 	//Spectral index data
 	bool hasSpectralIndexData;

@@ -1571,7 +1571,16 @@ int SourceExporter::WriteToROOT(std::string filename,const std::vector<Source*>&
 	dataTree->Branch("flag",&sourceTreeData.flag);//source flag
 	dataTree->Branch("good",&sourceTreeData.good);//source isGoodFlag
 	dataTree->Branch("depthLevel",&sourceTreeData.depthLevel);//source depth level
-	
+	dataTree->Branch("chi2",&sourceTreeData.chi2);
+	dataTree->Branch("ndf",&sourceTreeData.ndf);
+	dataTree->Branch("fitQuality",&sourceTreeData.fitQuality);
+	dataTree->Branch("residualMean",&sourceTreeData.residualMean);
+	dataTree->Branch("residualRMS",&sourceTreeData.residualRMS);
+	dataTree->Branch("residualMedian",&sourceTreeData.residualMedian);
+	dataTree->Branch("residualMAD",&sourceTreeData.residualMAD);
+	dataTree->Branch("residualMin",&sourceTreeData.residualMin);
+	dataTree->Branch("residualMax",&sourceTreeData.residualMax);
+
 	//Loop sources
 	bool deleteWCS= false;
 	
@@ -1726,6 +1735,41 @@ int SourceExporter::FillSourceTTree(TTree* dataTree,SourceTreeData& sourceTreeDa
 	sourceTreeData.good= static_cast<int>(source->IsGoodSource());
 	sourceTreeData.depthLevel= source->GetDepthLevel();
 
+	//Fit chi2 & residuals
+	int fitQuality= eUnknownFitQuality;
+	double chi2= -999;
+	double ndf= -999;
+	double residualMean= -999;
+	double residualRMS= -999;
+	double residualMedian= -999;
+	double residualMAD= -999;
+	double residualMin= -999;
+	double residualMax= -999;
+
+	if(source->HasFitInfo()){
+		SourceFitPars fitPars= source->GetFitPars();
+
+		chi2= fitPars.GetChi2();
+		ndf= fitPars.GetNDF();
+		fitQuality= fitPars.GetFitQuality();
+		residualMean= fitPars.GetResidualMean();
+		residualRMS= fitPars.GetResidualRMS();
+		residualMedian= fitPars.GetResidualMedian();
+		residualMAD= fitPars.GetResidualMAD();
+		residualMin= fitPars.GetResidualMin();
+		residualMax= fitPars.GetResidualMax();
+	}
+		
+	sourceTreeData.chi2= chi2;
+	sourceTreeData.ndf= ndf;
+	sourceTreeData.fitQuality= fitQuality;
+	sourceTreeData.residualMean= residualMean;
+	sourceTreeData.residualRMS= residualRMS;
+	sourceTreeData.residualMedian= residualMedian;
+	sourceTreeData.residualMAD= residualMAD;
+	sourceTreeData.residualMin= residualMin;
+	sourceTreeData.residualMax= residualMax;
+	
 
 	//## Fill Tree
 	dataTree->Fill();

@@ -469,6 +469,50 @@ private:
 
 
 //=======================================
+//==        PARAMETRIC CUT CLASS
+//=======================================
+/*
+class ParametricCut : public TObject 
+{
+	public:
+		
+		
+		ParametricCut(std::string name,bool enabled=false,bool reverse=false,bool combineInOR=false):
+			m_name(name), m_enabled(enabled), m_reverse(reverse), m_combineInOR(combineInOR)
+		{}
+		
+    virtual ~ParametricCut() {}		
+		
+	public:
+		
+		virtual bool isPassed(double val){return false;}
+		virtual bool isPassed(float val){return false;}
+		virtual bool isPassed(int val){return false;}
+		virtual bool isPassed(long int val){return false;}	
+		virtual bool isPassed(bool val){return false;}	
+		
+		virtual void enable(){m_enabled=true;}
+		
+		virtual void disable(){m_enabled=false;}
+		
+		virtual bool isEnabled(){return m_enabled;}
+		
+		virtual void PrintInfo(){}
+
+	public:
+		std::string m_name;
+		bool m_enabled;	
+		bool m_reverse;
+		bool m_combineInOR;
+		
+
+	ClassDef(ParametricCut,1)	
+};
+typedef ParametricCut* ParametricCutPtr;
+typedef std::map<std::string, ParametricCutPtr> ParametricCutMap;
+*/
+
+//=======================================
 //==       CUT FACTORY CLASS
 //=======================================
 class CutFactory : public TObject 
