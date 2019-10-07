@@ -62,7 +62,7 @@ list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/cmake)
 list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/cmake/modules)
 
 #---Locate the ROOT package and defines a number of variables (e.g. ROOT_INCLUDE_DIRS)
-SET (ROOT_REQUIRED_MODULES MathCore RIO Hist Tree Net PyROOT Minuit MathMore)
+SET (ROOT_REQUIRED_MODULES MathCore RIO Hist Tree Net PyROOT Minuit MathMore TMVA)
 SET (ROOT_OPTIONAL_MODULES Minuit2 FITSIO)
 if(ENABLE_R)
 	list(APPEND ROOT_REQUIRED_MODULES RInterface Rtools)

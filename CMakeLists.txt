@@ -426,6 +426,14 @@ if(BUILD_APPS)
 	target_link_libraries(SourceTreeWriterExe Caesar ${LINKED_LIBS})
 	set_target_properties(SourceTreeWriterExe PROPERTIES OUTPUT_NAME SourceTreeWriter)
 
+	add_executable(SourceAsciiExporterExe ${Task_SourceAsciiExporter_SRCS})
+	target_link_libraries(SourceAsciiExporterExe Caesar ${LINKED_LIBS})
+	set_target_properties(SourceAsciiExporterExe PROPERTIES OUTPUT_NAME SourceAsciiExporter)
+
+	add_executable(SourceMVClassifierExe ${Task_SourceMVClassifier_SRCS})
+	target_link_libraries(SourceMVClassifierExe Caesar ${LINKED_LIBS})
+	set_target_properties(SourceMVClassifierExe PROPERTIES OUTPUT_NAME SourceMVClassifier)
+
 	if(ENABLE_MPI AND MPI_FOUND)
 		include_directories(${MPI_CXX_INCLUDE_PATH})
 		add_executable(FindSourceMPIExe ${Task_FindSourceMPI_SRCS})
@@ -626,6 +634,8 @@ if(BUILD_APPS)
 		SourceCatalogsMatchFinder
 		SourceAstroCatalogsMatchFinder
 		SourceTreeWriter
+		SourceAsciiExporter
+		SourceMVClassifier
 	)
 	if(ENABLE_MPI)
 		list(APPEND EXE_FILES FindSourceMPI)
