@@ -505,6 +505,24 @@ class Source : public Blob {
 		}
 
 		/**
+		* \brief Set fit component flag
+		*/
+		int SetFitComponentFlag(int componentId,int flag)
+		{
+			if(!m_HasFitInfo) return -1;
+			return m_fitPars.SetComponentFlag(componentId,flag);
+		}
+
+		/**
+		* \brief Get fit component flag
+		*/
+		int GetFitComponentFlag(int& flag,int componentId)
+		{
+			if(!m_HasFitInfo) return -1;
+			return m_fitPars.GetComponentFlag(flag,componentId);
+		}
+
+		/**
 		* \brief Get fit status
 		*/
 		int GetFitStatus(){return m_fitStatus;}
