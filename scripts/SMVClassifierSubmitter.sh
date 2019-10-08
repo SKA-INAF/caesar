@@ -429,7 +429,7 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		else
 			EXE="$CAESAR_DIR/bin/SourceMVClassifier"
 		fi
-		EXE_ARGS="--input=$inputfile --weightfile=$WEIGHTFILE --classifier=$CLASSIFIER --sigcut=$SIGNAL_CUT --cuteff=$CUT_EFFICIENCY --filterByType --selectedType=1 --selectedType=2 --output=$outputfile --region-output=$ds9region_file --catalog-output=$catalog_file"
+		EXE_ARGS="--input=$inputfile --weights=$WEIGHTFILE --classifier=$CLASSIFIER --sigcut=$SIGNAL_CUT --cuteff=$CUT_EFFICIENCY --filterByType --selectedType=1 --selectedType=2 --output=$outputfile --region-output=$ds9region_file --catalog-output=$catalog_file"
 
 		generate_exec_script "$shfile" "$index" "$EXE" "$EXE_ARGS" "$logfile"
 
@@ -480,7 +480,7 @@ else
 	else
 		EXE="$CAESAR_DIR/bin/SourceMVClassifier"
 	fi
-	EXE_ARGS="--input=$inputfile --weightfile=$WEIGHTFILE --classifier=$CLASSIFIER --sigcut=$SIGNAL_CUT --cuteff=$CUT_EFFICIENCY --filterByType --selectedType=1 --selectedType=2 --output=$outputfile --region-output=$ds9region_file --catalog-output=$catalog_file"
+	EXE_ARGS="--input=$inputfile --weights=$WEIGHTFILE --classifier=$CLASSIFIER --sigcut=$SIGNAL_CUT --cuteff=$CUT_EFFICIENCY --filterByType --selectedType=1 --selectedType=2 --output=$outputfile --region-output=$ds9region_file --catalog-output=$catalog_file"
 
 	echo "INFO: Creating script file $shfile for input file: $inputfile ..."
 	jobId=" "
