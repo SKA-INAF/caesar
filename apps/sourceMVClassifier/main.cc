@@ -77,10 +77,14 @@ void Usage(char* exeName)
   cout<<"-h, --help \t Show help message and exit"<<endl;
 	cout<<"-I, --interactive \t Run application interactively"<<endl;
 	cout<<"-t, --train \t If enabled, train classifier instead of applying it to input data (default=no)"<<endl;
-	cout<<"-i, --input=[INPUT_FILE] \t Filename with list of input ROOT file(s) produced by CAESAR containing the source collection to be classified or used for training"<<endl;
+	cout<<"-i, --input=[INPUT_FILE] \t Filename or list of input ROOT file(s) produced by CAESAR containing the source collection to be classified or used for training"<<endl;
+	cout<<"-F, --filelist \t Consider input data as a filelist (default=no)"<<endl;
 	cout<<"-w, --weights=[CLASSIFIER_WEIGHT_FILE] \t Classifier weight filename (.xml) used to apply classification to input data"<<endl;
 	cout<<"-O, --options=[CLASSIFIER_OPTIONS] \t Options given to the classifier"<<endl;
 	cout<<"-c, --classifier=[CLASSIFIER] \t Classifier method {Cuts,MLP} (default=MLP)"<<endl;
+	cout<<"-n, --sigcut=[CLASSIFIER_SIGNAL_OUTPUT_CUT] \t Classifier signal/bkg cut value (default=0.5)"<<endl;
+	cout<<"-e, --cuteff=[CUT_EFFICIENCY] \t Cut classifier signal efficiency (default=0.9)"<<endl;
+	cout<<"-T, --trainsize=[TRAIN_SAMPLE_FRACTION] \t Percentage of input data used for training the classifier (1-fract for testing) (default=0.5)"<<endl;
 	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (ROOT format) where to store selected sources (default=sources.root)"<<endl;
 	cout<<"-R, --region-output=[REGION_OUTPUT_FILE] \t Output DS9 region file name where to store selected sources (default=sources.reg)"<<endl;
 	cout<<"-C, --catalog-output=[CATALOG_OUTPUT_FILE] \t Output catalog file name where to store selected sources (default=catalog.dat)"<<endl;
@@ -96,9 +100,13 @@ static const struct option options_tab[] = {
   { "help", no_argument, 0, 'h' },
 	{ "train", no_argument, 0, 't' },
 	{ "input", required_argument, 0, 'i' },
+	{ "filelist", no_argument, 0, 'F' },
 	{ "options", required_argument, 0, 'O' },
 	{ "weights", required_argument, 0, 'w' },
 	{ "classifier", required_argument, 0, 'c' },
+	{ "sigcut", required_argument, 0, 'n' },
+	{ "cuteff", required_argument, 0, 'e' },
+	{ "trainsize", required_argument, 0, 'T' },
 	{ "region-output", required_argument, 0, 'R' },
 	{ "catalog-output", required_argument, 0, 'C' },
 	{ "filterByType", no_argument, 0, 'f'},
@@ -112,8 +120,8 @@ static const struct option options_tab[] = {
 struct SourceComponentData
 {
 	int fitComponentIndex;
-	long int sourceIndex;
-	long int nestedSourceIndex;
+	int sourceIndex;
+	int nestedSourceIndex;
 	std::string sname;
 	double peakSNR;
 	double areaRatio;
@@ -134,7 +142,7 @@ struct SourceComponentData
 		classOutput= 0;	
 		isSelected= true;
 	}
-	SourceComponentData(int cindex,long int sindex,long int nindex):
+	SourceComponentData(int cindex,int sindex,int nindex):
 		fitComponentIndex(cindex), sourceIndex(sindex), nestedSourceIndex(nindex)
 	{
 		sname= "";
@@ -151,7 +159,8 @@ struct SourceComponentData
 
 //Options
 bool gRunInteractively= false;
-bool trainClassifier= false;
+bool gTrainClassifier= false;
+bool gIsFileList= false;
 std::string fileName= "";
 std::string weightFileName= "";
 std::string outputFileName= "sources.root";
@@ -167,22 +176,22 @@ TFile* inputFile= 0;
 TTree* sourceTree= 0;
 TTree* perfTree= 0;
 TTree* configTree= 0;
-std::string classifierMethod= "MLP";//Possible choices {"MLP","Cuts"}
-std::string classifierOptions= "";
-std::string cutClassifierOptions= "!H:!V:FitMethod=GA:EffSel";
-std::string nnClassifierOptions= "H:!V:NeuronType=tanh:EstimatorType=CE:VarTransform=None:NCycles=1000:HiddenLayers=N+6,N+3:TrainingMethod=BFGS:UseRegulator:CalculateErrors";
+std::string gClassifierMethod= "MLP";//Possible choices {"MLP","Cuts"}
+std::string gClassifierOptions= "";
+std::string gCutClassifierOptions= "!H:!V:FitMethod=GA:EffSel";
+std::string gNNClassifierOptions= "H:!V:NeuronType=tanh:EstimatorType=CE:VarTransform=None:NCycles=1000:HiddenLayers=N+6,N+3:TrainingMethod=BFGS:UseRegulator:CalculateErrors";
 
-float NEventFractionForTraining= 0.5;
-float NNCut= 0.5;
+float gTrainSampleFraction= 0.5;
 float gSignalCutEff= 0.9;
-float dataNormMin= -1;
-float dataNormMax= 1;
-float minSourceSNR= 0;
-float maxSourceSNR= 1000;
-float minEccentricityRatio= 0;
-float maxEccentricityRatio= 10;
-float minSourceToBeamRatio= 0;
-float maxSourceToBeamRatio= 50;
+float gClassSignalOutCut= 0.5;
+float gDataNormMin= -1;
+float gDataNormMax= 1;
+float gPeakSNRMin= 0;
+float gPeakSNRMax= 1000;
+float gEccentricityRatioMin= 0;
+float gEccentricityRatioMax= 10;
+float gSourceToBeamRatioMin= 0;
+float gSourceToBeamRatioMax= 50;
 
 
 //Globar vars
@@ -201,6 +210,9 @@ float gPeakSNR;
 float gEccentricityRatio;
 float gAreaRatio;
 int gClassOutput;
+int gSourceIndex;
+int gNestedSourceIndex;
+int gFitComponentIndex;
 TCanvas* ClassOutPlot= 0;
 TH2D* ClassOutPlotBkg= 0;
 TH1D* ClassOutHisto_signal= 0;
@@ -209,14 +221,13 @@ TH1D* ClassOutHisto_bkg= 0;
 std::vector<SourceComponentData*> m_sourceComponentData;
 Source* m_source= 0;
 std::vector<Source*> m_sources;
-std::vector<Source*> m_sources_sel;
 
 //Functions
 int ParseOptions(int argc, char *argv[]);
 std::string GetStringLogLevel(int verbosity);
 int ReadData(std::string filelist);
 int ReadSourceData(std::string filename);
-int FillSourcePars(std::vector<SourceComponentData*>& pars,Source* aSource,long int sourceIndex,long int nestedSourceIndex=-1);
+int FillSourcePars(std::vector<SourceComponentData*>& pars,Source* aSource,int sourceIndex,int nestedSourceIndex=-1);
 int MakeClassifierData();
 int TrainClassifier();
 int EvaluateMLPClassifier(std::string weightFileName);
@@ -231,10 +242,60 @@ int Init();
 void ClearData();
 void SetStyle();
 
+template<typename T>
+int GetClassifierResponse(T& classRes,TMVA::Reader* reader,std::string classMethod)
+{
+	classRes= T(0);
+	try{
+		classRes= reader->EvaluateMVA(classMethod.c_str());
+	}
+	catch(...){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Invalid classifier evaluation on data!");
+		#endif
+		return -1;
+	}
+
+	return 0;
+
+}//close GetClassifierResponse()
+
+int IsClassifiedAsSignal(bool& isSignal,TMVA::Reader* reader,std::string classMethod,double classSignalCut)
+{
+	isSignal= false;	
+	int status= 0;
+	if(classMethod=="Cuts") 
+	{
+		try{
+			isSignal= reader->EvaluateMVA(classMethod.c_str());
+		}
+		catch(...){
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Invalid classifier evaluation on data!");
+			#endif
+			return -1;
+		}
+	}//close if
+	else{
+		double classRes= 0;
+		if(GetClassifierResponse(classRes,reader,classMethod)<0){
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Invalid classifier evaluation on data!");
+			#endif
+			return -1;
+		}
+		if(classRes>=classSignalCut) isSignal= true;
+	}
+
+	return 0;
+
+}//close IsClassifiedAsSignal()
+
+
 int main(int argc, char *argv[])
 {
 	//================================
-	//== Parse command line options
+	//== PARSE CMD LINE OPTIONS
 	//================================
 	if(ParseOptions(argc,argv)<0){
 		#ifdef LOGGING_ENABLED	
@@ -244,7 +305,7 @@ int main(int argc, char *argv[])
 	}
 	
 	//=======================
-	//== Init
+	//== INIT DATA
 	//=======================
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Initializing data...");
@@ -259,21 +320,35 @@ int main(int argc, char *argv[])
 
 
 	//=======================
-	//== Read source data
+	//== READ DATA
 	//=======================
-	#ifdef LOGGING_ENABLED
-		INFO_LOG("Reading source data files from file "<<fileName<<" ...");
-	#endif
-	if(ReadData(fileName)<0){
+	if(gIsFileList){
 		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Reading of source data failed!");
+			INFO_LOG("Reading source data files from list "<<fileName<<" ...");
 		#endif
-		ClearData();
-		return -1;
+		if(ReadData(fileName)<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Reading of source data list failed!");
+			#endif
+			ClearData();
+			return -1;
+		}
+	}
+	else{
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Reading source data file "<<fileName<<" ...");
+		#endif
+		if(ReadSourceData(fileName)<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Reading of source data failed!");
+			#endif
+			ClearData();
+			return -1;
+		}
 	}
 
 	//===========================
-	//== Create classifier data
+	//== MAKE CLASSIFIER DATA
 	//===========================
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Creating classifier data ...");
@@ -288,10 +363,9 @@ int main(int argc, char *argv[])
 	
 
 	//==============================================
-	//== Train classifier or apply to input data
+	//== TRAIN/APPLY CLASSIFIER
 	//==============================================
-	if(trainClassifier)
-	{
+	if(gTrainClassifier){
 		#ifdef LOGGING_ENABLED
 			INFO_LOG("Training classifier ...");
 		#endif
@@ -303,11 +377,9 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 
-	}//close if
-	else{
-		//=============================
-		//== Apply classifier to data
-		//=============================
+	}//close if train classifier
+	else{//apply classifier
+		
 		#ifdef LOGGING_ENABLED
 			INFO_LOG("Applying classifier to input data ...");
 		#endif
@@ -321,7 +393,7 @@ int main(int argc, char *argv[])
 	}
 
 	//=======================
-	//== Save
+	//== SAVE DATA TO FILE
 	//=======================
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Saving data to file ...");
@@ -359,7 +431,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hti:w:o:R:C:v:fs:IO:c:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hti:Fw:o:R:C:v:fs:IO:c:n:e:T:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -378,13 +450,18 @@ int ParseOptions(int argc, char *argv[])
 			}
 			case 't':	
 			{
-				trainClassifier= true;
+				gTrainClassifier= true;
 				break;	
 			}
     	case 'i':	
 			{
 				fileName= std::string(optarg);	
 				break;	
+			}
+			case 'F':
+			{
+				gIsFileList= true;
+				break;
 			}
 			case 'w':	
 			{
@@ -393,12 +470,27 @@ int ParseOptions(int argc, char *argv[])
 			}
 			case 'c':	
 			{
-				classifierMethod= std::string(optarg);	
+				gClassifierMethod= std::string(optarg);	
+				break;	
+			}
+			case 'n':	
+			{
+				gClassSignalOutCut= atof(optarg);	
+				break;	
+			}	
+			case 'e':	
+			{
+				gSignalCutEff= atof(optarg);	
+				break;	
+			}
+			case 'T':	
+			{
+				gTrainSampleFraction= atof(optarg);	
 				break;	
 			}
 			case 'O':	
 			{
-				classifierOptions= std::string(optarg);	
+				gClassifierOptions= std::string(optarg);	
 				break;	
 			}
 			case 'o':	
@@ -462,7 +554,7 @@ int ParseOptions(int argc, char *argv[])
 	}
 
 	//Check classifier weights
-	if(!trainClassifier && weightFileName==""){
+	if(!gTrainClassifier && weightFileName==""){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Empty classifier weight file name given!");
 		#endif
@@ -502,23 +594,23 @@ int ParseOptions(int argc, char *argv[])
 	catalogComponentsOutputFileName+= "_fitcomp.dat";
 
 	//Set classifier options
-	if(classifierOptions==""){
-		if(classifierMethod=="MLP"){
-			classifierOptions= nnClassifierOptions;
+	if(gClassifierOptions==""){
+		if(gClassifierMethod=="MLP"){
+			gClassifierOptions= gNNClassifierOptions;
 		}
-		else if(classifierMethod=="Cuts"){
-			classifierOptions= cutClassifierOptions;
+		else if(gClassifierMethod=="Cuts"){
+			gClassifierOptions= gCutClassifierOptions;
 		}
 		else{
 			#ifdef LOGGING_ENABLED
-				ERROR_LOG("Invalid/unknown classifier method ("<<classifierMethod<<") given!");
+				ERROR_LOG("Invalid/unknown classifier method ("<<gClassifierMethod<<") given!");
 			#endif
 			return -1;
 		}
 	}
 
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("classifierOptions: "<<classifierOptions);
+		INFO_LOG("classifierOptions: "<<gClassifierOptions);
 	#endif
 	
 
@@ -560,12 +652,25 @@ int Init()
 	gDataTree->Branch("eccentricityRatio",&gEccentricityRatio);
 	gDataTree->Branch("areaRatio",&gAreaRatio);	
 	gDataTree->Branch("classOutput",&gClassOutput);
+	gDataTree->Branch("sourceIndex",&gSourceIndex);
+	gDataTree->Branch("nestedSourceIndex",&gNestedSourceIndex);
+	gDataTree->Branch("fitComponentIndex",&gFitComponentIndex);
+
+	gDataTree->SetBranchAddress("peakSNR",&gPeakSNR);
+	gDataTree->SetBranchAddress("eccentricityRatio",&gEccentricityRatio);
+	gDataTree->SetBranchAddress("areaRatio",&gAreaRatio);
+	gDataTree->SetBranchAddress("classOutput",&gClassOutput);
+	gDataTree->SetBranchAddress("sourceIndex",&gSourceIndex);
+	gDataTree->SetBranchAddress("nestedSourceIndex",&gNestedSourceIndex);
+	gDataTree->SetBranchAddress("fitComponentIndex",&gFitComponentIndex);
+
 	
 	if(!gSignalDataTree_train) gSignalDataTree_train= new TTree("signalData_train","signalData_train");
 	gSignalDataTree_train->Branch("peakSNR",&gPeakSNR);
 	gSignalDataTree_train->Branch("eccentricityRatio",&gEccentricityRatio);
 	gSignalDataTree_train->Branch("areaRatio",&gAreaRatio);	
 	gSignalDataTree_train->Branch("classOutput",&gClassOutput);
+	
 
 	if(!gBkgDataTree_train) gBkgDataTree_train= new TTree("bkgData_train","bkgData_train");
 	gBkgDataTree_train->Branch("peakSNR",&gPeakSNR);
@@ -687,6 +792,7 @@ int MakeClassifierData()
 	int nVars= 3;
 	std::vector<std::vector<double>> dataVarList;
 	std::vector<std::vector<double>> classifierData;
+	
 
 	for(int j=0;j<nVars;j++){
 		dataVarList.push_back( std::vector<double>() );
@@ -699,6 +805,10 @@ int MakeClassifierData()
 		double eccentricityRatio= m_sourceComponentData[i]->eccentricityRatio;
 		double sourceToBeamRatio= m_sourceComponentData[i]->areaRatio;
 		int classOutput= m_sourceComponentData[i]->classOutput;
+		int componentIndex= m_sourceComponentData[i]->fitComponentIndex;
+		int sindex= m_sourceComponentData[i]->sourceIndex;
+		int nestedSourceIndex= m_sourceComponentData[i]->nestedSourceIndex;
+		
 		dataVarList[0].push_back(peakSNR);
 		dataVarList[1].push_back(eccentricityRatio);
 		dataVarList[2].push_back(sourceToBeamRatio);
@@ -708,6 +818,9 @@ int MakeClassifierData()
 		classifierData[i].push_back(eccentricityRatio);
 		classifierData[i].push_back(sourceToBeamRatio);
 		classifierData[i].push_back(classOutput);
+		classifierData[i].push_back(sindex);
+		classifierData[i].push_back(nestedSourceIndex);
+		classifierData[i].push_back(componentIndex);
 
 	}//end loop data
 
@@ -724,7 +837,7 @@ int MakeClassifierData()
 		dataVars_max.push_back(wmax);
 
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("Data var "<<j+1<<": original range ("<<wmin<<","<<wmax<<"), norm range ("<<dataNormMin<<","<<dataNormMax<<")");
+			INFO_LOG("Data var "<<j+1<<": original range ("<<wmin<<","<<wmax<<"), norm range ("<<gDataNormMin<<","<<gDataNormMax<<")");
 		#endif
 
 		dataVars_stats.push_back(stats);
@@ -736,11 +849,11 @@ int MakeClassifierData()
 	#endif
 
 	for(size_t i=0;i<classifierData.size();i++){//loop on events
-		for(size_t j=0;j<classifierData[i].size()-1;j++){//loop on data vars
+		for(size_t j=0;j<classifierData[i].size()-4;j++){//loop on data vars
 			double wmin= dataVars_min[j];
 			double wmax= dataVars_max[j];
 			double w= classifierData[i][j];
-			double w_norm= dataNormMin + (dataNormMax-dataNormMin)*(w-wmin)/(wmax-wmin);
+			double w_norm= gDataNormMin + (gDataNormMax-gDataNormMin)*(w-wmin)/(wmax-wmin);
 			classifierData[i][j]= w_norm;
 		}//end loop data vars
 	}//end loop data
@@ -750,17 +863,20 @@ int MakeClassifierData()
 		INFO_LOG("Setting classifier input data (#"<<classifierData.size()<<" data entries present) ...");
 	#endif
 	
-	if(trainClassifier)
+	if(gTrainClassifier)
 	{
 		for(size_t i=0;i<classifierData.size();i++)
 		{	
 			gPeakSNR= classifierData[i][0];
 			gEccentricityRatio= classifierData[i][1];
 			gAreaRatio= classifierData[i][2];
-			gClassOutput= classifierData[i][3];
+			gClassOutput= static_cast<int>(classifierData[i][3]);
+			gSourceIndex= static_cast<int>(classifierData[i][4]);
+			gNestedSourceIndex= static_cast<int>(classifierData[i][5]);
+			gFitComponentIndex= static_cast<int>(classifierData[i][6]);
 
 			double rand= gRandom->Uniform(0,1);
-			if(rand<=NEventFractionForTraining)
+			if(rand<=gTrainSampleFraction)
 			{
 				if(gClassOutput==0) gBkgDataTree_train->Fill();
 				else gSignalDataTree_train->Fill();
@@ -792,7 +908,13 @@ int MakeClassifierData()
 			gPeakSNR= classifierData[i][0];
 			gEccentricityRatio= classifierData[i][1];
 			gAreaRatio= classifierData[i][2];
-			gClassOutput= classifierData[i][3];
+			gClassOutput= static_cast<int>(classifierData[i][3]);
+			gSourceIndex= static_cast<int>(classifierData[i][4]);
+			gNestedSourceIndex= static_cast<int>(classifierData[i][5]);
+			gFitComponentIndex= static_cast<int>(classifierData[i][6]);
+
+			//cout<<"--> Adding source component data no. "<<i+1<<" (sindex="<<gSourceIndex<<", nindex="<<gNestedSourceIndex<<", cindex="<<gFitComponentIndex<<")"<<endl;
+
 
 			gDataTree->Fill();
 
@@ -841,7 +963,7 @@ int TrainClassifier()
 	gDataLoader->AddVariable("eccentricityRatio", 'F');
 	gDataLoader->AddVariable("areaRatio", 'F');	
 	gDataLoader->AddSpectator("classOutput", 'I');	
-
+	
 	//Set the classifier train & test data
 	//Assume weights=1
 	double sigWeight = 1.0;
@@ -862,15 +984,15 @@ int TrainClassifier()
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Setting classifier method  ...");
 	#endif
-	if(classifierMethod=="MLP"){
-		gMVAFactory->BookMethod(gDataLoader,TMVA::Types::kMLP, "MLP", classifierOptions.c_str());
+	if(gClassifierMethod=="MLP"){
+		gMVAFactory->BookMethod(gDataLoader,TMVA::Types::kMLP, "MLP", gClassifierOptions.c_str());
 	}
-	else if(classifierMethod=="Cuts"){
-		gMVAFactory->BookMethod(gDataLoader,TMVA::Types::kCuts,"Cuts", classifierOptions.c_str());
+	else if(gClassifierMethod=="Cuts"){
+		gMVAFactory->BookMethod(gDataLoader,TMVA::Types::kCuts,"Cuts", gClassifierOptions.c_str());
 	}
 	else{
 		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Invalid or unknown classifier method ("<<classifierMethod<<") given!");
+			ERROR_LOG("Invalid or unknown classifier method ("<<gClassifierMethod<<") given!");
 		#endif
 		return -1;
 	}
@@ -905,17 +1027,17 @@ int TrainClassifier()
 	#endif
 	int status= 0;
 	std::string weightFileName= "";
-	if(classifierMethod=="MLP"){
+	if(gClassifierMethod=="MLP"){
 		weightFileName= "classifierData/weights/SourceClassifier_MLP.weights.xml";
 		status= EvaluateMLPClassifier(weightFileName);
 	}
-	else if(classifierMethod=="Cuts"){
+	else if(gClassifierMethod=="Cuts"){
 		weightFileName= "classifierData/weights/SourceClassifier_Cuts.weights.xml";
 		status= EvaluateCutClassifier(weightFileName);
 	}
 	else{
 		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Invalid or unknown classifier method ("<<classifierMethod<<") given!");
+			ERROR_LOG("Invalid or unknown classifier method ("<<gClassifierMethod<<") given!");
 		#endif
 		return -1;
 	}
@@ -1000,7 +1122,7 @@ int EvaluateMLPClassifier(std::string weightFileName)
 		}
 
 		//Update efficiency
-		if(NNOut>=NNCut){//identified as signal
+		if(NNOut>=gClassSignalOutCut){//identified as signal
 			NSig++;
 			if(gClassOutput==1) NSig_right++;//correct identification
 			else NSig_wrong++;//wrong identification
@@ -1160,9 +1282,77 @@ int EvaluateCutClassifier(std::string weightFileName)
 }//close EvaluateCutClassifier()
 
 
+
 int ApplyClassifier(std::string weightFileName)
 {
+	//######################################
+	//##   INIT MVA READER
+	//######################################
+	//Initialize MVA reader
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Initializing MVA reader ...");
+	#endif
+  if(!gMVAReader){
+		gMVAReader= new TMVA::Reader("!Color:!Silent");
+	}
+	gMVAReader->AddVariable("peakSNR",&gPeakSNR);
+	gMVAReader->AddVariable("eccentricityRatio",&gEccentricityRatio);
+	gMVAReader->AddVariable("areaRatio",&gAreaRatio);
+	gMVAReader->AddSpectator("classOutput",&gClassOutput);	
+
+	//Setting weights in reader
+	TString weightFile= weightFileName.c_str();
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Setting weights from file "<<weightFile.Data()<<" ...");
+	#endif
+	gMVAReader->BookMVA(gClassifierMethod.c_str(),weightFile);
 	
+
+	//#########################################
+	//##   APPLY CLASSIFICATION TO SOURCES
+	//#########################################
+	for (int i=0;i<gDataTree->GetEntries();i++) 
+	{
+		gDataTree->GetEntry(i);
+
+		if(i%1000==0) cout<<"--> Reading "<<i+1<<"/"<<gDataTree->GetEntries()<<" event..."<<endl;
+
+		
+		//Retrieve source from collection
+		Source* source= 0;
+		if(gNestedSourceIndex==-1) source= m_sources[gSourceIndex];
+		else source= m_sources[gSourceIndex]->GetNestedSource(gNestedSourceIndex);
+
+		//cout<<"--> Reading source "<<source->GetName()<<" (sindex="<<gSourceIndex<<", nindex="<<gNestedSourceIndex<<", cindex="<<gFitComponentIndex<<"), nFitComponents="<<source->GetNFitComponents()<<", nSelFitComponents="<<source->GetNSelFitComponents()<<" ..."<<endl;
+
+
+		//Skip if no fit info available
+		bool hasFitInfo= source->HasFitInfo();
+		if(!hasFitInfo || gFitComponentIndex<0) continue;
+
+		//Check is source is classified as signal by classifier
+		bool isClassifiedAsSignal= false;
+		if(IsClassifiedAsSignal(isClassifiedAsSignal,gMVAReader,gClassifierMethod,gClassSignalOutCut)<0){
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to evaluate classifier response on source no. "<<i<<" (sindex="<<gSourceIndex<<", nestedId="<<gNestedSourceIndex<<", compId="<<gFitComponentIndex<<"), skip it...");
+			#endif
+			continue;
+		}
+			
+		//Set source component flag
+		int componentFlag= 0;
+		if(isClassifiedAsSignal) componentFlag= eReal;
+		else componentFlag= eFake;
+
+		if(source->SetFitComponentFlag(gFitComponentIndex,componentFlag)<0){
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to set flag of fit component "<<gFitComponentIndex<<"!");
+			#endif
+			continue;
+		}
+	}//end loop source data
+
+	//double mvaErr = reader->GetMVAError();
 
 	return 0;
 
@@ -1240,8 +1430,8 @@ int ReadSourceData(std::string filename)
 		INFO_LOG("Reading #"<<sourceTree->GetEntries()<<" sources in file "<<filename<<"...");
 	#endif
 
-	std::vector<SourceComponentData*> pars;
-	long int sourceIndex= 0;
+	
+	int sourceIndex= static_cast<int>(m_sourceComponentData.size());//Start from previous list size (in case of multiple source catalog files)
 
 	for(int i=0;i<sourceTree->GetEntries();i++){
 		sourceTree->GetEntry(i);
@@ -1264,7 +1454,6 @@ int ReadSourceData(std::string filename)
 			if(skipSource) continue;
 		}
 
-		
 
 		//Copy source
 		Source* source= new Source;
@@ -1296,7 +1485,7 @@ int ReadSourceData(std::string filename)
 }//close ReadSourceData()
 
 
-int FillSourcePars(std::vector<SourceComponentData*>& pars,Source* aSource,long int sourceIndex,long int nestedSourceIndex)
+int FillSourcePars(std::vector<SourceComponentData*>& pars,Source* aSource,int sourceIndex,int nestedSourceIndex)
 {
 	
 	//Check input source
@@ -1348,7 +1537,7 @@ int FillSourcePars(std::vector<SourceComponentData*>& pars,Source* aSource,long 
 			if(flag==eFake || flag==eCandidate) classFlag= 0;
 			else if(flag==eReal) classFlag= 1;
 			else{
-				if(trainClassifier){
+				if(gTrainClassifier){
 					#ifdef LOGGING_ENABLED
 						WARN_LOG("Unknown flag for source component "<<sname<<", will not use this in training...");
 					#endif		
@@ -1374,25 +1563,25 @@ int FillSourcePars(std::vector<SourceComponentData*>& pars,Source* aSource,long 
 
 			//Check data integrity
 			// - Check source SNR range
-			if( peakSNR<minSourceSNR || peakSNR>maxSourceSNR || TMath::IsNaN(peakSNR) || !std::isfinite(peakSNR) ){
+			if( peakSNR<gPeakSNRMin || peakSNR>gPeakSNRMax || TMath::IsNaN(peakSNR) || !std::isfinite(peakSNR) ){
 				#ifdef LOGGING_ENABLED
-					WARN_LOG("Skip source component peakSNR (SNR="<<peakSNR<<") as NaN or outside selected range ("<<minSourceSNR<<","<<maxSourceSNR<<")");
+					WARN_LOG("Skip source component peakSNR (SNR="<<peakSNR<<") as NaN or outside selected range ("<<gPeakSNRMin<<","<<gPeakSNRMax<<")");
 				#endif		
 				continue;
 			}
 
 			//Check eccentricity ratio
-			if(eccentricityRatio<minEccentricityRatio || eccentricityRatio>maxEccentricityRatio || TMath::IsNaN(eccentricityRatio) || !std::isfinite(eccentricityRatio) ){
+			if(eccentricityRatio<gEccentricityRatioMin || eccentricityRatio>gEccentricityRatioMax || TMath::IsNaN(eccentricityRatio) || !std::isfinite(eccentricityRatio) ){
 				#ifdef LOGGING_ENABLED
-					WARN_LOG("Skip source component eccentricity ratio (E_ratio="<<eccentricityRatio<<") as NaN or outside selected range ("<<minEccentricityRatio<<","<<maxEccentricityRatio<<")");
+					WARN_LOG("Skip source component eccentricity ratio (E_ratio="<<eccentricityRatio<<") as NaN or outside selected range ("<<gEccentricityRatioMin<<","<<gEccentricityRatioMax<<")");
 				#endif
 				continue;
 			}
 
 			//Check source to beam area ratio
-			if(areaRatio<minSourceToBeamRatio || areaRatio>maxSourceToBeamRatio || TMath::IsNaN(areaRatio) || !std::isfinite(areaRatio) ){
+			if(areaRatio<gSourceToBeamRatioMin || areaRatio>gSourceToBeamRatioMax || TMath::IsNaN(areaRatio) || !std::isfinite(areaRatio) ){
 				#ifdef LOGGING_ENABLED
-					WARN_LOG("Skip source component beam area ratio (A_ratio="<<areaRatio<<") as NaN or outside selected range ("<<minSourceToBeamRatio<<","<<maxSourceToBeamRatio<<")");
+					WARN_LOG("Skip source component beam area ratio (A_ratio="<<areaRatio<<") as NaN or outside selected range ("<<gSourceToBeamRatioMin<<","<<gSourceToBeamRatioMax<<")");
 				#endif
 				continue;
 			}
@@ -1437,13 +1626,13 @@ int SaveDS9Regions()
 {
 	//Save DS9 regions for islands
 	bool convertDS9RegionsToWCS= false;
-	int status= SourceExporter::WriteToDS9(regionOutputFileName,m_sources_sel,convertDS9RegionsToWCS);
+	int status= SourceExporter::WriteToDS9(regionOutputFileName,m_sources,convertDS9RegionsToWCS);
 	if(status<0){
 		return -1;
 	}
 
 	//Save DS9 regions for components
-	status= SourceExporter::WriteComponentsToDS9(regionComponentsOutputFileName,m_sources_sel,convertDS9RegionsToWCS);
+	status= SourceExporter::WriteComponentsToDS9(regionComponentsOutputFileName,m_sources,convertDS9RegionsToWCS);
 	if(status<0){
 		return -1;
 	}
@@ -1469,8 +1658,8 @@ int SaveSources()
 	}
 
 	//Loop over selected sources and write TTree to output file
-	for(size_t i=0;i<m_sources_sel.size();i++){
-		m_source= m_sources_sel[i];
+	for(size_t i=0;i<m_sources.size();i++){
+		m_source= m_sources[i];
 		outputTree->Fill();
 	}
 
@@ -1484,7 +1673,7 @@ int SaveSources()
 int SaveCatalog()
 {
 	//Return if no sources are found
-	if(m_sources_sel.empty()){
+	if(m_sources.empty()){
 		#ifdef LOGGING_ENABLED
 			WARN_LOG("No sources selected, no catalog file will be written!");
 		#endif
@@ -1492,7 +1681,7 @@ int SaveCatalog()
 	}
 
 	//Retrieve source WCS
-	WCS* wcs= m_sources_sel[0]->GetWCS(ds9WCSType);
+	WCS* wcs= m_sources[0]->GetWCS(ds9WCSType);
 	if(!wcs) {
 		#ifdef LOGGING_ENABLED
 			WARN_LOG("Failed to compute WCS from sources!");
@@ -1504,7 +1693,7 @@ int SaveCatalog()
 		INFO_LOG("Writing source catalog to file "<<catalogOutputFileName<<" ...");
 	#endif
 	bool dumpNestedSourceInfo= true;
-	int status= SourceExporter::WriteToAscii(catalogOutputFileName,m_sources_sel,dumpNestedSourceInfo,ds9WCSType,wcs);
+	int status= SourceExporter::WriteToAscii(catalogOutputFileName,m_sources,dumpNestedSourceInfo,ds9WCSType,wcs);
 	if(status<0){
 		#ifdef LOGGING_ENABLED
 			WARN_LOG("Writing source catalog to file "<<catalogOutputFileName<<" failed!");
@@ -1515,7 +1704,7 @@ int SaveCatalog()
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Writing source catalog to file "<<catalogComponentsOutputFileName<<" ...");
 	#endif
-	status= SourceExporter::WriteComponentsToAscii(catalogComponentsOutputFileName,m_sources_sel,dumpNestedSourceInfo,ds9WCSType,wcs);
+	status= SourceExporter::WriteComponentsToAscii(catalogComponentsOutputFileName,m_sources,dumpNestedSourceInfo,ds9WCSType,wcs);
 	if(status<0){
 		#ifdef LOGGING_ENABLED
 			WARN_LOG("Writing source fitted component catalog to file "<<catalogComponentsOutputFileName<<" failed!");
