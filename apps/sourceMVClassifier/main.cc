@@ -187,11 +187,11 @@ float gClassSignalOutCut= 0.5;
 float gDataNormMin= -1;
 float gDataNormMax= 1;
 float gPeakSNRMin= 0;
-float gPeakSNRMax= 1000;
+float gPeakSNRMax= 5000;
 float gEccentricityRatioMin= 0;
 float gEccentricityRatioMax= 10;
 float gSourceToBeamRatioMin= 0;
-float gSourceToBeamRatioMax= 50;
+float gSourceToBeamRatioMax= 100;
 
 
 //Globar vars
