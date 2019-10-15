@@ -858,7 +858,7 @@ int UnfoldData()
 		gFFDiffSpectrum->SetBinError(i+1,countsErr_ff_norm);
 		
 
-		cout<<"INFO: bin "<<i+1<<": N="<<N<<" +- "<<NErr<<", N(unfolded)="<<N_unfolded<<" +- "<<NErr_unfolded<<", S(mJy)="<<S*1000<<", S(mJy)=["<<S_min*1000<<","<<S_max*1000<<"], dS(Jy)="<<dS<<", lgS=["<<lgS_min<<","<<lgS_max<<"], normFactor="<<NormFactor<<", counts="<<counts<<" +- "<<countsErr<<", counts(norm)="<<counts_norm<<" +- "<<countsErr_norm<<", counts/unfolded)="<<counts_unfolded<<" +- "<<countsErr_unfolded<<", counts(unfolded_norm)="<<counts_unfolded_norm<<" +- "<<countsErr_unfolded_norm<<endl;
+		cout<<"INFO: bin "<<i+1<<": N="<<N<<" +- "<<NErr<<", N(unfolded)="<<N_unfolded<<" +- "<<NErr_unfolded<<", S(mJy)="<<S*1000<<", S(mJy)=["<<S_min*1000<<","<<S_max*1000<<"], dS(mJy)="<<dS*1000.<<", lgS=["<<lgS_min<<","<<lgS_max<<"], normFactor="<<NormFactor<<", counts="<<counts<<" +- "<<countsErr<<", counts(norm)="<<counts_norm<<" +- "<<countsErr_norm<<", counts/unfolded)="<<counts_unfolded<<" +- "<<countsErr_unfolded<<", counts(unfolded_norm)="<<counts_unfolded_norm<<" +- "<<countsErr_unfolded_norm<<endl;
 	
 
 	}//end loop bins
@@ -1213,7 +1213,7 @@ void Draw()
 	DiffCountsPlotLegend2->SetTextSize(0.035);
 	DiffCountsPlotLegend2->SetTextFont(52);
 	DiffCountsPlotLegend2->SetHeader("Exp data fit @ 1.4 GHz)");
-	DiffCountsPlotLegend2->AddEntry(expDataFitFcn_Hopkins,"Hopkins et al. (2013)","L");
+	DiffCountsPlotLegend2->AddEntry(expDataFitFcn_Hopkins,"Hopkins et al. (2003)","L");
 	DiffCountsPlotLegend2->AddEntry(expDataFitFcn_Katgert,"Katgert et al. (1998)","L");
 	DiffCountsPlotLegend2->Draw("same");
 
