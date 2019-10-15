@@ -29,6 +29,8 @@
 #include <EllipseUtils.h>
 #include <Contour.h>
 #include <WCSUtils.h>
+#include <DS9Region.h>
+#include <DS9RegionParser.h>
 
 //ROOT headers
 #include <TFile.h>
@@ -57,6 +59,7 @@ void Usage(char* exeName)
   cout<<"-h, --help \t Show help message and exit"<<endl;
 	cout<<"-i, --input=[INPUT_FILE] \t Input file in ROOT format to be cross-matched with catalogs"<<endl;
 	cout<<"-C, --catalogs=[CATALOG_FILE] \t Input file list name (ascii format) containing all catalog files in ROOT format to be cross-matched each other"<<endl;
+	cout<<"-B, --regions=[REGION_FILE] \t Input file list name (ascii format) containing all region files in DS9 format used as shuffle boundaries"<<endl;
 	cout<<"-o, --output=[MATCH_OUTPUT_FILE] \t Output file name (root format) in which to store source match info"<<endl;
 	cout<<"-J, --soutput=[OUTPUT_FILE] \t Output file name (root format) in which to store source catalog with spectral index info added"<<endl;
 	cout<<"-j, --saveAllSources \t Save all sources (default: save only source matches)"<<endl;
@@ -95,6 +98,7 @@ static const struct option options_tab[] = {
   { "help", no_argument, 0, 'h' },
 	{ "input", required_argument, 0, 'i' },
 	{ "catalogs", required_argument, 0, 'C' },
+	{ "regions", required_argument, 0, 'B' },
 	{ "verbosity", required_argument, 0, 'v'},
 	{ "output", required_argument, 0, 'o' },
 	{ "soutput", required_argument, 0, 'J' },	
@@ -131,6 +135,7 @@ static const struct option options_tab[] = {
 //Options
 std::string fileName= "";
 std::string catalogFileName= "";
+std::string regionBoundaryFileName= "";
 int verbosity= 4;//INFO level
 bool matchSourcesByFlux= false;
 float matchFluxRelDiffThr= 0.5;//50%
@@ -167,6 +172,7 @@ long int nTilesY= 0;
 bool shuffleSources= false;
 double shuffleRMin= 30;
 double shuffleRMax= 50;
+bool readBoundaryRegions= false;
 
 
 //Globar vars
@@ -181,6 +187,8 @@ SourceMatchData* sourceMatchData= 0;
 Source* matchedSource= 0;
 Source* inputSource= 0;
 Source* m_source= 0;
+std::vector<std::vector<DS9Region*>> m_regions;
+std::vector<Contour*> m_regionContours;
 std::vector<SourceMatchData*> sourceMatchDataCollection;
 TTree* matchOptionTree= 0;
 bool cloneSource= false;
@@ -392,8 +400,12 @@ int ReadData(std::string filename);
 int ReadCatalogData(std::string filelist);
 int ReadSourceData(std::string filename,int collectionIndex);
 int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int collectionIndex,int sourceIndex,int nestedSourceIndex=-1,WCS* wcs=0,int coordSystem=0,bool shuffleData=false,double offsetX=0,double offsetY=0);
+int ReadRegionData(std::string filelist);
+int ReadCatalogRegionData(std::string filename,int catalogIndex);
 bool HaveSourceComponentMatch(SourceComponentMatchPars& scompmatchpars,ComponentPars* pars1,ComponentPars* pars2);
 bool HaveSourceIslandMatch(SourceMatchPars& smatchpars,SourcePars* pars1,SourcePars* pars2);
+int GetRandPosInAnnulus(double& offsetX,double& offsetY);
+int GetRandPosInRegion(double& offsetX,double& offsetY,Contour* contour,double xmin,double xmax,double ymin,double ymax,int nMaxGen=1000);
 void Save();
 int SaveSources();
 int CloneObjectsInFile(std::vector<std::string> excludedObjNames);
@@ -437,6 +449,21 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+
+	//==================================
+	//== Read catalogs boundary regions
+	//==================================
+	if(readBoundaryRegions){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Reading catalog region boundary data from given files...");
+		#endif
+		if(ReadRegionData(regionBoundaryFileName)<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Reading of catalog region data failed!");
+			#endif
+			return -1;
+		}
+	}
 
 	//=======================
 	//== Read catalogs data
@@ -510,7 +537,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:C:o:v:n:N:mM:POLlA:T:t:e:pba:d:cfFs:S:x:X:w:y:Y:k:gr:R:jJ:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:C:o:v:n:N:mM:POLlA:T:t:e:pba:d:cfFs:S:x:X:w:y:Y:k:gr:R:jJ:B:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -530,6 +557,12 @@ int ParseOptions(int argc, char *argv[])
 			case 'C':	
 			{
 				catalogFileName= std::string(optarg);	
+				break;	
+			}
+			case 'B':	
+			{
+				regionBoundaryFileName= std::string(optarg);	
+				readBoundaryRegions= true;
 				break;	
 			}
 			case 'o':	
@@ -1569,7 +1602,6 @@ bool HaveSourceComponentMatch(SourceComponentMatchPars& scompmatchpars,Component
 	//## Check overlap
 	bool hasPosLargeMatch= (fabs(posDist)<=posThr);
 	bool hasPosSmallMatch= (fabs(posDist)<=posHighThr);
-	bool noPosMatch= (hasPosSmallMatch || hasPosLargeMatch);
 	bool noOverlap= (rtn==EllipseUtils::DISJOINT_ELLIPSES);
 	bool hasOverlapCompleteMatch= (
 		rtn==EllipseUtils::ELLIPSE1_INSIDE_ELLIPSE2 || rtn==EllipseUtils::ELLIPSE2_INSIDE_ELLIPSE1
@@ -1800,7 +1832,6 @@ int ReadData(std::string filename)
 		//Copy source
 		Source* source= new Source;
 		*source= *aSource;
-		//Source* source= aSource;
 
 		//Compute wcs for this source collection if not done
 		if(!wcs){
@@ -1814,9 +1845,10 @@ int ReadData(std::string filename)
 		}
 
 		//Shuffle source?
-		//NB: Generate uniform in annulus (e.g. see https://stackoverflow.com/questions/9048095/create-random-number-within-an-annulus)
+		
 		double offsetX= 0;
 		double offsetY= 0;
+		/*
 		if(shuffleSources){
 			double A = 2/(shuffleRMax*shuffleRMax - shuffleRMin*shuffleRMin);
 			double r= sqrt(2*gRandom->Uniform()/A + shuffleRMin*shuffleRMin);
@@ -1826,6 +1858,7 @@ int ReadData(std::string filename)
 			offsetX/= 3600;//convert in deg
 			offsetY/= 3600;//convert in deg
 		}
+		*/
 
 		//Compute source position in WCS coords (needed to compute source min/max coords)
 		double X0_wcs= 0;
@@ -1845,7 +1878,8 @@ int ReadData(std::string filename)
 		
 		//Fill source pars
 		std::vector<SourcePars*> thisPars;
-		if(FillSourcePars(thisPars,source,catalogIndex,sourceIndex,-1,wcs,wcsType,shuffleSources,offsetX,offsetY)<0){
+		//if(FillSourcePars(thisPars,source,catalogIndex,sourceIndex,-1,wcs,wcsType,shuffleSources,offsetX,offsetY)<0){
+		if(FillSourcePars(thisPars,source,catalogIndex,sourceIndex,-1,wcs,wcsType,false,offsetX,offsetY)<0){
 			#ifdef LOGGING_ENABLED	
 				ERROR_LOG("Failed to fill pars for source no. "<<i+1<<" (name="<<source->GetName()<<", collectionIndex="<<catalogIndex<<")!");
 			#endif
@@ -1974,6 +2008,17 @@ int ReadCatalogData(std::string filelist)
 		m_catalog_source_pars.push_back(std::vector<SourcePars*>());
 	}
 
+	//Check nCatalogs is equal to region boundary size (if given as program input)
+	if(!m_regions.empty()){
+		int nCatalogRegions= static_cast<int>(m_regions.size());
+		if(nCatalogRegions!=nCatalogs){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Mismatch between number of boundary regions ("<<nCatalogRegions<<") and number of source catalogs ("<<nCatalogs<<")!");
+			#endif
+			return -1;
+		}
+	}
+
 	//Finally reading source data
 	for(size_t i=0;i<fileNames.size();i++){
 		if(ReadSourceData(fileNames[i],i)<0){
@@ -2031,7 +2076,29 @@ int ReadSourceData(std::string filename,int catalogIndex)
 	//int wcsType= 0;
 	int wcsType= eJ2000;
 	int sourceIndex= 0;
-	
+
+	//Find region boundary vertex
+	double regionXmin= 1.e+99;
+	double regionXmax= -1.e+99;
+	double regionYmin= 1.e+99;
+	double regionYmax= -1.e+99;
+
+	if(catalogIndex!=-1 && readBoundaryRegions){
+		std::vector<TVector2> bb= m_regionContours[catalogIndex]->BoundingBoxVertex;
+		for(size_t k=0;k<bb.size();k++){
+			double x= bb[k].X();
+			double y= bb[k].Y();
+			if(x>=regionXmax) regionXmax= x;
+			if(x<=regionXmin) regionXmin= x;
+			if(y>=regionYmax) regionYmax= y;
+			if(y<=regionYmin) regionYmin= y;
+		}
+		if(shuffleSources){
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Source shuffle in region with boundary x["<<regionXmin<<","<<regionXmax<<"], y["<<regionYmin<<","<<regionYmax<<"] ...");
+			#endif
+		}
+	}
 
 	//Read sources
 	#ifdef LOGGING_ENABLED
@@ -2088,10 +2155,42 @@ int ReadSourceData(std::string filename,int catalogIndex)
 			}
 		}
 
+		//Compute wcs source pos 
+		double x0= source->X0;
+		double y0= source->Y0;
+		double x0_wcs= 0;
+		double y0_wcs= 0;
+		AstroUtils::PixelToWCSCoords(x0_wcs,y0_wcs,wcs,x0,y0);
+
 		//Shuffle source?
 		//NB: Generate uniform in annulus (e.g. see https://stackoverflow.com/questions/9048095/create-random-number-within-an-annulus)
 		double offsetX= 0;
 		double offsetY= 0;
+		if(shuffleSources){
+			if(readBoundaryRegions){
+				double x0_wcs_rand= 0;
+				double y0_wcs_rand= 0;
+				if(GetRandPosInRegion(x0_wcs_rand,y0_wcs_rand,m_regionContours[catalogIndex],regionXmin,regionXmax,regionYmin,regionYmax)<0){
+					#ifdef LOGGING_ENABLED
+						ERROR_LOG("Failed to compute rand pos in region for source no. "<<sourceIndex<<"!");
+					#endif
+					return -1;
+				}
+				offsetX= x0_wcs_rand - x0_wcs;
+				offsetY= y0_wcs_rand - y0_wcs;
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Shuffle source no. "<<i+1<<" (name="<<source->GetName()<<"), pos("<<x0_wcs<<","<<y0_wcs<<"), shuffle pos("<<x0_wcs_rand<<","<<y0_wcs_rand<<"), offset("<<offsetX<<","<<offsetY<<"), offset/arcsec("<<offsetX*3600.<<","<<offsetY*3600<<")");
+				#endif
+			}
+			else{
+				GetRandPosInAnnulus(offsetX,offsetY);
+				offsetX/= 3600;//convert to deg
+				offsetY/= 3600;//convert to deg
+			}	
+
+		}//close if shuffleSources
+
+		/*
 		if(shuffleSources){
 			double A = 2/(shuffleRMax*shuffleRMax - shuffleRMin*shuffleRMin);
 			double r= sqrt(2*gRandom->Uniform()/A + shuffleRMin*shuffleRMin);
@@ -2101,9 +2200,10 @@ int ReadSourceData(std::string filename,int catalogIndex)
 			offsetX/= 3600;//convert in deg
 			offsetY/= 3600;//convert in deg
 		}
+		*/
 
 		//Fill source pars
-		if(FillSourcePars(m_catalog_source_pars[catalogIndex],source,catalogIndex,sourceIndex,-1,wcs,wcsType,false,offsetX,offsetY)<0){
+		if(FillSourcePars(m_catalog_source_pars[catalogIndex],source,catalogIndex,sourceIndex,-1,wcs,wcsType,shuffleSources,offsetX,offsetY)<0){
 			#ifdef LOGGING_ENABLED	
 				ERROR_LOG("Failed to fill pars for source no. "<<i+1<<" (name="<<source->GetName()<<", collectioIndex="<<catalogIndex<<")!");
 			#endif
@@ -2306,8 +2406,6 @@ int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogInd
 	//Append this source pars to collection
 	pars.push_back(sourcePars);
 
-
-
 	//## Fill pars for nested sources (if any)
 	if(hasNestedSources){
 		std::vector<Source*> nestedSources= aSource->GetNestedSources();
@@ -2324,6 +2422,156 @@ int FillSourcePars(std::vector<SourcePars*>& pars,Source* aSource,int catalogInd
 	return 0;
 
 }//close FillSourcePars()
+
+
+int ReadRegionData(std::string filelist)
+{
+	//Check filenames
+	std::ifstream fileStream(filelist);	
+	std::string line;
+	if (fileStream.fail() || !fileStream.is_open()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to open file "<<filelist<<" for reading...");
+		#endif
+		return -1;
+	}
+
+	//Store filenames present in lists
+	std::vector<std::string> fileNames;
+	std::string filename= "";
+	while (std::getline(fileStream, line)) {
+  	std::istringstream iss(line);
+    if (!(iss >> filename)) { 
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read line from file "<<filelist<<"!");
+			#endif
+			return -1; 
+		}
+    fileNames.push_back(filename);
+	}//end file read
+				
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<fileNames.size()<<" files present...");
+	#endif
+
+
+	//Initialize region boundary 
+	int nFiles= static_cast<int>(fileNames.size());
+	for(int i=0;i<nFiles;i++){
+		m_regions.push_back(std::vector<DS9Region*>());
+	}
+
+	//Finally reading region data
+	for(size_t i=0;i<fileNames.size();i++){
+		if(ReadCatalogRegionData(fileNames[i],i)<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read region data for file no. "<<i+1<<"!");
+			#endif
+			return -1;
+		}
+	}//end loop files
+
+	//Compute region contours and check that only one region is given. Multiple region not supported.
+	for(size_t i=0;i<m_regions.size();i++)
+	{
+		if(m_regions[i].size()!=1){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("More than one region given for catalog file no. "<<i+1<<" (hint: multi-region not supported)!");
+			#endif
+			return -1;
+		}
+		
+		//Compute contour
+		Contour* contour= m_regions[i][0]->GetContour(true);
+		if(!contour){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to get contour for catalog region "<<i+1<<"!");
+			#endif
+			return -1;
+		}
+		m_regionContours.push_back(contour);
+
+	}//end loop catalog regions
+
+	return 0;
+
+}//close ReadRegionData()
+
+int ReadCatalogRegionData(std::string filename,int catalogIndex)
+{
+	//Read and parse DS9 regions
+	if (DS9RegionParser::Parse(m_regions[catalogIndex],filename)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read and parse DS9 region file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+
+	//Check if empty
+	if(m_regions[catalogIndex].empty()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No regions read from file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+	else{
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("#"<<m_regions[catalogIndex].size()<<" regions read from file "<<filename<<"...");
+		#endif
+	}
+
+	return 0;
+
+}//close ReadCatalogRegionData()
+
+int GetRandPosInAnnulus(double& offsetX,double& offsetY)
+{
+	//NB: Generate uniform in annulus (e.g. see https://stackoverflow.com/questions/9048095/create-random-number-within-an-annulus)
+	//    Offset returned in arcsec
+	double A = 2/(shuffleRMax*shuffleRMax - shuffleRMin*shuffleRMin);
+	double r= sqrt(2*gRandom->Uniform()/A + shuffleRMin*shuffleRMin);
+	double theta= gRandom->Uniform(0,2*TMath::Pi());
+	offsetX= r*cos(theta);
+	offsetY= r*sin(theta);
+	
+	return 0;
+
+}//close GetRandPosInAnnulus()
+
+
+int GetRandPosInRegion(double& x0,double& y0,Contour* contour,double xmin,double xmax,double ymin,double ymax,int nMaxGen)
+{
+	//NB: Position returned in deg
+	int nGen= 0;
+	x0= 0;
+	y0= 0;
+	bool isGoodGen= false;
+
+	while(nGen<nMaxGen) 
+	{
+		double xrand= gRandom->Uniform(xmin,xmax);				
+		double yrand= gRandom->Uniform(ymin,ymax);				
+		bool isInsideContour= contour->IsPointInsideContour(xrand,yrand);
+		if(isInsideContour){
+			x0= xrand;	
+			y0= yrand;		
+			isGoodGen= true;
+			break;
+		}
+		nGen++;
+
+	}//end while
+
+	if(!isGoodGen){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to generate pos in region (nGen="<<nGen<<">="<<nMaxGen<<")!");
+		#endif
+		return -1;
+	}
+
+	return 0;
+
+}//close GetRandPosInRegion()
 
 void Save()
 {
