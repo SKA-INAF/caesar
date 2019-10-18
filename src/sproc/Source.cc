@@ -1201,6 +1201,11 @@ int Source::MergeSource(Source* aSource,bool copyPixels,bool checkIfAdjacent,boo
 		this->ComputeMorphologyParams();
 	}
 
+	//At this stage fitting information (if present) is invalid (there are new pixels that have not been fitted)
+	this->m_HasFitInfo= false;
+	this->m_fitStatus= eFitUnknownStatus;
+	this->m_fitPars.Reset();
+
 	return 0;
 	
 }//close MergeSource()
