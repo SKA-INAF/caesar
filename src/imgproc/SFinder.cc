@@ -4452,8 +4452,8 @@ int SFinder::PrepareWorkerTasks()
 	long int tileSizeY= Ny;
 	double tileStepSizeX= 1;
 	double tileStepSizeY= 1;
-	long int tileOverlapX= 0;
-	long int tileOverlapY= 0;
+	float tileOverlapX= 0;
+	float tileOverlapY= 0;
 	if(m_splitInTiles){
 		tileSizeX= m_TileSizeX;
 		tileSizeY= m_TileSizeY;
