@@ -201,8 +201,8 @@ int ConfigParser::RegisterPredefinedOptions()
 		REGISTER_OPTION(tileStepSizeY,double,1,0.001,1);
 		REGISTER_OPTION(mergeSourcesAtEdge,bool,true,false,true);
 		REGISTER_OPTION(mergeSources,bool,false,false,true);
-		REGISTER_OPTION(mergeCompactSources,bool,false,false,true);
-		REGISTER_OPTION(mergeExtendedSources,bool,false,false,true);
+		//REGISTER_OPTION(mergeCompactSources,bool,false,false,true);
+		//REGISTER_OPTION(mergeExtendedSources,bool,false,false,true);
 
 		//======================
 		//==  Logger options  ==
