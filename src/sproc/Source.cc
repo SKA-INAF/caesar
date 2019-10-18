@@ -1186,25 +1186,28 @@ int Source::MergeSource(Source* aSource,bool copyPixels,bool checkIfAdjacent,boo
 		}//close if found
 	}//close if sim type
 
-	//At this stage stats (mean/median/etc...) are invalid and need to be recomputed if desired
-	this->SetHasStats(false);//set stats to false to remember that current stats are not valid anymore and need to be recomputed
-	if(computeStatPars){
-		bool computeRobustStats= true;
-		bool forceRecomputing= false;//no need to re-compute moments (already updated in AddPixel())
-		if(sumMatchingPixels) forceRecomputing= true;
-		this->ComputeStats(computeRobustStats,forceRecomputing);
-	}
+	//Invalidate stats, pars if some pixels have been merged
+	if(nMergedPixels>0){
+		//At this stage stats (mean/median/etc...) are invalid and need to be recomputed if desired
+		this->SetHasStats(false);//set stats to false to remember that current stats are not valid anymore and need to be recomputed
+		if(computeStatPars){
+			bool computeRobustStats= true;
+			bool forceRecomputing= false;//no need to re-compute moments (already updated in AddPixel())
+			if(sumMatchingPixels) forceRecomputing= true;
+			this->ComputeStats(computeRobustStats,forceRecomputing);
+		}
 
-	//Contour and other parameters are also invalid
-	this->SetHasParameters(false);
-	if(computeMorphPars){
-		this->ComputeMorphologyParams();
-	}
+		//Contour and other parameters are also invalid
+		this->SetHasParameters(false);
+		if(computeMorphPars){
+			this->ComputeMorphologyParams();
+		}
 
-	//At this stage fitting information (if present) is invalid (there are new pixels that have not been fitted)
-	this->m_HasFitInfo= false;
-	this->m_fitStatus= eFitUnknownStatus;
-	this->m_fitPars.Reset();
+		//At this stage fitting information (if present) is invalid (there are new pixels that have not been fitted)
+		this->m_HasFitInfo= false;
+		this->m_fitStatus= eFitUnknownStatus;
+		this->m_fitPars.Reset();
+	}
 
 	return 0;
 	
