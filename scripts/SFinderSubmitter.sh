@@ -419,8 +419,8 @@ WTSCALE_MIN="3"
 WTSCALE_MAX="6"
 MERGE_EDGE_SOURCES="false"
 MERGE_SOURCES="true"
-MERGE_COMPACT_SOURCES="true"
-MERGE_EXTENDED_SOURCES="true"
+#MERGE_COMPACT_SOURCES="true" # REMOVED FROM OPTION LIST
+#MERGE_EXTENDED_SOURCES="true" # REMOVED FROM OPTION LIST
 SAVE_INPUT_MAP="false"
 SAVE_BKG_MAP="false"
 SAVE_RMS_MAP="false"
@@ -1258,10 +1258,10 @@ generate_config(){
 		echo "useTileOverlap = $TILE_OVERLAP                     | Allow for tile overlap"
     echo "tileStepSizeX = $TILE_STEP                         | Tile step size fraction X to partition the input image (1=no overlap,0.5=half overlap, ...)"
     echo "tileStepSizeY = $TILE_STEP												 | Tile step size fraction Y to partition the input image (1=no overlap,0.5=half overlap, ...)"
-		echo "mergeSourcesAtEdge = $MERGE_EDGE_SOURCES           | Merge sources found at tile edge by each workers (default=true)"
-		echo "mergeSources = $MERGE_SOURCES								       | Merge overlapping sources found by each workers (default=false)"
-		echo "mergeCompactSources = $MERGE_COMPACT_SOURCES       | Merge overlapping compact sources found by each workers (default=false)"
-		echo "mergeExtendedSources = $MERGE_EXTENDED_SOURCES     | Merge overlapping extended/compact sources found by each workers (default=false)"
+		echo "mergeSourcesAtEdge = $MERGE_EDGE_SOURCES           | Merge sources found at tile edge by each worker (default=true)"
+		echo "mergeSources = $MERGE_SOURCES								       | Merge overlapping sources found by each worker (default=false)"
+		#echo "mergeCompactSources = $MERGE_COMPACT_SOURCES       | Merge overlapping compact sources found by each workers (default=false)"
+		#echo "mergeExtendedSources = $MERGE_EXTENDED_SOURCES     | Merge overlapping extended/compact sources found by each workers (default=false)"
     echo '###'
     echo '###'
     echo '//=============================='
