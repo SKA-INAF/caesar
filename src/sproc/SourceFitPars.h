@@ -1161,7 +1161,13 @@ class SourceFitPars : public TObject {
 		*/
 		void SetFitQuality(int flag){fitQuality=flag;}
 
-		
+		/**
+		* \brief Reset fit pars
+		*/
+		void Reset()
+		{
+			
+		};
 
 	private:
 
