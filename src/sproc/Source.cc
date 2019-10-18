@@ -1207,7 +1207,8 @@ int Source::MergeSource(Source* aSource,bool copyPixels,bool checkIfAdjacent,boo
 		this->m_HasFitInfo= false;
 		this->m_fitStatus= eFitUnknownStatus;
 		this->m_fitPars.Reset();
-	}
+
+	}//close if
 
 	return 0;
 	
