@@ -77,6 +77,8 @@ void Usage(char* exeName)
 	cout<<"-t, --struebins=[STRUE_BINS] \t True flux bins (set equal to rec bins if not provided)"<<endl;
 	cout<<"-w, --useErrorsInChi2 \t If enabled, include bin errors in chi2 definition, otherwise set all errors to 1"<<endl;
 	cout<<"-L, --likelihoodFit \t If enabled, minimize -log likelihood"<<endl;
+	cout<<"-n, --freq=[FREQ] \t Data frequency in GHz used to convert source count literature fit models (default=1.4 GHz)"<<endl;	
+	cout<<"-N, --sindex=[SPECTRAL_INDEX] \t Data frequency spectral index used to convert source count literature fit models (default=-0.9)"<<endl;
 	cout<<"-v, --verbosity=[LEVEL] \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	cout<<"=============================="<<endl;
 
@@ -107,6 +109,8 @@ static const struct option options_tab[] = {
 	{ "struebins", required_argument, 0, 't' },
 	{ "useErrorsInChi2", no_argument, 0, 'w' },
 	{ "likelihoodFit", no_argument, 0, 'L' },	
+	{ "freq", required_argument, 0, 'n' },
+	{ "sindex", required_argument, 0, 'N' },	
 	{ "interactive", no_argument, 0, 'I' },
   {(char*)0, (int)0, (int*)0, (int)0}
 };
@@ -153,6 +157,8 @@ bool gUseLikelihoodFit= false;
 int gNRandSamples= 100;
 double gArea= 37.7;//in deg^2
 double gNormSpectralIndex= 2.5;
+double gDataFrequency= 1.4;//GHz
+double gDataSpectralIndex= -0.9;
 
 //Globar vars
 TFile* inputFile= 0;
@@ -304,7 +310,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:H:o:v:Ig:G:l:c:C:e:b:r:E:B:R:S:s:d:t:uwL",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:H:o:v:Ig:G:l:c:C:e:b:r:E:B:R:S:s:d:t:uwLn:N:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -485,6 +491,16 @@ int ParseOptions(int argc, char *argv[])
 			case 'L':	
 			{
 				gUseLikelihoodFit= true;
+				break;
+			}
+			case 'n':	
+			{	
+				gDataFrequency= atof(optarg);
+				break;
+			}
+			case 'N':	
+			{	
+				gDataSpectralIndex= atof(optarg);
 				break;
 			}
 			case 'v':	
@@ -1179,12 +1195,21 @@ void Draw()
 	trueDiffModelCounts->SetLineColor(kMagenta);
 	//trueDiffModelCounts->Draw("L hist same");
 
+	double refFreq= 1.4;//GHz
+	double freqScaleFactor= pow(refFreq/gDataFrequency,gDataSpectralIndex);
+	double lgFreqScaleFactor= log10(freqScaleFactor);
+	cout<<"refFreq(GHz)="<<refFreq<<", freq(GHz)="<<gDataFrequency<<", alpha="<<gDataSpectralIndex<<", scaleFactor="<<freqScaleFactor<<", lgFreqScaleFactor="<<lgFreqScaleFactor<<endl;
+
 	TF1* expDataFitFcn_Katgert= new TF1(
 		"expDataFitFcn_Katgert",
-		"pow(10,([0] + [1]*(x+3) + [2]*pow(x+3,2) + [3]*pow(x+3,3)) )",
+		//"pow(10,([0] + [1]*(x+3) + [2]*pow(x+3,2) + [3]*pow(x+3,3)) )",
+		//"pow(10,([0] + [1]*([4]+x+3) + [2]*pow([4]+x+3,2) + [3]*pow([4]+x+3,3)) )",
+		"pow(10,([0] + [1]*([4]+x+3) + [2]*pow([4]+x+3,2) + [3]*pow([4]+x+3,3)) -2.5*[4] )",
 		gTrueBins[0],gTrueBins[gTrueBins.size()-1]
 	);
-	expDataFitFcn_Katgert->SetParameters(gSourceCountsExpDataFitPars_Katgert.data());
+	//expDataFitFcn_Katgert->SetParameters(gSourceCountsExpDataFitPars_Katgert.data());
+	for(size_t k=0;k<gSourceCountsExpDataFitPars_Katgert.size();k++) expDataFitFcn_Katgert->SetParameter(k,gSourceCountsExpDataFitPars_Katgert[k]);
+	expDataFitFcn_Katgert->SetParameter(gSourceCountsExpDataFitPars_Katgert.size(),lgFreqScaleFactor);
 	expDataFitFcn_Katgert->SetLineColor(kBlack);
 	expDataFitFcn_Katgert->SetLineStyle(kDashed);
 	expDataFitFcn_Katgert->Draw("l same");
@@ -1192,10 +1217,13 @@ void Draw()
 
 	TF1* expDataFitFcn_Hopkins= new TF1(
 		"expDataFitFcn_Hopkins",
-		"pow(10,([0] + [1]*(x+3) + [2]*pow(x+3,2) + [3]*pow(x+3,3) + [4]*pow(x+3,4) + [5]*pow(x+3,5) + [6]*pow(x+3,6) ) )",
+		//"pow(10,([0] + [1]*(x+3) + [2]*pow(x+3,2) + [3]*pow(x+3,3) + [4]*pow(x+3,4) + [5]*pow(x+3,5) + [6]*pow(x+3,6) ) )",
+		"pow(10,([0] + [1]*([4]+x+3) + [2]*pow([4]+x+3,2) + [3]*pow([4]+x+3,3) + [4]*pow([4]+x+3,4) + [5]*pow([4]+x+3,5) + [6]*pow([4]+x+3,6) ) -2.5*[4] )",
 		gTrueBins[0],gTrueBins[gTrueBins.size()-1]
 	);
-	expDataFitFcn_Hopkins->SetParameters(gSourceCountsExpDataFitPars_Hopkins.data());
+	//expDataFitFcn_Hopkins->SetParameters(gSourceCountsExpDataFitPars_Hopkins.data());
+	for(size_t k=0;k<gSourceCountsExpDataFitPars_Hopkins.size();k++) expDataFitFcn_Hopkins->SetParameter(k,gSourceCountsExpDataFitPars_Hopkins[k]);
+	expDataFitFcn_Hopkins->SetParameter(gSourceCountsExpDataFitPars_Hopkins.size(),lgFreqScaleFactor);
 	expDataFitFcn_Hopkins->SetLineColor(kBlack);
 	expDataFitFcn_Hopkins->SetLineStyle(kDotted);
 	expDataFitFcn_Hopkins->Draw("l same");
@@ -1212,7 +1240,7 @@ void Draw()
 	TLegend* DiffCountsPlotLegend2= new TLegend(0.1,0.6,0.3,0.8);	
 	DiffCountsPlotLegend2->SetTextSize(0.035);
 	DiffCountsPlotLegend2->SetTextFont(52);
-	DiffCountsPlotLegend2->SetHeader("Exp data fit @ 1.4 GHz)");
+	DiffCountsPlotLegend2->SetHeader("Exp data fit @ 1.4 GHz");
 	DiffCountsPlotLegend2->AddEntry(expDataFitFcn_Hopkins,"Hopkins et al. (2003)","L");
 	DiffCountsPlotLegend2->AddEntry(expDataFitFcn_Katgert,"Katgert et al. (1998)","L");
 	DiffCountsPlotLegend2->Draw("same");
