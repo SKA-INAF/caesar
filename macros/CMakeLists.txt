@@ -21,10 +21,12 @@ file(GLOB MACRO_FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/ReadWRCatObjects.C
 	${CMAKE_CURRENT_SOURCE_DIR}/ReadMGPSObjects.C
 	${CMAKE_CURRENT_SOURCE_DIR}/ReadSelavyObjects.C
-	${CMAKE_CURRENT_SOURCE_DIR}/ReadAegeanObjects.C
+	${CMAKE_CURRENT_SOURCE_DIR}/ReadAegeanObjects.C	
+	${CMAKE_CURRENT_SOURCE_DIR}/ReadCaesarObjects.C
 	${CMAKE_CURRENT_SOURCE_DIR}/WriteSourceJsonCatalog.C
 	${CMAKE_CURRENT_SOURCE_DIR}/MakeCircleRegionGrid.C	
 	${CMAKE_CURRENT_SOURCE_DIR}/DumpSourceCoordsForMoidScript.C
+	${CMAKE_CURRENT_SOURCE_DIR}/DrawSourcePosDiff.C
 	#${CMAKE_CURRENT_SOURCE_DIR}/SelectSimSourcesInMosaic.C
 )
 
