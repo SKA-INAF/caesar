@@ -143,7 +143,8 @@ std::map<std::string,int> InitSimbadObjIdMap() {
 		std::pair<std::string,int> ("RC?",eSTAR),		
 		std::pair<std::string,int> ("Ro*",eSTAR),		
 		std::pair<std::string,int> ("a2*",eSTAR),		
-		std::pair<std::string,int> ("Psr",eSTAR),		
+		//std::pair<std::string,int> ("Psr",eSTAR),		
+		std::pair<std::string,int> ("Psr",ePULSAR),		
 		std::pair<std::string,int> ("BY*",eSTAR),		
 		std::pair<std::string,int> ("RS*",eSTAR),		
 		std::pair<std::string,int> ("Pu*",eSTAR),		
@@ -336,7 +337,8 @@ std::map<std::string,int> InitSimbadObjSubIdMap() {
 		std::pair<std::string,int> ("RC?",eSTAR_VARIABLE),		
 		std::pair<std::string,int> ("Ro*",eSTAR_VARIABLE),		
 		std::pair<std::string,int> ("a2*",eSTAR_VARIABLE),		
-		std::pair<std::string,int> ("Psr",eSTAR_PULSAR),		
+		//std::pair<std::string,int> ("Psr",eSTAR_PULSAR),
+		std::pair<std::string,int> ("Psr",ePULSAR),		
 		std::pair<std::string,int> ("BY*",eSTAR_VARIABLE),		
 		std::pair<std::string,int> ("RS*",eSTAR_VARIABLE),		
 		std::pair<std::string,int> ("Pu*",eSTAR_VARIABLE),		
@@ -492,8 +494,10 @@ std::map<std::string,int> InitNEDObjIdMap() {
 		std::pair<std::string,int> ("!WD*",eSTAR),//Galactic White dwarf
 		std::pair<std::string,int> ("WR*",eSTAR),//Wolf-Rayet star
 		std::pair<std::string,int> ("!WR*",eSTAR),//Galactic Wolf-Rayet star
-		std::pair<std::string,int> ("Psr",eSTAR),//Pulsar
-		std::pair<std::string,int> ("!Psr",eSTAR),//Galactic Pulsar
+		//std::pair<std::string,int> ("Psr",eSTAR),//Pulsar
+		//std::pair<std::string,int> ("!Psr",eSTAR),//Galactic Pulsar
+		std::pair<std::string,int> ("Psr",ePULSAR),//Pulsar
+		std::pair<std::string,int> ("!Psr",ePULSAR),//Galactic Pulsar
 		std::pair<std::string,int> ("SN",eSTAR),//Supernova
 		std::pair<std::string,int> ("!SN",eSTAR),//Galactic Supernova		
 		
@@ -597,8 +601,10 @@ std::map<std::string,int> InitNEDObjSubIdMap() {
 		std::pair<std::string,int> ("!WD*",eSTAR_WD),//Galactic White dwarf
 		std::pair<std::string,int> ("WR*",eSTAR_WR),//Wolf-Rayet star
 		std::pair<std::string,int> ("!WR*",eSTAR_WR),//Galactic Wolf-Rayet star
-		std::pair<std::string,int> ("Psr",eSTAR_PULSAR),//Pulsar
-		std::pair<std::string,int> ("!Psr",eSTAR_PULSAR),//Galactic Pulsar
+		//std::pair<std::string,int> ("Psr",eSTAR_PULSAR),//Pulsar
+		//std::pair<std::string,int> ("!Psr",eSTAR_PULSAR),//Galactic Pulsar
+		std::pair<std::string,int> ("Psr",ePULSAR),//Pulsar
+		std::pair<std::string,int> ("!Psr",ePULSAR),//Galactic Pulsar
 		std::pair<std::string,int> ("SN",eSTAR_SUPERNOVA),//Supernova
 		std::pair<std::string,int> ("!SN",eSTAR_SUPERNOVA),//Galactic Supernova		
 		
@@ -1250,7 +1256,7 @@ int AstroObjectParser::ParseAegeanData(std::vector<AstroObject*>& astroObjects,s
 int AstroObjectParser::ParseAegeanObjectData(AstroObject& astroObject,std::string data,char delimiter)
 {
 	//============================
-	//==    SELAVY FORMAT
+	//==    AEGEAN FORMAT
 	//============================
 	//- Field 24: Object name
 	//- Field 6: Ra
@@ -1357,6 +1363,240 @@ int AstroObjectParser::ParseAegeanObjectData(AstroObject& astroObject,std::strin
 	return 0;
 
 }//close ParseAegeanObjectData()
+
+
+
+
+int AstroObjectParser::ParseCaesarData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter)
+{
+	// Init data
+	astroObjects.clear();	
+
+	// Read region file and get region text lines
+	std::vector<std::string> raw_data;
+	if(Read(raw_data,filename)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read region data from file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+
+	// Check lines
+	if(raw_data.empty()){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Empty data list read from file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+	
+
+	// Extract astro objects from parsed lines
+	bool parseErr= false;
+
+	for(size_t i=0;i<raw_data.size();i++)
+	{
+		AstroObject* astroObject= new AstroObject;
+		if(ParseCaesarObjectData(*astroObject,raw_data[i],delimiter)<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to parse astro object from data line no. "<<i+1<<", stop parsing and return error!");
+			#endif
+			parseErr= true;
+			break;
+		}		
+
+		//Append region to list
+		astroObjects.push_back(astroObject);
+
+	}//end loop data
+
+	//Clear data in case of errors
+	if(parseErr){
+		CodeUtils::DeletePtrCollection<AstroObject>(astroObjects);
+		return -1;
+	}
+	
+	return 0;
+
+}//close ParseAegeanData()
+
+int AstroObjectParser::ParseCaesarObjectData(AstroObject& astroObject,std::string data,char delimiter)
+{
+	//============================
+	//==    CAESAR FORMAT
+	//============================
+	//- Field 0+2: Object name (finder name)
+	//- Field 59: Object name (astro) (if augmented catalog given)
+	//- Field 8: Ra
+	//- Field 9: Dec
+	//- Field 10: RaErr
+	//- Field 11: DecErr
+	//- Field 12: Freq
+	//- Field 13: PeakFlux
+	//- Field 14: PeakFluxErr
+	//- Field 15: Flux
+	//- Field 16: FluxErr
+	//- Field 26,27,28: bmaj, bmin, pa
+	//- Field 35,36,37: deconv bmaj, bmin, pa (NOT NEEDED)
+	//- Field 48,49,50,51,52: hasSpectralIndex, isMultiMatch, alpha, alphaErr,isFitted (if augmented catalog given) 
+	//=============================
+
+
+	//Check input
+	if(data==""){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty catalog line given, nothing to be parsed!");
+		#endif
+		return -1;
+	}
+		
+	//Split line using delimiter
+	std::vector<std::string> fields;
+	if(delimiter==' ') fields= CodeUtils::SplitStringOnWhitespaces(data);
+	else fields= CodeUtils::SplitStringOnPattern(data,delimiter);
+	size_t nRequestedFields= 48;
+	size_t nRequestedFields_augmVersion= 60;
+	bool isAugmentedCatalog= false;
+
+	if(fields.empty()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty fields parsed ("<<fields.size()<<"!");
+		#endif
+		return -1;
+	}
+	if(fields.size()!=nRequestedFields){
+		if(fields.size()==nRequestedFields_augmVersion){
+			isAugmentedCatalog= true;
+		}
+		else{
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Empty or invalid number of fields parsed ("<<fields.size()<<" found when "<<nRequestedFields<<" (or "<<nRequestedFields_augmVersion<<" expected)!");
+			#endif
+			return -1;
+		}
+	}
+
+	//Parse object name
+	std::string islandName_str= fields[0];
+	std::string compId_str= fields[2];
+	CodeUtils::RemovePatternInString(islandName_str,"\t");
+	CodeUtils::RemovePatternInString(compId_str,"\t");
+	astroObject.name= islandName_str + std::string("_fitcomp") + compId_str;
+	
+	//Set object identifier to RADIO source if no augmented data are present
+	if(isAugmentedCatalog){
+		std::string matchedObjNames_str= fields[59];
+		std::string objClassId_str= fields[56];
+		std::string objClassSubId_str= fields[57];	
+		CodeUtils::StripBlankSpaces(objClassId_str);
+		CodeUtils::StripBlankSpaces(objClassSubId_str);
+		int objClassId= atoi(objClassId_str.c_str());
+		int objClassSubId= atoi(objClassSubId_str.c_str());
+
+		astroObject.id= objClassId;
+		astroObject.subid= objClassSubId;
+		astroObject.id_str= matchedObjNames_str;
+	}
+	else{
+		astroObject.id_str= "";
+		astroObject.id= eRADIO_OBJ;
+		astroObject.subid= eRADIO_OBJ;
+	}
+
+	//Parse coordinates
+	std::string ra_str= fields[8];
+	CodeUtils::StripBlankSpaces(ra_str);
+	astroObject.x= atof(ra_str.c_str());
+
+	std::string dec_str= fields[9];
+	CodeUtils::StripBlankSpaces(dec_str);
+	astroObject.y= atof(dec_str.c_str());
+
+	//Parse coordinate errors
+	std::string raErr_str= fields[10];
+	CodeUtils::StripBlankSpaces(raErr_str);
+	astroObject.xerr= atof(raErr_str.c_str());
+
+	std::string decErr_str= fields[11];
+	CodeUtils::StripBlankSpaces(decErr_str);
+	astroObject.yerr= atof(decErr_str.c_str());
+
+	//Set frequency 
+	std::string freq_str= fields[12];
+	CodeUtils::StripBlankSpaces(freq_str);
+	astroObject.nu= atof(freq_str.c_str());
+	astroObject.dnu= 0;//unknown
+	astroObject.hasFrequencyInfo= true;
+
+
+	//Parse flux and errors
+	std::string peakFlux_str= fields[13];
+	std::string peakFluxErr_str= fields[14];
+	std::string fluxDensity_str= fields[15];
+	std::string fluxDensityErr_str= fields[16];
+	std::string beamArea_str= fields[19];
+	CodeUtils::StripBlankSpaces(peakFlux_str);
+	CodeUtils::StripBlankSpaces(peakFluxErr_str);
+	CodeUtils::StripBlankSpaces(fluxDensity_str);
+	CodeUtils::StripBlankSpaces(fluxDensityErr_str);
+	CodeUtils::StripBlankSpaces(beamArea_str);
+	double beamArea= atof(beamArea_str.c_str());
+
+	astroObject.peakFlux= atof(peakFlux_str.c_str());
+	astroObject.peakFluxErr= atof(peakFluxErr_str.c_str());
+	astroObject.fluxDensity= atof(fluxDensity_str.c_str());
+	astroObject.fluxDensityErr= atof(fluxDensityErr_str.c_str());
+	astroObject.flux= astroObject.fluxDensity/beamArea;
+	astroObject.fluxErr= astroObject.fluxDensityErr/beamArea;
+	astroObject.hasFluxInfo= true;
+
+
+	//Parse ellipse info
+	std::string bmaj_str= fields[26];
+	std::string bmin_str= fields[27];
+	std::string pa_str= fields[28];
+	CodeUtils::StripBlankSpaces(bmaj_str);
+	CodeUtils::StripBlankSpaces(bmin_str);
+	CodeUtils::StripBlankSpaces(pa_str);
+	astroObject.bmaj= atof(bmaj_str.c_str());
+	astroObject.bmin= atof(bmin_str.c_str());
+	astroObject.pa= atof(pa_str.c_str());
+	astroObject.hasEllipseInfo= true;
+
+	//Parse deconv ellipse info
+	std::string bmaj_deconv_str= fields[35];
+	std::string bmin_deconv_str= fields[36];
+	std::string pa_deconv_str= fields[37];
+	CodeUtils::StripBlankSpaces(bmaj_deconv_str);
+	CodeUtils::StripBlankSpaces(bmin_deconv_str);
+	CodeUtils::StripBlankSpaces(pa_deconv_str);
+	astroObject.bmaj_deconv= atof(bmaj_deconv_str.c_str());
+	astroObject.bmin_deconv= atof(bmin_deconv_str.c_str());
+	astroObject.pa_deconv= atof(pa_deconv_str.c_str());
+	astroObject.hasDeconvEllipseInfo= true;
+
+	//Parse spectral index data
+	if(isAugmentedCatalog){
+		std::string hasSpectralIndex_str= fields[48];
+		std::string isMultiMatch_str= fields[49];
+		std::string alpha_str= fields[50];
+		std::string alphaErr_str= fields[51];
+		std::string isFitted_str= fields[52];
+		CodeUtils::StripBlankSpaces(hasSpectralIndex_str);
+		CodeUtils::StripBlankSpaces(isMultiMatch_str);
+		CodeUtils::StripBlankSpaces(alpha_str);
+		CodeUtils::StripBlankSpaces(alphaErr_str);
+		CodeUtils::StripBlankSpaces(isFitted_str);
+		astroObject.hasSpectralIndexInfo= atoi(hasSpectralIndex_str.c_str());
+		astroObject.isMultiSourceMatchIndex= atoi(isMultiMatch_str.c_str());
+		astroObject.isSpectralIndexFit= atoi(isFitted_str.c_str());
+		astroObject.spectralIndex= atof(alpha_str.c_str());
+		astroObject.spectralIndexErr= atof(alphaErr_str.c_str());
+	}
+
+	return 0;
+
+}//close ParseCaesarObjectData()
+
 
 
 
@@ -1898,9 +2138,10 @@ int AstroObjectParser::ParseATNFPsrObjectData(AstroObject& astroObject,std::stri
 	
 	//Set object identifier to STAR & subid to PULSAR
 	astroObject.id_str= "";
-	astroObject.id= eSTAR;
-	astroObject.subid= eSTAR_PULSAR;
-
+	//astroObject.id= eSTAR;
+	//astroObject.subid= eSTAR_PULSAR;
+	astroObject.id= ePULSAR;
+	astroObject.subid= ePULSAR;
 	
 	//Set confirmed to true as no information is given in the catalogue
 	astroObject.confirmed= true;
@@ -2008,7 +2249,7 @@ int AstroObjectParser::ParseWRCatObjectData(AstroObject& astroObject,std::string
 	CodeUtils::RemovePatternInString(name_str,"\t");
 	astroObject.name= name_str;
 	
-	//Set object identifier to STAR & subid to PULSAR
+	//Set object identifier to STAR & subid to Wolf-Rayet
 	astroObject.id_str= "";
 	astroObject.id= eSTAR;
 	astroObject.subid= eSTAR_WR;

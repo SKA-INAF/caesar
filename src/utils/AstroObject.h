@@ -135,7 +135,13 @@ class AstroObject : public TObject
 		double bmin_deconv;//arcsec
 		double pa_deconv;//deg
 
-	ClassDef(AstroObject,4)
+		bool hasSpectralIndexInfo;
+		bool isMultiSourceMatchIndex;
+		bool isSpectralIndexFit;
+		double spectralIndex;
+		double spectralIndexErr;
+
+	ClassDef(AstroObject,5)
 
 };//close class AstroObject
 

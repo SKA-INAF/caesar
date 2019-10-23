@@ -372,6 +372,7 @@ enum AstroObjectType
 	eHI_SHELL=20,
 	eNOVA=21,
 	eTRANSIENT_EVENT=22,	
+	ePULSAR=23,
 	
 	//Generic unclassified objects by wavelength
 	eRADIO_OBJ=100,
