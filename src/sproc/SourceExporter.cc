@@ -495,6 +495,7 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 		ss<<"# objClassSubId - Object class subid\n";
 
 		// - Astro crossmatched object names
+		ss<<"# hasMatchedObject - Bool flag indicating if source component has matched astro object\n";
 		ss<<"# matchedObjNames - Cross-matched astronomical object names\n";
 
 	}//close if
