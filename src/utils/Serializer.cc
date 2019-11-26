@@ -803,6 +803,7 @@ int Serializer::EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* sourc
 		source_pb.set_objlocationid(source->ObjLocationId);
 		source_pb.set_objclassid(source->ObjClassId);
 		source_pb.set_objclasssubid(source->ObjClassSubId);
+		source_pb.set_objconfirmed(source->ObjConfirmed);
 
 		//Set component object class ids
 		for(size_t i=0;i<(source->componentObjLocationIds).size();i++){
@@ -813,6 +814,9 @@ int Serializer::EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* sourc
 		}
 		for(size_t i=0;i<(source->componentObjClassSubIds).size();i++){
 			source_pb.add_componentobjclasssubid((source->componentObjClassSubIds)[i]);
+		}
+		for(size_t i=0;i<(source->componentObjConfirmed).size();i++){
+			source_pb.add_componentobjconfirmed((source->componentObjConfirmed)[i]);
 		}
 	
 		//Set blob field
@@ -1513,11 +1517,13 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 		if(source_pb.has_objlocationid()) source.ObjLocationId= source_pb.objlocationid();
 		if(source_pb.has_objclassid()) source.ObjClassId= source_pb.objclassid();		
 		if(source_pb.has_objclasssubid()) source.ObjClassSubId= source_pb.objclasssubid();
+		if(source_pb.has_objconfirmed()) source.ObjConfirmed= source_pb.objconfirmed();
 
 		//Set component object class ids
 		std::vector<int> compObjLocationIds;
 		std::vector<int> compObjClassIds;
 		std::vector<int> compObjClassSubIds;
+		std::vector<bool> compObjConfirmed;
 		for(int i=0;i<source_pb.componentobjlocationid_size();i++){
 			int objLocationId = source_pb.componentobjlocationid(i);
 			compObjLocationIds.push_back(objLocationId);
@@ -1529,10 +1535,15 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 		for(int i=0;i<source_pb.componentobjclasssubid_size();i++){
 			int objClassSubId = source_pb.componentobjclasssubid(i);
 			compObjClassSubIds.push_back(objClassSubId);
+		}	
+		for(int i=0;i<source_pb.componentobjconfirmed_size();i++){
+			bool objConfirmed = source_pb.componentobjconfirmed(i);
+			compObjConfirmed.push_back(objConfirmed);
 		}
 		source.componentObjLocationIds= compObjLocationIds;
 		source.componentObjClassIds= compObjClassIds;
 		source.componentObjClassSubIds= compObjClassSubIds;
+		source.componentObjConfirmed= compObjConfirmed;
 		
 
 		//Set blob fields
