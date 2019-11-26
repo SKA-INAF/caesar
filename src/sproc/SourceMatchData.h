@@ -661,7 +661,7 @@ class SourceMatchData : public TObject {
 		* \brief Get source match names
 		*/
 		int GetMatchedSourceNames(std::vector<std::string>& snames,int catalogIndex);
-
+		
 		/**
 		* \brief Get source match frequencies
 		*/

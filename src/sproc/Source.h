@@ -764,6 +764,7 @@ class Source : public Blob {
 		*/
 		int ComputeComponentObjClassId();
 
+
 	protected:
 		/**
 		* \brief Find source match by position
@@ -778,7 +779,8 @@ class Source : public Blob {
 		/**
 		* \brief Compute object class id from astro object data (if available)
 		*/
-		int ComputeObjClassId(int& id,int& subid,std::vector<AstroObject>& data);
+		int ComputeObjClassId(int& id,int& subid,bool& confirmed,std::vector<AstroObject>& data);
+		
 
 	private:
 	
@@ -799,11 +801,13 @@ class Source : public Blob {
 		int ObjLocationId;
 		int ObjClassId;
 		int ObjClassSubId;
+		bool ObjConfirmed;
 
 		//Component object type
 		std::vector<int> componentObjLocationIds;
 		std::vector<int> componentObjClassIds;
 		std::vector<int> componentObjClassSubIds;
+		std::vector<bool> componentObjConfirmed;
 
 	private:
 		double m_BeamFluxIntegral;
@@ -840,7 +844,7 @@ class Source : public Blob {
 		bool m_hasComponentAstroObjectData;
 		std::vector<std::vector<AstroObject>> m_componentAstroObjects;
 		
-		ClassDef(Source,7)
+		ClassDef(Source,8)
 
 	public:
 		

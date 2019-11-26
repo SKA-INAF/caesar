@@ -504,7 +504,6 @@ int SourceMatchData::GetMatchedSourceNames(std::vector<std::string>& snames,int 
 
 
 
-
 int SourceMatchData::GetMatchedSourceFrequency(int catalogIndex,double& freq,double& dfreq)
 {
 	freq= 0;

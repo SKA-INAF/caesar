@@ -153,11 +153,13 @@ void Source::Copy(TObject &obj) const
 	((Source&)obj).ObjClassId= ObjClassId;
 	((Source&)obj).ObjClassSubId= ObjClassSubId;
 	((Source&)obj).ObjLocationId= ObjLocationId;
+	((Source&)obj).ObjConfirmed= ObjConfirmed;
 	
 	//Set object component class ids
 	((Source&)obj).componentObjLocationIds= componentObjLocationIds;
 	((Source&)obj).componentObjClassIds= componentObjClassIds;
 	((Source&)obj).componentObjClassSubIds= componentObjClassSubIds;
+	((Source&)obj).componentObjConfirmed= componentObjConfirmed;
 	
 
 	//Delete first a previously existing vector
@@ -237,11 +239,13 @@ void Source::Init(){
 	ObjLocationId= eUNKNOWN_OBJECT_LOCATION;
 	ObjClassId= eUNKNOWN_OBJECT;
 	ObjClassSubId= eUNKNOWN_OBJECT;
+	ObjConfirmed= false;
 
 	//Init component object class ids
 	componentObjLocationIds.clear();
 	componentObjClassIds.clear();
 	componentObjClassSubIds.clear();
+	componentObjConfirmed.clear();
 
 }//close Init()
 
@@ -1768,7 +1772,7 @@ int Source::GetSpectralAxisInfo(double& val,double& dval,std::string& units)
 
 int Source::ComputeObjClassId()
 {
-	return ComputeObjClassId(ObjClassId,ObjClassSubId,m_astroObjects);
+	return ComputeObjClassId(ObjClassId,ObjClassSubId,ObjConfirmed,m_astroObjects);
 }
 
 
@@ -1792,14 +1796,17 @@ int Source::ComputeComponentObjClassId()
 	//Loop over components and compute 
 	componentObjClassIds.clear();
 	componentObjClassSubIds.clear();
+	componentObjConfirmed.clear();
 
 	for(size_t i=0;i<m_componentAstroObjects.size();i++)
 	{
 		int classId= eUNKNOWN_OBJECT;
 		int classSubId= eUNKNOWN_OBJECT; 
-		ComputeObjClassId(classId,classSubId,m_componentAstroObjects[i]);
+		bool confirmed= false;
+		ComputeObjClassId(classId,classSubId,confirmed,m_componentAstroObjects[i]);
 		componentObjClassIds.push_back(classId);
 		componentObjClassSubIds.push_back(classSubId);
+		componentObjConfirmed.push_back(confirmed);
 	}
 
 
@@ -1808,12 +1815,13 @@ int Source::ComputeComponentObjClassId()
 }//close ComputeComponentObjClassId()
 
 
-int Source::ComputeObjClassId(int& classId,int& classSubId,std::vector<AstroObject>& astroObjects)
+int Source::ComputeObjClassId(int& classId,int& classSubId,bool& confirmed,std::vector<AstroObject>& astroObjects)
 {
 	//Set to unknown if no astro object data present
 	if(astroObjects.empty()){
 		classId= eUNKNOWN_OBJECT; 
 		classSubId= eUNKNOWN_OBJECT; 
+		confirmed= false;
 		return 0;
 	}
 
@@ -1823,13 +1831,16 @@ int Source::ComputeObjClassId(int& classId,int& classSubId,std::vector<AstroObje
 	if(nObjs==1){
 		classId= astroObjects[0].id;
 		classSubId= astroObjects[0].subid;
+		confirmed= astroObjects[0].confirmed;
 	}
 	else{
 		std::vector<int> objIds;
-		std::vector<int> objSubIds;		
+		std::vector<int> objSubIds;
+		std::vector<bool> objConfirmeds;		
 		for(int i=0;i<nObjs;i++){
 			objIds.push_back(astroObjects[i].id);
 			objSubIds.push_back(astroObjects[i].subid);	
+			objConfirmeds.push_back(astroObjects[i].confirmed);
 		}
 		int nmodes_id= 0;
 		int mode_id= CodeUtils::FindVectorMode(objIds.begin(),objIds.end(),nmodes_id);
@@ -1839,11 +1850,18 @@ int Source::ComputeObjClassId(int& classId,int& classSubId,std::vector<AstroObje
 		else classId= eMULTI_CLASS_OBJECT;
 		if(nmodes_subid==1) classSubId= mode_subid;
 		else classSubId= eMULTI_CLASS_OBJECT;
+		int nmodes_confirmed= 0;
+		bool mode_confirmed= CodeUtils::FindVectorMode(objConfirmeds.begin(),objConfirmeds.end(),nmodes_confirmed);
+		if(nmodes_confirmed==1) confirmed= mode_confirmed;
+		else confirmed= false;
 	}
 
 	return 0;
 
 }//close ComputeObjClassId()
+
+
+
 
 int Source::AddAstroObject(AstroObject& astroObject)
 {

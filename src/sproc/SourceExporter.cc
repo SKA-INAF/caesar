@@ -138,6 +138,7 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 		ss<<"# objLocationId - Object location id (0=UNKNOWN,1=GALACTIC,2=EXTRAGALACTIC)\n";
 		ss<<"# objClassId - Object class id\n";
 		ss<<"# objClassSubId - Object class subid\n";
+		ss<<"# objConfirmed - Object confirmed\n";
 
 		// - Astro crossmatched object names
 		ss<<"# matchedObjNames - Cross-matched astronomical object names\n";
@@ -359,6 +360,7 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 		ss<<source->ObjLocationId<<delimiter;
 		ss<<source->ObjClassId<<delimiter;
 		ss<<source->ObjClassSubId<<delimiter;
+		ss<<source->ObjConfirmed<<delimiter;
 
 		//- Astro object cross matches
 		bool hasAstroObjs= source->HasAstroObjects();
@@ -493,6 +495,7 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 		ss<<"# objLocationId - Object location id (0=UNKNOWN,1=GALACTIC,2=EXTRAGALACTIC)\n";
 		ss<<"# objClassId - Object class id\n";
 		ss<<"# objClassSubId - Object class subid\n";
+		ss<<"# objClassConfirmed - Object confirmed\n";
 
 		// - Astro crossmatched object names
 		ss<<"# hasMatchedObject - Bool flag indicating if source component has matched astro object\n";
@@ -873,6 +876,12 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 				}
 				if(source->componentObjClassSubIds.size()==nComponents){
 					ss<<source->componentObjClassSubIds[k]<<delimiter;
+				}
+				else{
+					ss<<eUNKNOWN_OBJECT<<delimiter;
+				}
+				if(source->componentObjConfirmed.size()==nComponents){
+					ss<<source->componentObjConfirmed[k]<<delimiter;
 				}
 				else{
 					ss<<eUNKNOWN_OBJECT<<delimiter;
