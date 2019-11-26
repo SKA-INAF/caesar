@@ -1218,7 +1218,7 @@ void Draw()
 	TF1* expDataFitFcn_Hopkins= new TF1(
 		"expDataFitFcn_Hopkins",
 		//"pow(10,([0] + [1]*(x+3) + [2]*pow(x+3,2) + [3]*pow(x+3,3) + [4]*pow(x+3,4) + [5]*pow(x+3,5) + [6]*pow(x+3,6) ) )",
-		"pow(10,([0] + [1]*([4]+x+3) + [2]*pow([4]+x+3,2) + [3]*pow([4]+x+3,3) + [4]*pow([4]+x+3,4) + [5]*pow([4]+x+3,5) + [6]*pow([4]+x+3,6) ) -2.5*[4] )",
+		"pow(10,([0] + [1]*([7]+x+3) + [2]*pow([7]+x+3,2) + [3]*pow([7]+x+3,3) + [4]*pow([7]+x+3,4) + [5]*pow([7]+x+3,5) + [6]*pow([7]+x+3,6) ) -2.5*[7] )",
 		gTrueBins[0],gTrueBins[gTrueBins.size()-1]
 	);
 	//expDataFitFcn_Hopkins->SetParameters(gSourceCountsExpDataFitPars_Hopkins.data());
@@ -1240,7 +1240,8 @@ void Draw()
 	TLegend* DiffCountsPlotLegend2= new TLegend(0.1,0.6,0.3,0.8);	
 	DiffCountsPlotLegend2->SetTextSize(0.035);
 	DiffCountsPlotLegend2->SetTextFont(52);
-	DiffCountsPlotLegend2->SetHeader("Exp data fit @ 1.4 GHz");
+	TString legendText= Form("1.4 GHz data shifted @ %1.0f MHz",gDataFrequency*1000);
+	DiffCountsPlotLegend2->SetHeader(legendText);
 	DiffCountsPlotLegend2->AddEntry(expDataFitFcn_Hopkins,"Hopkins et al. (2003)","L");
 	DiffCountsPlotLegend2->AddEntry(expDataFitFcn_Katgert,"Katgert et al. (1998)","L");
 	DiffCountsPlotLegend2->Draw("same");
