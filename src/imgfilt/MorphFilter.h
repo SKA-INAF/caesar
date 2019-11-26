@@ -115,7 +115,7 @@ class MorphFilter : public TObject {
 		/**
 		* \brief Apply morph filter to image and return filtered image
 		*/
-		static Image* ComputeMorphFilter(Image* img,int morphOp,int kernSize=3,int structElementType=eMORPH_RECT,int niters=1);
+		static Image* ComputeMorphFilter(Image* img,int morphOp,int kernSize=3,int structElementType=eMORPH_RECT,int niters=1,bool skipZeroPixels=true);
 
 		/**
 		* \brief Find peaks in image by combining local peaks found with different dilation kernel sizes

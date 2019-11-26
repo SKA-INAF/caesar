@@ -491,7 +491,7 @@ Image* MorphFilter::ComputeMorphRecoFilter(Image* img,double baseline,int kernSi
 }//close ComputeMorphRecoFilter()
 
 
-Image* MorphFilter::ComputeMorphFilter(Image* img,int morphOp,int KernSize,int structElementType,int niters) 
+Image* MorphFilter::ComputeMorphFilter(Image* img,int morphOp,int KernSize,int structElementType,int niters,bool skipZeroPixels) 
 {
 	//Check input image
 	if(!img){
@@ -554,7 +554,7 @@ Image* MorphFilter::ComputeMorphFilter(Image* img,int morphOp,int KernSize,int s
 		for(int i=0;i<Nx;i++){
 			long int colId= i;
 			double binContent= img->GetPixelValue(i,j);
-			if(binContent==0) continue;
+			if(binContent==0 && skipZeroPixels) continue;
 			double w= mat_morph.at<double>(rowId,colId);			
 			morphImg->FillPixel(i,j,w);
 		}//end loop x
@@ -562,7 +562,7 @@ Image* MorphFilter::ComputeMorphFilter(Image* img,int morphOp,int KernSize,int s
 
 	return morphImg;
 
-}//close ComputeTopHatFilter()
+}//close ComputeMorphFilter()
 
 
 int MorphFilter::FindPeaks(std::vector<ImgPeak>& peakPoints,Image* img,std::vector<int> kernelSizes,int peakShiftTolerance,bool skipBorders,int peakKernelMultiplicityThr)
