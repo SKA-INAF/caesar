@@ -156,6 +156,7 @@ void SourceFitPars::Copy(TObject& obj) const
 	((SourceFitPars&)obj).fluxDensityErr = fluxDensityErr;	
 
 	((SourceFitPars&)obj).fitQuality = fitQuality;
+	((SourceFitPars&)obj).normFactor = normFactor;
 		
 	//Copy matrix
 	int nRows= fitCovarianceMatrix.GetNrows();
@@ -207,6 +208,7 @@ void SourceFitPars::Init()
 	fluxDensity= 0;
 	fluxDensityErr= 0;
 	fitQuality= eBadFit;
+	normFactor= 1.e+3;//standard norm factor from mJy to Jy
 		
 }//close Init()
 
@@ -281,8 +283,9 @@ double SourceFitPars::GetComponentFluxDensityErr(int componentId)
 	}
 	double Err= sqrt(Var);
 
-	//Convert to Jy
-	Err/= 1.e+3;
+	//Convert to Jy or scale by source max
+	//Err/= 1.e+3;
+	Err/= normFactor;
 
 	return Err;			
 

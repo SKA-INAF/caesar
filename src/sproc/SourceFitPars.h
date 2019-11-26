@@ -667,6 +667,16 @@ class SourceFitPars : public TObject {
 		}//close SetCovarianceMatrix()
 
 		/**
+		* \brief Set fit covariance matrix
+		*/
+		int SetCovarianceMatrix(TMatrixD& M)
+		{
+			if(M.GetNrows()<=0 || M.GetNcols()<=0) return -1;
+			fitCovarianceMatrix= M;
+			return 0;
+		}
+
+		/**
 		* \brief Remove component(s) from covariance matrix
 		*/
 		/*
@@ -769,6 +779,17 @@ class SourceFitPars : public TObject {
 		TMatrixD& GetFluxDensityDerivMatrix(){return fluxDensityDerivMatrix;}
 
 		/**
+		* \brief Set flux density derivative matrix
+		*/
+		int SetFluxDensityDerivMatrix(TMatrixD& M)
+		{	
+			if(M.GetNrows()<=0 || M.GetNcols()<=0) return -1;
+			fluxDensityDerivMatrix= M;
+			return 0;
+		}
+
+
+		/**
 		* \brief Print flux density derivative matrix
 		*/
 		void PrintFluxDensityDerivMatrix(){
@@ -799,7 +820,8 @@ class SourceFitPars : public TObject {
 			for(int i=0;i<nComponents;i++){
 				//Retrieve fitted pars for this component
 				double A= pars[i].GetParValue("A");
-				A*= 1.e+3;//convert to mJy
+				//A*= 1.e+3;//convert to mJy
+				A*= normFactor;//convert to mJy
 				double sigmaX= pars[i].GetParValue("sigmaX");
 				double sigmaY= pars[i].GetParValue("sigmaY");
 
@@ -884,7 +906,8 @@ class SourceFitPars : public TObject {
 			fluxDensityErr= sqrt(fluxDensityVariance);
 
 			//Convert back to Jy
-			fluxDensityErr/= 1.e+3;
+			//fluxDensityErr/= 1.e+3;
+			fluxDensityErr/= normFactor;
 			
 			return 0;
 		}//close ComputeFluxDensityError()
@@ -1019,7 +1042,14 @@ class SourceFitPars : public TObject {
 		*/
 		bool IsOffsetFixed(){return offsetFixed;}
 
-		
+		/**
+		* \brief Set norm factor
+		*/
+		void SetNormFactor(double value){normFactor=value;}
+		/**
+		* \brief Get norm factor
+		*/
+		double GetNormFactor(){return normFactor;}
 
 		/**
 		* \brief Get number of free parameters per component
@@ -1204,10 +1234,11 @@ class SourceFitPars : public TObject {
 		bool sigmaFixed;
 		double fluxDensity;
 		double fluxDensityErr;
-
 		int fitQuality;
 
-	ClassDef(SourceFitPars,5)
+		double normFactor;
+
+	ClassDef(SourceFitPars,6)
 
 };//close class
 

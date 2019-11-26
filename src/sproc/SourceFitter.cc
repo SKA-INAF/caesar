@@ -1456,10 +1456,12 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	if(fitOptions.fitScaleDataToMax){//convert back to original scale
 		m_sourceFitPars.SetOffsetPar(fittedOffset*normFactor);
 		m_sourceFitPars.SetOffsetParErr(fittedOffsetErr*normFactor);
+		m_sourceFitPars.SetNormFactor(1./normFactor);
 	}
 	else{//convert back to Jy
 		m_sourceFitPars.SetOffsetPar(fittedOffset/1.e+3);
 		m_sourceFitPars.SetOffsetParErr(fittedOffsetErr/1.e+3);
+		m_sourceFitPars.SetNormFactor(1.e+3);
 	}
 	
 	//Set fit status if any pars at limits
