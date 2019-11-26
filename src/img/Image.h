@@ -1137,27 +1137,27 @@ class Image : public TNamed {
 		/**
 		* \brief Get dilated filtered image
 		*/
-		Image* GetMorphDilatedImage(int kernSize=3,int niters=1);
+		Image* GetMorphDilatedImage(int kernSize=3,int niters=1,bool skipZeroPixels=true);
 		/**
 		* \brief Get eroded filtered image
 		*/
-		Image* GetMorphErodedImage(int kernSize=3,int niters=1);
+		Image* GetMorphErodedImage(int kernSize=3,int niters=1,bool skipZeroPixels=true);
 		/**
 		* \brief Get tophat filtered image
 		*/
-		Image* GetMorphTopHatImage(int kernSize=3,int niters=1);
+		Image* GetMorphTopHatImage(int kernSize=3,int niters=1,bool skipZeroPixels=true);
 		/**
 		* \brief Get morph closing filtered image
 		*/
-		Image* GetMorphClosingImage(int kernSize=3,int niters=1);
+		Image* GetMorphClosingImage(int kernSize=3,int niters=1,bool skipZeroPixels=true);
 		/**
 		* \brief Get morph opening filtered image
 		*/
-		Image* GetMorphOpeningImage(int kernSize=3,int niters=1);
+		Image* GetMorphOpeningImage(int kernSize=3,int niters=1,bool skipZeroPixels=true);
 		/**
 		* \brief Get morph gradient filtered image
 		*/
-		Image* GetMorphGradientImage(int kernSize=3,int niters=1);
+		Image* GetMorphGradientImage(int kernSize=3,int niters=1,bool skipZeroPixels=true);
 		/**
 		* \brief Get morph reco filtered image
 		*/

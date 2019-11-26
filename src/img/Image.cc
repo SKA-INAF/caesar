@@ -3030,39 +3030,39 @@ TGraph* Image::ComputePeakGraph(std::vector<int> kernelSizes,int peakShiftTolera
 
 }//close ComputePeakGraph()
 
-Image* Image::GetMorphDilatedImage(int kernSize,int niters)
+Image* Image::GetMorphDilatedImage(int kernSize,int niters,bool skipZeroPixels)
 {
-	return MorphFilter::ComputeMorphFilter(this,eMORPH_DILATION,kernSize,eMORPH_RECT,niters);
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_DILATION,kernSize,eMORPH_RECT,niters,skipZeroPixels);
 
 }//close GetMorphDilatedImage()
 
-Image* Image::GetMorphErodedImage(int kernSize,int niters)
+Image* Image::GetMorphErodedImage(int kernSize,int niters,bool skipZeroPixels)
 {
-	return MorphFilter::ComputeMorphFilter(this,eMORPH_EROSION,kernSize,eMORPH_RECT,niters);
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_EROSION,kernSize,eMORPH_RECT,niters,skipZeroPixels);
 
 }//close GetMorphErodedImage()
 
-Image* Image::GetMorphClosingImage(int kernSize,int niters)
+Image* Image::GetMorphClosingImage(int kernSize,int niters,bool skipZeroPixels)
 {
-	return MorphFilter::ComputeMorphFilter(this,eMORPH_CLOSING,kernSize,eMORPH_RECT,niters);
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_CLOSING,kernSize,eMORPH_RECT,niters,skipZeroPixels);
 
 }//close GetMorphClosingImage()
 
-Image* Image::GetMorphOpeningImage(int kernSize,int niters)
+Image* Image::GetMorphOpeningImage(int kernSize,int niters,bool skipZeroPixels)
 {
-	return MorphFilter::ComputeMorphFilter(this,eMORPH_OPENING,kernSize,eMORPH_RECT,niters);
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_OPENING,kernSize,eMORPH_RECT,niters,skipZeroPixels);
 
 }//close GetMorphOpeningImage()
 
-Image* Image::GetMorphTopHatImage(int kernSize,int niters)
+Image* Image::GetMorphTopHatImage(int kernSize,int niters,bool skipZeroPixels)
 {
-	return MorphFilter::ComputeMorphFilter(this,eMORPH_TOPHAT,kernSize,eMORPH_RECT,niters);
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_TOPHAT,kernSize,eMORPH_RECT,niters,skipZeroPixels);
 
 }//close GetMorphTopHatImage()
 
-Image* Image::GetMorphGradientImage(int kernSize,int niters)
+Image* Image::GetMorphGradientImage(int kernSize,int niters,bool skipZeroPixels)
 {
-	return MorphFilter::ComputeMorphFilter(this,eMORPH_GRADIENT,kernSize,eMORPH_RECT,niters);
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_GRADIENT,kernSize,eMORPH_RECT,niters,skipZeroPixels);
 
 }//close GetMorphGradientImage()
 
