@@ -831,6 +831,129 @@ int AstroObjectParser::ParseSimbadObjectData(AstroObject& astroObject,std::strin
 
 
 
+
+
+int AstroObjectParser::ParseGaiaData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter)
+{
+	// Init data
+	astroObjects.clear();	
+
+	// Read region file and get region text lines
+	std::vector<std::string> raw_data;
+	if(Read(raw_data,filename)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read region data from file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+
+	// Check lines
+	if(raw_data.empty()){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Empty data list read from file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+	
+
+	// Extract astro objects from parsed lines
+	bool parseErr= false;
+
+	for(size_t i=0;i<raw_data.size();i++)
+	{
+		AstroObject* astroObject= new AstroObject;
+		if(ParseGaiaObjectData(*astroObject,raw_data[i],delimiter)<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to parse astro object from data line no. "<<i+1<<", stop parsing and return error!");
+			#endif
+			parseErr= true;
+			break;
+		}		
+
+		//Append region to list
+		astroObjects.push_back(astroObject);
+
+	
+	}//end loop data
+
+	//Clear data in case of errors
+	if(parseErr){
+		CodeUtils::DeletePtrCollection<AstroObject>(astroObjects);
+		return -1;
+	}
+	
+	return 0;
+
+}//close ParseGaiaData()
+
+int AstroObjectParser::ParseGaiaObjectData(AstroObject& astroObject,std::string data,char delimiter)
+{
+	//============================
+	//==    GAIA FORMAT
+	//============================
+	//- Field 0: Object name
+	//- Field 1: RA (deg)
+	//- Field 2: RA err (mas)
+	//- Field 3: Dec (deg)
+	//- Field 4: Dec err (mas)
+	//=============================
+
+	//Check input
+	if(data==""){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty catalog line given, nothing to be parsed!");
+		#endif
+		return -1;
+	}
+	
+	
+	//Split line using delimiter
+	std::vector<std::string> fields= CodeUtils::SplitStringOnPattern(data,delimiter);
+	size_t nRequestedFields= 5;
+
+	if(fields.empty() || fields.size()!=nRequestedFields){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty or invalid number of fields parsed ("<<fields.size()<<" found when "<<nRequestedFields<<" expected)!");
+		#endif
+		return -1;
+	}
+
+	//Parse object name
+	std::string name_str= fields[0];
+	CodeUtils::RemovePatternInString(name_str,"\t");
+	astroObject.name= name_str;
+	
+	//Parse object identifier
+	astroObject.id_str= "";
+	astroObject.id= eSTAR;
+
+	//Parse object minor identifier
+	astroObject.subid= eSTAR;
+
+	//set candidate to true
+	astroObject.confirmed= true;
+	
+	//Parse coordinates
+	std::string ra_str= fields[1];
+	std::string raErr_str= fields[2];
+	std::string dec_str= fields[3];
+	std::string decErr_str= fields[4];
+	CodeUtils::StripBlankSpaces(ra_str);
+	CodeUtils::StripBlankSpaces(raErr_str);
+	CodeUtils::StripBlankSpaces(dec_str);
+	CodeUtils::StripBlankSpaces(decErr_str);
+	
+	astroObject.x= atof(ra_str.c_str());
+	astroObject.y= atof(dec_str.c_str());
+	astroObject.xerr= atof(ra_str.c_str())/(3600.*1000.);//in deg
+	astroObject.yerr= atof(dec_str.c_str())/(3600.*1000.);//in deg
+	
+	
+	return 0;
+
+}//close ParseGaiaObjectData()
+
+
 int AstroObjectParser::ParseMGPSData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter)
 {
 	// Init data
@@ -1454,7 +1577,7 @@ int AstroObjectParser::ParseCaesarObjectData(AstroObject& astroObject,std::strin
 	if(delimiter==' ') fields= CodeUtils::SplitStringOnWhitespaces(data);
 	else fields= CodeUtils::SplitStringOnPattern(data,delimiter);
 	size_t nRequestedFields= 48;
-	size_t nRequestedFields_augmVersion= 60;
+	size_t nRequestedFields_augmVersion= 61;//60;
 	bool isAugmentedCatalog= false;
 
 	if(fields.empty()){
@@ -1484,22 +1607,26 @@ int AstroObjectParser::ParseCaesarObjectData(AstroObject& astroObject,std::strin
 	
 	//Set object identifier to RADIO source if no augmented data are present
 	if(isAugmentedCatalog){
-		std::string matchedObjNames_str= fields[59];
+		std::string matchedObjNames_str= fields[60];//fields[59];
 		std::string objClassId_str= fields[56];
 		std::string objClassSubId_str= fields[57];	
+		std::string objConfirmed_str= fields[58];
 		CodeUtils::StripBlankSpaces(objClassId_str);
 		CodeUtils::StripBlankSpaces(objClassSubId_str);
+		CodeUtils::StripBlankSpaces(objConfirmed_str);
 		int objClassId= atoi(objClassId_str.c_str());
 		int objClassSubId= atoi(objClassSubId_str.c_str());
-
+		int objConfirmed= atoi(objConfirmed_str.c_str());
 		astroObject.id= objClassId;
 		astroObject.subid= objClassSubId;
+		astroObject.confirmed= objConfirmed;
 		astroObject.id_str= matchedObjNames_str;
 	}
 	else{
 		astroObject.id_str= "";
 		astroObject.id= eRADIO_OBJ;
 		astroObject.subid= eRADIO_OBJ;
+		astroObject.confirmed= true;
 	}
 
 	//Parse coordinates
@@ -1869,7 +1996,7 @@ int AstroObjectParser::ParseHASHObjectData(AstroObject& astroObject,std::string 
 	if(flag_str=="T"){
 		astroObject.confirmed= true;
 	}
-	else if(flag_str=="P" || flag_str=="L"){
+	else if(flag_str=="P" || flag_str=="L" || flag_str=="c"){
 		astroObject.confirmed= false;
 	}
 	else{
@@ -2269,6 +2396,154 @@ int AstroObjectParser::ParseWRCatObjectData(AstroObject& astroObject,std::string
 	return 0;
 
 }//close ParseATNFPsrObjectData()
+
+
+int AstroObjectParser::ParseMASHData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter)
+{
+	// Init data
+	astroObjects.clear();	
+
+	// Read region file and get region text lines
+	std::vector<std::string> raw_data;
+	if(Read(raw_data,filename)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to read region data from file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+
+	// Check lines
+	if(raw_data.empty()){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Empty data list read from file "<<filename<<"!");
+		#endif
+		return -1;
+	}
+	
+
+	// Extract astro objects from parsed lines
+	bool parseErr= false;
+
+	for(size_t i=0;i<raw_data.size();i++)
+	{
+		AstroObject* astroObject= new AstroObject;
+		if(ParseMASHObjectData(*astroObject,raw_data[i],delimiter)<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to parse astro object from data line no. "<<i+1<<", stop parsing and return error!");
+			#endif
+			parseErr= true;
+			break;
+		}		
+
+		//Append region to list
+		astroObjects.push_back(astroObject);
+
+	
+	}//end loop data
+
+	//Clear data in case of errors
+	if(parseErr){
+		CodeUtils::DeletePtrCollection<AstroObject>(astroObjects);
+		return -1;
+	}
+	
+	return 0;
+
+}//close ParseMASHData()
+
+int AstroObjectParser::ParseMASHObjectData(AstroObject& astroObject,std::string data,char delimiter)
+{
+	//============================
+	//==    HASH FORMAT
+	//============================
+	//- Field 0-1: Object coordinates (RA & DEC)
+	//- Field 2: Object flag (T=confirmed, L=likely, P=possible)
+	//- Field 3: Object gal name (not needed)
+	//- Field 4: Object name
+	//- Field 5-6: Object GAL coordinates
+	//- Field 7-8: Maj/min diameter
+	//- Field 9: Type of central star (not needed)
+	//================================
+
+
+	//Check input
+	if(data==""){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty catalog line given, nothing to be parsed!");
+		#endif
+		return -1;
+	}
+	
+	
+	//Split line using delimiter
+	std::vector<std::string> fields= CodeUtils::SplitStringOnPattern(data,delimiter);
+	size_t nRequestedFields= 10;
+
+	if(fields.empty() || fields.size()!=nRequestedFields){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty or invalid number of fields parsed ("<<fields.size()<<" found when "<<nRequestedFields<<" expected)!");
+		#endif
+		return -1;
+	}
+
+
+	//Parse object name
+	std::string name_str= fields[4];
+	CodeUtils::RemovePatternInString(name_str,"\t");
+	astroObject.name= name_str;
+	
+	
+	//Set object identifier to PN
+	astroObject.id_str= "";
+	astroObject.id= ePN;
+	astroObject.subid= ePN;
+
+	
+	//Parse confirmed field
+	std::string flag_str= fields[2];
+	CodeUtils::RemovePatternInString(flag_str,"\t");
+	CodeUtils::StripBlankSpaces(flag_str);
+	
+	if(flag_str=="T"){
+		astroObject.confirmed= true;
+	}
+	else if(flag_str=="P" || flag_str=="L"){
+		astroObject.confirmed= false;
+	}
+	else{
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Unknown PN flag found ("<<flag_str<<")");
+		#endif
+	}
+
+	//Parse coordinates
+	std::string ra_str= fields[0];
+	CodeUtils::StripBlankSpaces(ra_str);
+	astroObject.x= atof(ra_str.c_str());
+
+	std::string dec_str= fields[1];
+	CodeUtils::StripBlankSpaces(dec_str);
+	astroObject.y= atof(dec_str.c_str());
+
+	//Parse ellipse fields
+	std::string bmaj_str= fields[7];
+	std::string bmin_str= fields[8];
+	
+	CodeUtils::StripBlankSpaces(bmaj_str);
+	CodeUtils::StripBlankSpaces(bmin_str);
+	
+	if(bmaj_str!="" && bmin_str!=""){
+		astroObject.hasEllipseInfo= true;
+		astroObject.bmaj= atof(bmaj_str.c_str());
+		astroObject.bmin= atof(bmin_str.c_str());
+	}
+	
+	
+	return 0;
+
+}//close ParseMASHObjectData()
+
+
 
 int AstroObjectParser::Read(std::vector<std::string>& data,std::string filename)
 {
