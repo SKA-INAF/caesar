@@ -1044,7 +1044,7 @@ class SourceFitPars : public TObject {
 			int nCols= fluxDensityDerivMatrix.GetNcols(); 
 			if(nCols<=last_index){
 				#ifdef LOGGING_ENABLED
-					WARN_LOG("Trying to access to an not-existing element (index="<<last_index<<") of derivative matrix (dim="<<nCols<<") (hint: derivative matrix not initialized)!");	
+					WARN_LOG("Trying to access to an not-existing element (index="<<last_index<<") of derivative matrix (dim="<<nCols<<", npars_component="<<npars_component<<") (hint: derivative matrix not initialized)!");	
 				#endif
 				return -1;
 			}
