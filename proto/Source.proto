@@ -398,15 +398,18 @@ message Source {
 	optional int32 ObjLocationId= 22;
 	optional int32 ObjClassId= 23;
 	optional int32 ObjClassSubId= 24;
-	repeated int32 componentObjLocationId= 25;
-	repeated int32 componentObjClassId= 26;
-	repeated int32 componentObjClassSubId= 27;
+	optional bool ObjConfirmed= 25;
+	repeated int32 componentObjLocationId= 26;
+	repeated int32 componentObjClassId= 27;
+	repeated int32 componentObjClassSubId= 28;
+	repeated bool componentObjConfirmed= 29;
+
 
 	//Astro objects
-	optional bool m_hasAstroObjectData= 28;
-	optional AstroObjectCollection m_astroObjects= 29;
-	optional bool m_hasComponentAstroObjectData= 30;
-	repeated AstroObjectCollection m_componentAstroObjects= 31;
+	optional bool m_hasAstroObjectData= 30;
+	optional AstroObjectCollection m_astroObjects= 31;
+	optional bool m_hasComponentAstroObjectData= 32;
+	repeated AstroObjectCollection m_componentAstroObjects= 33;
 
 }//close Source schema
 
