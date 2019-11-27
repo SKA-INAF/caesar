@@ -1588,7 +1588,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	m_sourceFitPars.SetResidualMAD(residualMAD);
 	
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Fit residual stats: min/max="<<residualMin<<"/"<<residualMax<<", mean="<<residualMean<<", rms="<<residualRMS<<", median="<<residualMedian<<", mad="<<residualMAD);
+		DEBUG_LOG("Fit residual stats: min/max="<<residualMin<<"/"<<residualMax<<", mean="<<residualMean<<", rms="<<residualRMS<<", median="<<residualMedian<<", mad="<<residualMAD);
 	#endif
 
 	//==============================================
@@ -1623,7 +1623,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	}
 	else{
 		#ifdef LOGGING_ENABLED
-			WARN_LOG("Source has no image metadata, cannot set beam info in fit pars!");
+			WARN_LOG("Source "<<aSource->GetName()<<" has no image metadata, cannot set beam info in fit pars!");
 		#endif
 	}
 

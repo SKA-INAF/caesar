@@ -2266,7 +2266,7 @@ int SourceExporter::WriteComponentsToDS9(std::string filename,const std::vector<
 		//Get DS9 regions for fitted components
 		std::string regionInfo= SourceToDS9FittedEllipseRegion(sources[k],useFWHM,true,convertDS9RegionsToWCS,wcs,ds9WCSType);
 
-		fprintf(fout_fit,"%s\n",regionInfo.c_str());
+		if(regionInfo!="") fprintf(fout_fit,"%s\n",regionInfo.c_str());
 	}//end loop sources
 		
 	#ifdef LOGGING_ENABLED
@@ -2480,7 +2480,9 @@ const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,
 	//Check if source has fit info
 	std::stringstream sstream;
 	bool hasFitInfo= source->HasFitInfo();
-	if(hasFitInfo){
+	int nSelFitComponents= source->GetNSelFitComponents();
+
+	if(hasFitInfo && nSelFitComponents>0){
 		//Get fit pars
 		SourceFitPars fitPars= source->GetFitPars();
 
