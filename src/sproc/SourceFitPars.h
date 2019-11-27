@@ -671,7 +671,10 @@ class SourceFitPars : public TObject {
 		*/
 		int SetCovarianceMatrix(TMatrixD& M)
 		{
-			if(M.GetNrows()<=0 || M.GetNcols()<=0) return -1;
+			int nCols= M.GetNcols();
+			int nRows= M.GetNrows();
+			if(nRows<=0 || nCols<=0) return -1;
+			fitCovarianceMatrix.ResizeTo(nRows,nCols);
 			fitCovarianceMatrix= M;
 			return 0;
 		}
@@ -783,7 +786,10 @@ class SourceFitPars : public TObject {
 		*/
 		int SetFluxDensityDerivMatrix(TMatrixD& M)
 		{	
-			if(M.GetNrows()<=0 || M.GetNcols()<=0) return -1;
+			int nCols= M.GetNcols();
+			int nRows= M.GetNrows();
+			if(nRows<=0 || nCols<=0) return -1;
+			fluxDensityDerivMatrix.ResizeTo(nRows,nCols);
 			fluxDensityDerivMatrix= M;
 			return 0;
 		}
