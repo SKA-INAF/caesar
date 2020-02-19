@@ -1013,7 +1013,7 @@ class Image : public TNamed {
 		/**
 		* \brief Get source masked image
 		*/
-		Image* GetSourceMask(std::vector<Source*>const& sources,bool isBinary=false,bool invert=false);
+		Image* GetSourceMask(std::vector<Source*>const& sources,bool isBinary=false,bool invert=false,bool searchSourceCoords=false);
 
 		/**
 		* \brief Mask sources

@@ -2464,7 +2464,7 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 }//close GetBkgInfoAroundSource()
 
 
-Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,bool invert)
+Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,bool invert,bool searchSourceCoords)
 {
 	//## Clone map
 	long int Nx= this->GetNx();
@@ -2488,17 +2488,56 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 		return maskedImage;	
 	}
 
+	//## Search source pixel coordinates in image?
+	//## If sources are extracted from the same map there is no need to do that
+	//## however for sources extracted from submaps or tiles it is needed
+	std::vector<long int> masked_pix_ids;
+	if(searchSourceCoords) {
+		#ifdef OPENMP_ENABLED
+		#pragma omp parallel for
+		#endif
+		for(int k=0;k<nSources;k++){
+			for(int l=0;l<sources[k]->GetNPixels();l++){
+				Pixel* pixel= sources[k]->GetPixel(l);
+				double x= pixel->x;
+				double y= pixel->y;
+				long int id= this->FindBin(x,y);
+				if(id<0) continue;
+				masked_pix_ids.push_back(id);	
+			}
+		}
+	}//close if
+	else{
+		#ifdef OPENMP_ENABLED
+		#pragma omp parallel for
+		#endif
+		for(int k=0;k<nSources;k++){
+			for(int l=0;l<sources[k]->GetNPixels();l++){
+				long int id= (sources[k]->GetPixel(l))->id;
+				masked_pix_ids.push_back(id);	
+			}
+		}
+	}//close else
+
+
 	if(invert){
 		if(isBinary){
 			#ifdef OPENMP_ENABLED
 			#pragma omp parallel for
 			#endif
+			for(size_t i=0;i<masked_pix_ids.size();i++){
+				long int id= masked_pix_ids[i];
+				maskedImage->SetPixelValue(id,0);
+			}
+			/*
 			for(int k=0;k<nSources;k++){
 				for(int l=0;l<sources[k]->GetNPixels();l++){
 					long int id= (sources[k]->GetPixel(l))->id;
+					//cout<<"Source "<<sources[k]->GetName()<<": pix id="<<id<<", ix="<<this->GetBinX(id)<<", iy="<<this->GetBinY(id)<<endl;//DEBUG!!!
 					maskedImage->SetPixelValue(id,0);
 				}//end loop pixels
 			}//end loop sources	
+			*/
 
 			#ifdef OPENMP_ENABLED
 			#pragma omp parallel for
@@ -2515,12 +2554,19 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 			#ifdef OPENMP_ENABLED
 			#pragma omp parallel for
 			#endif
+			for(size_t i=0;i<masked_pix_ids.size();i++){
+				long int id= masked_pix_ids[i];
+				maskedImage->SetPixelValue(id,0);
+			}
+			/*
 			for(int k=0;k<nSources;k++){
 				for(int l=0;l<sources[k]->GetNPixels();l++){
 					long int id= (sources[k]->GetPixel(l))->id;
 					maskedImage->SetPixelValue(id,0);
 				}//end loop pixels
 			}//end loop sources		
+			*/
+
 		}//close else
 
 		//Force re-computation of stats
@@ -2534,7 +2580,12 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 		if(isBinary){	
 			#ifdef OPENMP_ENABLED
 			#pragma omp parallel for
-			#endif		
+			#endif	
+			for(size_t i=0;i<masked_pix_ids.size();i++){
+				long int id= masked_pix_ids[i];
+				maskedImage->SetPixelValue(id,1);
+			}	
+			/*
 			for(int k=0;k<nSources;k++){
 				for(int l=0;l<sources[k]->GetNPixels();l++){
 					long int id= (sources[k]->GetPixel(l))->id;
@@ -2542,11 +2593,19 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 					maskedImage->SetPixelValue(id,1);
 				}//end loop pixels
 			}//end loop sources		
+			*/
+
 		}//close if
 		else{
 			#ifdef OPENMP_ENABLED
 			#pragma omp parallel for
 			#endif
+			for(size_t i=0;i<masked_pix_ids.size();i++){
+				long int id= masked_pix_ids[i];
+				double w= this->GetPixelValue(id);
+				maskedImage->SetPixelValue(id,w);
+			}
+			/*
 			for(int k=0;k<nSources;k++){
 				for(int l=0;l<sources[k]->GetNPixels();l++){
 					long int id= (sources[k]->GetPixel(l))->id;
@@ -2554,7 +2613,8 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 					//maskedImage->FillPixel(id,w);
 					maskedImage->SetPixelValue(id,w);
 				}//end loop pixels
-			}//end loop sources		
+			}//end loop sources	
+			*/	
 		}//close else
 
 		//Force re-computation of stats
