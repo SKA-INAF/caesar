@@ -434,6 +434,10 @@ if(BUILD_APPS)
 	target_link_libraries(SourceMVClassifierExe Caesar ${LINKED_LIBS})
 	set_target_properties(SourceMVClassifierExe PROPERTIES OUTPUT_NAME SourceMVClassifier)
 
+	add_executable(SourceRefitterExe ${Task_SourceRefitter_SRCS})
+	target_link_libraries(SourceRefitterExe Caesar ${LINKED_LIBS})
+	set_target_properties(SourceRefitterExe PROPERTIES OUTPUT_NAME SourceRefitter)
+
 	if(ENABLE_MPI AND MPI_FOUND)
 		include_directories(${MPI_CXX_INCLUDE_PATH})
 		add_executable(FindSourceMPIExe ${Task_FindSourceMPI_SRCS})
@@ -636,6 +640,7 @@ if(BUILD_APPS)
 		SourceTreeWriter
 		SourceAsciiExporter
 		SourceMVClassifier
+		SourceRefitter
 	)
 	if(ENABLE_MPI)
 		list(APPEND EXE_FILES FindSourceMPI)
