@@ -34,13 +34,16 @@
 #include <TF1.h>
 #include <TF2.h>
 
+#include <iostream>
+
 
 //=================================================
 //===             RESO MODEL 
 //==================================================
 enum ResoModel {
 	eCONST_RESO= 0,
-	eEXP_RESO= 1
+	eEXP_RESO= 1,
+	eEXP_STEP_RESO= 2
 };
 
 
@@ -54,6 +57,7 @@ class ResoPars
 		//Pure virtual
 		virtual double GetA() const = 0;	
 		virtual double GetB() const = 0;	
+		virtual double GetC() const = 0;
 		virtual std::vector<double> GetPars() const = 0;
 		
 		//Standard
@@ -66,6 +70,7 @@ class ResoPars
 		int model;
 		double A;
 		double B;
+		double C;
 };
 
 class ConstResoPars : public ResoPars 
@@ -82,6 +87,7 @@ class ConstResoPars : public ResoPars
 		static int GetParNumber() {return 1;}
 		virtual double GetA() const {return A;}
 		virtual double GetB() const {return 0;}
+		virtual double GetC() const {return 0;}
 		virtual std::vector<double> GetPars() const {
 			std::vector<double> pars;
 			pars.push_back(A);
@@ -105,6 +111,7 @@ class ExpResoPars : public ResoPars
 		static int GetParNumber() {return 2;}
 		virtual double GetA() const {return A;}
 		virtual double GetB() const {return B;}
+		virtual double GetC() const {return 0;}
 		
 		virtual std::vector<double> GetPars() const {
 			std::vector<double> pars;
@@ -114,6 +121,34 @@ class ExpResoPars : public ResoPars
 		}	
 	
 };//close class ExpResoPars
+
+
+class ExpStepResoPars : public ResoPars 
+{
+	public:		
+		ExpStepResoPars(double m_A,double m_B,double m_C){ 
+			A= m_A; 
+			B= m_B; 
+			C= m_C;
+			model= eEXP_STEP_RESO;		
+			nPars= 3;
+		};
+		virtual ~ExpStepResoPars() {};
+
+	public:
+		static int GetParNumber() {return 3;}
+		virtual double GetA() const {return A;}
+		virtual double GetB() const {return B;}
+		virtual double GetC() const {return C;}
+		virtual std::vector<double> GetPars() const {
+			std::vector<double> pars;
+			pars.push_back(A);
+			pars.push_back(B);
+			pars.push_back(C);
+			return pars;
+		}
+
+};//close ExpStepBiasPars class
 //==================================================
 
 
@@ -327,6 +362,106 @@ class SigmoidEfficiencyPars : public EfficiencyPars
 	
 };
 
+//=================================================
+//===      SOURCE COUNTS RESOLUTION BIAS MODEL 
+//==================================================
+class SourceCountsResoBiasPars 
+{
+	public:
+		SourceCountsResoBiasPars(){
+			SetDefaults();
+		}
+		SourceCountsResoBiasPars(std::vector<double> pars)
+		{ 
+			if(pars.size()!=12){
+				std::cerr<<"WARN: Given par size !=12 in SourceCountsResoBiasPars, using default pars!"<<std::endl;
+				SetDefaults();
+			}
+			else{
+				nPars= 12;
+				bmaj= pars[0];		
+				bmin= pars[1];
+				rms= pars[2];
+				Sthr= pars[3];
+				resolvedSourceThrP0= pars[4];
+				resolvedSourceThrP1= pars[5];
+				resolvedSourceThrSlope= pars[6];
+				nu= pars[7];
+				alpha= pars[8];
+				phiMedianSlope= pars[9];
+				phiMedianSbreak= pars[10];
+				phiMedianScaleFactor= pars[11];
+			}
+		};
+		virtual ~SourceCountsResoBiasPars() {};
+
+	public:
+		static int GetParNumber() {return nPars;}
+		virtual double GetBmaj() const {return bmaj;}
+		virtual double GetBmin() const {return bmin;}
+		virtual double GetRMS() const {return rms;}
+		virtual double GetSthr() const {return Sthr;}
+		virtual double GetResolvedSourceP0() const {return resolvedSourceThrP0;}
+		virtual double GetResolvedSourceP1() const {return resolvedSourceThrP1;}	
+		virtual double GetResolvedSourceSlope() const {return resolvedSourceThrSlope;}	
+		virtual double GetNu() const {return nu;}	
+		virtual double GetAlpha() const {return alpha;}	
+		virtual double GetPhiMedianSlope() const {return phiMedianSlope;}	
+		virtual double GetPhiMedianSbreak() const {return phiMedianSbreak;}	
+		virtual double GetPhiMedianScaleFactor() const {return phiMedianScaleFactor;}	
+		
+		virtual std::vector<double> GetPars() const {
+			std::vector<double> pars;
+			pars.push_back(bmaj);
+			pars.push_back(bmin);
+			pars.push_back(rms);
+			pars.push_back(Sthr);
+			pars.push_back(resolvedSourceThrP0);
+			pars.push_back(resolvedSourceThrP1);
+			pars.push_back(resolvedSourceThrSlope);
+			pars.push_back(nu);
+			pars.push_back(alpha);
+			pars.push_back(phiMedianSlope);
+			pars.push_back(phiMedianSbreak);
+			pars.push_back(phiMedianScaleFactor);
+			return pars;
+		}
+
+	protected:
+		void SetDefaults()
+		{
+			nPars= 12;
+			bmaj= 24.;//arcsec
+			bmin= 20.;//arcsec
+			rms= 300.e-3;//mJy
+			Sthr= 1.5;//mJy
+			resolvedSourceThrP0= 1.08;
+			resolvedSourceThrP1= 2.03;
+			resolvedSourceThrSlope= 1;
+			nu= 0.912;//GHz
+			alpha= -0.9;
+			phiMedianSlope= 0.30;
+			phiMedianSbreak= 1;//mJy
+			phiMedianScaleFactor= 1;
+		}
+
+	protected:
+		
+		static int nPars;
+		double bmaj;
+		double bmin;
+		double rms;	
+		double Sthr;
+		double resolvedSourceThrP0;
+		double resolvedSourceThrP1;
+		double resolvedSourceThrSlope;
+		double nu;
+		double alpha;
+		double phiMedianSlope;
+		double phiMedianSbreak;
+		double phiMedianScaleFactor;
+
+};//close SourceCountsResoBiasPars class
 
 //======================================================
 //==        SPECTRUM FITTING PARS
@@ -884,12 +1019,16 @@ class SpectrumUtils
  		*/
 		static double GetTwoBrokenPowerLawIntegral(double gamma1,double gamma2,double lgS_break,double lgS_min, double lgS_max);
 	
-
+		
 		// - Response models
 		/** 
-		\brief Compute flux resolution model
+		\brief Compute flux exp resolution model
  		*/
-		static double ResolutionModel(double* x, double* par);
+		static double ExpResolutionModel(double* x, double* par);
+		/** 
+		\brief Compute flux exp step resolution model
+ 		*/
+		static double ExpStepResolutionModel(double* x, double* par);
 		/** 
 		\brief Compute flux bias exp model
  		*/
@@ -911,6 +1050,30 @@ class SpectrumUtils
 		\brief Compute response model 1D
  		*/
 		static double ResponseModel1D(double* x, double* par);
+
+
+		// - Source counts resolution bias model
+		/** 
+		\brief Compute max angular size model fcn
+ 		*/
+		static double PhiMaxModel(double* x,double* pars);
+		/** 
+		\brief Compute min angular size model fcn
+ 		*/
+		static double PhiMinModel(double* x,double* pars);
+		/** 
+		\brief Compute median angular size model fcn
+ 		*/
+		static double PhiMedianModel(double* x,double* pars);
+		/** 
+		\brief Compute source counts reso bias model
+ 		*/
+		static double SourceCountsResoBiasModel(double* x,double* pars);
+		/** 
+		\brief Compute source counts reso bias corr factor model
+ 		*/
+		static double SourceCountsResoBiasCorrFactor(double* x,double* pars);
+
 
 };//close class
 

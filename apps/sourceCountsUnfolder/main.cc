@@ -24,6 +24,7 @@
 #endif
 #include <CodeUtils.h>
 #include <MathUtils.h>
+#include <StatsUtils.h>
 
 
 //ROOT headers
@@ -38,6 +39,8 @@
 #include <TF2.h>
 #include <TCanvas.h>
 #include <TLegend.h>
+#include <TGraph.h>
+#include <TGraphErrors.h>
 
 #include <iostream>
 #include <vector>
@@ -73,10 +76,14 @@ void Usage(char* exeName)
 	cout<<"-S, --smodel=[SPECTRUM_MODEL] \t Spectrum model used for response matrix creation (flat,powerlaw,brokenpowerlaw,pol3)"<<endl;
 	cout<<"-s, --smodel-fit=[SPECTRUM_MODEL] \t Spectrum model used as fit model in unfolding (flat,powerlaw,brokenpowerlaw,pol3)"<<endl;
 	cout<<"-d, --spolpars=[SPECTRUM_POL_PARS] \t Flux spectrum polynomial model pars"<<endl;
+	cout<<"-j, --useResoBiasCorrection \t If enabled, include resolution bias correction in response matrix"<<endl;
 	cout<<"-u, --uncertainties \t Compute stats & syst uncertainties in unfolded flux"<<endl;
 	cout<<"-t, --struebins=[STRUE_BINS] \t True flux bins (set equal to rec bins if not provided)"<<endl;
 	cout<<"-w, --useErrorsInChi2 \t If enabled, include bin errors in chi2 definition, otherwise set all errors to 1"<<endl;
 	cout<<"-L, --likelihoodFit \t If enabled, minimize -log likelihood"<<endl;
+	cout<<"-m, --useFitRange \t If enabled, limit fit to specified flux density range (default=false)"<<endl;
+	cout<<"-f, --lgSfit-min=[LGSFIT_MIN] \t Minimum flux density range used in fitting (default=-4)"<<endl;
+	cout<<"-F, --lgSfit-max=[LGSFIT_MAX] \t Maximum flux density range used in fitting (default=1.5)"<<endl;
 	cout<<"-n, --freq=[FREQ] \t Data frequency in GHz used to convert source count literature fit models (default=1.4 GHz)"<<endl;	
 	cout<<"-N, --sindex=[SPECTRAL_INDEX] \t Data frequency spectral index used to convert source count literature fit models (default=-0.9)"<<endl;
 	cout<<"-v, --verbosity=[LEVEL] \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
@@ -107,8 +114,12 @@ static const struct option options_tab[] = {
 	{ "spolpars", required_argument, 0, 'd' },
 	{ "uncertainties", no_argument, 0, 'u' },	
 	{ "struebins", required_argument, 0, 't' },
+	{ "useResoBiasCorrection", no_argument, 0, 'j' },
 	{ "useErrorsInChi2", no_argument, 0, 'w' },
 	{ "likelihoodFit", no_argument, 0, 'L' },	
+	{ "useFitRange", no_argument, 0, 'm' },	
+	{ "lgSfit-min", required_argument, 0, 'f' },
+	{ "lgSfit-max", required_argument, 0, 'F' },
 	{ "freq", required_argument, 0, 'n' },
 	{ "sindex", required_argument, 0, 'N' },	
 	{ "interactive", no_argument, 0, 'I' },
@@ -135,30 +146,69 @@ double gSpectrumModelCutoffSlope= 0.5;
 double gSpectrumModelCutoffSlope_min= -10000;
 double gSpectrumModelCutoffSlope_max= 10000;
 std::vector<double> gSpectrumModelPolPars {224.546,188.565,53.5395,5.12536};
-std::vector<double> gEfficiencyPars {9.86885e-01,-2.85922e+00,4.14620e-01};
-std::vector<double> gFluxBiasPars {1.26004e-05,2.88008e+00,-3.31134e-04};
-std::vector<double> gFluxResoPars {4.86065e-04,1.78705e+00};
+//std::vector<double> gEfficiencyPars {9.86885e-01,-2.85922e+00,4.14620e-01};
+std::vector<double> gEfficiencyPars {9.86970e-01,-2.87361e+00,3.94529e-01};
+std::vector<double> gEfficiencyParErrors {1.24084e-03,2.39855e-03,2.98135e-03};
+std::vector<std::vector<double>> gEfficiencyParCovMatrix 
+{
+	{1.54e-06,1.091e-06,1.079e-06},
+  {1.091e-06,5.753e-06,4.599e-06}, 
+  {1.079e-06,4.599e-06,8.888e-06}
+};
+std::vector<double> gFluxBiasPars {1.43202e-06,3.64812e+00,-2.70949e-04,-3};
+std::vector<double> gFluxBiasParErrors {3.12949e-07,6.99724e-02,1.07134e-04,0};
+std::vector<std::vector<double>> gFluxBiasParCovMatrix 
+{
+	{9.794e-14,-2.177e-08,-3.524e-12,0}, 
+  {-2.177e-08,0.004896,7.324e-07,0}, 
+  {-3.524e-12,7.324e-07,1.148e-08,0},
+	{0,0,0,0}
+};
+
+std::vector<double> gFluxResoPars {4.48925e-04,1.81314e+00,-3};
+std::vector<double> gFluxResoParErrors {2.12782e-05,1.74581e-02,0};
+std::vector<std::vector<double>> gFluxResoParCovMatrix 
+{
+	{4.528e-10,-3.631e-07,0},
+  {-3.631e-07,0.0003048,0},
+	{0,0,0}
+};
+
 int gBiasModel= eCONST_RESO;
 int gResoModel= eCONST_BIAS;
 int gEfficiencyModel= eCONST_EFF;
 int gSpectrumModel= eFlat;
 //int gSpectrumModel_fit= eBrokenPowerLaws;
 int gSpectrumModel_fit= ePol3;
+SpectrumPars* gSpectrumPars= 0;
 double gConstEfficiency= 1;
 double gConstBias= 0;
 double gConstReso= 0;
-bool gUseFitRange= true;
+bool gUseFitRange= false;
 //double gLgSMin_fit= -3.;
 double gLgSMin_fit= -4;
 double gLgSMax_fit= 1.5;
 bool gUseErrorsInChi2= false;
 bool gComputeUncertainties= false;
 bool gUseLikelihoodFit= false;
-int gNRandSamples= 100;
+int gNRandSamples= 1000;
 double gArea= 37.7;//in deg^2
 double gNormSpectralIndex= 2.5;
 double gDataFrequency= 1.4;//GHz
 double gDataSpectralIndex= -0.9;
+double gBmaj= 24;//arcsec
+double gBmin= 20;//arcsec
+double gNoiseRms= 300.e-3;//mJy
+double gSThr= 1.5;//mJy
+double gResolvedSourceThrP0= 1.08;
+double gResolvedSourceThrP1= 2.03;
+double gResolvedSourceThrSlope= 1;
+double gPhiMedianSlope= 0.30;
+double gPhiMedianSbreak= 1;
+double gPhiMedianScaleFactor= 1;
+bool gUseSourceCountsResoBiasCorr= true;
+double gSourceCountsResoBiasCorrErr= 0.1;
+double gExpSourceCountDataStatErr= 0.2;//taken from Windhorst+90 (section 3)
 
 //Globar vars
 TFile* inputFile= 0;
@@ -167,14 +217,32 @@ TApplication* app= 0;
 TH1D* gSourceCounts= 0;
 std::vector<double> gRecBins;
 std::vector<double> gTrueBins;
+TF1* gTrueFitModelFcn= 0;
 TH2D* gResponseMatrix= 0;
 TF2* gResponseModelFcn= 0;
+TH2D* gResponseMatrix_fluctuated= 0;
+TF1* gResoModelFcn= 0;
+TF1* gBiasModelFcn= 0;
 ForwardFolder* gForwardFolder= 0;
 TH1D* gUnfoldedSpectrum= 0;
+TH1D* gUnfoldedSpectrum_totErrors= 0;
 TH1D* gFFSpectrum= 0;
 TH1D* gDiffSourceCounts= 0;
 TH1D* gUnfoldedDiffSpectrum= 0;
+TH1D* gUnfoldedDiffSpectrum_totErrors= 0;
+TH1D* gUnfoldedDiffSpectrum_resoBiasCorrected= 0;
 TH1D* gFFDiffSpectrum= 0;
+TF1* gSourceCountsResoBiasCorrFcn= 0;
+TH1D* gSourceCountsFitResidualHisto= 0;
+TH2D* gRandSigmaResponseMatrix= 0;
+TH2D* gRandMeanResponseMatrix= 0;
+std::vector<TH2D*> gRandResponseMatrices;
+TGraph* gExpDataFitAreaGraph= 0;
+TGraph* gExpDataFitAreaGraph_min= 0;
+TGraph* gExpDataFitAreaGraph_max= 0;
+TGraph* gExpDataFitAreaGraph_mean= 0;
+TF1* gExpDataFitFcn_Katgert= 0;
+TF1* gExpDataFitFcn_Hopkins= 0;
 
 std::vector<double> gSourceCountsExpDataFitPars_Hopkins {0.859,0.508,0.376,-0.049,-0.121,0.057,-0.008};
 std::vector<double> gSourceCountsExpDataFitPars_Katgert {0.908,0.619,0.190,-0.075};
@@ -184,9 +252,12 @@ int ParseOptions(int argc, char *argv[]);
 std::string GetStringLogLevel(int verbosity);
 int ReadData(std::string filename);
 int SetResponseMatrix();
+int ComputeResponseMatrixErrors();
+int ComputeSourceCountsModels();
 int UnfoldData();
 void Save();
 int Init();
+void PrintSourceCountTable();
 void Draw();
 void SetStyle();
 void ClearData();
@@ -266,6 +337,21 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	//==================================
+	//== COMPUTE SOURCE COUNTS MODELS
+	//==================================
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing source counts models ...");
+	#endif	
+	if(ComputeSourceCountsModels()<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Computing of source counts model failed!");
+		#endif
+		ClearData();
+		return -1;
+	}
+
+
 	//=======================
 	//== DRAW PLOTS
 	//=======================
@@ -273,6 +359,14 @@ int main(int argc, char *argv[])
 		INFO_LOG("Drawing data ...");
 	#endif
 	Draw();
+
+	//=======================
+	//== PRINT TABLE
+	//=======================
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Print source counts table ...");
+	#endif
+	PrintSourceCountTable();
 
 	//=======================
 	//== SAVE
@@ -310,7 +404,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:H:o:v:Ig:G:l:c:C:e:b:r:E:B:R:S:s:d:t:uwLn:N:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:H:o:v:Ig:G:l:c:C:e:b:r:E:B:R:S:s:d:t:uwLn:N:jmf:F:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -425,6 +519,7 @@ int ParseOptions(int argc, char *argv[])
 				std::string resoModel_str= std::string(optarg);
 				if(resoModel_str=="const") gResoModel= eCONST_RESO;
 				else if(resoModel_str=="exp") gResoModel= eEXP_RESO;
+				else if(resoModel_str=="expstep") gResoModel= eEXP_STEP_RESO;
 				else gResoModel= eCONST_EFF;
 				break;	
 			}
@@ -483,6 +578,11 @@ int ParseOptions(int argc, char *argv[])
 				gComputeUncertainties= true;
 				break;	
 			}
+			case 'j':
+			{
+				gUseSourceCountsResoBiasCorr= true;
+				break;
+			}
 			case 'w':	
 			{
 				gUseErrorsInChi2= true;
@@ -491,6 +591,22 @@ int ParseOptions(int argc, char *argv[])
 			case 'L':	
 			{
 				gUseLikelihoodFit= true;
+				break;
+			}
+
+			case 'm':
+			{
+				gUseFitRange= true;
+				break;
+			}
+			case 'f':
+			{
+				gLgSMin_fit= atof(optarg);
+				break;
+			}
+			case 'F':
+			{
+				gLgSMax_fit= atof(optarg);
 				break;
 			}
 			case 'n':	
@@ -583,6 +699,12 @@ int ParseOptions(int argc, char *argv[])
 	if(gResoModel==eEXP_RESO && gFluxResoPars.size()!=2){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Empty or invalid reso pars given (2 pars required)!");
+		#endif
+		return -1;
+	}
+	if(gResoModel==eEXP_STEP_RESO && gFluxResoPars.size()!=3){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty or invalid reso pars given (3 pars required)!");
 		#endif
 		return -1;
 	}
@@ -808,8 +930,53 @@ int UnfoldData()
 
 	//- Retrieve unfolding results
 	gUnfoldedSpectrum= gForwardFolder->GetUnfoldedSpectrum();
+	gUnfoldedSpectrum_totErrors= gForwardFolder->GetTotErrUnfoldedSpectrum();
 	gFFSpectrum= gForwardFolder->GetForwardFoldedSpectrum();
+
+	//Add source counts reso bias?
+	if(gUseSourceCountsResoBiasCorr){
+		for(int i=0;i<gUnfoldedSpectrum_totErrors->GetNbinsX();i++){
+			for(int j=0;j<gUnfoldedSpectrum_totErrors->GetNbinsY();j++){
+				double binContent= gUnfoldedSpectrum_totErrors->GetBinContent(i+1,j+1);
+				double binError_unfolding= gUnfoldedSpectrum_totErrors->GetBinError(i+1,j+1);
+				double binError_resoBias= gSourceCountsResoBiasCorrErr*binContent;
+				double binError_tot= sqrt( binError_unfolding*binError_unfolding + binError_resoBias*binError_resoBias);
+				gUnfoldedSpectrum_totErrors->SetBinError(i+1,j+1,binError_tot);
+			}
+		}
+	}//close if
+	
+	//Retrieve fit model fcn
+	std::vector<double> fitPars= gForwardFolder->GetFitPars();
+	
+	if(gSpectrumModel_fit==eBrokenPowerLaws){
+		gTrueFitModelFcn= new TF1("trueFitModelFcn",SpectrumUtils::BrokenPowerLawSpectrum,gLgSMin_fit,gLgSMax_fit,6);
+		gTrueFitModelFcn->SetParameters(fitPars.data());
+	}
+	else if(gSpectrumModel_fit==ePowerLawWithCutoff){
+		gTrueFitModelFcn= new TF1("trueFitModelFcn",SpectrumUtils::PowerLawWithCutoffSpectrum,gLgSMin_fit,gLgSMax_fit,4);
+		gTrueFitModelFcn->SetParameters(fitPars.data());
+	}
+	else if(gSpectrumModel_fit==eTwoBrokenPowerLaws){
+		gTrueFitModelFcn= new TF1("trueFitModelFcn",SpectrumUtils::TwoBrokenPowerLawSpectrum,gLgSMin_fit,gLgSMax_fit,4);
+		gTrueFitModelFcn->SetParameters(fitPars.data());
+	}
+	else if(gSpectrumModel_fit==ePowerLaw){
+		gTrueFitModelFcn= new TF1("trueFitModelFcn",SpectrumUtils::PowerLawSpectrum,gLgSMin_fit,gLgSMax_fit,2);
+		gTrueFitModelFcn->SetParameters(fitPars.data());
+	}
+	else if(gSpectrumModel_fit==ePol3){
+		gTrueFitModelFcn= new TF1("trueFitModelFcn",SpectrumUtils::Pol3Spectrum,gLgSMin_fit,gLgSMax_fit,4);
+		gTrueFitModelFcn->SetParameters(fitPars.data());
+	}
+	else if(gSpectrumModel_fit==ePol6){
+		gTrueFitModelFcn= new TF1("trueFitModelFcn",SpectrumUtils::Pol6Spectrum,gLgSMin_fit,gLgSMax_fit,7);
+		gTrueFitModelFcn->SetParameters(fitPars.data());
+	}
+
 		
+	
+
 	//====================================================
 	//==         COMPUTE DIFF COUNTS
 	//=====================================================
@@ -819,8 +986,17 @@ int UnfoldData()
 	if(!gUnfoldedDiffSpectrum) gUnfoldedDiffSpectrum= (TH1D*)gUnfoldedSpectrum->Clone("UnfoldedDiffSpectrum");
 	gUnfoldedDiffSpectrum->Reset();
 
+	if(!gUnfoldedDiffSpectrum_totErrors) gUnfoldedDiffSpectrum_totErrors= (TH1D*)gUnfoldedSpectrum->Clone("UnfoldedDiffSpectrum_totErrors");
+	gUnfoldedDiffSpectrum_totErrors->Reset();
+
 	if(!gFFDiffSpectrum) gFFDiffSpectrum= (TH1D*)gFFSpectrum->Clone("FFDiffSpectrum");
 	gFFDiffSpectrum->Reset();
+
+	if(!gUnfoldedDiffSpectrum_resoBiasCorrected) gUnfoldedDiffSpectrum_resoBiasCorrected= (TH1D*)gUnfoldedDiffSpectrum->Clone("UnfoldedDiffSpectrum_resoBiasCorrected");
+	gUnfoldedDiffSpectrum_resoBiasCorrected->Reset();
+
+	if(!gSourceCountsFitResidualHisto) gSourceCountsFitResidualHisto= (TH1D*)gSourceCounts->Clone("SourceCountsResiduals");
+	gSourceCountsFitResidualHisto->Reset();
 
 	double gamma= gNormSpectralIndex;
 	double A_sr= Deg2ToSr(gArea);
@@ -831,10 +1007,15 @@ int UnfoldData()
 		double NErr= gSourceCounts->GetBinError(i+1); 
 		double N_unfolded= gUnfoldedSpectrum->GetBinContent(i+1);
 		double NErr_unfolded= gUnfoldedSpectrum->GetBinError(i+1);
+		double NTotErr_unfolded= gUnfoldedSpectrum_totErrors->GetBinError(i+1);
 		double N_ff= gFFSpectrum->GetBinContent(i+1);
 		double NErr_ff= gFFSpectrum->GetBinError(i+1);
 		
-		 
+		if(N>0){
+			double fitRelResidual= N_ff/N-1;
+			gSourceCountsFitResidualHisto->SetBinContent(i+1,fitRelResidual);
+		}
+
 		//if(N<=0) continue;
 		double lgS= gSourceCounts->GetBinCenter(i+1);		
 		double dlgS= gSourceCounts->GetBinWidth(i+1);
@@ -860,9 +1041,14 @@ int UnfoldData()
 		double counts_unfolded_norm= counts_unfolded/NormFactor;//in units: Jy^-2.5 sr^-1
 		double countsErr_unfolded= NErr_unfolded/(dS*A_sr);
 		double countsErr_unfolded_norm= countsErr_unfolded/NormFactor;
+		double countsTotErr_unfolded= NTotErr_unfolded/(dS*A_sr);
+		double countsTotErr_unfolded_norm= countsTotErr_unfolded/NormFactor;
 
 		gUnfoldedDiffSpectrum->SetBinContent(i+1,counts_unfolded_norm);
 		gUnfoldedDiffSpectrum->SetBinError(i+1,countsErr_unfolded_norm);
+
+		gUnfoldedDiffSpectrum_totErrors->SetBinContent(i+1,counts_unfolded_norm);
+		gUnfoldedDiffSpectrum_totErrors->SetBinError(i+1,countsTotErr_unfolded_norm);
 
 		//Set differential forward folded source counts
 		double counts_ff= N_ff/(dS*A_sr);//in units: Jy^-1 sr^-1 
@@ -874,8 +1060,15 @@ int UnfoldData()
 		gFFDiffSpectrum->SetBinError(i+1,countsErr_ff_norm);
 		
 
-		cout<<"INFO: bin "<<i+1<<": N="<<N<<" +- "<<NErr<<", N(unfolded)="<<N_unfolded<<" +- "<<NErr_unfolded<<", S(mJy)="<<S*1000<<", S(mJy)=["<<S_min*1000<<","<<S_max*1000<<"], dS(mJy)="<<dS*1000.<<", lgS=["<<lgS_min<<","<<lgS_max<<"], normFactor="<<NormFactor<<", counts="<<counts<<" +- "<<countsErr<<", counts(norm)="<<counts_norm<<" +- "<<countsErr_norm<<", counts/unfolded)="<<counts_unfolded<<" +- "<<countsErr_unfolded<<", counts(unfolded_norm)="<<counts_unfolded_norm<<" +- "<<countsErr_unfolded_norm<<endl;
+		cout<<"INFO: bin "<<i+1<<": N="<<N<<" +- "<<NErr<<", N(unfolded)="<<N_unfolded<<" +- "<<NErr_unfolded<<"(stat) +- "<<NTotErr_unfolded<<"(stat+syst), S(mJy)="<<S*1000<<", S(mJy)=["<<S_min*1000<<","<<S_max*1000<<"], dS(mJy)="<<dS*1000.<<", lgS=["<<lgS_min<<","<<lgS_max<<"], normFactor="<<NormFactor<<", counts="<<counts<<" +- "<<countsErr<<", counts(norm)="<<counts_norm<<" +- "<<countsErr_norm<<", counts(unfolded)="<<counts_unfolded<<" +- "<<countsErr_unfolded<<"(stat) +- "<<countsTotErr_unfolded<<"(stat+syst), counts(unfolded_norm)="<<counts_unfolded_norm<<" +- "<<countsErr_unfolded_norm<<"(stat) +- "<<countsTotErr_unfolded_norm<<" (stat+syst)"<<endl;
 	
+		//Compute reso bias corrected counts
+		double resoBiasCorr= gSourceCountsResoBiasCorrFcn->Eval(lgS);
+		double counts_unfolded_norm_corr= resoBiasCorr* counts_unfolded_norm;
+		double countsErr_unfolded_norm_corr= resoBiasCorr* countsErr_unfolded_norm;
+		gUnfoldedDiffSpectrum_resoBiasCorrected->SetBinContent(i+1,counts_unfolded_norm_corr);
+		gUnfoldedDiffSpectrum_resoBiasCorrected->SetBinError(i+1,countsErr_unfolded_norm_corr);
+		
 
 	}//end loop bins
 
@@ -884,12 +1077,18 @@ int UnfoldData()
 
 	return 0;
 
-}//close SelectSources()
+}//close UnfoldData()
 
 
 
 int SetResponseMatrix()
-{
+{	
+	//Set flux bins
+	double lgSmin_true= gTrueBins[0];
+	double lgSmax_true= gTrueBins[gTrueBins.size()-1];
+	double lgSmin_rec= gRecBins[0];
+	double lgSmax_rec= gRecBins[gRecBins.size()-1];
+
 	//====================================================
 	//==         SET RESPONSE MODEL PARS
 	//=====================================================		
@@ -916,16 +1115,16 @@ int SetResponseMatrix()
 	// - Set spectrum pars
 	SpectrumPars* spectrumPars= 0;
 	if(gSpectrumModel==ePowerLaw){
-		spectrumPars= new PowerLawPars(normPar,gammaPar2);
+		gSpectrumPars= new PowerLawPars(normPar,gammaPar2);
 	}
 	else if(gSpectrumModel==eFlat){
-		spectrumPars= new FlatSpectrumPars(normPar);
+		gSpectrumPars= new FlatSpectrumPars(normPar);
 	}
 	else if(gSpectrumModel==eBrokenPowerLaws){
-		spectrumPars= new BrokenPowerLawsPars(normPar,gammaPar1, gammaPar2, gammaPar3,breakPar,cutoffPar);
+		gSpectrumPars= new BrokenPowerLawsPars(normPar,gammaPar1, gammaPar2, gammaPar3,breakPar,cutoffPar);
 	}
 	else if(gSpectrumModel==eTwoBrokenPowerLaws){
-		spectrumPars= new TwoBrokenPowerLawsPars(normPar,gammaPar2, gammaPar3,breakPar);
+		gSpectrumPars= new TwoBrokenPowerLawsPars(normPar,gammaPar2, gammaPar3,breakPar);
 	}
 	else if(gSpectrumModel==ePol3){
 		FitPar p0= FitPar("p0",gSpectrumModelPolPars[0]);
@@ -933,7 +1132,7 @@ int SetResponseMatrix()
 		FitPar p2= FitPar("p2",gSpectrumModelPolPars[2]);
 		FitPar p3= FitPar("p3",gSpectrumModelPolPars[3]);
 
-		spectrumPars= new Pol3SpectrumPars(p0,p1,p2,p3);
+		gSpectrumPars= new Pol3SpectrumPars(p0,p1,p2,p3);
 	}
 	else if(gSpectrumModel==ePol6){	
 		FitPar p0= FitPar("p0",gSpectrumModelPolPars[0]);
@@ -944,7 +1143,7 @@ int SetResponseMatrix()
 		FitPar p5= FitPar("p5",gSpectrumModelPolPars[5]);
 		FitPar p6= FitPar("p6",gSpectrumModelPolPars[6]);
 
-		spectrumPars= new Pol6SpectrumPars(p0,p1,p2,p3,p4,p5,p6);
+		gSpectrumPars= new Pol6SpectrumPars(p0,p1,p2,p3,p4,p5,p6);
 	}
 	
 	// - Set bias pars
@@ -954,14 +1153,17 @@ int SetResponseMatrix()
 	else if(gBiasModel==eEXP_BIAS) biasPars= new ExpBiasPars(gFluxBiasPars[0],gFluxBiasPars[1],gFluxBiasPars[2]);
 	else if(gBiasModel==eEXP_STEP_BIAS) biasPars= new ExpStepBiasPars(gFluxBiasPars[0],gFluxBiasPars[1],gFluxBiasPars[2],gFluxBiasPars[3]);
 
-	
+	gBiasModelFcn= SpectrumUtils::ComputeBiasModel(*biasPars,lgSmin_true,lgSmax_true,200);
+
 	// - Set resolution pars
 	ResoPars* resoPars= 0;
 	//if(gResoModel==eCONST_RESO) resoPars= new ConstResoPars(gConstReso);
 	if(gResoModel==eCONST_RESO) resoPars= new ConstResoPars(gFluxResoPars[0]);
 	else if(gResoModel==eEXP_RESO) resoPars= new ExpResoPars(gFluxResoPars[0],gFluxResoPars[1]);
+	else if(gResoModel==eEXP_STEP_RESO) resoPars= new ExpStepResoPars(gFluxResoPars[0],gFluxResoPars[1],gFluxResoPars[2]);
 
-	
+	gResoModelFcn= SpectrumUtils::ComputeResoModel(*resoPars,lgSmin_true,lgSmax_true,200);
+
 	// - Set efficiency pars
 	EfficiencyPars* effPars= 0;
 	//if(gEfficiencyModel==eCONST_EFF) effPars= new ConstEfficiencyPars(gConstEfficiency);
@@ -973,14 +1175,11 @@ int SetResponseMatrix()
 	//====================================================
 	//==         BUILD RESPONSE MATRIX
 	//=====================================================
-	double lgSmin_true= gTrueBins[0];
-	double lgSmax_true= gTrueBins[gTrueBins.size()-1];
-	double lgSmin_rec= gRecBins[0];
-	double lgSmax_rec= gRecBins[gRecBins.size()-1];
+	
 
 	/*
 	gResponseModelFcn= SpectrumUtils::ComputeResponseModel(
-		*spectrumPars,
+		*gSpectrumPars,
 		*biasPars,
 		*resoPars,
 		*effPars,
@@ -991,7 +1190,7 @@ int SetResponseMatrix()
 	
 	//gResponseMatrix= SpectrumUtils::ComputeParametricResponse(
 	gResponseMatrix= SpectrumUtils::BuildResponseMatrix(
-		*spectrumPars,
+		*gSpectrumPars,
 		*biasPars,
 		*resoPars,
 		*effPars,
@@ -1004,15 +1203,413 @@ int SetResponseMatrix()
 		#endif
 		return -1;
 	}
-	
+
+
+	//=========================================================
+	//==  COMPUTE SOURCE COUNT RESOLUTION BIAS CORR FACTOR
+	//=========================================================	
+	std::vector<double> scResoBiasPars
+	{
+		gBmaj,
+		gBmin,
+		gNoiseRms,
+		gSThr,
+		gResolvedSourceThrP0,
+		gResolvedSourceThrP1,
+		gResolvedSourceThrSlope,
+		gDataFrequency,
+		gDataSpectralIndex,
+		gPhiMedianSlope,	
+		gPhiMedianSbreak,
+		gPhiMedianScaleFactor
+	};
+
+	gSourceCountsResoBiasCorrFcn= new TF1(
+		"SourceCountsResoBiasCorrFcn",
+		SpectrumUtils::SourceCountsResoBiasCorrFactor,
+		lgSmin_rec,lgSmax_rec,
+		12
+	);
+	gSourceCountsResoBiasCorrFcn->SetParameters(scResoBiasPars.data());
+		
+
+	if(gUseSourceCountsResoBiasCorr){
+		for(int i=0;i<gResponseMatrix->GetNbinsX();i++){
+			double lgS= gResponseMatrix->GetXaxis()->GetBinCenter(i+1);
+			double resoBiasCorr= gSourceCountsResoBiasCorrFcn->Eval(lgS);
+			
+			for(int j=0;j<gResponseMatrix->GetNbinsY();j++){
+				double w_old= gResponseMatrix->GetBinContent(i+1,j+1);
+				double w_new= w_old/resoBiasCorr;
+				gResponseMatrix->SetBinContent(i+1,j+1,w_new);
+			}//end loop bins y
+		}//end loop bins x
+	}//close useSourceCountsResoBiasCorr
+
+	//Compute response matrix errors
+	if(ComputeResponseMatrixErrors()<0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to compute response matrix uncertainties ...");
+		#endif
+	}
 
 	return 0;
 
 }//close SetResponseMatrix()
 
 
+int ComputeResponseMatrixErrors()
+{
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing errors on response matrix elements...");
+	#endif
+
+	//## Generate random bias model pars
+	// - Flux bias model
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Generating random flux bias model pars ...");
+	#endif
+	std::vector<std::vector<double>> fluxBiasRandPars;
+	if(StatsUtils::GenerateFitParsAroundCovMatrix(fluxBiasRandPars,gFluxBiasPars,gFluxBiasParCovMatrix,gNRandSamples)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to generate random bias model pars!");
+		#endif
+		return -1;
+	}
+	
+	// - Flux reso model
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Generating random flux reso model pars ...");
+	#endif
+	std::vector<std::vector<double>> fluxResoRandPars;
+	if(StatsUtils::GenerateFitParsAroundCovMatrix(fluxResoRandPars,gFluxResoPars,gFluxResoParCovMatrix,gNRandSamples)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to generate random reso model pars!");
+		#endif
+		return -1;
+	}
+
+	// - Efficiency model
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Generating random efficiency model pars ...");
+	#endif
+	std::vector<std::vector<double>> efficiencyRandPars;
+	if(StatsUtils::GenerateFitParsAroundCovMatrix(efficiencyRandPars,gEfficiencyPars,gEfficiencyParCovMatrix,gNRandSamples)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to generate random efficiency model pars!");
+		#endif
+		return -1;
+	}
+
+	//# Compute response matrix uncertainties
+	std::vector<TH2D*> gRandResponseMatrices;
+	gRandMeanResponseMatrix= (TH2D*)gResponseMatrix->Clone("randMeanResponseMatrix");
+	gRandMeanResponseMatrix->Reset();
+
+	for(int k=0;k<gNRandSamples;k++)
+	{
+		//Generate random bias model
+		BiasPars* biasPars_rand= 0;
+		if(gBiasModel==eCONST_BIAS) biasPars_rand= new ConstBiasPars(fluxBiasRandPars[k][0]);
+		else if(gBiasModel==eEXP_BIAS) biasPars_rand= new ExpBiasPars(fluxBiasRandPars[k][0],fluxBiasRandPars[k][1],fluxBiasRandPars[k][2]);
+		else if(gBiasModel==eEXP_STEP_BIAS) biasPars_rand= new ExpStepBiasPars(fluxBiasRandPars[k][0],fluxBiasRandPars[k][1],fluxBiasRandPars[k][2],fluxBiasRandPars[k][3]);
+		
+		//Generate random resolution pars
+		ResoPars* resoPars_rand= 0;
+		if(gResoModel==eCONST_RESO) resoPars_rand= new ConstResoPars(fluxResoRandPars[k][0]);
+		else if(gResoModel==eEXP_RESO) resoPars_rand= new ExpResoPars(fluxResoRandPars[k][0],fluxResoRandPars[k][1]);
+		else if(gResoModel==eEXP_STEP_RESO) resoPars_rand= new ExpStepResoPars(fluxResoRandPars[k][0],fluxResoRandPars[k][1],fluxResoRandPars[k][2]);
+
+		//Generate random efficiency pars
+		EfficiencyPars* effPars_rand= 0;
+		if(gEfficiencyModel==eCONST_EFF) effPars_rand= new ConstEfficiencyPars(efficiencyRandPars[k][0]);
+		else if(gEfficiencyModel==eSIGMOID_EFF) effPars_rand= new SigmoidEfficiencyPars(efficiencyRandPars[k][0],efficiencyRandPars[k][1],efficiencyRandPars[k][2]);
+
+		//Create response matrix
+		TH2D* responseMatrix_rand= SpectrumUtils::BuildResponseMatrix(
+			*gSpectrumPars,
+			*biasPars_rand,
+			*resoPars_rand,
+			*effPars_rand,
+			gTrueBins, gRecBins
+		);
+		
+		//Add to matrix
+		gRandResponseMatrices.push_back(responseMatrix_rand);
+		gRandMeanResponseMatrix->Add(responseMatrix_rand);
+
+		//Clear data
+		if(biasPars_rand){
+			delete biasPars_rand;
+			biasPars_rand= 0;
+		}
+		if(resoPars_rand){
+			delete resoPars_rand;
+			resoPars_rand= 0;
+		}
+		if(effPars_rand){
+			delete effPars_rand;
+			effPars_rand= 0;
+		}
+
+	}//end loop rand samples
+
+	//Set random response matrix in forward folder
+	gForwardFolder->SetRandomResponseMatrices(gRandResponseMatrices);
+
+	//Compute mean random response matrix
+	gRandMeanResponseMatrix->Scale(1./gNRandSamples);
+
+	//Compute sigma random response matrix
+	gRandSigmaResponseMatrix= (TH2D*)gResponseMatrix->Clone("randSigmaResponseMatrix");
+	gRandSigmaResponseMatrix->Reset();
+	
+	for(size_t k=0;k<gRandResponseMatrices.size();k++)
+	{
+		for(int i=0;i<gRandResponseMatrices[k]->GetNbinsX();i++){
+			for(int j=0;j<gRandResponseMatrices[k]->GetNbinsY();j++){
+				int binId= gRandSigmaResponseMatrix->GetBin(i+1,j+1);
+				double w= gRandResponseMatrices[k]->GetBinContent(i+1,j+1);
+				double w_mean= gRandSigmaResponseMatrix->GetBinContent(i+1,j+1);
+				double s2= (w-w_mean)*(w-w_mean);
+				gRandSigmaResponseMatrix->AddBinContent(binId,s2);
+			}//end loop bins y
+		}//end loop bins
+	}//end loop rand samples
+
+	gRandSigmaResponseMatrix->Scale(1./(gNRandSamples-1));
+
+	for(int i=0;i<gRandSigmaResponseMatrix->GetNbinsX();i++){
+		for(int j=0;j<gRandSigmaResponseMatrix->GetNbinsY();j++){
+			double w= gRandSigmaResponseMatrix->GetBinContent(i+1,j+1);
+			double wsqr= sqrt(w);
+			gRandSigmaResponseMatrix->SetBinContent(i+1,j+1,wsqr);
+		}
+	}
+	
+	
+	return 0;
+
+}//close ComputeResponseMatrixErrors()
+
+
+int ComputeSourceCountsModels()
+{
+	//Set reference frequency
+	double refFreq= 1.4;//GHz
+	double freqScaleFactor= pow(refFreq/gDataFrequency,gDataSpectralIndex);
+	double lgFreqScaleFactor= log10(freqScaleFactor);
+
+	double alphaEG_min= -0.9;
+	double alphaEG_max= -0.7;
+	double freqScaleFactor_min= pow(refFreq/gDataFrequency,alphaEG_min);
+	double freqScaleFactor_max= pow(refFreq/gDataFrequency,alphaEG_max);
+	double lgFreqScaleFactor_min= log10(freqScaleFactor_min);
+	double lgFreqScaleFactor_max= log10(freqScaleFactor_max);
+
+	double galSourceOverDensity= 0.2;
+	double galSourceOverDensityFactor= 1. + galSourceOverDensity;
+
+	//cout<<"refFreq(GHz)="<<refFreq<<", freq(GHz)="<<gDataFrequency<<", alpha="<<gDataSpectralIndex<<", scaleFactor="<<freqScaleFactor<<", lgFreqScaleFactor="<<lgFreqScaleFactor<<endl;
+
+	//=======================================
+	//===    KATGERT+90 SOURCE COUNTS
+	//=======================================
+	gExpDataFitFcn_Katgert= new TF1(
+		"expDataFitFcn_Katgert",
+		//"pow(10,([0] + [1]*(x+3) + [2]*pow(x+3,2) + [3]*pow(x+3,3)) )",
+		//"pow(10,([0] + [1]*([4]+x+3) + [2]*pow([4]+x+3,2) + [3]*pow([4]+x+3,3)) )",
+		"pow(10,([0] + [1]*([4]+x+3) + [2]*pow([4]+x+3,2) + [3]*pow([4]+x+3,3)) -2.5*[4] )",
+		gTrueBins[0],gTrueBins[gTrueBins.size()-1]
+	);
+	//gExpDataFitFcn_Katgert->SetParameters(gSourceCountsExpDataFitPars_Katgert.data());
+	for(size_t k=0;k<gSourceCountsExpDataFitPars_Katgert.size();k++) gExpDataFitFcn_Katgert->SetParameter(k,gSourceCountsExpDataFitPars_Katgert[k]);
+	gExpDataFitFcn_Katgert->SetParameter(gSourceCountsExpDataFitPars_Katgert.size(),lgFreqScaleFactor);
+	gExpDataFitFcn_Katgert->SetLineColor(kBlack);
+	gExpDataFitFcn_Katgert->SetLineStyle(kDashed);
+	//gExpDataFitFcn_Katgert->Draw("l same");
+
+	TF1* expDataFitFcn_fluxScaledMin_Katgert= new TF1(
+		"expDataFitFcn_fluxScaledMin_Katgert",
+		"pow(10,([0] + [1]*([4]+x+3) + [2]*pow([4]+x+3,2) + [3]*pow([4]+x+3,3)) -2.5*[4] )",
+		gTrueBins[0],gTrueBins[gTrueBins.size()-1]
+	);
+	for(size_t k=0;k<gSourceCountsExpDataFitPars_Katgert.size();k++) expDataFitFcn_fluxScaledMin_Katgert->SetParameter(k,gSourceCountsExpDataFitPars_Katgert[k]);
+	expDataFitFcn_fluxScaledMin_Katgert->SetParameter(gSourceCountsExpDataFitPars_Katgert.size(),lgFreqScaleFactor_min);
+
+	TF1* expDataFitFcn_fluxScaledMax_Katgert= new TF1(
+		"expDataFitFcn_fluxScaledMax_Katgert",
+		"pow(10,([0] + [1]*([4]+x+3) + [2]*pow([4]+x+3,2) + [3]*pow([4]+x+3,3)) -2.5*[4] )",
+		gTrueBins[0],gTrueBins[gTrueBins.size()-1]
+	);
+	for(size_t k=0;k<gSourceCountsExpDataFitPars_Katgert.size();k++) expDataFitFcn_fluxScaledMax_Katgert->SetParameter(k,gSourceCountsExpDataFitPars_Katgert[k]);
+	expDataFitFcn_fluxScaledMax_Katgert->SetParameter(gSourceCountsExpDataFitPars_Katgert.size(),lgFreqScaleFactor_max);
+
+	//Shift EG source counts model by +20% (to account galactic source overdensity)
+	
+	TF1* expDataFitFcn_fluxScaled_overdensity_Katgert= new TF1(
+		"expDataFitFcn_fluxScaled_overdensity_Katgert",
+		"pow(10,([0] + [1]*([4]+x+3) + [2]*pow([4]+x+3,2) + [3]*pow([4]+x+3,3)) -2.5*[4] + log10([5]) )",
+		gTrueBins[0],gTrueBins[gTrueBins.size()-1]
+	);
+	for(size_t k=0;k<gSourceCountsExpDataFitPars_Katgert.size();k++) expDataFitFcn_fluxScaled_overdensity_Katgert->SetParameter(k,gSourceCountsExpDataFitPars_Katgert[k]);
+	expDataFitFcn_fluxScaled_overdensity_Katgert->SetParameter(gSourceCountsExpDataFitPars_Katgert.size(),lgFreqScaleFactor);
+	expDataFitFcn_fluxScaled_overdensity_Katgert->SetParameter(gSourceCountsExpDataFitPars_Katgert.size()+1,galSourceOverDensityFactor);
+	expDataFitFcn_fluxScaled_overdensity_Katgert->SetLineColor(kRed);
+	expDataFitFcn_fluxScaled_overdensity_Katgert->SetLineStyle(kDashed);
+	//expDataFitFcn_fluxScaled_overdensity_Katgert->Draw("l same");
+	
+
+	//=======================================
+	//===      HOPKINS+03 SOURCE COUNTS
+	//=======================================
+	gExpDataFitFcn_Hopkins= new TF1(
+		"expDataFitFcn_Hopkins",
+		//"pow(10,([0] + [1]*(x+3) + [2]*pow(x+3,2) + [3]*pow(x+3,3) + [4]*pow(x+3,4) + [5]*pow(x+3,5) + [6]*pow(x+3,6) ) )",
+		"pow(10,([0] + [1]*([7]+x+3) + [2]*pow([7]+x+3,2) + [3]*pow([7]+x+3,3) + [4]*pow([7]+x+3,4) + [5]*pow([7]+x+3,5) + [6]*pow([7]+x+3,6) ) -2.5*[7] )",
+		gTrueBins[0],gTrueBins[gTrueBins.size()-1]
+	);
+	//gExpDataFitFcn_Hopkins->SetParameters(gSourceCountsExpDataFitPars_Hopkins.data());
+	for(size_t k=0;k<gSourceCountsExpDataFitPars_Hopkins.size();k++) gExpDataFitFcn_Hopkins->SetParameter(k,gSourceCountsExpDataFitPars_Hopkins[k]);
+	gExpDataFitFcn_Hopkins->SetParameter(gSourceCountsExpDataFitPars_Hopkins.size(),lgFreqScaleFactor);
+	gExpDataFitFcn_Hopkins->SetLineColor(kBlack);
+	gExpDataFitFcn_Hopkins->SetLineStyle(kDotted);
+	//gExpDataFitFcn_Hopkins->Draw("l same");
+
+	
+	//Compute source count models shifted to input data frequency assuming a min/max spectral index for EG sources
+	TF1* expDataFitFcn_fluxScaledMin_Hopkins= new TF1(
+		"expDataFitFcn_fluxScaledMin_Hopkins",
+		"pow(10,([0] + [1]*([7]+x+3) + [2]*pow([7]+x+3,2) + [3]*pow([7]+x+3,3) + [4]*pow([7]+x+3,4) + [5]*pow([7]+x+3,5) + [6]*pow([7]+x+3,6) ) -2.5*[7] )",
+		gTrueBins[0],gTrueBins[gTrueBins.size()-1]
+	);
+	for(size_t k=0;k<gSourceCountsExpDataFitPars_Hopkins.size();k++) expDataFitFcn_fluxScaledMin_Hopkins->SetParameter(k,gSourceCountsExpDataFitPars_Hopkins[k]);
+	expDataFitFcn_fluxScaledMin_Hopkins->SetParameter(gSourceCountsExpDataFitPars_Hopkins.size(),lgFreqScaleFactor_min);
+
+	TF1* expDataFitFcn_fluxScaledMax_Hopkins= new TF1(
+		"expDataFitFcn_fluxScaledMax_Hopkins",
+		"pow(10,([0] + [1]*([7]+x+3) + [2]*pow([7]+x+3,2) + [3]*pow([7]+x+3,3) + [4]*pow([7]+x+3,4) + [5]*pow([7]+x+3,5) + [6]*pow([7]+x+3,6) ) -2.5*[7] )",
+		gTrueBins[0],gTrueBins[gTrueBins.size()-1]
+	);
+	for(size_t k=0;k<gSourceCountsExpDataFitPars_Hopkins.size();k++) expDataFitFcn_fluxScaledMax_Hopkins->SetParameter(k,gSourceCountsExpDataFitPars_Hopkins[k]);
+	expDataFitFcn_fluxScaledMax_Hopkins->SetParameter(gSourceCountsExpDataFitPars_Hopkins.size(),lgFreqScaleFactor_max);
+
+	TF1* expDataFitFcn_fluxScaled_overdensity_Hopkins= new TF1(
+		"expDataFitFcn_fluxScaled_overdensity_Hopkins",
+		"pow(10,([0] + [1]*([7]+x+3) + [2]*pow([7]+x+3,2) + [3]*pow([7]+x+3,3) + [4]*pow([7]+x+3,4) + [5]*pow([7]+x+3,5) + [6]*pow([7]+x+3,6) ) -2.5*[7] + log10([8]))",
+		gTrueBins[0],gTrueBins[gTrueBins.size()-1]
+	);
+	for(size_t k=0;k<gSourceCountsExpDataFitPars_Hopkins.size();k++) expDataFitFcn_fluxScaled_overdensity_Hopkins->SetParameter(k,gSourceCountsExpDataFitPars_Hopkins[k]);
+	expDataFitFcn_fluxScaled_overdensity_Hopkins->SetParameter(gSourceCountsExpDataFitPars_Hopkins.size(),lgFreqScaleFactor);
+	expDataFitFcn_fluxScaled_overdensity_Hopkins->SetParameter(gSourceCountsExpDataFitPars_Hopkins.size()+1,galSourceOverDensityFactor);
+	expDataFitFcn_fluxScaled_overdensity_Hopkins->SetLineColor(kRed);
+	expDataFitFcn_fluxScaled_overdensity_Hopkins->SetLineStyle(kDotted);
+	//expDataFitFcn_fluxScaled_overdensity_Hopkins->Draw("l same");
+
+	//=======================================
+	//===      SOURCE COUNTS MODEL
+	//=======================================
+	gExpDataFitAreaGraph_min= new TGraph;	
+	gExpDataFitAreaGraph_max= new TGraph;
+	gExpDataFitAreaGraph_mean= new TGraph;	
+	double xmin = gDiffSourceCounts->GetXaxis()->GetXmin();
+	double xmax = gDiffSourceCounts->GetXaxis()->GetXmax();
+	int npx= expDataFitFcn_fluxScaledMin_Katgert->GetNpx();
+	double dx = (xmax-xmin)/npx;
+	double x= xmin + 0.5*dx; 
+	int npoints= 0;
+	std::vector<double> xlist;
+	std::vector<double> yminlist;
+	std::vector<double> ymaxlist;
+	while (x <= xmax)
+	{
+		xlist.push_back(x);
+		double y_Katgert_min= expDataFitFcn_fluxScaledMin_Katgert->Eval(x);
+		double y_Katgert_max= expDataFitFcn_fluxScaledMax_Katgert->Eval(x);
+		double y_Hopkins_min= expDataFitFcn_fluxScaledMin_Hopkins->Eval(x);
+		double y_Hopkins_max= expDataFitFcn_fluxScaledMax_Hopkins->Eval(x);		
+		double ymodel_min= std::min({y_Katgert_min,y_Katgert_max,y_Hopkins_min,y_Hopkins_max});  	
+		double ymodel_max= std::max({y_Katgert_min,y_Katgert_max,y_Hopkins_min,y_Hopkins_max});  	
+		double ymodel_mean= ymodel_min + 0.5*(ymodel_max-ymodel_min);
+		
+		//Enlarge the boundary by the stat/syst error in source count model (~20%)
+		ymodel_min*= (1-gExpSourceCountDataStatErr);
+		ymodel_max*= (1+gExpSourceCountDataStatErr);
+		
+		yminlist.push_back(ymodel_min);
+		ymaxlist.push_back(ymodel_max);
+		gExpDataFitAreaGraph_min->SetPoint(npoints,x,ymodel_min);
+		gExpDataFitAreaGraph_max->SetPoint(npoints,x,ymodel_max);
+		gExpDataFitAreaGraph_mean->SetPoint(npoints,x,ymodel_mean);
+		npoints++;
+		x+= dx;
+		
+	}//end loop points
+		
+	gExpDataFitAreaGraph= new TGraph(npoints*2);
+	for (int i=0;i<npoints;i++) {
+  	gExpDataFitAreaGraph->SetPoint(i,xlist[i],ymaxlist[i]);
+    gExpDataFitAreaGraph->SetPoint(npoints+i,xlist[npoints-i-1],yminlist[npoints-i-1]);
+  }
+	
+
+	/*
+	// - Compute true differential source counts
+	TH1D* trueDiffModelCounts= new TH1D("trueDiffModelCounts","",10,gLgSMin_fit,gLgSMax_fit);
+	//TH1D* trueDiffModelCounts= (TH1D*)gSourceCounts->Clone("trueDiffModelCounts");
+	double gamma= gNormSpectralIndex;
+	double A_sr= Deg2ToSr(gArea);
+
+	for(int i=0;i<trueDiffModelCounts->GetNbinsX();i++){
+		double lgS= trueDiffModelCounts->GetBinCenter(i+1);
+		double dlgS= trueDiffModelCounts->GetBinWidth(i+1);
+		double lgS_min= trueDiffModelCounts->GetBinLowEdge(i+1);
+		double lgS_max= lgS_min + dlgS;
+		double S_min= pow(10,lgS_min);
+		double S_max= pow(10,lgS_max);
+		double dS= S_max-S_min;
+		double S= pow(10,lgS);
+		double NormFactor= pow(S,-gamma);
+
+		double N= gTrueFitModelFcn->Integral(lgS_min,lgS_max);
+		//double N= gTrueFitModelFcn->Eval(lgS);
+		//trueDiffModelCounts->SetBinContent(i+1,N);
+		//if(N>0) trueDiffModelCounts->SetBinError(i+1,sqrt(N));
+		
+		double counts= N/(dS*A_sr);//in units: Jy^-1 sr^-1
+		//double counts= N/(A_sr);//in units: Jy^-1 sr^-1 
+		//double counts= N/A_sr;
+		//double counts= N/(dS*A_sr*fabs(dlgS));//in units: Jy^-1 sr^-1
+		//double counts= trueDiffModelCounts->GetBinContent(i+1)/(dS*A_sr);//in units: Jy^-1 sr^-1 
+		 	
+		double counts_norm= counts/NormFactor;//in units: Jy^-2.5 sr^-1
+
+		cout<<"lgS="<<lgS<<", dS="<<dS<<", Nmodel="<<N<<", counts="<<counts<<endl;
+		trueDiffModelCounts->SetBinContent(i+1,counts_norm);
+	}
+	
+	trueDiffModelCounts->SetLineColor(kMagenta);
+	//trueDiffModelCounts->Draw("L hist same");
+	*/
+
+	//## Clear data
+	if(expDataFitFcn_fluxScaledMin_Katgert) expDataFitFcn_fluxScaledMin_Katgert->Delete();
+	if(expDataFitFcn_fluxScaledMax_Katgert) expDataFitFcn_fluxScaledMax_Katgert->Delete();
+	if(expDataFitFcn_fluxScaled_overdensity_Katgert) expDataFitFcn_fluxScaled_overdensity_Katgert->Delete();
+	if(expDataFitFcn_fluxScaledMin_Hopkins) expDataFitFcn_fluxScaledMin_Hopkins->Delete();
+	if(expDataFitFcn_fluxScaledMax_Hopkins) expDataFitFcn_fluxScaledMax_Hopkins->Delete();
+	if(expDataFitFcn_fluxScaled_overdensity_Hopkins) expDataFitFcn_fluxScaled_overdensity_Hopkins->Delete();
+
+	return 0;
+
+}//close ComputeSourceCountsModels()
+
+
 void Draw()
 {
+	//=======================================
+	//==    RESPONSE MATRIX
+	//=======================================
 	// - Draw response function 2D
 	if(gResponseModelFcn){
 		TCanvas* ResponseModelPlot= new TCanvas("ResponseModelPlot","ResponseModelPlot");
@@ -1022,6 +1619,9 @@ void Draw()
 	}
 
 	// - Draw response matrix
+	TF1* diagFcn= new TF1("diagFcn","x",gTrueBins[0],gTrueBins[gTrueBins.size()-1]);
+	diagFcn->SetLineColor(kWhite);
+
 	if(gResponseMatrix){
 		TCanvas* ResponseMatrixPlot= new TCanvas("ResponseMatrixPlot","ResponseMatrixPlot");
 		ResponseMatrixPlot->cd();
@@ -1032,15 +1632,88 @@ void Draw()
 		gResponseMatrix->GetZaxis()->SetRangeUser(-0.0001,1);
 		gResponseMatrix->Draw("COLZ");
 	
-		TF1* diagFcn= new TF1("diagFcn","x",gTrueBins[0],gTrueBins[gTrueBins.size()-1]);
-		diagFcn->SetLineColor(kWhite);
 		diagFcn->Draw("lsame");
 	}
 
+	if(gRandMeanResponseMatrix){
+		gStyle->SetPaintTextFormat(".2f");
+
+		TCanvas* RandMeanResponseMatrixPlot= new TCanvas("RandMeanResponseMatrixPlot","RandMeanResponseMatrixPlot");
+		RandMeanResponseMatrixPlot->cd();
+
+		gRandMeanResponseMatrix->SetStats(0);
+		gRandMeanResponseMatrix->SetMarkerColor(kWhite);
+		gRandMeanResponseMatrix->SetMarkerSize(0.9);
+		gRandMeanResponseMatrix->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+		gRandMeanResponseMatrix->GetYaxis()->SetTitle("log_{10}(S_{meas}/Jy)");
+		gRandMeanResponseMatrix->GetZaxis()->SetRangeUser(-0.0001,1);
+		gRandMeanResponseMatrix->Draw("COLZ TEXT");
 	
+		diagFcn->Draw("lsame");
+	}
+
+	if(gRandSigmaResponseMatrix){
+		gStyle->SetPaintTextFormat(".2f");
+
+		TCanvas* RandSigmaResponseMatrixPlot= new TCanvas("RandSigmaResponseMatrixPlot","RandSigmaResponseMatrixPlot");
+		RandSigmaResponseMatrixPlot->cd();
+
+		gRandSigmaResponseMatrix->SetStats(0);
+		gRandSigmaResponseMatrix->SetMarkerColor(kWhite);
+		gRandSigmaResponseMatrix->SetMarkerSize(0.9);
+		gRandSigmaResponseMatrix->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+		gRandSigmaResponseMatrix->GetYaxis()->SetTitle("log_{10}(S_{meas}/Jy)");
+		gRandSigmaResponseMatrix->GetZaxis()->SetRangeUser(-0.0001,1);
+		gRandSigmaResponseMatrix->Draw("COLZ TEXT");
 	
-	//--> Results Plot
+		diagFcn->Draw("lsame");
+	}
+
+	// - Draw flux bias model
+	if(gBiasModelFcn){
+		TCanvas* BiasModelPlot= new TCanvas("BiasModelPlot","BiasModelPlot");
+		BiasModelPlot->cd();
+
+		gBiasModelFcn->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+		gBiasModelFcn->GetYaxis()->SetTitle("bias");
+		gBiasModelFcn->Draw("l");
+	}
+	
+
+	// - Draw flux resolution model
+	if(gResoModelFcn){
+		TCanvas* ResoModelPlot= new TCanvas("ResoModelPlot","ResoModelPlot");
+		ResoModelPlot->cd();
+
+		gResoModelFcn->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
+		gResoModelFcn->GetYaxis()->SetTitle("reso");
+		gResoModelFcn->Draw("l");
+	}
+	
+	//=======================================
+	//==    SOURCE COUNTS RESO BIAS
+	//=======================================
+	// - Draw resolution bias model
+	if(gSourceCountsResoBiasCorrFcn){
+		TCanvas* ResoBiasPlot= new TCanvas("ResoBiasPlot","ResoBiasPlot");
+		ResoBiasPlot->cd();
+
+		TH2D* ResoBiasPlotBkg= new TH2D("ResoBiasPlotBkg","",100,gSourceCounts->GetXaxis()->GetXmin(),gSourceCounts->GetXaxis()->GetXmax(),100,gSourceCountsResoBiasCorrFcn->GetMinimum(),gSourceCountsResoBiasCorrFcn->GetMaximum());
+		ResoBiasPlotBkg->SetStats(0);
+		ResoBiasPlotBkg->GetXaxis()->SetTitle("log_{10}(S/Jy)");
+		ResoBiasPlotBkg->GetYaxis()->SetTitle("reso bias corr");
+		ResoBiasPlotBkg->Draw();
+
+		gSourceCountsResoBiasCorrFcn->SetNpx(200);
+		gSourceCountsResoBiasCorrFcn->Draw("l same");
+	}
+	
+	//=======================================
+	//==    RAW SOURCE COUNTS
+	//=======================================
+	// - Draw raw source counts
 	gStyle->SetOptLogy(true);
+	gStyle->SetPadRightMargin(0.05);
 
 	TCanvas* Plot= new TCanvas("Plot","Plot");
 	Plot->cd();
@@ -1067,54 +1740,15 @@ void Draw()
 	gUnfoldedSpectrum->SetMarkerSize(1.3);
 	gUnfoldedSpectrum->SetMarkerStyle(24);
 	gUnfoldedSpectrum->Draw("EPZ same");
-	
+
 	gFFSpectrum->SetMarkerColor(kBlack);
 	gFFSpectrum->SetLineColor(kBlack);
 	gFFSpectrum->SetMarkerStyle(23);
 	//gFFSpectrum->Draw("L hist same");
 	gFFSpectrum->Draw("hist same");
 
-	std::vector<double> fitPars= gForwardFolder->GetFitPars();
-	TF1* trueFitModelFcn= 0;
-
-	if(gSpectrumModel_fit==eBrokenPowerLaws){
-		trueFitModelFcn= new TF1("trueFitModelFcn",SpectrumUtils::BrokenPowerLawSpectrum,gLgSMin_fit,gLgSMax_fit,6);
-		trueFitModelFcn->SetParameters(fitPars.data());
-		trueFitModelFcn->SetLineColor(kRed);
-		trueFitModelFcn->Draw("l same");
-	}
-	else if(gSpectrumModel_fit==ePowerLawWithCutoff){
-		trueFitModelFcn= new TF1("trueFitModelFcn",SpectrumUtils::PowerLawWithCutoffSpectrum,gLgSMin_fit,gLgSMax_fit,4);
-		trueFitModelFcn->SetParameters(fitPars.data());
-		trueFitModelFcn->SetLineColor(kRed);
-		trueFitModelFcn->Draw("l same");
-	}
-	else if(gSpectrumModel_fit==eTwoBrokenPowerLaws){
-		trueFitModelFcn= new TF1("trueFitModelFcn",SpectrumUtils::TwoBrokenPowerLawSpectrum,gLgSMin_fit,gLgSMax_fit,4);
-		trueFitModelFcn->SetParameters(fitPars.data());
-		trueFitModelFcn->SetLineColor(kRed);
-		trueFitModelFcn->Draw("l same");
-	}
-	else if(gSpectrumModel_fit==ePowerLaw){
-		trueFitModelFcn= new TF1("trueFitModelFcn",SpectrumUtils::PowerLawSpectrum,gLgSMin_fit,gLgSMax_fit,2);
-		trueFitModelFcn->SetParameters(fitPars.data());
-		trueFitModelFcn->SetLineColor(kRed);
-		trueFitModelFcn->Draw("l same");
-	}
-	else if(gSpectrumModel_fit==ePol3){
-		trueFitModelFcn= new TF1("trueFitModelFcn",SpectrumUtils::Pol3Spectrum,gLgSMin_fit,gLgSMax_fit,4);
-		trueFitModelFcn->SetParameters(fitPars.data());
-		trueFitModelFcn->SetLineColor(kRed);
-		trueFitModelFcn->Draw("l same");
-	}
-	else if(gSpectrumModel_fit==ePol6){
-		trueFitModelFcn= new TF1("trueFitModelFcn",SpectrumUtils::Pol6Spectrum,gLgSMin_fit,gLgSMax_fit,7);
-		trueFitModelFcn->SetParameters(fitPars.data());
-		trueFitModelFcn->SetLineColor(kRed);
-		trueFitModelFcn->Draw("l same");
-	}
-
-	
+	gTrueFitModelFcn->SetLineColor(kRed);
+	gTrueFitModelFcn->Draw("l same");	
 
 
 	TLegend* PlotLegend= new TLegend(0.6,0.6,0.8,0.8);	
@@ -1124,10 +1758,25 @@ void Draw()
 	PlotLegend->AddEntry(gSourceCounts,"measured","PL");
 	PlotLegend->AddEntry(gUnfoldedSpectrum,"unfolded","PL");
 	PlotLegend->AddEntry(gFFSpectrum,"fit","L");
-	PlotLegend->AddEntry(trueFitModelFcn,"model","L");
+	PlotLegend->AddEntry(gTrueFitModelFcn,"model","L");
 	PlotLegend->Draw("same");
 
+	// - Draw fit relative residuals
+	gStyle->SetOptLogy(false);
+
+	TCanvas* FitResidualPlot= new TCanvas("FitResidualPlot","FitResidualPlot");
+	FitResidualPlot->cd();
+
+	gSourceCountsFitResidualHisto->GetXaxis()->SetTitle("log_{10}(S/Jy)");
+	gSourceCountsFitResidualHisto->GetYaxis()->SetTitle("N_{ff}/N-1");
+	gSourceCountsFitResidualHisto->Draw("hist same");
+
+	//=======================================
+	//==    DIFFERENTIAL SOURCE COUNTS
+	//=======================================
 	//- Draw normalized differential counts
+	gStyle->SetOptLogy(true);
+
 	TCanvas* DiffCountsPlot= new TCanvas("DiffCountsPlot","DiffCountsPlot");
 	DiffCountsPlot->cd();
 
@@ -1142,6 +1791,10 @@ void Draw()
 	DiffCountsPlotBkg->GetYaxis()->SetTitleOffset(1.3);
 	DiffCountsPlotBkg->Draw();
 
+	gExpDataFitAreaGraph->SetFillStyle(1001);
+  gExpDataFitAreaGraph->SetFillColor(kAzure-8);
+  gExpDataFitAreaGraph->Draw("F");
+		
 	gDiffSourceCounts->SetMarkerColor(kBlack);
 	gDiffSourceCounts->SetLineColor(kBlack);
 	gDiffSourceCounts->SetMarkerStyle(8);
@@ -1150,103 +1803,159 @@ void Draw()
 	
 	gUnfoldedDiffSpectrum->SetMarkerColor(kBlack);
 	gUnfoldedDiffSpectrum->SetLineColor(kBlack);
-	gUnfoldedDiffSpectrum->SetMarkerSize(1.3);
+	gUnfoldedDiffSpectrum->SetMarkerSize(1.1);
 	gUnfoldedDiffSpectrum->SetMarkerStyle(24);
-	gUnfoldedDiffSpectrum->Draw("EPZ same");
+	//gUnfoldedDiffSpectrum->Draw("EPZ same");
+
+	TGraphErrors* unfoldedDiffSpectrumGraph_totErrors= new TGraphErrors;
+	TGraphErrors* unfoldedDiffSpectrumGraph= new TGraphErrors;
+	int npts= 0;
+	int npts2= 0;
+	double minBinSize= 1.e+99;
+	for(int i=0;i<gUnfoldedDiffSpectrum_totErrors->GetNbinsX();i++){
+		double binWidth= gUnfoldedDiffSpectrum_totErrors->GetXaxis()->GetBinWidth(i+1);
+		if(binWidth<minBinSize) minBinSize= binWidth;
+	}
+	//double offset= minBinSize/3.;
+	double offset= 0;
+
+	for(int i=0;i<gUnfoldedDiffSpectrum_totErrors->GetNbinsX();i++){
+		double lgS= gUnfoldedDiffSpectrum_totErrors->GetXaxis()->GetBinCenter(i+1);
+		double binContent= gUnfoldedDiffSpectrum_totErrors->GetBinContent(i+1);
+		double binError= gUnfoldedDiffSpectrum_totErrors->GetBinError(i+1);
+		if(binContent>0){
+			unfoldedDiffSpectrumGraph_totErrors->SetPoint(npts,lgS+offset,binContent);
+			unfoldedDiffSpectrumGraph_totErrors->SetPointError(npts,0,binError);
+			npts++;
+		}
+		
+		lgS= gUnfoldedDiffSpectrum->GetXaxis()->GetBinCenter(i+1);
+		binContent= gUnfoldedDiffSpectrum->GetBinContent(i+1);
+		binError= gUnfoldedDiffSpectrum->GetBinError(i+1);
+		if(binContent>0){
+			unfoldedDiffSpectrumGraph->SetPoint(npts2,lgS+offset,binContent);
+			unfoldedDiffSpectrumGraph->SetPointError(npts2,0,binError);
+			npts2++;
+		}
+	}
+
+	unfoldedDiffSpectrumGraph->SetMarkerColor(kBlack);
+	unfoldedDiffSpectrumGraph->SetLineColor(kBlack);
+	unfoldedDiffSpectrumGraph->SetMarkerSize(1.1);
+	unfoldedDiffSpectrumGraph->SetMarkerStyle(24);
+	unfoldedDiffSpectrumGraph->Draw("PZ");
+
+	unfoldedDiffSpectrumGraph_totErrors->SetMarkerColor(kBlack);
+	unfoldedDiffSpectrumGraph_totErrors->SetLineColor(kBlack);
+	unfoldedDiffSpectrumGraph_totErrors->SetMarkerSize(1.1);
+	unfoldedDiffSpectrumGraph_totErrors->SetMarkerStyle(24);
+	unfoldedDiffSpectrumGraph_totErrors->Draw("[]");
+
+	gUnfoldedDiffSpectrum_resoBiasCorrected->SetMarkerColor(kBlue);
+	gUnfoldedDiffSpectrum_resoBiasCorrected->SetLineColor(kBlue);
+	gUnfoldedDiffSpectrum_resoBiasCorrected->SetMarkerSize(1.1);
+	gUnfoldedDiffSpectrum_resoBiasCorrected->SetMarkerStyle(21);
+	//gUnfoldedDiffSpectrum_resoBiasCorrected->Draw("EPZ same");
 	
 	gFFDiffSpectrum->SetMarkerColor(kBlack);
 	gFFDiffSpectrum->SetLineColor(kBlack);
 	gFFDiffSpectrum->SetMarkerStyle(23);
 	//gFFDiffSpectrum->Draw("L hist same");
 
-	TH1D* trueDiffModelCounts= new TH1D("trueDiffModelCounts","",10,gLgSMin_fit,gLgSMax_fit);
-	//TH1D* trueDiffModelCounts= (TH1D*)gSourceCounts->Clone("trueDiffModelCounts");
-	double gamma= gNormSpectralIndex;
-	double A_sr= Deg2ToSr(gArea);
-
-	for(int i=0;i<trueDiffModelCounts->GetNbinsX();i++){
-		double lgS= trueDiffModelCounts->GetBinCenter(i+1);
-		double dlgS= trueDiffModelCounts->GetBinWidth(i+1);
-		double lgS_min= trueDiffModelCounts->GetBinLowEdge(i+1);
-		double lgS_max= lgS_min + dlgS;
-		double S_min= pow(10,lgS_min);
-		double S_max= pow(10,lgS_max);
-		double dS= S_max-S_min;
-		double S= pow(10,lgS);
-		double NormFactor= pow(S,-gamma);
-
-		double N= trueFitModelFcn->Integral(lgS_min,lgS_max);
-		//double N= trueFitModelFcn->Eval(lgS);
-		//trueDiffModelCounts->SetBinContent(i+1,N);
-		//if(N>0) trueDiffModelCounts->SetBinError(i+1,sqrt(N));
-		
-		double counts= N/(dS*A_sr);//in units: Jy^-1 sr^-1
-		//double counts= N/(A_sr);//in units: Jy^-1 sr^-1 
-		//double counts= N/A_sr;
-		//double counts= N/(dS*A_sr*fabs(dlgS));//in units: Jy^-1 sr^-1
-		//double counts= trueDiffModelCounts->GetBinContent(i+1)/(dS*A_sr);//in units: Jy^-1 sr^-1 
-		 	
-		double counts_norm= counts/NormFactor;//in units: Jy^-2.5 sr^-1
-
-		cout<<"lgS="<<lgS<<", dS="<<dS<<", Nmodel="<<N<<", counts="<<counts<<endl;
-		trueDiffModelCounts->SetBinContent(i+1,counts_norm);
-	}
-	
-	trueDiffModelCounts->SetLineColor(kMagenta);
-	//trueDiffModelCounts->Draw("L hist same");
-
-	double refFreq= 1.4;//GHz
-	double freqScaleFactor= pow(refFreq/gDataFrequency,gDataSpectralIndex);
-	double lgFreqScaleFactor= log10(freqScaleFactor);
-	cout<<"refFreq(GHz)="<<refFreq<<", freq(GHz)="<<gDataFrequency<<", alpha="<<gDataSpectralIndex<<", scaleFactor="<<freqScaleFactor<<", lgFreqScaleFactor="<<lgFreqScaleFactor<<endl;
-
-	TF1* expDataFitFcn_Katgert= new TF1(
-		"expDataFitFcn_Katgert",
-		//"pow(10,([0] + [1]*(x+3) + [2]*pow(x+3,2) + [3]*pow(x+3,3)) )",
-		//"pow(10,([0] + [1]*([4]+x+3) + [2]*pow([4]+x+3,2) + [3]*pow([4]+x+3,3)) )",
-		"pow(10,([0] + [1]*([4]+x+3) + [2]*pow([4]+x+3,2) + [3]*pow([4]+x+3,3)) -2.5*[4] )",
-		gTrueBins[0],gTrueBins[gTrueBins.size()-1]
-	);
-	//expDataFitFcn_Katgert->SetParameters(gSourceCountsExpDataFitPars_Katgert.data());
-	for(size_t k=0;k<gSourceCountsExpDataFitPars_Katgert.size();k++) expDataFitFcn_Katgert->SetParameter(k,gSourceCountsExpDataFitPars_Katgert[k]);
-	expDataFitFcn_Katgert->SetParameter(gSourceCountsExpDataFitPars_Katgert.size(),lgFreqScaleFactor);
-	expDataFitFcn_Katgert->SetLineColor(kBlack);
-	expDataFitFcn_Katgert->SetLineStyle(kDashed);
-	expDataFitFcn_Katgert->Draw("l same");
-
-
-	TF1* expDataFitFcn_Hopkins= new TF1(
-		"expDataFitFcn_Hopkins",
-		//"pow(10,([0] + [1]*(x+3) + [2]*pow(x+3,2) + [3]*pow(x+3,3) + [4]*pow(x+3,4) + [5]*pow(x+3,5) + [6]*pow(x+3,6) ) )",
-		"pow(10,([0] + [1]*([7]+x+3) + [2]*pow([7]+x+3,2) + [3]*pow([7]+x+3,3) + [4]*pow([7]+x+3,4) + [5]*pow([7]+x+3,5) + [6]*pow([7]+x+3,6) ) -2.5*[7] )",
-		gTrueBins[0],gTrueBins[gTrueBins.size()-1]
-	);
-	//expDataFitFcn_Hopkins->SetParameters(gSourceCountsExpDataFitPars_Hopkins.data());
-	for(size_t k=0;k<gSourceCountsExpDataFitPars_Hopkins.size();k++) expDataFitFcn_Hopkins->SetParameter(k,gSourceCountsExpDataFitPars_Hopkins[k]);
-	expDataFitFcn_Hopkins->SetParameter(gSourceCountsExpDataFitPars_Hopkins.size(),lgFreqScaleFactor);
-	expDataFitFcn_Hopkins->SetLineColor(kBlack);
-	expDataFitFcn_Hopkins->SetLineStyle(kDotted);
-	expDataFitFcn_Hopkins->Draw("l same");
-
 	TLegend* DiffCountsPlotLegend= new TLegend(0.6,0.6,0.8,0.8);	
 	DiffCountsPlotLegend->SetTextSize(0.04);
 	DiffCountsPlotLegend->SetTextFont(52);
 	DiffCountsPlotLegend->AddEntry(gDiffSourceCounts,"measured","PL");
 	DiffCountsPlotLegend->AddEntry(gUnfoldedDiffSpectrum,"unfolded","PL");
+	DiffCountsPlotLegend->AddEntry(gExpDataFitAreaGraph,Form("1.4 GHz data shifted @ %1.0f MHz",gDataFrequency*1000),"F");
 	//DiffCountsPlotLegend->AddEntry(gFFDiffSpectrum,"fit","L");
 	//DiffCountsPlotLegend->AddEntry(trueDiffModelCounts,"model","L");
 	DiffCountsPlotLegend->Draw("same");
 
-	TLegend* DiffCountsPlotLegend2= new TLegend(0.1,0.6,0.3,0.8);	
-	DiffCountsPlotLegend2->SetTextSize(0.035);
-	DiffCountsPlotLegend2->SetTextFont(52);
-	TString legendText= Form("1.4 GHz data shifted @ %1.0f MHz",gDataFrequency*1000);
-	DiffCountsPlotLegend2->SetHeader(legendText);
-	DiffCountsPlotLegend2->AddEntry(expDataFitFcn_Hopkins,"Hopkins et al. (2003)","L");
-	DiffCountsPlotLegend2->AddEntry(expDataFitFcn_Katgert,"Katgert et al. (1998)","L");
-	DiffCountsPlotLegend2->Draw("same");
+
+	// - Compute difference between observed counts and model
+	gStyle->SetOptLogy(0);
+
+	TCanvas* ObsModelCountDiffPlot= new TCanvas("ObsModelCountDiffPlot","ObsModelCountDiffPlot");
+	ObsModelCountDiffPlot->cd();
+
+	TH2D* ObsModelCountDiffPlotBkg= new TH2D("ObsModelCountDiffPlot","",100,gDiffSourceCounts->GetXaxis()->GetXmin(),gDiffSourceCounts->GetXaxis()->GetXmax(),100,-1,1);
+	ObsModelCountDiffPlotBkg->SetTitle(0);
+	ObsModelCountDiffPlotBkg->SetStats(0);
+	ObsModelCountDiffPlotBkg->GetXaxis()->SetTitle("log_{10}(S/Jy)");
+	ObsModelCountDiffPlotBkg->GetXaxis()->SetTitleSize(0.06);
+	ObsModelCountDiffPlotBkg->GetXaxis()->SetTitleOffset(0.8);
+	ObsModelCountDiffPlotBkg->GetYaxis()->SetTitle("dN/dS_{obs}/dN/dS_{model}-1");
+	ObsModelCountDiffPlotBkg->GetYaxis()->SetTitleSize(0.06);
+	ObsModelCountDiffPlotBkg->GetYaxis()->SetTitleOffset(1.3);
+	ObsModelCountDiffPlotBkg->Draw();
+
+	TGraph* sourceCountsObsToModelDiffGraph_min= new TGraph;
+	TGraph* sourceCountsObsToModelDiffGraph_mean= new TGraph;
+	int np= 0;
+
+	for(int i=0;i<gUnfoldedDiffSpectrum->GetNbinsX();i++){
+		double binCenter= gUnfoldedDiffSpectrum->GetBinCenter(i+1);
+		double counts_obs= gUnfoldedDiffSpectrum->GetBinContent(i+1);
+		double counts_model_min= gExpDataFitAreaGraph_min->Eval(binCenter);
+		double counts_model_mean= gExpDataFitAreaGraph_mean->Eval(binCenter);
+				
+		if(counts_obs<=0 || counts_model_min<=0 || counts_model_mean<=0) continue;
+		
+		double pull_mean= counts_obs/counts_model_mean-1;
+		double pull_min= counts_obs/counts_model_min-1;
+		sourceCountsObsToModelDiffGraph_mean->SetPoint(np,binCenter,pull_mean);
+		sourceCountsObsToModelDiffGraph_min->SetPoint(np,binCenter,pull_min);
+		np++;
+	}//end loop bins
+	
+	sourceCountsObsToModelDiffGraph_min->SetMarkerColor(kBlack);
+	sourceCountsObsToModelDiffGraph_min->SetLineColor(kBlack);
+	sourceCountsObsToModelDiffGraph_min->SetMarkerStyle(8);
+	sourceCountsObsToModelDiffGraph_min->SetMarkerSize(1.3);
+	sourceCountsObsToModelDiffGraph_min->Draw("PLZ");
+
+	sourceCountsObsToModelDiffGraph_mean->SetMarkerColor(kRed);
+	sourceCountsObsToModelDiffGraph_mean->SetLineColor(kRed);
+	sourceCountsObsToModelDiffGraph_mean->SetMarkerStyle(21);
+	sourceCountsObsToModelDiffGraph_mean->SetMarkerSize(1.1);
+	sourceCountsObsToModelDiffGraph_mean->Draw("PLZ");
+
 
 }//close Draw()
+
+
+void PrintSourceCountTable()
+{
+	std::string delimiter= "&";	
+	
+	cout<<"== SOURCE COUNTS TABLE =="<<endl;
+	for(int i=0;i<gSourceCounts->GetNbinsX();i++){
+		double lgS= gSourceCounts->GetBinCenter(i+1);
+		double dlgS= gSourceCounts->GetBinWidth(i+1);	
+		double lgSmin= gSourceCounts->GetBinLowEdge(i+1);	
+		double lgSmax= lgSmin + dlgS;
+		double S= pow(10,lgS)*1.e+3;//mJy
+		double Smin= pow(10,lgSmin);
+		double Smax= pow(10,lgSmax);
+		double dS= (Smax-Smin)*1.e+3;//mJy
+
+		double N= gSourceCounts->GetBinContent(i+1);
+		double N_unfold= gUnfoldedSpectrum->GetBinContent(i+1);
+		double counts= gDiffSourceCounts->GetBinContent(i+1);
+		double counts_unfold= gUnfoldedDiffSpectrum->GetBinContent(i+1);
+		double countsErr_unfold= gUnfoldedDiffSpectrum->GetBinError(i+1);
+		double countsTotErr_unfold= gUnfoldedDiffSpectrum_totErrors->GetBinError(i+1);
+		
+
+		if(N<=0) continue;
+		
+		printf("%.2f %s %.2f %s %d %s %.2f %s %.2f %s %.2f %s %.2f %s %.2f\n",dS,delimiter.c_str(),S,delimiter.c_str(),(int)(N),delimiter.c_str(),N_unfold,delimiter.c_str(),counts,delimiter.c_str(),counts_unfold,delimiter.c_str(),countsErr_unfold,delimiter.c_str(),countsTotErr_unfold);
+	}
+	cout<<"========================="<<endl;
+
+
+}//close PrintSourceCountTable()
 
 int ReadData(std::string filename)
 {
@@ -1320,8 +2029,13 @@ void Save()
 		outputFile->cd();		
 		
 		//Write source counts
-		if(gSourceCounts) gSourceCounts->Write();
-		
+		if(gSourceCounts) gSourceCounts->Write();		
+		if(gDiffSourceCounts) gDiffSourceCounts->Write();
+		if(gUnfoldedDiffSpectrum) gUnfoldedDiffSpectrum->Write();
+		if(gUnfoldedDiffSpectrum_totErrors) gUnfoldedDiffSpectrum_totErrors->Write();
+		if(gUnfoldedDiffSpectrum_resoBiasCorrected) gUnfoldedDiffSpectrum_resoBiasCorrected->Write();
+		if(gFFDiffSpectrum) gFFDiffSpectrum->Write();
+
 		//Write response matrix
 		if(gResponseMatrix) gResponseMatrix->Write();
 		if(gResponseModelFcn) {

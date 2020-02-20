@@ -61,7 +61,11 @@ class ForwardFolder
 		/**
 		* \brief Return unfolded spectrum
 		*/
-		TH1D* GetUnfoldedSpectrum(){return fUnfoldedSpectrum;}
+		TH1D* GetUnfoldedSpectrum(){return fUnfoldedSpectrum;}	
+		/**
+		* \brief Return unfolded spectrum with total stat+syst errors
+		*/
+		TH1D* GetTotErrUnfoldedSpectrum(){return fUnfoldedSpectrum_totErrors;}
 		/**
 		* \brief Return true spectrum
 		*/
@@ -74,7 +78,11 @@ class ForwardFolder
 		* \brief Return forward folded spectrum
 		*/
 		TH1D* GetForwardFoldedSpectrum(){return fForwardFoldedSpectrum;}
-
+		/**
+		* \brief Set random response matrices
+		*/
+		void SetRandomResponseMatrices(std::vector<TH2D*>& histos){fRandomResponseMatrices=histos;}
+		
 		/**
 		* \brief Get fit pars
 		*/
@@ -122,7 +130,7 @@ class ForwardFolder
 		/**
 		* \brief Unfold spectrum (internal method)
 		*/
-		TH1D* UnfoldSpectrum(SpectrumPars& initFitPars,std::string runMode="FIT");
+		TH1D* UnfoldSpectrum(SpectrumPars& initFitPars,std::string runMode="FIT",int printLevel=1);
 		/**
 		* \brief Fit log-likelihood definition
 		*/
@@ -142,7 +150,10 @@ class ForwardFolder
 		static TH1D* fForwardFoldedSpectrum;
 		static TH1D* fCurrentForwardFoldedSpectrum;
 		TH1D* fUnfoldedSpectrum;
-		static TH2D* fResponseMatrix;
+		TH1D* fUnfoldedSpectrum_totErrors;
+		TH2D* fResponseMatrix;
+		static TH2D* fCurrentResponseMatrix;
+		static std::vector<TH2D*> fRandomResponseMatrices;
 		int fNTrueBins;
 		double fLgEMin_true;
 		double fLgEMax_true;

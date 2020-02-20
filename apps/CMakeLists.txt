@@ -19,6 +19,8 @@ add_subdirectory(sourceAstroCatalogsMatchFinder)
 add_subdirectory(sourceTreeWriter)
 add_subdirectory(sourceAsciiExporter)
 add_subdirectory(sourceMVClassifier)
+add_subdirectory(sourceRefitter)
+
 
 set (INCLUDE_DIRS ${INCLUDE_DIRS} PARENT_SCOPE)
 set (Task_ReadImg_SRCS ${Task_ReadImg_SRCS} PARENT_SCOPE)
@@ -42,4 +44,5 @@ set (Task_SourceAstroCatalogsMatchFinder_SRCS ${Task_SourceAstroCatalogsMatchFin
 set (Task_SourceTreeWriter_SRCS ${Task_SourceTreeWriter_SRCS} PARENT_SCOPE)
 set (Task_SourceAsciiExporter_SRCS ${Task_SourceAsciiExporter_SRCS} PARENT_SCOPE)
 set (Task_SourceMVClassifier_SRCS ${Task_SourceMVClassifier_SRCS} PARENT_SCOPE)
+set (Task_SourceRefitter_SRCS ${Task_SourceRefitter_SRCS} PARENT_SCOPE)
 

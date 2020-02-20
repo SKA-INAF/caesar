@@ -161,8 +161,10 @@ struct SourceComponentData
 bool gRunInteractively= false;
 bool gTrainClassifier= false;
 bool gIsFileList= false;
+bool gApplyLogTransformToVariables= true;
 std::string fileName= "";
 std::string weightFileName= "";
+std::string outputFileName_trainData= "output_train.root";
 std::string outputFileName= "sources.root";
 std::string regionOutputFileName= "sources.reg";
 std::string regionComponentsOutputFileName= "sources_fitcomp.reg";
@@ -196,6 +198,7 @@ float gSourceToBeamRatioMax= 100;
 
 //Globar vars
 TFile* outputFile= 0;
+TFile* outputFile_trainData= 0;
 TTree* outputTree= 0;
 TApplication* app= 0;
 TMVA::Factory* gMVAFactory= 0;
@@ -217,6 +220,7 @@ TCanvas* ClassOutPlot= 0;
 TH2D* ClassOutPlotBkg= 0;
 TH1D* ClassOutHisto_signal= 0;
 TH1D* ClassOutHisto_bkg= 0;
+TLegend* ClassOutPlotLegend= 0;
 
 std::vector<SourceComponentData*> m_sourceComponentData;
 Source* m_source= 0;
@@ -642,9 +646,12 @@ int Init()
 	m_sources.clear();
 	outputTree->Branch("Source",&m_source);
 
+	
 	//Init MVA 
 	TMVA::Tools::Instance();
 
+	//Init output train data file
+	if(gTrainClassifier && !gRunInteractively) outputFile_trainData= new TFile(outputFileName_trainData.c_str(),"RECREATE");
 
 	//Init classifier data TTree
 	if(!gDataTree) gDataTree= new TTree("data","data");
@@ -690,6 +697,17 @@ int Init()
 	gBkgDataTree_test->Branch("areaRatio",&gAreaRatio);	
 	gBkgDataTree_test->Branch("classOutput",&gClassOutput);
 	
+	
+	if(!ClassOutHisto_signal) ClassOutHisto_signal= new TH1D("ClassOutHisto_signal","ClassOutHisto_signal",100,-2,2);
+	ClassOutHisto_signal->SetFillColor(kRed);
+	ClassOutHisto_signal->SetFillStyle(3001);
+	ClassOutHisto_signal->SetLineColor(kRed);
+
+	if(!ClassOutHisto_bkg) ClassOutHisto_bkg= new TH1D("ClassOutHisto_bkg","ClassOutHisto_bkg",100,-2,2);
+	ClassOutHisto_bkg->SetFillColor(kBlack);
+	ClassOutHisto_bkg->SetFillStyle(3004);
+	ClassOutHisto_bkg->SetLineColor(kBlack);
+
 	//Set random seed
 	gRandom = new TRandom3(0);
 	gRandom->SetSeed(0);
@@ -710,6 +728,11 @@ void ClearData()
 	//Close file
 	if(outputFile && outputFile->IsOpen()){
 		outputFile->Close();
+	}
+
+	//Close train data file
+	if(outputFile_trainData && outputFile_trainData->IsOpen()){
+		outputFile_trainData->Close();
 	}
 
 }//close ClearData()
@@ -808,6 +831,12 @@ int MakeClassifierData()
 		int componentIndex= m_sourceComponentData[i]->fitComponentIndex;
 		int sindex= m_sourceComponentData[i]->sourceIndex;
 		int nestedSourceIndex= m_sourceComponentData[i]->nestedSourceIndex;
+
+		if(gApplyLogTransformToVariables){
+			peakSNR= log10(peakSNR);
+			eccentricityRatio= log10(eccentricityRatio);
+			sourceToBeamRatio= log10(sourceToBeamRatio);
+		}
 		
 		dataVarList[0].push_back(peakSNR);
 		dataVarList[1].push_back(eccentricityRatio);
@@ -912,9 +941,6 @@ int MakeClassifierData()
 			gSourceIndex= static_cast<int>(classifierData[i][4]);
 			gNestedSourceIndex= static_cast<int>(classifierData[i][5]);
 			gFitComponentIndex= static_cast<int>(classifierData[i][6]);
-
-			//cout<<"--> Adding source component data no. "<<i+1<<" (sindex="<<gSourceIndex<<", nindex="<<gNestedSourceIndex<<", cindex="<<gFitComponentIndex<<")"<<endl;
-
 
 			gDataTree->Fill();
 
@@ -1084,8 +1110,7 @@ int EvaluateMLPClassifier(std::string weightFileName)
 	//######################################
 	//##   INIT DATA
 	//######################################
-	ClassOutHisto_signal= new TH1D("ClassOutHisto_signal","ClassOutHisto_signal",100,-2,2);
-	ClassOutHisto_bkg= new TH1D("ClassOutHisto_bkg","ClassOutHisto_bkg",100,-2,2);
+	
 
 	int NSig_true= 0;
 	int NSig= 0;
@@ -1141,35 +1166,46 @@ int EvaluateMLPClassifier(std::string weightFileName)
 	#endif
 	
 	//Draw NN output histos
-	ClassOutPlot= new TCanvas("ClassOutPlot","ClassOutPlot",600,600);
-	ClassOutPlot->cd();
+	if(outputFile_trainData) outputFile_trainData->cd();
 
-	ClassOutPlotBkg= new TH2D("ClassOutPlotBkg","",100,-0.5,1.5,100,0,1);
-	ClassOutPlotBkg->SetXTitle("NNOut");
-	ClassOutPlotBkg->SetYTitle("entries");
-	ClassOutPlotBkg->SetStats(0);
-	ClassOutPlotBkg->Draw();
+		ClassOutPlot= new TCanvas("ClassOutPlot","ClassOutPlot",600,600);
+		ClassOutPlot->cd();
 
-	gPad->Modified(); 
-	gPad->Update();
+		ClassOutPlotBkg= new TH2D("ClassOutPlotBkg","",100,-0.5,1.5,100,0,1);
+		ClassOutPlotBkg->SetXTitle("NNOut");
+		ClassOutPlotBkg->SetYTitle("entries");
+		ClassOutPlotBkg->SetStats(0);
+		ClassOutPlotBkg->Draw();
 
-	ClassOutHisto_signal->SetFillColor(kRed);
-	ClassOutHisto_signal->SetFillStyle(3001);
-	ClassOutHisto_signal->SetLineColor(kRed);
-	ClassOutHisto_signal->DrawNormalized("hist same");
+		gPad->Modified(); 
+		gPad->Update();
 
-	gPad->Modified(); 
-	gPad->Update();
+		ClassOutHisto_signal->DrawNormalized("hist same");
 
-	ClassOutHisto_bkg->SetLineColor(kBlack);
-	ClassOutHisto_bkg->DrawNormalized("hist same");
+		gPad->Modified(); 
+		gPad->Update();
 
-	gPad->Modified(); 
-	gPad->Update();
+		ClassOutHisto_bkg->DrawNormalized("hist same");
 
-	ClassOutPlot->Update();
-  ClassOutPlot->Draw();
-	gSystem->ProcessEvents();
+		gPad->Modified(); 
+		gPad->Update();
+
+		ClassOutPlotLegend= new TLegend(0.6,0.7,0.7,0.8);
+		ClassOutPlotLegend->SetFillColor(0);
+		ClassOutPlotLegend->SetTextSize(0.045);
+		ClassOutPlotLegend->SetTextFont(52);
+		ClassOutPlotLegend->AddEntry(ClassOutHisto_signal,"real","F");
+		ClassOutPlotLegend->AddEntry(ClassOutHisto_bkg,"false","F");	
+		ClassOutPlotLegend->Draw("same");
+
+		gPad->Modified(); 
+		gPad->Update();
+
+		ClassOutPlot->Update();
+  	ClassOutPlot->Draw();
+
+	
+	if(gRunInteractively) gSystem->ProcessEvents();
 
 	//Clear stuff
 	if(gMVAReader) {
@@ -1743,6 +1779,22 @@ void Save()
 		INFO_LOG("Saving ascii catalog with selected sources...");
 	#endif
 	SaveCatalog();
+
+	//Save train data
+	if(!gRunInteractively && outputFile_trainData && outputFile_trainData->IsOpen())
+	{
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving train data to file ...");
+		#endif
+		outputFile_trainData->cd();
+		if(gSignalDataTree_train) gSignalDataTree_train->Write();
+		if(gSignalDataTree_test) gSignalDataTree_test->Write();
+		if(gBkgDataTree_train) gBkgDataTree_train->Write();
+		if(gBkgDataTree_test) gBkgDataTree_test->Write();
+		if(ClassOutHisto_signal) ClassOutHisto_signal->Write();
+		if(ClassOutHisto_bkg) ClassOutHisto_bkg->Write();	
+		if(ClassOutPlot) ClassOutPlot->Write();
+	}
 
 }//close Save()
 

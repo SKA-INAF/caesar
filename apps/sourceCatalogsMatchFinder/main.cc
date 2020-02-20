@@ -31,6 +31,7 @@
 #include <WCSUtils.h>
 #include <DS9Region.h>
 #include <DS9RegionParser.h>
+#include <TCanvas.h>
 
 //ROOT headers
 #include <TFile.h>
@@ -38,6 +39,7 @@
 #include <TEllipse.h>
 #include <TRandom.h>
 #include <TRandom3.h>
+#include <TGraphErrors.h>
 
 
 #include <iostream>
@@ -87,7 +89,8 @@ void Usage(char* exeName)
 	cout<<"-g, --shuffleSources \t Randomize sources and catalog sources in an annulus centred on their original position (default=no)"<<endl;
 	cout<<"-r, --shuffleRmin=[Rmin] \t Minimum annulus radius for source shuffling (default=30)"<<endl;
 	cout<<"-R, --shuffleRmax=[Rmax] \t Maximum annulus radius for source shuffling (default=50)"<<endl;
-	
+	cout<<"-u, --shiftFlux \t Shift flux density of main catalog (not that of the matching catalogs) (default=false)"<<endl;
+	cout<<"-U, --fluxShift=[FLUX_SHIFT] \t Flux density shift (default=0)"<<endl;
 	cout<<"-v, --verbosity=[LEVEL] \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	
 	cout<<"=============================="<<endl;
@@ -128,6 +131,8 @@ static const struct option options_tab[] = {
 	{ "shuffleSources", no_argument, 0, 'g'},	
 	{ "shuffleRmin", required_argument, 0, 'r'},
 	{ "shuffleRmax", required_argument, 0, 'R'},
+	{ "shiftFlux", no_argument, 0, 'u'},
+	{ "fluxShift", required_argument, 0, 'U'},
   {(char*)0, (int)0, (int*)0, (int)0}
 };
 
@@ -153,6 +158,8 @@ float compMatchOverlapThr= 0.8;//fraction of overlap above which source fit comp
 float compMatchOverlapLowThr= 0.2;//fraction of overlap above which source fit component and region are matched
 bool applySourceComponentAreaRatioThr= false;
 bool correctFlux= false;
+bool shiftFlux= false;
+double fluxShift= 0;
 bool saveAllSources= false;
 bool selectSourceByType= false;//default=all true sources searched 
 std::vector<int> stypes;
@@ -203,6 +210,10 @@ std::vector<int> nMatchedSourcesPerCatalog;
 std::vector<int> nMatchedSourceCatalogMultiplicity;
 std::vector<int> nMatchedSourceComponentsPerCatalog;
 std::vector<int> nMatchedSourceComponentCatalogMultiplicity;
+std::vector<TCanvas*> m_SEDPlots;
+std::vector<TGraphErrors*> m_SEDGraphs;
+std::vector<TGraphErrors*> m_SEDComponentGraphs;
+
 
 //====================================
 //     ComponentPars struct
@@ -407,6 +418,7 @@ bool HaveSourceIslandMatch(SourceMatchPars& smatchpars,SourcePars* pars1,SourceP
 int GetRandPosInAnnulus(double& offsetX,double& offsetY);
 int GetRandPosInRegion(double& offsetX,double& offsetY,Contour* contour,double xmin,double xmax,double ymin,double ymax,int nMaxGen=1000);
 void Save();
+int SaveSED();
 int SaveSources();
 int CloneObjectsInFile(std::vector<std::string> excludedObjNames);
 int Init();
@@ -537,7 +549,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:C:o:v:n:N:mM:POLlA:T:t:e:pba:d:cfFs:S:x:X:w:y:Y:k:gr:R:jJ:B:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:C:o:v:n:N:mM:POLlA:T:t:e:pba:d:cfFs:S:x:X:w:y:Y:k:gr:R:jJ:B:uU:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -708,6 +720,16 @@ int ParseOptions(int argc, char *argv[])
 				shuffleRMax= atof(optarg);
 				break;
 			}	
+			case 'u':
+			{
+				shiftFlux= true;
+				break;
+			}
+			case 'U':
+			{
+				fluxShift= atof(optarg);
+				break;
+			}
 			default:
 			{
       	Usage(argv[0]);	
@@ -739,6 +761,7 @@ int ParseOptions(int argc, char *argv[])
 		INFO_LOG("matchSourceComponentsByPos? "<<matchSourceComponentsByPos<<", compMatchPosThr(arcsec)="<<compMatchPosThr<<", compMatchPosHighThr(arcsec)="<<compMatchPosHighThr);
 		INFO_LOG("matchSourceComponentsByOverlap? "<<matchSourceComponentsByOverlap<<", compMatchOverlapThr="<<compMatchOverlapThr<<", compMatchOverlapLowThr="<<compMatchOverlapLowThr);
 		INFO_LOG("applySourceComponentAreaRatioThr? "<<applySourceComponentAreaRatioThr);
+		INFO_LOG("shiftFlux? "<<shiftFlux<<", shift="<<fluxShift);
 	#endif
 
 	return 0;
@@ -792,6 +815,8 @@ int Init(){
 	matchOptionTree->Branch("nMatchedSourceCatalogMultiplicity",&nMatchedSourceCatalogMultiplicity);
 	matchOptionTree->Branch("nMatchedSourceComponentsPerCatalog",&nMatchedSourceComponentsPerCatalog);
 	matchOptionTree->Branch("nMatchedSourceComponentCatalogMultiplicity",&nMatchedSourceComponentCatalogMultiplicity);
+	matchOptionTree->Branch("shiftFlux",&shiftFlux);
+	matchOptionTree->Branch("fluxShift",&fluxShift);
 
 	//Set random seed
 	gRandom = new TRandom3(0);
@@ -869,6 +894,9 @@ int ComputeSpectralIndices()
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Computing spectral indices...");
 	#endif
+
+	TCanvas* Plot= 0;
+
 	for(size_t i=0;i<sourceMatchDataCollection.size();i++)
 	{
 		//Get source
@@ -882,6 +910,10 @@ int ComputeSpectralIndices()
 		if(status==0){//Set spectral index in source
 			SpectralIndexData spectralIndexData= sourceMatchDataCollection[i]->GetSpectralIndexData();
 			source->SetSpectralIndexData(spectralIndexData);
+
+			//Save sed graph
+			TGraphErrors* sed= sourceMatchDataCollection[i]->GetSEDGraph();
+			m_SEDGraphs.push_back(sed);
 		}
 		else {
 			#ifdef LOGGING_ENABLED
@@ -894,12 +926,21 @@ int ComputeSpectralIndices()
 		if(status==0){
 			std::vector<SpectralIndexData> componentSpectralIndexData= sourceMatchDataCollection[i]->GetSourceComponentSpectralIndexData();
 			source->SetComponentSpectralIndexData(componentSpectralIndexData);
+
+			//Save sed component graph
+			std::vector<TGraphErrors*> componentSEDs= sourceMatchDataCollection[i]->GetSEDComponentGraphs();
+			for(size_t k=0;k<componentSEDs.size();k++) m_SEDComponentGraphs.push_back(componentSEDs[k]);
+
 		}
 		else{
 			#ifdef LOGGING_ENABLED
 				WARN_LOG("Failed to compute source component spectral indices for source match data no. "<<i+1<<"!");
 			#endif
 		}
+
+		//Get SED+fit plot
+		//Plot= sourceMatchDataCollection[i]->DrawSED();
+		//if(Plot) m_SEDPlots.push_back(Plot);
 
 	}//end loop match data
 
@@ -971,6 +1012,7 @@ int FindSourceMatchesInTiles()
 			inputSource= new Source;
 			*inputSource= *source;
 			sourceMatchData= new SourceMatchData(inputSource,NCatalogs,cloneSource);
+			sourceMatchData->ShiftFlux(shiftFlux,fluxShift);
 	
 			//Get source fit info
 			bool hasFitInfo= source->HasFitInfo();
@@ -2591,6 +2633,10 @@ void Save()
 		if(matchOptionTree){
 			matchOptionTree->Write();
 		}
+
+		//Write SED plots to file
+		//SaveSED();
+
 		matchOutputFile->Close();
 	}
 
@@ -2610,6 +2656,27 @@ void Save()
 	}//close if
 
 }//close Save()
+
+int SaveSED()
+{
+	//Save SED graphs
+	for(size_t i=0;i<m_SEDGraphs.size();i++){
+		if(m_SEDGraphs[i]) m_SEDGraphs[i]->Write();
+	}
+
+	//Save SED component graphs
+	for(size_t i=0;i<m_SEDComponentGraphs.size();i++){
+		if(m_SEDComponentGraphs[i]) m_SEDComponentGraphs[i]->Write();
+	}
+
+	//Save sed plots to file
+	for(size_t i=0;i<m_SEDPlots.size();i++){
+		if(m_SEDPlots[i]) m_SEDPlots[i]->Write();
+	}
+
+	return 0;
+
+}//close SavePlots()
 
 int SaveSources()
 {
