@@ -1558,6 +1558,16 @@ class StatsUtils : public TObject {
 
 		}//close ComputeStatsBootstrapError()
 
+		/**
+		* \brief Generate fit parameters randomized around fit covariance matrix
+		*/
+		static int GenerateFitParsAroundCovMatrix(std::vector<std::vector<double>>& fitPars_rand,const std::vector<double>& fitPars,TMatrixD& fitCovMatrix,int nsamples=1);
+		/**
+		* \brief Generate fit parameters randomized around fit covariance matrix
+		*/
+		static int GenerateFitParsAroundCovMatrix(std::vector<std::vector<double>>& fitPars_rand,const std::vector<double>& fitPars,const std::vector<std::vector<double>>& fitCovMatrix,int nsamples=1);
+		
+
 	private:
 	
 		ClassDef(StatsUtils,1)

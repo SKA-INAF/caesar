@@ -29,6 +29,7 @@
 #ifndef _CONSTS_h
 #define _CONSTS_h 1
 
+#include <TMath.h>
 #include <math.h>
 #include <string>
 
@@ -456,8 +457,9 @@ enum AstroObjectLocation
 //===          CONSTANTS         =====
 //====================================
 static const double GausSigma2FWHM= 2.*sqrt(2*log(2.));
-
-
+static const double SrToDeg2= pow(180/TMath::Pi(),2);
+static const double SrToArcmin2= SrToDeg2*60*60;
+static const double SrToArcsec2= SrToDeg2*3600*3600;
 
 }//close namespace
 

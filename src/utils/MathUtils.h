@@ -398,7 +398,22 @@ class MathUtils : public TObject {
 			return d;
 		}
 
-		
+		/**
+		* \brief SynchrotronSelfAbsSED model
+		*/
+		static double SynchrotronSelfAbsSED(double* x,double* pars);
+		/**
+		* \brief SynchrotronExtFreeFreeAbsSED model
+		*/
+		static double SynchrotronExtFreeFreeAbsSED(double* x,double* pars);
+		/**
+		* \brief SynchrotronIntFreeFreeAbsSED model
+		*/
+		static double SynchrotronIntFreeFreeAbsSED(double* x,double* pars);
+		/**
+		* \brief FreeFreeSED model
+		*/
+		static double FreeFreeSED(double* x,double* pars);
 
 	private:
 	

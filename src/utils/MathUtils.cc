@@ -1042,6 +1042,114 @@ void MathUtils::ComputeRotatedCoords(double& xrot,double& yrot,double x,double y
 
 }//close ComputeRotatedCoords()
 
+
+double MathUtils::SynchrotronSelfAbsSED(double* x,double* pars)
+{
+	double lgNu= x[0];
+	double nu= pow(10,lgNu);//in GHz
+	//double nu= x[0];
+	double S0= pars[0];
+	double alpha= pars[1];
+	double beta= 1.-2*alpha;
+	double nu_t= pars[2];
+
+	double z= nu/nu_t;
+	double pl= pow(z,alpha);
+	double tau= pow(z,alpha-2.5);
+	double abs= (1.-exp(-tau))/tau;
+	double S= S0* pl * abs;
+	double lgS= log10(S);	
+
+	//return S;
+	return lgS;
+
+}//close SynchrotronSelfAbsSED()
+
+
+double MathUtils::SynchrotronExtFreeFreeAbsSED(double* x,double* pars)
+{
+	//NB: Homogeneous thermal screen
+	double lgNu= x[0];
+	double nu= pow(10,lgNu);//in GHz
+	//double nu= x[0];
+	double S0= pars[0];
+	double alpha= pars[1];
+	double nu_t= pars[2];
+
+	double pl= pow(nu,alpha);
+	double abs= exp(-pow(nu/nu_t,-2.1));
+	double S= S0* pl * abs;
+	double lgS= log10(S);	
+
+	//return S;
+	return lgS;
+
+}//close SynchrotronExtFreeFreeAbsSED()
+
+double MathUtils::SynchrotronIntFreeFreeAbsSED(double* x,double* pars)
+{
+	double lgNu= x[0];
+	double nu= pow(10,lgNu);//in GHz
+	//double nu= x[0];
+	double S0= pars[0];
+	double alpha= pars[1];
+	double nu_t= pars[2];
+
+	double z= nu/nu_t;
+	double pl= pow(z,alpha);
+	double tau= pow(z,-2.1);
+	double abs= (1.-exp(-tau))/tau;
+	double S= S0* pl * abs;
+	double lgS= log10(S);	
+	
+	//return S;
+	return lgS;
+
+}//close SynchrotronIntFreeFreeAbsSED()
+
+double MathUtils::FreeFreeSED(double* x,double* pars)
+{
+	double lgNu= x[0];
+	double nu_GHz= pow(10,lgNu);//in GHz
+	double nu= nu_GHz*1.e+9;//in Hz
+	double lgOmega= pars[0];
+	double lgTe= pars[1];
+	double lgEM= pars[2];
+	double Omega= pow(10,lgOmega);//sr
+	double Te= pow(10,lgTe);//K	
+	double EM= pow(10,lgEM);//pc cm^-6
+	
+	//Compute Planck function B(nu,Te)
+	double h= TMath::H();
+	double c= TMath::C();
+	double k= TMath::K();
+	double nu3= nu*nu*nu;
+	double c2= c*c;
+	double arg= h*nu/(k*Te);
+	double BB= 2.*h*nu3/c2 * 1./(exp(arg)-1);
+	
+	//Compute optical depth tau(Te,nu,EM)
+	//--> see Oster L., 1961, Rev. Mod. Phys., 33, 525
+	//--> https://www.cv.nrao.edu/~sransom/web/Ch4.html
+	//NB: An approximation for tau is given by Mezger P.G., Henderson A.P., 1967, ApJ, 147, 471
+	double g_ff= log(4.955e-2*pow(nu_GHz,-1)) + 1.5*log(Te);
+	double tau= 3.014e-2*pow(Te,-1.5)*pow(nu_GHz,-2)*EM*g_ff;
+	//double tau_approx= 8.235e-2 * pow(Te,-1.35) * pow(nu_GHz,-2.1) * EM;
+	
+	//Compute flux density as BB x (1-e^-tau) x Omega	
+	double S= Omega * BB * (1-exp(-tau));//in W m^-2 Hz^-1
+	S*= 1e+26;//convert to Jy
+
+	double lgS= 0;
+	if(S>=0) lgS= log10(S);	
+
+	//cout<<"lgNu="<<lgNu<<", nu_GHz="<<nu_GHz<<", Te="<<Te<<", EM="<<EM<<", BB="<<BB<<", tau="<<tau<<", S="<<S<<endl;
+
+	return lgS;
+
+}//close FreeFreeSED()
+
+
 }//close namespace
 
 
