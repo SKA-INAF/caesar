@@ -503,6 +503,25 @@ class Option : public OptionBase {
 				#endif
 				return -1;
 			}
+
+			//Newer JsonCpp API
+			Json::StreamWriterBuilder builder;
+			builder["commentStyle"] = "None";
+			if(isMinified) builder["indentation"] = "";//written in a single line			
+			else builder["indentation"] = "  ";
+
+			try {
+				jsonString= Json::writeString(builder, jsonObj);
+			}
+			catch(...){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to encode argument to json string!");
+				#endif
+				return -1;
+			}
+
+			/*
+			//Deprecated JsonCpp API
 			try {
 				if(isMinified){// write in a minified way
 					Json::FastWriter fastWriter;
@@ -519,6 +538,8 @@ class Option : public OptionBase {
 				#endif
 				return -1;
 			}
+			*/
+
 			return 0;
 		};
 
@@ -855,6 +876,25 @@ class OptionFactory : public TObject {
 				cerr<<"OptionFactory::GetJsonString(): ERROR: Failed to encode option to json object!"<<endl;
 				return -1;
 			}
+
+			//Newer JsonCpp API
+			Json::StreamWriterBuilder builder;
+			builder["commentStyle"] = "None";
+			if(isMinified) builder["indentation"] = "";//written in a single line			
+			else builder["indentation"] = "  ";
+
+			try {
+				jsonString= Json::writeString(builder, jsonObj);
+			}
+			catch(...){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to encode argument to json string!");
+				#endif
+				return -1;
+			}
+
+			/*
+			//Deprecated JsonCPP API
 			try {
 				if(isMinified){// write in a minified way
 					Json::FastWriter fastWriter;
@@ -869,6 +909,8 @@ class OptionFactory : public TObject {
 				cerr<<"OptionFactory::GetJsonString(): ERROR: Failed to encode argument to json string!"<<endl;
 				return -1;
 			}
+			*/
+
 			return 0;
 		};
 

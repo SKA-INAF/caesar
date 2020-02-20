@@ -160,8 +160,9 @@ class CodeUtils : public TObject {
 		}
 
 		/**
-		* \brief Convert json to string
+		* \brief Convert json to string (DEPRECATED JSONCPP API)
 		*/
+		/*
 		static int JsonToString(std::string& jsonString,Json::Value& jsonObj,bool isMinified=true){
 			//Encode to string
 			try {
@@ -180,6 +181,30 @@ class CodeUtils : public TObject {
 				#endif
 				return -1;
 			}		
+			return 0;
+		}//close JsonToString()
+		*/
+
+		/**
+		* \brief Convert json to string (NEW JSONCPP API)
+		*/
+		static int JsonToString(std::string& jsonString,Json::Value& jsonObj,bool isMinified=true)
+		{
+			//Encode to string
+			Json::StreamWriterBuilder builder;
+			builder["commentStyle"] = "None";
+			if(isMinified) builder["indentation"] = "";//written in a single line			
+			else builder["indentation"] = "  ";
+
+			try {
+				jsonString= Json::writeString(builder, jsonObj);
+			}
+			catch(...){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to encode to json string!");
+				#endif
+				return -1;
+			}
 			return 0;
 		}//close JsonToString()
 
