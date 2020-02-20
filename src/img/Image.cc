@@ -2513,7 +2513,8 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 		#endif
 		for(int k=0;k<nSources;k++){
 			for(int l=0;l<sources[k]->GetNPixels();l++){
-				long int id= (sources[k]->GetPixel(l))->id;
+				Pixel* pixel= sources[k]->GetPixel(l);
+				long int id= pixel->id;
 				masked_pix_ids.push_back(id);	
 			}
 		}
