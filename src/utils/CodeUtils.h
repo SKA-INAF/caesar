@@ -212,7 +212,9 @@ class CodeUtils : public TObject {
 		* \brief Convert string to json
 		*/
 		static int StringToJson(Json::Value& root,std::string& jsonString)
-		{			
+		{		
+			//DEPRECATED JSONCPP API
+			/*	
 			Json::Reader reader;
 			if(!reader.parse(jsonString, root)) {
 				#ifdef LOGGING_ENABLED
@@ -220,6 +222,27 @@ class CodeUtils : public TObject {
 				#endif
 				return -1;
 			}
+			*/
+
+			//NEW JSONCPP API
+			Json::CharReaderBuilder builder;
+			Json::CharReader* reader = builder.newCharReader();
+			Json::Value output;
+			std::string errors;
+
+			bool status= reader->parse(jsonString.c_str(), jsonString.c_str() + jsonString.length(), &root, &errors);
+			if(reader){
+				delete reader;
+				reader= 0;
+			}
+			if(!status){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to encode string to json (err="<<errors<<")");
+				#endif
+				return -1;
+			}
+
+
 			return 0;
 		}//close StringToJson()
 
