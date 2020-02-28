@@ -57,7 +57,7 @@ namespace Caesar {
 
 
 //======================================
-//==      STRUCT: SPECTRAL INDEX DATA
+//==   CLASS: SPECTRAL INDEX DATA
 //======================================
 class SpectralIndexData : public TObject 
 {
@@ -85,6 +85,9 @@ class SpectralIndexData : public TObject
 		*/
 		//void Copy(TObject& obj) const;
 
+	public:
+		void Reset(){Init();}
+
 	private:
 		/**
 		* \brief Init data
@@ -94,13 +97,16 @@ class SpectralIndexData : public TObject
 	public:
 		bool hasSpectralIndex;
 		bool isMultiSourceMatchIndex;
+		double norm;
+		double normErr;
 		double spectralIndex;
 		double spectralIndexErr;
 		bool isSpectralIndexFit;
 		double spectralFitChi2;
 		double spectralFitNDF;
+		int spectralIndexFitStatus;
 
-	ClassDef(SpectralIndexData,1)
+	ClassDef(SpectralIndexData,2)
 
 };
 
@@ -109,6 +115,135 @@ class SpectralIndexData : public TObject
 #pragma link C++ class vector<SpectralIndexData>+;
 #pragma link C++ class vector<SpectralIndexData*>+;
 #endif
+
+//============================================
+//==   CLASS: PowerLaw SPECTRAL INDEX DATA
+//============================================
+class PLSpectralIndexData : public TObject  
+{
+	public:
+		/** 
+		\brief Class constructor: initialize structures.
+ 		*/
+		PLSpectralIndexData();
+		/**
+		* \brief Class destructor: free allocated memory
+		*/
+		virtual ~PLSpectralIndexData();
+
+	private:
+		/**
+		* \brief Init data
+		*/
+		void Init();
+		
+	public:
+		bool hasData;
+		bool isMultiMatch;
+		bool isFitted;
+		double fitChi2;
+		double fitNDF;	
+		double norm;
+		double normErr;
+		double alpha;//spectral index
+		double alphaErr;//spectral index err
+		int status;//fit status
+		
+	ClassDef(PLSpectralIndexData,2)
+
+};
+#ifdef __MAKECINT__
+#pragma link C++ class PLSpectralIndexData+;
+#pragma link C++ class vector<PLSpectralIndexData>+;
+#pragma link C++ class vector<PLSpectralIndexData*>+;
+#endif
+
+
+//============================================
+//==   CLASS: Polynomial SPECTRAL INDEX DATA
+//============================================
+class PolSpectralIndexData : public TObject 
+{
+	public:
+		/** 
+		\brief Class constructor: initialize structures.
+ 		*/
+		PolSpectralIndexData();
+		/**
+		* \brief Class destructor: free allocated memory
+		*/
+		virtual ~PolSpectralIndexData();
+
+	private:
+		/**
+		* \brief Init data
+		*/
+		void Init();
+		
+	public:
+		bool hasData;
+		bool isMultiMatch;
+		double fitChi2;
+		double fitNDF;
+		std::vector<double> polPars;
+		std::vector<double> polParErrors;
+		int status;//fit status
+
+	ClassDef(PolSpectralIndexData,2)
+
+};
+#ifdef __MAKECINT__
+#pragma link C++ class PolSpectralIndexData+;
+#pragma link C++ class vector<PolSpectralIndexData>+;
+#pragma link C++ class vector<PolSpectralIndexData*>+;
+#endif
+
+
+//=====================================================
+//==   CLASS: SYNCHROTRON + ABSORPTION SPECTRAL DATA
+//=====================================================
+class SASpectralIndexData : public TObject 
+{
+	public:
+		/** 
+		\brief Class constructor: initialize structures.
+ 		*/
+		SASpectralIndexData();
+		/**
+		* \brief Class destructor: free allocated memory
+		*/
+		virtual ~SASpectralIndexData();
+
+	private:
+		/**
+		* \brief Init data
+		*/
+		void Init();
+		
+	public:
+		bool hasData;
+		bool isMultiMatch;
+		double fitChi2;
+		double fitNDF;
+		double norm;
+		double normErr;
+		double alpha;
+		double alphaErr;
+		double nu_t;
+		double nuErr_t;
+		int status;//fit status
+		
+	ClassDef(SASpectralIndexData,2)
+
+};
+#ifdef __MAKECINT__
+#pragma link C++ class SASpectralIndexData+;
+#pragma link C++ class vector<SASpectralIndexData>+;
+#pragma link C++ class vector<SASpectralIndexData*>+;
+#endif
+
+
+
 
 }//close namespace
 

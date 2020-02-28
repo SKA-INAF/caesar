@@ -1301,6 +1301,44 @@ int Source::Fit(SourceFitOptions& fitOptions)
 }//close Fit()
 
 
+int Source::Fit(SourceFitOptions& fitOptions,SourceFitPars& initfitPars)
+{
+	//Get start fit pars vector
+	std::vector<std::vector<double>> fitPars_start;
+	initfitPars.GetFitParVec(fitPars_start);
+
+	//Create source fitter
+	SourceFitter fitter;
+	if(fitter.FitSource(this,fitOptions,fitPars_start)<0){	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to fit source "<<this->GetName()<<" ...");
+		#endif
+		m_HasFitInfo= false;
+		m_fitStatus= fitter.GetFitStatus();
+		return -1;
+	}
+	
+	//Get fit results
+	SourceFitPars fitPars= fitter.GetFitPars();
+	fitPars.Print();
+
+	int fitStatus= fitter.GetFitStatus();
+	if(fitStatus==eFitConverged || fitStatus==eFitConvergedWithWarns){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Fit of source "<<this->GetName()<<" converged (status="<<fitStatus<<"), storing fit parameters...");	
+		#endif
+		m_fitPars= fitPars;
+		m_HasFitInfo= true;
+	}
+	
+	//Store latest fit status
+	m_fitStatus= fitStatus;
+
+	return 0;
+
+}//close Fit()
+
+
 int Source::GetFitEllipses(std::vector<TEllipse*>& fitEllipses,bool useFWHM,bool convertToWCS,WCS* wcs,int coordSystem,int pixOffset,bool useWCSSimpleConversion)
 {
 	//Init data 

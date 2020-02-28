@@ -270,12 +270,12 @@ class SourceExporter : public TObject
 		/**
 		* \brief Write DS9 regions from source collection
 		*/
-		static int WriteToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS=false,int ds9WCSType=eJ2000,int ds9RegionFormat=ePolygonRegion,WCS* wcs=0);
+		static int WriteToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS=false,int ds9WCSType=eJ2000,int ds9RegionFormat=ePolygonRegion,WCS* wcs=0,std::string ds9RegionColor="red");
 
 		/**
 		* \brief Write DS9 regions for source fitted components
 		*/
-		static int WriteComponentsToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS=false,int ds9WCSType=eJ2000,WCS* wcs=0);
+		static int WriteComponentsToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS=false,int ds9WCSType=eJ2000,WCS* wcs=0,std::string ds9RegionColor="red");
 
 
 		/**

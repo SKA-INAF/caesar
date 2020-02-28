@@ -1205,6 +1205,11 @@ class SourceFitPars : public TObject {
 			
 		};
 
+		/**
+		* \brief Get fit pars vector
+		*/
+		int GetFitParVec(std::vector<std::vector<double>>& parVector);
+
 	private:
 
 		/**

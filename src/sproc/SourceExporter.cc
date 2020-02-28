@@ -2162,7 +2162,7 @@ int SourceExporter::FillSourceComponentTree(TTree* dataTree,SourceComponentTreeD
 //=================================================
 //==        DS9 EXPORTER
 //=================================================
-int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS,int ds9WCSType,int ds9RegionFormat,WCS* wcs)
+int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS,int ds9WCSType,int ds9RegionFormat,WCS* wcs,std::string ds9RegionColor)
 {
 	//## Open output file
 	FILE* fout= fopen(filename.c_str(),"w");
@@ -2174,7 +2174,7 @@ int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& 
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("Saving DS9 region header...");
 	#endif
-	fprintf(fout,"global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
+	fprintf(fout,"global color=%s font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n",ds9RegionColor.c_str());
 	fprintf(fout,"%s\n",ds9WCSTypeHeader.c_str());
 
 	#ifdef LOGGING_ENABLED
@@ -2228,7 +2228,7 @@ int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& 
 }//close WriteToDS9()
 
 
-int SourceExporter::WriteComponentsToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS,int ds9WCSType,WCS* wcs)
+int SourceExporter::WriteComponentsToDS9(std::string filename,const std::vector<Source*>& sources,bool convertDS9RegionsToWCS,int ds9WCSType,WCS* wcs,std::string ds9RegionColor)
 {
 	//## Open file
 	FILE* fout_fit= fopen(filename.c_str(),"w");
@@ -2240,7 +2240,7 @@ int SourceExporter::WriteComponentsToDS9(std::string filename,const std::vector<
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("Saving DS9 region header for fitted source catalog...");
 	#endif
-	fprintf(fout_fit,"global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
+	fprintf(fout_fit,"global color=%s font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n",ds9RegionColor.c_str());
 	fprintf(fout_fit,"%s\n",ds9WCSTypeHeader.c_str());
 
 	#ifdef LOGGING_ENABLED

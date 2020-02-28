@@ -292,4 +292,27 @@ double SourceFitPars::GetComponentFluxDensityErr(int componentId)
 }//close GetComponentFluxDensityErr()
 
 
+int SourceFitPars::GetFitParVec(std::vector<std::vector<double>>& parVector)
+{
+	parVector.clear();
+	if(pars.empty()) return 0;
+	
+	for(size_t i=0;i<pars.size();i++)
+	{
+		double A= pars[i].GetParValue("A");
+		double x0= pars[i].GetParValue("x0");
+		double y0= pars[i].GetParValue("y0");
+		double sigmaX= pars[i].GetParValue("sigmaX");
+		double sigmaY= pars[i].GetParValue("sigmaY");
+		double theta= pars[i].GetParValue("theta");
+		
+		parVector.push_back({A,x0,y0,sigmaX,sigmaY,theta});
+
+	}//end loop components
+
+	return 0;
+
+}//close GetFitParVec()
+
+
 }//close namespace

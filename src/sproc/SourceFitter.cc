@@ -1986,6 +1986,128 @@ int SourceFitter::FitSource(Source* aSource,SourceFitOptions& fitOptions)
 
 
 
+
+int SourceFitter::FitSource(Source* aSource,SourceFitOptions& fitOptions,std::vector< std::vector<double> >& fitPars_start)
+{
+	//## Check input source
+	if(!aSource){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to source given!");
+		#endif
+		m_fitStatus= eFitAborted;
+		return -1;
+	}
+
+	//## Check input start parameters
+	if(fitPars_start.empty()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty list of starting fit pars provided!");
+		#endif
+		m_fitStatus= eFitAborted;
+		return -1;
+	}
+
+	//## Check fit options
+	if(CheckFitOptions(fitOptions)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid fit options given!");
+		#endif
+		m_fitStatus= eFitAborted;
+		return -1;
+	}
+	m_chi2RegPar= fitOptions.chi2RegPar;
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Fitting source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") assuming these blob pars: {Bmaj(pix)="<<fitOptions.bmaj<<", Bmin(pix)="<<fitOptions.bmin<<", Bpa(deg)="<<fitOptions.bpa<<"}");
+	#endif
+
+	//## Initialize data histos
+	if(InitData(aSource,fitOptions)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to initialize fit data histo!");
+		#endif
+		m_fitStatus= eFitAborted;
+		return -1;
+	}
+
+	//## Normalize start fit pars
+	double amplNormFactor= 1.e-3;//convert to mJy
+	if(fitOptions.fitScaleDataToMax) amplNormFactor= aSource->GetSmax();
+
+	for(size_t i=0;i<fitPars_start.size();i++)
+	{
+		//Normalize amplitude
+		double A= fitPars_start[i][0];
+		double A_norm= A/amplNormFactor; 
+		fitPars_start[i][0]= A_norm;
+
+		//Normalize centroids
+		double x0= fitPars_start[i][1];
+		double y0= fitPars_start[i][2];
+		double x0_norm= x0-m_sourceX0;
+		double y0_norm= y0-m_sourceY0;
+		fitPars_start[i][1]= x0_norm;
+		fitPars_start[i][2]= y0_norm;
+
+		//Normalize theta
+		double theta_deg= fitPars_start[i][5];
+		double theta_rad= theta_deg*TMath::DegToRad();
+		fitPars_start[i][5]= theta_rad;
+
+	}//end loop pars
+
+	//## Perform fit
+	if(DoChi2Fit(aSource,fitOptions,fitPars_start)<0){	
+		#ifdef LOGGING_ENABLED	
+			ERROR_LOG("Failed to perform source fit!");
+		#endif
+		m_fitStatus= eFitAborted;
+		return -1;	
+	}
+
+	//## Iteratively repeat the fit if not converged
+	bool retryFit= (
+		fitOptions.fitRetryWithLessComponents==true &&
+		m_fitStatus==eFitNotConverged
+	);
+
+	if(retryFit){
+		int niters= 0;
+		int nComponents= static_cast<int>(fitPars_start.size());
+		
+		while(m_fitStatus==eFitNotConverged){
+			//Remove one component at each cycle and retry fit
+			std::vector< std::vector<double> > fitPars_start_iter(fitPars_start.begin(),fitPars_start.end()-niters-1); 
+			int nComponents_iter= static_cast<int>(fitPars_start_iter.size());
+			if(nComponents_iter<=0){
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("No more components left for fitting after iteration...giving up, fit failed!");
+				#endif
+				break;
+			}	
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Repeating fit of source "<<aSource->GetName()<<" with #"<<nComponents_iter<<"/"<<nComponents<<" brightest components...");
+			#endif
+			niters++;
+
+			//Perform fit		
+			int status= DoChi2Fit(aSource,fitOptions,fitPars_start_iter);
+			if(status<0){
+				#ifdef LOGGING_ENABLED		
+					ERROR_LOG("Failed to perform source fit at iteration no. "<<niters<<", exit fit");
+				#endif
+				m_fitStatus= eFitAborted;
+				return -1;	
+			}
+
+		}//end loop fit iterations
+	}//close retryFit
+
+	return 0;
+
+}//close FitSource() input fit pars
+
+
 bool SourceFitter::HasFitParsAtLimit(const ROOT::Fit::FitResult& fitRes)
 {
 	//Loop over parameters and check if they converged at bounds

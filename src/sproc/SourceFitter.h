@@ -322,9 +322,13 @@ class SourceFitter : public TObject {
 	public:
 
 		/**
-		* \brief Fit source
+		* \brief Fit source with automated pars initialization
 		*/
 		int FitSource(Source* source,SourceFitOptions& fitOptions);
+		/**
+		* \brief Fit source starting from provided init pars
+		*/
+		int FitSource(Source* source,SourceFitOptions& fitOptions,std::vector< std::vector<double> >& fitPars_start);
 		
 		/**
 		* \brief Get fit pars
