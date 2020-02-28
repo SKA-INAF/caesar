@@ -43,11 +43,13 @@
 #include <TObject.h>
 #include <TCanvas.h>
 #include <TH2D.h>
+#include <TF1.h>
 #include <TSystem.h>
 #include <TPad.h>
 #include <TExec.h>
 #include <TStyle.h>
 #include <TFitResult.h>
+#include <TLegend.h>
 
 #include <iomanip>
 #include <iostream>
@@ -139,7 +141,7 @@ SourceMatchData::~SourceMatchData()
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("Deleting source SED graph ...");
 	#endif
-	CodeUtils::DeletePtr<TGraphAsymmErrors>(m_sourceSED);
+	CodeUtils::DeletePtr<TGraphErrors>(m_sourceSED);
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("done!");
 	#endif
@@ -148,7 +150,23 @@ SourceMatchData::~SourceMatchData()
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("Deleting source component SED graph added ...");
 	#endif
-	CodeUtils::DeletePtrCollection<TGraphAsymmErrors>(m_sourceComponentSED);
+	CodeUtils::DeletePtrCollection<TGraphErrors>(m_sourceComponentSED);
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("done!");
+	#endif
+
+	//Delete source SED fit fcn
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Deleting source SED fit fcn ...");
+	#endif
+	CodeUtils::DeletePtr<TF1>(m_sedPLFitFcn);
+	CodeUtils::DeletePtrCollection<TF1>(m_sedComponentPLFitFcns);
+	CodeUtils::DeletePtr<TF1>(m_sedSSAFitFcn);
+	CodeUtils::DeletePtrCollection<TF1>(m_sedComponentSSAFitFcns);
+	CodeUtils::DeletePtr<TF1>(m_sedSIFFAFitFcn);
+	CodeUtils::DeletePtrCollection<TF1>(m_sedComponentSIFFAFitFcns);
+	CodeUtils::DeletePtr<TF1>(m_sedSEFFAFitFcn);
+	CodeUtils::DeletePtrCollection<TF1>(m_sedComponentSEFFAFitFcns);
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("done!");
 	#endif
@@ -215,7 +233,7 @@ void SourceMatchData::Copy(TObject &obj) const
 		((SourceMatchData&)obj).m_sourceSED= 0;
 	}
 	if(m_sourceSED){
-		((SourceMatchData&)obj).m_sourceSED= new TGraphAsymmErrors;
+		((SourceMatchData&)obj).m_sourceSED= new TGraphErrors;
 		*((SourceMatchData&)obj).m_sourceSED = *m_sourceSED;
 	}
 
@@ -233,9 +251,9 @@ void SourceMatchData::Copy(TObject &obj) const
 	(((SourceMatchData&)obj).m_sourceComponentSED).clear();
 
 	
-	TGraphAsymmErrors* aGraph= 0;
+	TGraphErrors* aGraph= 0;
 	for(size_t i=0;i<m_sourceComponentSED.size();i++){
-		aGraph= new TGraphAsymmErrors;
+		aGraph= new TGraphErrors;
 		*aGraph= *(m_sourceComponentSED[i]);
 		(((SourceMatchData&)obj).m_sourceComponentSED).push_back(aGraph);
 	}
@@ -297,7 +315,7 @@ void SourceMatchData::Init()
 {
 	
 	//Init source SEDs
-	m_sourceSED= new TGraphAsymmErrors;
+	m_sourceSED= new TGraphErrors;
 	
 	
 	//Init source group data
@@ -317,14 +335,18 @@ void SourceMatchData::Init()
 	
 	//Init component match index
 	m_componentSpectralIndexData.clear();
+	m_componentPolSpectralIndexData.clear();
+	m_componentSSASpectralIndexData.clear();
+	m_componentSIFFASpectralIndexData.clear();
+	m_componentSEFFASpectralIndexData.clear();
 	m_sourceComponentSED.clear();
-	TGraphAsymmErrors* sed= 0;
+	TGraphErrors* sed= 0;
 
 	if(m_source){
 		int nComponents= m_source->GetNFitComponents();
 		if(nComponents>0) {
 			for(int i=0;i<nComponents;i++){
-				sed= new TGraphAsymmErrors;
+				sed= new TGraphErrors;
 				m_sourceComponentSED.push_back(sed);
 				m_componentMatchIndexes.push_back( std::vector<ComponentMatchIndexGroup>() );
 				m_componentMatchIndexes[i].resize(m_nCatalogs);
@@ -333,8 +355,25 @@ void SourceMatchData::Init()
 				m_sourceComponentMatchPars[i].resize(m_nCatalogs);
 			}
 			m_componentSpectralIndexData.resize(nComponents);
+			m_componentPolSpectralIndexData.resize(nComponents);
+			m_componentSSASpectralIndexData.resize(nComponents);
+			m_componentSIFFASpectralIndexData.resize(nComponents);
+			m_componentSEFFASpectralIndexData.resize(nComponents);
 		}
 	}
+
+	m_shiftFlux= false;
+	m_fluxShift= 0.;
+
+	//Init fit functions
+	m_sedPLFitFcn= 0;
+	m_sedComponentPLFitFcns.clear();	
+	m_sedSSAFitFcn= 0;
+	m_sedComponentSSAFitFcns.clear();
+	m_sedSIFFAFitFcn= 0;
+	m_sedComponentSIFFAFitFcns.clear();
+	m_sedSEFFAFitFcn= 0;
+	m_sedComponentSEFFAFitFcns.clear();
 
 }//close Init()
 
@@ -353,24 +392,20 @@ bool SourceMatchData::HasSourceMatch()
 		}
 	}
 	return hasMatch;
-}
+
+}//close HasSourceMatch()
 
 
 bool SourceMatchData::HasSourceComponentMatch(int componentId)
 {
-	//cout<<"HasSourceComponentMatch(): pto 1"<<endl;
 	if(m_componentMatchIndexes.empty()) return false;
 	if(componentId<0 || componentId>=(int)(m_componentMatchIndexes.size())) return false;
-	//cout<<"HasSourceComponentMatch(): pto 2"<<endl;
 	if(m_componentMatchIndexes[componentId].empty()) return false;
-	//cout<<"HasSourceComponentMatch(): pto 3 (N="<<m_componentMatchIndexes[componentId].size()<<")"<<endl;
 			
 	bool hasMatch= false;
 	for(size_t j=0;j<m_componentMatchIndexes[componentId].size();j++){
-		//cout<<"HasSourceComponentMatch(): pto 4"<<endl;
 		int nIndexes= m_componentMatchIndexes[componentId][j].GetNIndexes();
 		//std::vector<ComponentMatchIndex> index_list= m_componentMatchIndexes[componentId][j].GetIndexes();
-		//cout<<"HasSourceComponentMatch(): pto 5"<<endl;
 		//if(!index_list.empty()){
 		if(nIndexes>0){
 			hasMatch= true;
@@ -378,7 +413,8 @@ bool SourceMatchData::HasSourceComponentMatch(int componentId)
 		}
 	}
 	return hasMatch;
-}
+
+}//close HasSourceComponentMatch()
 
 
 
@@ -395,7 +431,8 @@ int SourceMatchData::GetMatchedSourcesPerCatalog(std::vector<Source*>& sources,i
 	sources= m_matchedSources[catalogIndex]->GetSources();
 				
 	return 0;
-}
+
+}//close GetMatchedSourcesPerCatalog()
 
 
 
@@ -423,7 +460,8 @@ int SourceMatchData::AddMatchedSourceToGroup(int catalogIndex,Source* aSource,bo
 		if(nMatchesInCatalog>0) m_nMatches++;
 	}
 	return status;	
-}
+
+}//close AddMatchedSourceToGroup()
 
 
 int SourceMatchData::AddMatchedSourcePars(int catalogIndex,SourceMatchPars* smatchpars)
@@ -476,6 +514,29 @@ int SourceMatchData::AddMatchedComponentIndex(int componentIndex,int catalogInde
 }//close AddMatchedComponentIndex()
 
 
+int SourceMatchData::GetComponentCatalogMatchMultiplicity(int componentIndex)
+{
+	//Check if component id was allocated
+	int nComponents= static_cast<int>(m_componentMatchIndexes.size());
+	if(nComponents<=0 || componentIndex<0 || componentIndex>=nComponents){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Component with index "<<componentIndex<<" was not allocated!");
+		#endif
+		return -1;
+	}
+
+	//Loop over match index and count
+	int nMatches= 0;
+	for(size_t j=0;j<m_componentMatchIndexes[componentIndex].size();j++)
+	{
+		int nCatalogMatches= m_componentMatchIndexes[componentIndex][j].GetNIndexes();
+		if(nCatalogMatches>0) nMatches++;
+
+	}//end loop catalog
+
+	return nMatches;
+
+}//close GetComponentCatalogMatchMultiplicity()
 
 
 
@@ -490,17 +551,16 @@ int SourceMatchData::GetMatchedSourceNames(std::vector<std::string>& snames,int 
 		return -1;
 	}
 
-	//cout<<"pto 0"<<endl;
 	if(m_matchedSources[catalogIndex]->GetSourceNames(snames)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to get matched source names!");
 		#endif
 		return -1;
 	}
-	//cout<<"pto 1"<<endl;
-
+	
 	return 0;
-}
+
+}//close GetMatchedSourceNames()
 
 
 
@@ -557,9 +617,12 @@ int SourceMatchData::ComputeSourceSEDs()
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Clear existing SED graph...");
 	#endif
+	TString graphName= Form("sourceSED_%s",m_source->GetName());
+	m_sourceSED->SetNameTitle(graphName,graphName);
 	m_sourceSED->Set(0);//remove all existing points	
-	m_spectralIndexData.isMultiSourceMatchIndex= false;
-	m_spectralIndexData.hasSpectralIndex= false;
+	m_spectralIndexData.Reset();//reset spectral index data
+	//m_spectralIndexData.isMultiSourceMatchIndex= false;
+	//m_spectralIndexData.hasSpectralIndex= false;
 	
 	std::string sname=  m_source->GetName();
 
@@ -592,8 +655,7 @@ int SourceMatchData::ComputeSourceSEDs()
 	double lgNu= log10(Nu);
 	double dlgNu= log10(TMath::E())*dNu/Nu;	
 
-	
-	
+
 	//Get source flux
 	double fluxDensity= 0;
 	double fluxDensityErr= 0;
@@ -619,6 +681,11 @@ int SourceMatchData::ComputeSourceSEDs()
 
 	double flux= fluxDensity/beamArea;
 	double fluxErr= fluxDensityErr/beamArea;
+	if(m_shiftFlux){
+		flux*= (1. + m_fluxShift);
+		fluxErr*= (1. + m_fluxShift);
+	}
+
 	double lgFlux= log10(flux);
 	double lgFluxErr= log10(TMath::E())*fluxErr/flux;
 
@@ -633,12 +700,14 @@ int SourceMatchData::ComputeSourceSEDs()
 	//Check if we have matched sources
 	if(!HasSourceMatch()) {
 		m_sourceSED->SetPoint(0,lgNu,lgFlux);
-		m_sourceSED->SetPointError(0,0,0,lgFluxErr,lgFluxErr);
+		m_sourceSED->SetPointError(0,0,lgFluxErr);
 		return 0;//nothing to be done without matched sources
 	}
 	
 
 	//## Get matched source info
+	bool isMultiSourceMatchIndex= false;
+
 	for(size_t i=0;i<m_matchedSources.size();i++)
 	{
 		//Skip if no matches
@@ -652,14 +721,10 @@ int SourceMatchData::ComputeSourceSEDs()
 			#endif
 		}
 		std::stringstream ss;
-		//cout<<"ComputeSourceSEDs: pto 1"<<endl;
 		if(!snames.empty()){
 			ss<<"{";
-			//cout<<"ComputeSourceSEDs: pto 2"<<endl;
 			for(size_t j=0;j<snames.size()-1;j++) ss<<snames[j]<<",";
-			//cout<<"ComputeSourceSEDs: pto 3"<<endl;
 			ss<<snames[snames.size()-1]<<"}";
-			//cout<<"ComputeSourceSEDs: pto 4"<<endl; 
 		}
 
 		//Get frequency
@@ -682,7 +747,8 @@ int SourceMatchData::ComputeSourceSEDs()
 		}
 		lgFlux= log10(flux);
 		lgFluxErr= log10(TMath::E())*fluxErr/flux;
-		if(fluxSummed) m_spectralIndexData.isMultiSourceMatchIndex= true;
+		//if(fluxSummed) m_spectralIndexData.isMultiSourceMatchIndex= true;
+		if(fluxSummed) isMultiSourceMatchIndex= true;
 
 		#ifdef LOGGING_ENABLED
 			INFO_LOG("Matched source group no. "<<i+1<<": snames="<<ss.str()<<", Nu="<<Nu<<", dNu="<<dNu<<", lgNu="<<lgNu<<", flux="<<flux<<", lgFlux="<<lgFlux);
@@ -713,62 +779,334 @@ int SourceMatchData::ComputeSourceSEDs()
 	
 	for(int i=0;i<N;i++){
 		m_sourceSED->SetPoint(i,lgNu_list_sorted[i],lgFlux_list_sorted[i]);
-		m_sourceSED->SetPointError(i,0,0,lgFluxErr_list_sorted[i],lgFluxErr_list_sorted[i]);
+		m_sourceSED->SetPointError(i,0,lgFluxErr_list_sorted[i]);
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("Source SED: P"<<i+1<<"("<<lgNu_list_sorted[i]<<","<<lgFlux_list_sorted[i]<<")");
+			DEBUG_LOG("Source SED: P"<<i+1<<"("<<lgNu_list_sorted[i]<<","<<lgFlux_list_sorted[i]<<")");
 		#endif
 	}
 
-	//# Find spectral index
-	if(N==2){
-		m_spectralIndexData.isSpectralIndexFit= false;
-		double x1= 0; 
-		double x2= 0;	
-		double y1= 0;
-		double y2= 0;
-		m_sourceSED->GetPoint(0,x1,y1);
-		m_sourceSED->GetPoint(1,x2,y2);
-		m_spectralIndexData.spectralIndex= (y2-y1)/(x2-x1);
-		m_spectralIndexData.spectralIndexErr= 0;
-		m_spectralIndexData.spectralFitChi2= 0;
-		m_spectralIndexData.spectralFitNDF= 0;
-		m_spectralIndexData.hasSpectralIndex= true;
-	}
-	else{
-		m_spectralIndexData.isSpectralIndexFit= true;
-		TFitResultPtr fitRes= m_sourceSED->Fit("pol1","S");
-		m_spectralIndexData.spectralFitChi2= fitRes->Chi2();
-		m_spectralIndexData.spectralFitNDF= fitRes->Ndf();
-		m_spectralIndexData.spectralIndex= fitRes->Value(1);
-		m_spectralIndexData.spectralIndexErr= fitRes->ParError(1);
-		int fitStatus= fitRes;
-		if(fitStatus==0) m_spectralIndexData.hasSpectralIndex= true;
-	}
 
-	#ifdef LOGGING_ENABLED
-		INFO_LOG("Source "<<m_source->GetName()<<": hasSpectralIndex?"<<m_spectralIndexData.hasSpectralIndex<<", gamma="<<m_spectralIndexData.spectralIndex<<" +- "<<m_spectralIndexData.spectralIndexErr<<", chi2/ndf="<<m_spectralIndexData.spectralFitChi2<<"/"<<m_spectralIndexData.spectralFitNDF);
-	#endif
-	
+	//# Compute spectral index from power law fit
+	m_spectralIndexData.isMultiSourceMatchIndex= isMultiSourceMatchIndex;
+	FitPLToSourceSED(m_spectralIndexData,m_sourceSED);
+
+	//# Fit pol3 to SED
+	m_polSpectralIndexData.isMultiMatch= isMultiSourceMatchIndex;
+	FitPolToSourceSED(m_polSpectralIndexData,m_sourceSED);
+
+	//# Fit SSA to SED
+	m_ssaSpectralIndexData.isMultiMatch= isMultiSourceMatchIndex;
+	FitSSAToSourceSED(m_ssaSpectralIndexData,m_sourceSED);
+
+	//# Fit SIFFA to SED
+	m_siffaSpectralIndexData.isMultiMatch= isMultiSourceMatchIndex;
+	FitSIFFAToSourceSED(m_siffaSpectralIndexData,m_sourceSED);
+
+	//# Fit SEFFA to SED
+	m_seffaSpectralIndexData.isMultiMatch= isMultiSourceMatchIndex;
+	FitSEFFAToSourceSED(m_seffaSpectralIndexData,m_sourceSED);
 
 	return 0;
 
 }//close ComputeSourceSEDs()
 
 
+int SourceMatchData::FitSourceSED(bool useRobustFitter,double rob)
+{
+	//## Check SED
+	if(!m_sourceSED){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Source SED was not computed yet!");
+		#endif
+		return -1;
+	}
+	if(m_sourceSED->GetN()<=0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Source SED has no points, nothing to be done...");
+		#endif
+		return 0;
+	}
+
+	//## Fit SED
+	//- Fit power law
+	FitPLToSourceSED(m_spectralIndexData,m_sourceSED,useRobustFitter,rob);
+
+	//- Fit pol3 
+	FitPolToSourceSED(m_polSpectralIndexData,m_sourceSED,useRobustFitter,rob);
+
+	//- Fit SSA 
+	FitSSAToSourceSED(m_ssaSpectralIndexData,m_sourceSED,useRobustFitter,rob);
+
+	//- Fit SIFFA 
+	FitSIFFAToSourceSED(m_siffaSpectralIndexData,m_sourceSED,useRobustFitter,rob);
+
+	//- Fit SEFFA
+	FitSEFFAToSourceSED(m_seffaSpectralIndexData,m_sourceSED,useRobustFitter,rob);
+
+	return 0;
+
+}//close FitSourceSED()
+
+
+int SourceMatchData::FitPLToSourceSED(SpectralIndexData& spectralIndexData,TGraphErrors* sed,bool useRobustFitter,double rob)
+{
+	//- Find spectral index
+	int N= sed->GetN();
+	
+	if(N==2){
+		spectralIndexData.isSpectralIndexFit= false;
+		double x1= 0; 
+		double x2= 0;	
+		double y1= 0;
+		double y2= 0;	
+		double x1_err= 0;
+		double x2_err= 0;
+		double y1_err= 0;
+		double y2_err= 0;
+
+		sed->GetPoint(0,x1,y1);
+		x1_err= sed->GetErrorX(0);
+		y1_err= sed->GetErrorY(0);	
+		sed->GetPoint(1,x2,y2);
+		x2_err= sed->GetErrorX(1);
+		y2_err= sed->GetErrorY(1);
+
+		double y2_up= y2 + y2_err;
+		double y2_down= y2 - y2_err;
+		double y1_up= y1 + y1_err;
+		double y1_down= y1 - y1_err;
+		double alpha= (y2-y1)/(x2-x1);
+		double alpha_up= (y2_up-y1_down)/(x2-x1);
+		double alpha_down= (y2_down-y1_up)/(x2-x1);
+		double dalpha_up= alpha_up-alpha;
+		double dalpha_down= alpha-alpha_down;		
+		double alphaErr= fabs(dalpha_up);		
+		double norm= (x2*y1-x1*y2)/(x2-x1);
+		double normErr= sqrt( pow(x2*y1_err/(x2-x1),2) + pow(x1*y2_err/(x2-x1),2) );
+
+		spectralIndexData.spectralIndex= alpha;
+		spectralIndexData.spectralIndexErr= alphaErr;
+		spectralIndexData.norm= norm;	
+		spectralIndexData.normErr= normErr;		
+		spectralIndexData.spectralFitChi2= 0;
+		spectralIndexData.spectralFitNDF= 0;
+		spectralIndexData.hasSpectralIndex= true;
+	}
+	else{
+		spectralIndexData.isSpectralIndexFit= true;
+
+		TString fitOptions= "RMS";
+		if(useRobustFitter) fitOptions= Form("SN rob=%1.2f",rob);
+		TFitResultPtr fitRes= sed->Fit("pol1",fitOptions);
+		spectralIndexData.spectralFitChi2= fitRes->Chi2();
+		spectralIndexData.spectralFitNDF= fitRes->Ndf();
+		spectralIndexData.norm= fitRes->Value(0);
+		spectralIndexData.normErr= fitRes->ParError(0);
+		spectralIndexData.spectralIndex= fitRes->Value(1);
+		spectralIndexData.spectralIndexErr= fitRes->ParError(1);
+		spectralIndexData.spectralIndexFitStatus= fitRes->Status();
+		spectralIndexData.hasSpectralIndex= true;
+	}
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Source "<<m_source->GetName()<<": hasData?"<<spectralIndexData.hasSpectralIndex<<", alpha="<<spectralIndexData.spectralIndex<<" +- "<<spectralIndexData.spectralIndexErr<<", chi2/ndf="<<spectralIndexData.spectralFitChi2<<"/"<<spectralIndexData.spectralFitNDF);
+	#endif
+	
+
+	return 0;
+
+}//close FitPLToSourceSED()
+
+
+int SourceMatchData::FitPolToSourceSED(PolSpectralIndexData& spectralIndexData,TGraphErrors* sed,bool useRobustFitter,double rob)
+{
+	//# Nothing to be done if less than N=4 points present in SED
+	int N= sed->GetN();
+	spectralIndexData.hasData= false;
+	if(N<4) return 0; 
+	
+	//# Fit sed
+	TString fitOptions= "RMS";
+	if(useRobustFitter) fitOptions= Form("SN rob=%1.2f",rob);
+	TFitResultPtr fitRes= sed->Fit("pol3",fitOptions);
+	spectralIndexData.fitChi2= fitRes->Chi2();
+	spectralIndexData.fitNDF= fitRes->Ndf();
+	std::stringstream ss;
+	ss<<"polPars{";
+	for(int i=0;i<fitRes->NPar();i++){
+		double p= fitRes->Value(i);
+		double pErr= fitRes->ParError(i);
+		(spectralIndexData.polPars).push_back(p);
+		(spectralIndexData.polParErrors).push_back(pErr);
+		ss<<"p"<<i+1<<"="<<p<<"+-"<<pErr<<",";
+	}
+	ss<<"}";
+
+	spectralIndexData.status= fitRes->Status();
+	spectralIndexData.hasData= true;
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Source "<<m_source->GetName()<<": hasData?"<<spectralIndexData.hasData<<", "<<ss.str()<<", chi2/ndf="<<spectralIndexData.fitChi2<<"/"<<spectralIndexData.fitNDF);
+	#endif
+
+	
+	
+	return 0;
+
+}//close FitPolToSourceSED()
+
+
+int SourceMatchData::FitSSAToSourceSED(SASpectralIndexData& spectralIndexData,TGraphErrors* sed,bool useRobustFitter,double rob)
+{
+	//# Nothing to be done if less than N=4 points present in SED
+	int N= sed->GetN();
+	spectralIndexData.hasData= false;
+	if(N<6) return 0; 
+	
+	//# Create fit function
+	double xmin= TMath::MinElement(sed->GetN(),sed->GetX());
+	double xmax= TMath::MaxElement(sed->GetN(),sed->GetX());
+	double dx= fabs(xmax-xmin);
+	double xmin_fcn= xmin - 0.2*dx;
+	double xmax_fcn= xmax + 0.2*dx;
+	double ymax= TMath::MaxElement(sed->GetN(),sed->GetY());
+	double norm_start= ymax;
+	double alpha_start= -0.5;
+	double nu_t_start= xmin + 0.5*(xmax-xmin);
+	TF1* fitFcn= new TF1("",MathUtils::SynchrotronSelfAbsSED,xmin_fcn,xmax_fcn,3);
+	fitFcn->SetParameters(ymax,alpha_start,nu_t_start);
+
+	//# Fit sed
+	TString fitOptions= "RMS";
+	if(useRobustFitter) fitOptions= Form("SN rob=%1.2f",rob);
+	TFitResultPtr fitRes= sed->Fit(fitFcn,fitOptions);
+	spectralIndexData.fitChi2= fitRes->Chi2();
+	spectralIndexData.fitNDF= fitRes->Ndf();
+	spectralIndexData.norm= fitRes->Value(0);
+	spectralIndexData.normErr= fitRes->ParError(0);
+	spectralIndexData.alpha= fitRes->Value(1);
+	spectralIndexData.alphaErr= fitRes->ParError(1);
+	spectralIndexData.nu_t= fitRes->Value(2);
+	spectralIndexData.nuErr_t= fitRes->ParError(2);
+	spectralIndexData.status= fitRes->Status();
+	spectralIndexData.hasData= true;
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Source "<<m_source->GetName()<<" SSA Fit: hasData?"<<spectralIndexData.hasData<<", alpha="<<spectralIndexData.alpha<<"+-"<<spectralIndexData.alphaErr<<", nu_t="<<spectralIndexData.nu_t<<"+-"<<spectralIndexData.nuErr_t<<", chi2/ndf="<<spectralIndexData.fitChi2<<"/"<<spectralIndexData.fitNDF);
+	#endif
+
+	//# Clear data
+	delete fitFcn;
+	fitFcn= 0;
+	
+	return 0;
+
+}//close FitSSAToSourceSED()
+
+
+int SourceMatchData::FitSIFFAToSourceSED(SASpectralIndexData& spectralIndexData,TGraphErrors* sed,bool useRobustFitter,double rob)
+{
+	//# Nothing to be done if less than N=4 points present in SED
+	int N= sed->GetN();
+	spectralIndexData.hasData= false;
+	if(N<6) return 0; 
+	
+	//# Create fit function
+	double xmin= TMath::MinElement(sed->GetN(),sed->GetX());
+	double xmax= TMath::MaxElement(sed->GetN(),sed->GetX());
+	double dx= fabs(xmax-xmin);
+	double xmin_fcn= xmin - 0.2*dx;
+	double xmax_fcn= xmax + 0.2*dx;
+	double ymax= TMath::MaxElement(sed->GetN(),sed->GetY());
+	double norm_start= ymax;
+	double alpha_start= -0.5;
+	double nu_t_start= xmin + 0.5*(xmax-xmin);
+	TF1* fitFcn= new TF1("",MathUtils::SynchrotronIntFreeFreeAbsSED,xmin_fcn,xmax_fcn,3);
+	fitFcn->SetParameters(ymax,alpha_start,nu_t_start);
+
+	//# Fit sed
+	TString fitOptions= "RMS";
+	if(useRobustFitter) fitOptions= Form("SN rob=%1.2f",rob);
+	TFitResultPtr fitRes= sed->Fit(fitFcn,fitOptions);
+	spectralIndexData.fitChi2= fitRes->Chi2();
+	spectralIndexData.fitNDF= fitRes->Ndf();
+	spectralIndexData.norm= fitRes->Value(0);
+	spectralIndexData.normErr= fitRes->ParError(0);
+	spectralIndexData.alpha= fitRes->Value(1);
+	spectralIndexData.alphaErr= fitRes->ParError(1);
+	spectralIndexData.nu_t= fitRes->Value(2);
+	spectralIndexData.nuErr_t= fitRes->ParError(2);
+	spectralIndexData.status= fitRes->Status();
+	spectralIndexData.hasData= true;
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Source "<<m_source->GetName()<<" SIFFA Fit: hasData?"<<spectralIndexData.hasData<<", alpha="<<spectralIndexData.alpha<<"+-"<<spectralIndexData.alphaErr<<", nu_t="<<spectralIndexData.nu_t<<"+-"<<spectralIndexData.nuErr_t<<", chi2/ndf="<<spectralIndexData.fitChi2<<"/"<<spectralIndexData.fitNDF);
+	#endif
+
+	//# Clear data
+	delete fitFcn;
+	fitFcn= 0;
+	
+	return 0;
+
+}//close FitSIFFAToSourceSED()
+
+int SourceMatchData::FitSEFFAToSourceSED(SASpectralIndexData& spectralIndexData,TGraphErrors* sed,bool useRobustFitter,double rob)
+{
+	//# Nothing to be done if less than N=4 points present in SED
+	int N= sed->GetN();
+	spectralIndexData.hasData= false;
+	if(N<6) return 0; 
+	
+	//# Create fit function
+	double xmin= TMath::MinElement(sed->GetN(),sed->GetX());
+	double xmax= TMath::MaxElement(sed->GetN(),sed->GetX());
+	double dx= fabs(xmax-xmin);
+	double xmin_fcn= xmin - 0.2*dx;
+	double xmax_fcn= xmax + 0.2*dx;
+	double ymax= TMath::MaxElement(sed->GetN(),sed->GetY());
+	double norm_start= ymax;
+	double alpha_start= -0.5;
+	double nu_t_start= xmin + 0.5*(xmax-xmin);
+	TF1* fitFcn= new TF1("",MathUtils::SynchrotronExtFreeFreeAbsSED,xmin_fcn,xmax_fcn,3);
+	fitFcn->SetParameters(ymax,alpha_start,nu_t_start);
+
+	//# Fit sed
+	TString fitOptions= "RMS";
+	if(useRobustFitter) fitOptions= Form("SN rob=%1.2f",rob);
+	TFitResultPtr fitRes= sed->Fit(fitFcn,fitOptions);
+	spectralIndexData.fitChi2= fitRes->Chi2();
+	spectralIndexData.fitNDF= fitRes->Ndf();
+	spectralIndexData.norm= fitRes->Value(0);
+	spectralIndexData.normErr= fitRes->ParError(0);
+	spectralIndexData.alpha= fitRes->Value(1);
+	spectralIndexData.alphaErr= fitRes->ParError(1);
+	spectralIndexData.nu_t= fitRes->Value(2);
+	spectralIndexData.nuErr_t= fitRes->ParError(2);
+	spectralIndexData.status= fitRes->Status();
+	spectralIndexData.hasData= true;
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Source "<<m_source->GetName()<<" SEFFA Fit: hasData?"<<spectralIndexData.hasData<<", alpha="<<spectralIndexData.alpha<<"+-"<<spectralIndexData.alphaErr<<", nu_t="<<spectralIndexData.nu_t<<"+-"<<spectralIndexData.nuErr_t<<", chi2/ndf="<<spectralIndexData.fitChi2<<"/"<<spectralIndexData.fitNDF);
+	#endif
+
+	//# Clear data
+	delete fitFcn;
+	fitFcn= 0;
+	
+	return 0;
+
+}//close FitSEFFAToSourceSED()
+
 int SourceMatchData::ComputeSourceComponentSEDs()
 {
-	//cout<<"ComputeSourceComponentSEDs: pto 1"<<endl;
 	//Do nothing if no source set
 	if(!m_source) return -1;
 	if(m_matchedSources.empty()) return 0;
 	if(m_componentMatchIndexes.empty()) return 0;
 
-	//cout<<"ComputeSourceComponentSEDs: pto 2"<<endl;
-
 	//Get source pars
 	if(!m_source->HasFitInfo()) return 0;//no components, nothing to be done
-
-	//cout<<"ComputeSourceComponentSEDs: pto 3"<<endl;
 
 	//Get source fit component pars
 	SourceFitPars fitPars= m_source->GetFitPars();
@@ -788,8 +1126,6 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 		INFO_LOG("sourceName="<<sourceName<<", nComponents="<<nComponents_index);	
 	#endif	
 
-	//cout<<"ComputeSourceComponentSEDs: pto 4"<<endl;
-
 	
 	double beamArea= m_source->GetBeamFluxIntegral();
 	if(beamArea<=0){
@@ -799,8 +1135,7 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 		return -1;
 	}
 
-	//cout<<"ComputeSourceComponentSEDs: pto 5"<<endl;
-
+	
 	//Get source metadata
 	ImgMetaData* metadata= m_source->GetImageMetaData();
 	if(!metadata){
@@ -809,8 +1144,6 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 		#endif
 		return -1;
 	}
-	
-	//cout<<"ComputeSourceComponentSEDs: pto 6"<<endl;
 	
 	//Get source frequency
 	double Nu= metadata->Freq;
@@ -823,16 +1156,16 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 	double lgNu= log10(Nu);
 	double dlgNu= log10(TMath::E())*dNu/Nu;	
 
-	
-	
+
 	//Reset existing source SEDs
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Reset existing SED graphs...");
 	#endif
 	for(size_t i=0;i<m_sourceComponentSED.size();i++){
+		TString graphName= Form("sourceSED_%s_fitcomp%d",m_source->GetName(),(int)(i+1));
+		m_sourceComponentSED[i]->SetNameTitle(graphName,graphName);
 		m_sourceComponentSED[i]->Set(0);
 	}
-
 
 	
 	//Loop over source components
@@ -852,6 +1185,10 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 		double fluxDensityErr= fitPars.GetComponentFluxDensityErr(i);
 		double flux= fluxDensity/beamArea;
 		double fluxErr= fluxDensityErr/beamArea;
+		if(m_shiftFlux){
+			flux*= (1. + m_fluxShift);
+			fluxErr*= (1. + m_fluxShift);
+		}
 		double lgFlux= log10(flux);
 		double lgFluxErr= log10(TMath::E())*fluxErr/flux;
 		
@@ -861,12 +1198,9 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 		bool isMatchComponentFluxSummed= false;	
 
 		//Skip if no component match	
-		//cout<<"ComputeSourceComponentSEDs: pto 7"<<endl;
 		if(!HasSourceComponentMatch(i)){
-			//cout<<"ComputeSourceComponentSEDs: pto 8"<<endl;
 			m_sourceComponentSED[i]->SetPoint(0,lgNu,lgFlux);
-			m_sourceComponentSED[i]->SetPointError(0,0,0,lgFluxErr,lgFluxErr);
-			//cout<<"ComputeSourceComponentSEDs: pto 9"<<endl;
+			m_sourceComponentSED[i]->SetPointError(0,0,lgFluxErr);
 			continue;
 		}
 
@@ -976,45 +1310,32 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 		
 		for(int k=0;k<N;k++){
 			m_sourceComponentSED[i]->SetPoint(k,lgNu_list_sorted[k],lgFlux_list_sorted[k]);
-			m_sourceComponentSED[i]->SetPointError(k,0,0,lgFluxErr_list_sorted[k],lgFluxErr_list_sorted[k]);
+			m_sourceComponentSED[i]->SetPointError(k,0,lgFluxErr_list_sorted[k]);
 			#ifdef LOGGING_ENABLED
 				INFO_LOG("Source SED: P"<<k+1<<"("<<lgNu_list_sorted[k]<<","<<lgFlux_list_sorted[k]<<")");
 			#endif
 		}
 		
-	
-
 		//# Find spectral index
-		m_componentSpectralIndexData[i].isMultiSourceMatchIndex= isMatchComponentFluxSummed;
-		if(N==2){
-			m_componentSpectralIndexData[i].isSpectralIndexFit= false;
-			double x1= 0; 
-			double x2= 0;	
-			double y1= 0;
-			double y2= 0;
-			m_sourceComponentSED[i]->GetPoint(0,x1,y1);
-			m_sourceComponentSED[i]->GetPoint(1,x2,y2);
-			m_componentSpectralIndexData[i].spectralIndex= (y2-y1)/(x2-x1);
-			m_componentSpectralIndexData[i].spectralIndexErr= 0;
-			m_componentSpectralIndexData[i].spectralFitChi2= 0;
-			m_componentSpectralIndexData[i].spectralFitNDF= 0;
-			m_componentSpectralIndexData[i].hasSpectralIndex= true;
-		}
-		else{
-			m_componentSpectralIndexData[i].isSpectralIndexFit= true;
-			TFitResultPtr fitRes= m_sourceComponentSED[i]->Fit("pol1","S");
-			m_componentSpectralIndexData[i].spectralFitChi2= fitRes->Chi2();
-			m_componentSpectralIndexData[i].spectralFitNDF= fitRes->Ndf();
-			m_componentSpectralIndexData[i].spectralIndex= fitRes->Value(1);
-			m_componentSpectralIndexData[i].spectralIndexErr= fitRes->ParError(1);
-			int fitStatus= fitRes;
-			if(fitStatus==0) m_componentSpectralIndexData[i].hasSpectralIndex= true;
-		}
+		//# Compute spectral index from power law fit
+		m_componentSpectralIndexData[i].isMultiSourceMatchIndex= isMatchComponentFluxSummed;	
+		FitPLToSourceSED(m_componentSpectralIndexData[i],m_sourceComponentSED[i]);
 
-		#ifdef LOGGING_ENABLED
-			INFO_LOG("Source "<<m_source->GetName()<<", component no. "<<i+1<<": hasSpectralIndex?"<<m_componentSpectralIndexData[i].hasSpectralIndex<<", gamma="<<m_componentSpectralIndexData[i].spectralIndex<<" +- "<<m_componentSpectralIndexData[i].spectralIndexErr<<", chi2/ndf="<<m_componentSpectralIndexData[i].spectralFitChi2<<"/"<<m_componentSpectralIndexData[i].spectralFitNDF);
-		#endif
+		//# Fit pol3 to SED
+		m_componentPolSpectralIndexData[i].isMultiMatch= isMatchComponentFluxSummed;
+		FitPolToSourceSED(m_componentPolSpectralIndexData[i],m_sourceComponentSED[i]);
 
+		//# Fit SSA to SED
+		m_componentSSASpectralIndexData[i].isMultiMatch= isMatchComponentFluxSummed;
+		FitSSAToSourceSED(m_componentSSASpectralIndexData[i],m_sourceComponentSED[i]);
+
+		//# Fit SIFFA to SED
+		m_componentSIFFASpectralIndexData[i].isMultiMatch= isMatchComponentFluxSummed;
+		FitSIFFAToSourceSED(m_componentSIFFASpectralIndexData[i],m_sourceComponentSED[i]);
+
+		//# Fit SEFFA to SED
+		m_componentSEFFASpectralIndexData[i].isMultiMatch= isMatchComponentFluxSummed;
+		FitSEFFAToSourceSED(m_componentSEFFASpectralIndexData[i],m_sourceComponentSED[i]);
 	
 	}//end loop components
 	
@@ -1023,21 +1344,51 @@ int SourceMatchData::ComputeSourceComponentSEDs()
 
 }//close ComputeSourceComponentSEDs()
 
+int SourceMatchData::FitSourceComponentSED(bool useRobustFitter,double rob)
+{
+	//Loop over component SEDs
+	for(size_t i=0;i<m_sourceComponentSED.size();i++)
+	{
+		//Check SED
+		if(!m_sourceComponentSED[i]) continue;
+		if(m_sourceComponentSED[i]->GetN()<=0) continue;
 
-int SourceMatchData::DrawSED()
+		//Fit power law fit
+		FitPLToSourceSED(m_componentSpectralIndexData[i],m_sourceComponentSED[i],useRobustFitter,rob);
+
+		//Fit pol3 to SED
+		FitPolToSourceSED(m_componentPolSpectralIndexData[i],m_sourceComponentSED[i],useRobustFitter,rob);
+
+		//Fit SSA to SED
+		FitSSAToSourceSED(m_componentSSASpectralIndexData[i],m_sourceComponentSED[i],useRobustFitter,rob);
+
+		// Fit SIFFA to SED
+		FitSIFFAToSourceSED(m_componentSIFFASpectralIndexData[i],m_sourceComponentSED[i],useRobustFitter,rob);
+
+		//# Fit SEFFA to SED
+		FitSEFFAToSourceSED(m_componentSEFFASpectralIndexData[i],m_sourceComponentSED[i],useRobustFitter,rob);
+
+	}//end loop components
+
+	return 0;
+
+}//close FitSourceComponentSED()
+
+
+TCanvas* SourceMatchData::DrawSED()
 {
 	//Do nothing if no source is present
 	if(!m_source || !m_sourceSED){
 		#ifdef LOGGING_ENABLED
 			WARN_LOG("No source and/or sed present, nothing to be drawn.");
 		#endif	
-		return 0;
+		return nullptr;
 	}	
 	if(m_sourceSED->GetN()<=0){
 		#ifdef LOGGING_ENABLED
 			WARN_LOG("No points stored in source SED, nothing to be drawn.");
 		#endif	
-		return 0;
+		return nullptr;
 	}
 
 	//Find SED min/max
@@ -1080,40 +1431,46 @@ int SourceMatchData::DrawSED()
 		WCSUtils::DeleteWCS(&wcs);
 	}
 	
-
 	//Get flux
 	double fluxDensity= 0;
 	int status= m_source->GetFluxDensity(fluxDensity);
 	double beamArea= m_source->GetBeamFluxIntegral();
 	double flux= fluxDensity;
 	TString fluxText= "";
+	flux*= 1.e+3;//convert to mJy
 	std::string fluxUnits= "mJy/beam";
 	if(beamArea>0) {
 		flux/= beamArea;
 		fluxUnits= "mJy";
 	}
+
+	if(m_shiftFlux){
+		flux*= (1.+m_fluxShift);
+	}
+	
 	fluxText= Form("%1.2f %s",flux,(fluxUnits).c_str());
 
 	//Get spectral index
 	TString sindexText= "";
 	if(m_spectralIndexData.hasSpectralIndex){
-		double gamma= m_spectralIndexData.spectralIndex;
-		double gammaErr= m_spectralIndexData.spectralIndexErr;
-		sindexText= Form("gamma=%1.2f#pm%1.2f",gamma,gammaErr);
+	//if(m_spectralIndexData.hasData){
+		double alpha= m_spectralIndexData.spectralIndex;
+		double alphaErr= m_spectralIndexData.spectralIndexErr;
+		sindexText= Form("alpha=%1.2f#pm%1.2f",alpha,alphaErr);
 	}
 
 	//Get component spectral index
 	std::vector<TString> sindexTexts;
 	for(size_t i=0;i<m_componentSpectralIndexData.size();i++){
 		if(!m_componentSpectralIndexData[i].hasSpectralIndex) continue;
-		double gamma= m_componentSpectralIndexData[i].spectralIndex;
-		double gammaErr= m_componentSpectralIndexData[i].spectralIndexErr;
-		TString s= Form("gamma(comp%d)=%1.2f#pm%1.2f",(int)(i+1),gamma,gammaErr);
+		double alpha= m_componentSpectralIndexData[i].spectralIndex;
+		double alphaErr= m_componentSpectralIndexData[i].spectralIndexErr;
+		TString s= Form("alpha_comp%d=%1.2f#pm%1.2f",(int)(i+1),alpha,alphaErr);
 		sindexTexts.push_back(s);
 	}
 
 	//Create canvas
-	gStyle->SetPadRightMargin(0.1);
+	gStyle->SetPadRightMargin(0.05);
 	gStyle->SetPadLeftMargin(0.15);
 
 	TString canvasName= Form("SEDPlot_%s",sname.c_str());
@@ -1126,7 +1483,8 @@ int SourceMatchData::DrawSED()
 	double y_min= lgFlux_min - fabs(step*(lgFlux_min-lgFlux_max));
 	double y_max= lgFlux_max + fabs(step*(lgFlux_min-lgFlux_max));
 
-	TH2D* PlotBkg= new TH2D("PlotBkg","",100,x_min,x_max,100,y_min,y_max);
+	TString histoName= Form("SEDPlotBkg_%s",sname.c_str());
+	TH2D* PlotBkg= new TH2D(histoName,"",100,x_min,x_max,100,y_min,y_max);
 	PlotBkg->GetXaxis()->SetTitle("log_{10}(#nu/Hz)");
 	PlotBkg->GetYaxis()->SetTitle("log_{10}(S/Jy)");	
 	PlotBkg->SetStats(0);
@@ -1169,7 +1527,217 @@ int SourceMatchData::DrawSED()
 		}
 	}
 
-	return 0;
+	//## Draw SED fit
+	// - Power law fit
+	if(m_sedPLFitFcn){
+		delete m_sedPLFitFcn;
+		m_sedPLFitFcn= 0;
+	}
+	TString sedLPFitLegendText= "";
+	if(m_spectralIndexData.hasSpectralIndex && m_spectralIndexData.isSpectralIndexFit)
+	{	
+		TString fcnName= Form("sedPLFitFcn_%s",m_source->GetName());
+		m_sedPLFitFcn= new TF1(fcnName,"pol1",x_min,x_max);	
+		m_sedPLFitFcn->SetParameter(0,m_spectralIndexData.norm);
+		m_sedPLFitFcn->SetParameter(1,m_spectralIndexData.spectralIndex);
+		m_sedPLFitFcn->SetLineColor(kBlack);
+		m_sedPLFitFcn->SetLineStyle(kSolid);
+		m_sedPLFitFcn->Draw("l same");
+
+		sedLPFitLegendText= Form("sed PL fit (alpha=%1.2f#pm%1.2f)",m_spectralIndexData.spectralIndex,m_spectralIndexData.spectralIndexErr);
+
+	}//close if
+
+	// - SSA fit
+	if(m_sedSSAFitFcn){
+		delete m_sedSSAFitFcn;
+		m_sedSSAFitFcn= 0;
+	}
+	TString sedSSAFitLegendText= "";
+	if(m_ssaSpectralIndexData.hasData)
+	{
+		TString fcnName= Form("sedSSAFitFcn_%s",m_source->GetName());
+		m_sedSSAFitFcn= new TF1(fcnName,MathUtils::SynchrotronSelfAbsSED,x_min,x_max);	
+		m_sedSSAFitFcn->SetParameter(0,m_ssaSpectralIndexData.norm);
+		m_sedSSAFitFcn->SetParameter(1,m_ssaSpectralIndexData.alpha);		
+		m_sedSSAFitFcn->SetParameter(2,m_ssaSpectralIndexData.nu_t);
+		m_sedSSAFitFcn->SetLineColor(kBlack);
+		m_sedSSAFitFcn->SetLineStyle(kDashed);
+		m_sedSSAFitFcn->Draw("l same");
+
+		sedSSAFitLegendText= Form("sed SSA fit (alpha=%1.2f#pm%1.2f,nu_t=%1.2f#pm%1.2f)",m_ssaSpectralIndexData.alpha,m_ssaSpectralIndexData.alphaErr,m_ssaSpectralIndexData.nu_t,m_ssaSpectralIndexData.nuErr_t);
+	}//close if
+
+	// - SIFFA fit
+	if(m_sedSIFFAFitFcn){
+		delete m_sedSIFFAFitFcn;
+		m_sedSIFFAFitFcn= 0;
+	}
+	TString sedSIFFAFitLegendText= "";
+	if(m_siffaSpectralIndexData.hasData)
+	{
+		TString fcnName= Form("sedSIFFAFitFcn_%s",m_source->GetName());
+		m_sedSIFFAFitFcn= new TF1("",MathUtils::SynchrotronIntFreeFreeAbsSED,x_min,x_max);	
+		m_sedSIFFAFitFcn->SetParameter(0,m_siffaSpectralIndexData.norm);
+		m_sedSIFFAFitFcn->SetParameter(1,m_siffaSpectralIndexData.alpha);		
+		m_sedSIFFAFitFcn->SetParameter(2,m_siffaSpectralIndexData.nu_t);
+		m_sedSIFFAFitFcn->SetLineColor(kBlack);
+		m_sedSIFFAFitFcn->SetLineStyle(kDotted);
+		m_sedSIFFAFitFcn->Draw("l same");
+
+		sedSIFFAFitLegendText= Form("sed SIFFA fit (alpha=%1.2f#pm%1.2f,nu_t=%1.2f#pm%1.2f)",m_siffaSpectralIndexData.alpha,m_siffaSpectralIndexData.alphaErr,m_siffaSpectralIndexData.nu_t,m_siffaSpectralIndexData.nuErr_t);
+	}//close if
+
+	// - SEFFA fit
+	if(m_sedSEFFAFitFcn){
+		delete m_sedSEFFAFitFcn;
+		m_sedSEFFAFitFcn= 0;
+	}
+	TString sedSEFFAFitLegendText= "";
+	if(m_seffaSpectralIndexData.hasData)
+	{	
+		TString fcnName= Form("sedSEFFAFitFcn_%s",m_source->GetName());
+		m_sedSEFFAFitFcn= new TF1("",MathUtils::SynchrotronExtFreeFreeAbsSED,x_min,x_max);	
+		m_sedSEFFAFitFcn->SetParameter(0,m_seffaSpectralIndexData.norm);
+		m_sedSEFFAFitFcn->SetParameter(1,m_seffaSpectralIndexData.alpha);		
+		m_sedSEFFAFitFcn->SetParameter(2,m_seffaSpectralIndexData.nu_t);
+		m_sedSEFFAFitFcn->SetLineColor(kBlack);
+		m_sedSEFFAFitFcn->SetLineStyle(9);
+		m_sedSEFFAFitFcn->Draw("l same");
+
+		sedSEFFAFitLegendText= Form("sed SEFFA fit (alpha=%1.2f#pm%1.2f,nu_t=%1.2f#pm%1.2f)",m_seffaSpectralIndexData.alpha,m_seffaSpectralIndexData.alphaErr,m_seffaSpectralIndexData.nu_t,m_seffaSpectralIndexData.nuErr_t);
+	}//close if
+
+	
+	//## Draw SED component fit
+	// - Power law fit
+	TF1* sedComponentPLFitFcn= 0;
+	std::vector<TString> sedComponentPLFitLegendTexts;
+
+	for(size_t i=0;i<m_componentSpectralIndexData.size();i++){	
+		if(!m_componentSpectralIndexData[i].hasSpectralIndex || !m_componentSpectralIndexData[i].isSpectralIndexFit) continue;
+		int color= kBlack;
+		if(m_componentSpectralIndexData.size()<componentColors.size()){
+			color= componentColors[i];
+		}
+		
+		TString fcnName= Form("sedComponentPLFitFcn_%s_comp%d",m_source->GetName(),(int)(i+1));
+		sedComponentPLFitFcn= new TF1(fcnName,"pol1",x_min,x_max);	
+		sedComponentPLFitFcn->SetParameter(0,m_componentSpectralIndexData[i].norm);
+		sedComponentPLFitFcn->SetParameter(1,m_componentSpectralIndexData[i].spectralIndex);
+		sedComponentPLFitFcn->SetLineColor(color);
+		sedComponentPLFitFcn->SetLineStyle(kSolid);
+		sedComponentPLFitFcn->Draw("l same");
+		m_sedComponentPLFitFcns.push_back(sedComponentPLFitFcn);
+
+		TString legendText= Form("sedComp%d PL fit (alpha=%1.2f#pm%1.2f)",(int)(i+1),m_componentSpectralIndexData[i].spectralIndex,m_componentSpectralIndexData[i].spectralIndexErr);
+		sedComponentPLFitLegendTexts.push_back(legendText);
+	}//end loop components	
+
+	// - SSA fit
+	TF1* sedComponentSSAFitFcn= 0;
+	std::vector<TString> sedComponentSSAFitLegendTexts;
+
+	for(size_t i=0;i<m_componentSSASpectralIndexData.size();i++){	
+		if(!m_componentSSASpectralIndexData[i].hasData) continue;
+		int color= kBlack;
+		if(m_componentSSASpectralIndexData.size()<componentColors.size()){
+			color= componentColors[i];
+		}
+		
+		TString fcnName= Form("sedComponentSSAFitFcn_%s_comp%d",m_source->GetName(),(int)(i+1));
+		sedComponentSSAFitFcn= new TF1(fcnName,MathUtils::SynchrotronSelfAbsSED,x_min,x_max);	
+		sedComponentSSAFitFcn->SetParameter(0,m_componentSSASpectralIndexData[i].norm);
+		sedComponentSSAFitFcn->SetParameter(1,m_componentSSASpectralIndexData[i].alpha);
+		sedComponentSSAFitFcn->SetParameter(2,m_componentSSASpectralIndexData[i].nu_t);
+		sedComponentSSAFitFcn->SetLineColor(color);
+		sedComponentSSAFitFcn->SetLineStyle(kDashed);
+		sedComponentSSAFitFcn->Draw("l same");
+		m_sedComponentSSAFitFcns.push_back(sedComponentSSAFitFcn);
+
+		TString legendText= Form("sedComp%d SSA fit (alpha=%1.2f#pm%1.2f, nu_t=%1.2f#pm%1.2f)",(int)(i+1),m_componentSSASpectralIndexData[i].alpha,m_componentSSASpectralIndexData[i].alphaErr,m_componentSSASpectralIndexData[i].nu_t,m_componentSSASpectralIndexData[i].nuErr_t);
+		sedComponentSSAFitLegendTexts.push_back(legendText);
+	}//end loop components
+
+	// - SIFFA fit
+	TF1* sedComponentSIFFAFitFcn= 0;
+	std::vector<TString> sedComponentSIFFAFitLegendTexts;
+
+	for(size_t i=0;i<m_componentSIFFASpectralIndexData.size();i++){	
+		if(!m_componentSIFFASpectralIndexData[i].hasData) continue;
+		int color= kBlack;
+		if(m_componentSIFFASpectralIndexData.size()<componentColors.size()){
+			color= componentColors[i];
+		}
+		
+		TString fcnName= Form("sedComponentSIFFAFitFcn_%s_comp%d",m_source->GetName(),(int)(i+1));
+		sedComponentSIFFAFitFcn= new TF1(fcnName,MathUtils::SynchrotronIntFreeFreeAbsSED,x_min,x_max);	
+		sedComponentSIFFAFitFcn->SetParameter(0,m_componentSIFFASpectralIndexData[i].norm);
+		sedComponentSIFFAFitFcn->SetParameter(1,m_componentSIFFASpectralIndexData[i].alpha);
+		sedComponentSIFFAFitFcn->SetParameter(2,m_componentSIFFASpectralIndexData[i].nu_t);
+		sedComponentSIFFAFitFcn->SetLineColor(color);
+		sedComponentSIFFAFitFcn->SetLineStyle(kDotted);
+		sedComponentSIFFAFitFcn->Draw("l same");
+		m_sedComponentSIFFAFitFcns.push_back(sedComponentSIFFAFitFcn);
+
+		TString legendText= Form("sedComp%d SIFFA fit (alpha=%1.2f#pm%1.2f, nu_t=%1.2f#pm%1.2f)",(int)(i+1),m_componentSIFFASpectralIndexData[i].alpha,m_componentSIFFASpectralIndexData[i].alphaErr,m_componentSIFFASpectralIndexData[i].nu_t,m_componentSIFFASpectralIndexData[i].nuErr_t);
+		sedComponentSIFFAFitLegendTexts.push_back(legendText);
+	}//end loop components	
+	
+	// - SEFFA fit
+	TF1* sedComponentSEFFAFitFcn= 0;
+	std::vector<TString> sedComponentSEFFAFitLegendTexts;
+
+	for(size_t i=0;i<m_componentSEFFASpectralIndexData.size();i++){	
+		if(!m_componentSEFFASpectralIndexData[i].hasData) continue;
+		int color= kBlack;
+		if(m_componentSEFFASpectralIndexData.size()<componentColors.size()){
+			color= componentColors[i];
+		}
+		
+		TString fcnName= Form("sedComponentSEFFAFitFcn_%s_comp%d",m_source->GetName(),(int)(i+1));
+		sedComponentSEFFAFitFcn= new TF1(fcnName,MathUtils::SynchrotronExtFreeFreeAbsSED,x_min,x_max);	
+		sedComponentSEFFAFitFcn->SetParameter(0,m_componentSEFFASpectralIndexData[i].norm);
+		sedComponentSEFFAFitFcn->SetParameter(1,m_componentSEFFASpectralIndexData[i].alpha);
+		sedComponentSEFFAFitFcn->SetParameter(2,m_componentSEFFASpectralIndexData[i].nu_t);
+		sedComponentSEFFAFitFcn->SetLineColor(color);
+		sedComponentSEFFAFitFcn->SetLineStyle(kDotted);
+		sedComponentSEFFAFitFcn->Draw("l same");
+		m_sedComponentSEFFAFitFcns.push_back(sedComponentSEFFAFitFcn);
+
+		TString legendText= Form("sedComp%d SEFFA fit (alpha=%1.2f#pm%1.2f, nu_t=%1.2f#pm%1.2f)",(int)(i+1),m_componentSEFFASpectralIndexData[i].alpha,m_componentSEFFASpectralIndexData[i].alphaErr,m_componentSEFFASpectralIndexData[i].nu_t,m_componentSEFFASpectralIndexData[i].nuErr_t);
+		sedComponentSEFFAFitLegendTexts.push_back(legendText);
+	}//end loop components	
+
+	//## Draw legend
+	TLegend* PlotLegend= new TLegend(0.6,0.6,0.8,0.8);
+	PlotLegend->SetBorderSize(0);
+	PlotLegend->SetFillColor(0);
+	PlotLegend->SetTextFont(52);
+	PlotLegend->SetTextSize(0.04);
+	if(m_sourceSED) PlotLegend->AddEntry(m_sourceSED,"island","PL");
+	for(size_t i=0;i<m_sourceComponentSED.size();i++){	
+		if(m_sourceComponentSED[i]) PlotLegend->AddEntry(m_sourceComponentSED[i],Form("component %d",i+1),"PL");
+	}
+	if(m_sedPLFitFcn) PlotLegend->AddEntry(m_sedPLFitFcn,sedLPFitLegendText,"L");	
+	if(m_sedSSAFitFcn) PlotLegend->AddEntry(m_sedSSAFitFcn,sedSSAFitLegendText,"L");
+	if(m_sedSIFFAFitFcn) PlotLegend->AddEntry(m_sedSIFFAFitFcn,sedSIFFAFitLegendText,"L");
+	if(m_sedSEFFAFitFcn) PlotLegend->AddEntry(m_sedSEFFAFitFcn,sedSEFFAFitLegendText,"L");
+	for(size_t i=0;i<m_sedComponentPLFitFcns.size();i++){
+		if(m_sedComponentPLFitFcns[i]) PlotLegend->AddEntry(m_sedComponentPLFitFcns[i],sedComponentPLFitLegendTexts[i],"L");	
+	}
+	for(size_t i=0;i<m_sedComponentSSAFitFcns.size();i++){
+		if(m_sedComponentSSAFitFcns[i]) PlotLegend->AddEntry(m_sedComponentSSAFitFcns[i],sedComponentSSAFitLegendTexts[i],"L");	
+	}
+	for(size_t i=0;i<m_sedComponentSIFFAFitFcns.size();i++){
+		if(m_sedComponentSIFFAFitFcns[i]) PlotLegend->AddEntry(m_sedComponentSIFFAFitFcns[i],sedComponentSIFFAFitLegendTexts[i],"L");	
+	}
+	for(size_t i=0;i<m_sedComponentSEFFAFitFcns.size();i++){
+		if(m_sedComponentSEFFAFitFcns[i]) PlotLegend->AddEntry(m_sedComponentSEFFAFitFcns[i],sedComponentSEFFAFitLegendTexts[i],"L");	
+	}
+	PlotLegend->Draw("same");
+
+	return Plot;
 
 }//close DrawSED()
 
