@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/bin/bash -e
+
+# NB: -e makes script to fail if internal script fails (for example when --run is enabled)
 
 #######################################
 ##         CHECK ARGS
@@ -222,7 +224,8 @@ if [ "$NARGS" -lt 2 ]; then
 	echo "--wtscalemax - Maximum Wavelet Transform scale for extended source search (default=6)"
 	echo ""
 	
-	echo "=== SFINDER RUN OPTIONS ==="	
+	echo "=== SFINDER RUN OPTIONS ==="
+	echo "--run - Run the generated run script on the local shell. If disabled only run script will be generated for later run."	
 	echo "--envfile=[ENV_FILE] - File (.sh) with list of environment variables to be loaded by each processing node"
 	echo "--loglevel=[LOG_LEVEL] - Logging level string {INFO, DEBUG, WARN, ERROR, OFF} (default=INFO)"
 	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"
@@ -240,7 +243,7 @@ if [ "$NARGS" -lt 2 ]; then
 	echo ""
 
 	echo "=== SFINDER SUBMISSION OPTIONS ==="
-	echo "--submit - Submit the script to the batch system using queue specified"
+	echo "--submit - Submit the script to the batch system using queue specified. Takes precedence over local run."
 	echo "--batchsystem - Name of batch system. Valid choices are {PBS,SLURM} (default=PBS)"
 	echo "--queue=[BATCH_QUEUE] - Name of queue in batch system" 
 	echo "--jobwalltime=[JOB_WALLTIME] - Job wall time in batch system (default=96:00:00)"
@@ -256,6 +259,7 @@ fi
 ##         PARSE ARGS
 #######################################
 ENV_FILE=""
+RUN_SCRIPT=false
 SUBMIT=false
 BATCH_SYSTEM="PBS"
 CONTAINER_IMG=""
@@ -1018,8 +1022,11 @@ do
 
 
 		## SUBMISSION OPTIONS
+		--run*)
+    	RUN_SCRIPT=true
+    ;;
 		--submit*)
-    	SUBMIT="true"
+    	SUBMIT=true
     ;;
 		--batchsystem=*)
     	BATCH_SYSTEM=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
@@ -1057,6 +1064,7 @@ done
 echo ""
 echo "*****  PARSED ARGUMENTS ****"
 echo "SUBMIT? $SUBMIT, BATCH_SYSTEM=$BATCH_SYSTEM, QUEUE=$BATCH_QUEUE, JOB_CPU: $JOB_NCPUS, JOB_NODES=$JOB_NNODES, JOB_WALLTIME: $JOB_WALLTIME, JOB_MEMORY: $JOB_MEMORY, JOB_USER_GROUP: $JOB_USER_GROUP"
+echo "RUN_SCRIPT? $RUN_SCRIPT"
 echo "RUN_IN_CONTAINER? $RUN_IN_CONTAINER, CONTAINER_IMG=$CONTAINER_IMG, CONTAINER_OPTIONS=$CONTAINER_OPTIONS"
 echo "ENV_FILE: $ENV_FILE"
 echo "INPUTFILE: $INPUTFILE"
@@ -1153,8 +1161,10 @@ export OUTPUT_DATADIR="$PWD"
 export DATADIR=""
 
 ## Load env file
-echo "INFO: Loading environment variables defined in file $ENV_FILE ..."
-source $ENV_FILE
+if [ "$ENV_FILE" != "" ]; then
+	echo "INFO: Loading environment variables defined in file $ENV_FILE ..."
+	source $ENV_FILE
+fi
 
 ## Define batch run options
 if [ "$BATCH_SYSTEM" = "PBS" ]; then
@@ -1589,7 +1599,7 @@ generate_exec_script(){
 	
 	echo "INFO: Creating sh file $shfile (jobindex=$jobindex, exe=$exe, exe_args=$exe_args)..."
 	( 
-			echo "#!/bin/bash"
+			echo "#!/bin/bash -e"
 			#echo "#PBS -N SFinderJob$jobindex"
 			#echo "#PBS -j oe"
   		#echo "#PBS -o $BASEDIR"
@@ -1761,7 +1771,14 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		if [ "$SUBMIT" = true ] ; then
 			echo "INFO: Submitting script $shfile to QUEUE $BATCH_QUEUE using $BATCH_SYSTEM batch system ..."
 			$BATCH_SUB_CMD $BATCH_QUEUE_NAME_OPTION $BATCH_QUEUE $CURRENTJOBDIR/$shfile
+		else
+			if [ "$RUN_SCRIPT" = true ] ; then
+				echo "INFO: Running script $shfile to local shell system ..."
+				$CURRENTJOBDIR/$shfile
+			fi
 		fi
+
+		
 
 		(( file_counter= $file_counter + 1 ))
 		(( index= $index + 1 ))
@@ -1839,6 +1856,11 @@ else
 	if [ "$SUBMIT" = true ] ; then
 		echo "INFO: Submitting script $shfile to QUEUE $BATCH_QUEUE using $BATCH_SYSTEM batch system ..."
 		$BATCH_SUB_CMD $BATCH_QUEUE_NAME_OPTION $BATCH_QUEUE $CURRENTJOBDIR/$shfile
+	else
+		if [ "$RUN_SCRIPT" = true ] ; then
+			echo "INFO: Running script $shfile to local shell system ..."
+			$CURRENTJOBDIR/$shfile
+		fi
 	fi
 
 fi

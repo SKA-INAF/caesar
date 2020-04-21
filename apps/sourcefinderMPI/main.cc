@@ -95,6 +95,8 @@ int main(int argc, char *argv[])
 	SFinder* finder= new SFinder;
 
 	//Run finder	
+	int status= 0;
+
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Starting source finding");
 	#endif
@@ -102,6 +104,7 @@ int main(int argc, char *argv[])
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Source finding failed!");
 		#endif
+		status= 1;
 	}
 	else{
 		#ifdef LOGGING_ENABLED
@@ -136,7 +139,7 @@ int main(int argc, char *argv[])
 		#endif
 	}
 
-	return 0;
+	return status;
 
 }//close main
 
