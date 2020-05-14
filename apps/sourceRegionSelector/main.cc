@@ -537,7 +537,9 @@ int CloneObjectsInFile(std::vector<std::string> excludedObjNames)
 			}
 		}
 		if(excludeObj) {
-			INFO_LOG("Object "<<keyName<<" exluded from the list of objects that will be saved ...");
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Object "<<keyName<<" exluded from the list of objects that will be saved ...");
+			#endif
 			continue;
 		}
 
