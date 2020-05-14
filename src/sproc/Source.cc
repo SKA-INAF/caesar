@@ -1995,7 +1995,7 @@ int Source::AddComponentAstroObject(int componentIndex,AstroObject& astroObject)
 		#endif
 		if(astroObject.name==thisObjName){
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Astro object no. "<<i+1<<": name="<<thisObjName<<" (objName="<<astroObject.name<<") found!");
+				DEBUG_LOG("Astro object no. "<<i+1<<": name="<<thisObjName<<" (objName="<<astroObject.name<<") found!");
 			#endif
 			found= true;
 			break;
