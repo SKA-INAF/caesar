@@ -1912,6 +1912,25 @@ int Source::AddAstroObject(AstroObject& astroObject)
 	}
 
 	//Search if object is already present 
+	bool found= false;
+	for(size_t i=0;i<m_astroObjects.size();i++)
+	{
+		std::string thisObjName= m_astroObjects[i].name; 
+		if(astroObject.name==thisObjName){
+			found= true;
+			break;
+		}	
+	}
+
+	//Add to collection if not present and re-compute class id
+	if(!found){
+		m_astroObjects.push_back(astroObject);
+		m_hasAstroObjectData= true;
+		ComputeObjClassId();
+	}
+
+	/*
+	//Search if object is already present 
 	auto it= std::find_if(
 		m_astroObjects.begin(),
 		m_astroObjects.end(), 
@@ -1926,6 +1945,7 @@ int Source::AddAstroObject(AstroObject& astroObject)
 		m_hasAstroObjectData= true;
 		ComputeObjClassId();
 	}
+	*/
 
 	return 0;
 
@@ -1966,6 +1986,31 @@ int Source::AddComponentAstroObject(int componentIndex,AstroObject& astroObject)
 	}
 
 	//Search if object is already present 
+	bool found= false;
+	for(size_t i=0;i<m_componentAstroObjects[componentIndex].size();i++)
+	{
+		std::string thisObjName= m_componentAstroObjects[componentIndex][i].name; 
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Astro object no. "<<i+1<<": name="<<thisObjName<<" (objName="<<astroObject.name<<")");
+		#endif
+		if(astroObject.name==thisObjName){
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Astro object no. "<<i+1<<": name="<<thisObjName<<" (objName="<<astroObject.name<<") found!");
+			#endif
+			found= true;
+			break;
+		}	
+	}
+
+	//Add to collection if not present and re-compute class id
+	if(!found){
+		m_componentAstroObjects[componentIndex].push_back(astroObject);
+		m_hasComponentAstroObjectData= true;
+		ComputeComponentObjClassId();
+	}
+
+	/*
+	//Search if object is already present 
 	auto it= std::find_if(
 		m_componentAstroObjects[componentIndex].begin(),
 		m_componentAstroObjects[componentIndex].end(), 
@@ -1980,6 +2025,7 @@ int Source::AddComponentAstroObject(int componentIndex,AstroObject& astroObject)
 		m_hasComponentAstroObjectData= true;
 		ComputeComponentObjClassId();
 	}
+	*/
 	
 	return 0;
 

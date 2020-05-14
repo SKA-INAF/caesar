@@ -271,48 +271,30 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 	std::stringstream ss;
 	
 	//- Source name
-	//ss<<source->GetName()<<"\t";
-	//ss<<iauName<<"\t";
 	ss<<source->GetName()<<delimiter;
 	ss<<iauName<<delimiter;
 
 	
 	//- Number of pixels
-	//ss<<source->NPix<<"\t";
 	ss<<source->NPix<<delimiter;
 
 	//- Number of sub-components
-	//ss<<source->GetNSelFitComponents()<<"\t";
-	//ss<<source->GetNestedSourceNumber()<<"\t";
 	ss<<source->GetNSelFitComponents()<<delimiter;
 	ss<<source->GetNestedSourceNumber()<<delimiter;
 
 	//- Pixel centroids
-	//ss<<source->X0<<"\t"<<source->Y0<<"\t";
-	//ss<<source->GetSx()<<"\t"<<source->GetSy()<<"\t";
-	//ss<<X0_wcs<<"\t"<<Y0_wcs<<"\t"<<X0_weighted_wcs<<"\t"<<Y0_weighted_wcs<<"\t";
 	ss<<source->X0<<"\t"<<source->Y0<<delimiter;
 	ss<<source->GetSx()<<"\t"<<source->GetSy()<<delimiter;
-	ss<<X0_wcs<<delimiter<<Y0_wcs<<delimiter<<X0_weighted_wcs<<delimiter<<Y0_weighted_wcs<<delimiter;
+	ss<<setprecision(8)<<X0_wcs<<delimiter<<Y0_wcs<<delimiter<<X0_weighted_wcs<<delimiter<<Y0_weighted_wcs<<delimiter;
 
 	//- Bounding box
-	//ss<<xmin<<"\t"<<xmax<<"\t"<<ymin<<"\t"<<ymax<<"\t";
-	//ss<<xmin_wcs<<"\t"<<xmax_wcs<<"\t"<<ymin_wcs<<"\t"<<ymax_wcs<<"\t";
 	ss<<xmin<<delimiter<<xmax<<delimiter<<ymin<<delimiter<<ymax<<delimiter;
 	ss<<xmin_wcs<<delimiter<<xmax_wcs<<delimiter<<ymin_wcs<<delimiter<<ymax_wcs<<delimiter;
 	
 	//- Frequency
-	//ss<<Nu<<"\t";
 	ss<<Nu<<delimiter;
 
 	//- Flux 
-	/*
-	ss<<source->GetS()<<"\t";
-	ss<<source->GetSmax()<<"\t";
-	ss<<fluxDensity<<"\t";
-	ss<<fluxDensityErr<<"\t";
-	ss<<source->GetBeamFluxIntegral()<<"\t";
-	*/
 	ss<<source->GetS()<<delimiter;
 	ss<<source->GetSmax()<<delimiter;
 	ss<<fluxDensity<<delimiter;
@@ -320,8 +302,6 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 	ss<<source->GetBeamFluxIntegral()<<delimiter;
 
 	//- Bkg/noise estimators
-	//ss<<source->GetBkgSum()<<"\t";
-	//ss<<source->GetBkgRMSSum()<<"\t";
 	ss<<source->GetBkgSum()<<delimiter;
 	ss<<source->GetBkgRMSSum()<<delimiter;
 
@@ -339,15 +319,6 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 		SpectralIndexData sid= source->GetSpectralIndexData();	
 		bool hasSpectralIndexData= ((source->HasSpectralIndexData()) && (sid.hasSpectralIndex));
 			
-		/*
-		ss<<hasSpectralIndexData<<"\t";
-		ss<<sid.isMultiSourceMatchIndex<<"\t";
-		ss<<sid.spectralIndex<<"\t";
-		ss<<sid.spectralIndexErr<<"\t";
-		ss<<sid.isSpectralIndexFit<<"\t";
-		ss<<sid.spectralFitChi2<<"\t";
-		ss<<sid.spectralFitNDF<<"\t";
-		*/
 		ss<<hasSpectralIndexData<<delimiter;
 		ss<<sid.isMultiSourceMatchIndex<<delimiter;
 		ss<<sid.spectralIndex<<delimiter;
@@ -752,84 +723,57 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			std::stringstream ss;
 
 			//- Mother source name & npix
-			//ss<<source->GetName()<<"\t";
-			//ss<<source->NPix<<"\t";
 			ss<<source->GetName()<<delimiter;
 			ss<<source->NPix<<delimiter;
 
 			//- Component id
-			//ss<<k+1<<"\t";
 			ss<<k+1<<delimiter;
 
 			//- Component IAU name
-			//ss<<iau<<"\t";
 			ss<<iau<<delimiter;
 				
 			//- Position in pixel coordinates
-			//ss<<x0<<"\t"<<y0<<"\t";
-			//ss<<x0_err<<"\t"<<y0_err<<"\t";
 			ss<<x0<<delimiter<<y0<<delimiter;
 			ss<<x0_err<<delimiter<<y0_err<<delimiter;
 
 			//- Position in WCS coordinates
-			//ss<<x0_wcs<<"\t"<<y0_wcs<<"\t";
-			//ss<<x0_wcs_err<<"\t"<<y0_wcs_err<<"\t";
-			ss<<x0_wcs<<delimiter<<y0_wcs<<delimiter;
-			ss<<x0_wcs_err<<delimiter<<y0_wcs_err<<delimiter;
+			ss<<setprecision(8)<<x0_wcs<<delimiter<<y0_wcs<<delimiter;
+			ss<<setprecision(8)<<x0_wcs_err<<delimiter<<y0_wcs_err<<delimiter;
 
 			//- Frequency
-			//ss<<Nu<<"\t";
 			ss<<Nu<<delimiter;
 		
 			//- Flux amplitude & density
-			/*
-			ss<<A<<"\t"<<A_err<<"\t";
-			ss<<fluxDensity<<"\t"<<fluxDensity_err<<"\t";
-			ss<<fluxDensityTot<<"\t"<<fluxDensityTot_err<<"\t";
-			ss<<source->GetBeamFluxIntegral()<<"\t";
-			*/
 			ss<<A<<delimiter<<A_err<<delimiter;
 			ss<<fluxDensity<<delimiter<<fluxDensity_err<<delimiter;
 			ss<<fluxDensityTot<<delimiter<<fluxDensityTot_err<<delimiter;
 			ss<<source->GetBeamFluxIntegral()<<delimiter;
 	
 			//- Ellipse pars in pixel coordinates
-			//ss<<bmaj<<"\t"<<bmin<<"\t"<<pa<<"\t";
-			//ss<<bmaj_err<<"\t"<<bmin_err<<"\t"<<pa_err<<"\t";
 			ss<<bmaj<<delimiter<<bmin<<delimiter<<pa<<delimiter;
 			ss<<bmaj_err<<delimiter<<bmin_err<<delimiter<<pa_err<<delimiter;
 				
 			//- Ellipse pars in WCS coordinates
-			//ss<<bmaj_wcs<<"\t"<<bmin_wcs<<"\t"<<pa_wcs<<"\t";
-			//ss<<bmaj_wcs_err<<"\t"<<bmin_wcs_err<<"\t"<<pa_wcs_err<<"\t";
 			ss<<bmaj_wcs<<delimiter<<bmin_wcs<<delimiter<<pa_wcs<<delimiter;
 			ss<<bmaj_wcs_err<<delimiter<<bmin_wcs_err<<delimiter<<pa_wcs_err<<delimiter;
 		
 			//Beam ellipse pars
-			//ss<<bmaj_beam<<"\t"<<bmin_beam<<"\t"<<pa_beam<<"\t";
 			ss<<bmaj_beam<<delimiter<<bmin_beam<<delimiter<<pa_beam<<delimiter;
 
 			//- Beam-deconvolved ellipse pars in WCS coordinates
-			//ss<<bmaj_deconv_wcs<<"\t"<<bmin_deconv_wcs<<"\t"<<pa_deconv_wcs<<"\t";
 			ss<<bmaj_deconv_wcs<<delimiter<<bmin_deconv_wcs<<delimiter<<pa_deconv_wcs<<delimiter;
 			
 			//- Fit ellipse vs beam ellipse pars
-			//ss<<EccentricityRatio<<"\t"<<AreaRatio<<"\t"<<RotAngle<<"\t";
 			ss<<EccentricityRatio<<delimiter<<AreaRatio<<delimiter<<RotAngle<<delimiter;
 
-
 			//Bkg/noise estimators
-			//ss<<source->GetBkgSum()<<"\t";
-			//ss<<source->GetBkgRMSSum()<<"\t";
 			ss<<source->GetBkgSum()<<delimiter;
 			ss<<source->GetBkgRMSSum()<<delimiter;
 
 			//Fit chi2/ndf
-			//ss<<fitPars.GetChi2()<<"\t"<<fitPars.GetNDF()<<"\t";
 			ss<<fitPars.GetChi2()<<delimiter<<fitPars.GetNDF()<<delimiter;
 
 			//Source component flags
-			//ss<<fitPars.GetFitQuality()<<"\t"<<componentFlag<<"\t"<<componentType;
 			ss<<fitPars.GetFitQuality()<<delimiter<<componentFlag<<delimiter<<componentType;
 
 			//## Additional source info
@@ -901,7 +845,7 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 						for(size_t j=0;j<compAstroObjects[k].size()-1;j++){
 							sstream<<compAstroObjects[k][j].name<<";";
 						}
-						sstream<<compAstroObjects[k][compAstroObjects.size()-1].name;
+						sstream<<compAstroObjects[k][compAstroObjects[k].size()-1].name;
 					}
 			
 					ss<<sstream.str();
@@ -1532,7 +1476,7 @@ int SourceExporter::SourceComponentsToJson(std::vector<Json::Value>& jsonValues,
 //=================================================
 //==        ROOT EXPORTER
 //=================================================
-int SourceExporter::WriteToROOT(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
+int SourceExporter::WriteToROOT(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs,bool writeAdditionalSourceInfo)
 {
 	//Open output file
 	TFile* fout= new TFile(filename.c_str(),"RECREATE");
@@ -1591,6 +1535,26 @@ int SourceExporter::WriteToROOT(std::string filename,const std::vector<Source*>&
 	dataTree->Branch("residualMin",&sourceTreeData.residualMin);
 	dataTree->Branch("residualMax",&sourceTreeData.residualMax);
 
+	if(writeAdditionalSourceInfo)
+	{
+		//Spectral index
+		dataTree->Branch("hasSpectralIndexData",&sourceTreeData.hasSpectralIndexData);
+		dataTree->Branch("isMultiSourceMatchIndex",&sourceTreeData.isMultiSourceMatchIndex);
+		dataTree->Branch("spectralIndex",&sourceTreeData.spectralIndex);
+		dataTree->Branch("spectralIndexErr",&sourceTreeData.spectralIndexErr);
+		dataTree->Branch("isSpectralIndexFit",&sourceTreeData.isSpectralIndexFit);
+		dataTree->Branch("spectralFitChi2",&sourceTreeData.spectralFitChi2);
+		dataTree->Branch("spectralFitNDF",&sourceTreeData.spectralFitNDF);
+
+		//Astro obj match
+		dataTree->Branch("objLocationId",&sourceTreeData.objLocationId);
+		dataTree->Branch("objClassId",&sourceTreeData.objClassId);
+		dataTree->Branch("objClassSubId",&sourceTreeData.objClassSubId);
+		dataTree->Branch("objConfirmed",&sourceTreeData.objConfirmed);
+		dataTree->Branch("hasAstroObjs",&sourceTreeData.hasAstroObjs);
+		dataTree->Branch("objName",&sourceTreeData.objName);
+	}
+
 	//Loop sources
 	bool deleteWCS= false;
 	
@@ -1616,7 +1580,7 @@ int SourceExporter::WriteToROOT(std::string filename,const std::vector<Source*>&
 		}
 
 		//Get source data and fill TTree
-		FillSourceTTree(dataTree,sourceTreeData,sources[k],dumpNestedSourceInfo,wcsType,wcs);
+		FillSourceTTree(dataTree,sourceTreeData,sources[k],dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo);
 		
 	}//end loop sources
 
@@ -1632,7 +1596,7 @@ int SourceExporter::WriteToROOT(std::string filename,const std::vector<Source*>&
 
 }//close WriteToROOT()
 
-int SourceExporter::FillSourceTTree(TTree* dataTree,SourceTreeData& sourceTreeData,Source* source,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
+int SourceExporter::FillSourceTTree(TTree* dataTree,SourceTreeData& sourceTreeData,Source* source,bool dumpNestedSourceInfo,int wcsType,WCS* wcs,bool writeAdditionalSourceInfo)
 {
 	//Check source
 	if(!source){
@@ -1780,6 +1744,49 @@ int SourceExporter::FillSourceTTree(TTree* dataTree,SourceTreeData& sourceTreeDa
 	sourceTreeData.residualMin= residualMin;
 	sourceTreeData.residualMax= residualMax;
 	
+	//- Spectral index data
+	SpectralIndexData sid= source->GetSpectralIndexData();	
+	bool hasSpectralIndexData= ((source->HasSpectralIndexData()) && (sid.hasSpectralIndex));
+			
+	
+	sourceTreeData.hasSpectralIndexData= hasSpectralIndexData;
+	sourceTreeData.isMultiSourceMatchIndex = sid.isMultiSourceMatchIndex;
+	sourceTreeData.spectralIndex = sid.spectralIndex;
+	sourceTreeData.spectralIndexErr = sid.spectralIndexErr;
+	sourceTreeData.isSpectralIndexFit = sid.isSpectralIndexFit;
+	sourceTreeData.spectralFitChi2 = sid.spectralFitChi2;
+	sourceTreeData.spectralFitNDF = sid.spectralFitNDF;
+	
+	//- Astro object IDs
+	sourceTreeData.objLocationId = source->ObjLocationId;
+	sourceTreeData.objClassId = source->ObjClassId;
+	sourceTreeData.objClassSubId = source->ObjClassSubId;
+	sourceTreeData.objConfirmed = source->ObjConfirmed;
+
+	//- Astro object cross matches
+	bool hasAstroObjs= source->HasAstroObjects();
+	std::vector<AstroObject> astroObjs= source->GetAstroObjects();
+		
+	sourceTreeData.hasAstroObjs= hasAstroObjs;
+
+	if(hasAstroObjs && !astroObjs.empty()){
+		std::stringstream sstream;
+		if(astroObjs.size()==1){
+			sstream<<astroObjs[0].name;
+		}
+		else{
+			for(size_t j=0;j<astroObjs.size()-1;j++){
+				sstream<<astroObjs[j].name<<";";
+			}
+			sstream<<astroObjs[astroObjs.size()-1].name;
+		}
+			
+		sourceTreeData.objName= sstream.str();
+
+	}//close if
+	else{
+		sourceTreeData.objName= "XXX";
+	}
 
 	//## Fill Tree
 	dataTree->Fill();
@@ -1790,7 +1797,7 @@ int SourceExporter::FillSourceTTree(TTree* dataTree,SourceTreeData& sourceTreeDa
 		std::vector<Source*> nestedSources= source->GetNestedSources();
 		for(size_t k=0;k<nestedSources.size();k++)
 		{			
-			FillSourceTTree(dataTree,sourceTreeData,nestedSources[k],dumpNestedSourceInfo,wcsType,wcs);		
+			FillSourceTTree(dataTree,sourceTreeData,nestedSources[k],dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo);		
 		}
 	}//close if has nested sources 
 		
@@ -1806,7 +1813,7 @@ int SourceExporter::FillSourceTTree(TTree* dataTree,SourceTreeData& sourceTreeDa
 
 
 
-int SourceExporter::WriteComponentsToROOT(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
+int SourceExporter::WriteComponentsToROOT(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs,bool writeAdditionalSourceInfo)
 {
 	//Open output file
 	TFile* fout= new TFile(filename.c_str(),"RECREATE");
@@ -1873,6 +1880,26 @@ int SourceExporter::WriteComponentsToROOT(std::string filename,const std::vector
 	dataTree->Branch("fitQuality",&sourceTreeData.fitQuality);
 	dataTree->Branch("type",&sourceTreeData.type);
 	dataTree->Branch("flag",&sourceTreeData.flag);
+
+	if(writeAdditionalSourceInfo)
+	{
+		//Spectral index
+		dataTree->Branch("hasSpectralIndexData",&sourceTreeData.hasSpectralIndexData);
+		dataTree->Branch("isMultiSourceMatchIndex",&sourceTreeData.isMultiSourceMatchIndex);
+		dataTree->Branch("spectralIndex",&sourceTreeData.spectralIndex);
+		dataTree->Branch("spectralIndexErr",&sourceTreeData.spectralIndexErr);
+		dataTree->Branch("isSpectralIndexFit",&sourceTreeData.isSpectralIndexFit);
+		dataTree->Branch("spectralFitChi2",&sourceTreeData.spectralFitChi2);
+		dataTree->Branch("spectralFitNDF",&sourceTreeData.spectralFitNDF);
+
+		//Astro obj match
+		dataTree->Branch("objLocationId",&sourceTreeData.objLocationId);
+		dataTree->Branch("objClassId",&sourceTreeData.objClassId);
+		dataTree->Branch("objClassSubId",&sourceTreeData.objClassSubId);
+		dataTree->Branch("objConfirmed",&sourceTreeData.objConfirmed);
+		dataTree->Branch("hasAstroObjs",&sourceTreeData.hasAstroObjs);
+		dataTree->Branch("objName",&sourceTreeData.objName);
+	}
 	
 	//Loop sources
 	bool deleteWCS= false;
@@ -1899,7 +1926,7 @@ int SourceExporter::WriteComponentsToROOT(std::string filename,const std::vector
 		}
 
 		//Get source data and fill TTree
-		FillSourceComponentTree(dataTree,sourceTreeData,sources[k],dumpNestedSourceInfo,wcsType,wcs);
+		FillSourceComponentTree(dataTree,sourceTreeData,sources[k],dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo);
 		
 	}//end loop sources
 
@@ -1916,7 +1943,7 @@ int SourceExporter::WriteComponentsToROOT(std::string filename,const std::vector
 }//close WriteComponentsToROOT()
 
 
-int SourceExporter::FillSourceComponentTree(TTree* dataTree,SourceComponentTreeData& sourceData,Source* source,bool dumpNestedSourceInfo,int wcsType,WCS* wcs)
+int SourceExporter::FillSourceComponentTree(TTree* dataTree,SourceComponentTreeData& sourceData,Source* source,bool dumpNestedSourceInfo,int wcsType,WCS* wcs,bool writeAdditionalSourceInfo)
 {
 	//Check source
 	if(!source){
@@ -1991,6 +2018,12 @@ int SourceExporter::FillSourceComponentTree(TTree* dataTree,SourceComponentTreeD
 		//- Bkg pars
 		sourceData.bkgSum= source->GetBkgSum();
 		sourceData.rmsSum= source->GetBkgRMSSum();
+
+		//Retrieve component spectral index data
+		std::vector<SpectralIndexData> compSpectralIndexData= source->GetComponentSpectralIndexData();
+		
+		//Retrieve component astro objects
+		std::vector<std::vector<AstroObject>> compAstroObjects= source->GetComponentAstroObjects();
 	
 		//Loop over fit components
 		for(int k=0;k<nComponents;k++)
@@ -2093,7 +2126,7 @@ int SourceExporter::FillSourceComponentTree(TTree* dataTree,SourceComponentTreeD
 			sourceData.Pa_deconv_wcs= 0;
 			if(fitPars.GetComponentFitWCSDeconvolvedEllipsePars(k,sourceData.Bmaj_deconv_wcs,sourceData.Bmin_deconv_wcs,sourceData.Pa_deconv_wcs)<0){
 				#ifdef LOGGING_ENABLED
-					WARN_LOG("Failed to retrieve WCS beam-deconvolved ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+					DEBUG_LOG("Failed to retrieve WCS beam-deconvolved ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
 				#endif
 			}
 
@@ -2135,6 +2168,78 @@ int SourceExporter::FillSourceComponentTree(TTree* dataTree,SourceComponentTreeD
 			sourceData.ndf= fitPars.GetNDF();
 			sourceData.fitQuality= fitPars.GetFitQuality();			
 	
+			//- Spectral index data
+			if(compSpectralIndexData.size()==nComponents)
+			{
+				bool hasComponentSpectralIndexData= ((source->HasComponentSpectralIndexData()) && (compSpectralIndexData[k].hasSpectralIndex));
+				sourceData.hasSpectralIndexData= hasComponentSpectralIndexData;
+				sourceData.isMultiSourceMatchIndex= compSpectralIndexData[k].isMultiSourceMatchIndex;
+				sourceData.spectralIndex= compSpectralIndexData[k].spectralIndex;
+				sourceData.spectralIndexErr= compSpectralIndexData[k].spectralIndexErr;
+				sourceData.isSpectralIndexFit= compSpectralIndexData[k].isSpectralIndexFit;
+				sourceData.spectralFitChi2 = compSpectralIndexData[k].spectralFitChi2;
+				sourceData.spectralFitNDF = compSpectralIndexData[k].spectralFitNDF;
+			}
+			else{
+				SpectralIndexData dummySid;
+				sourceData.hasSpectralIndexData= 0;
+				sourceData.isMultiSourceMatchIndex= dummySid.isMultiSourceMatchIndex;
+				sourceData.spectralIndex= dummySid.spectralIndex;
+				sourceData.spectralIndexErr= dummySid.spectralIndexErr;
+				sourceData.isSpectralIndexFit= dummySid.isSpectralIndexFit;
+				sourceData.spectralFitChi2 = dummySid.spectralFitChi2;
+				sourceData.spectralFitNDF= dummySid.spectralFitNDF;
+			}
+
+			//- Astro object cross matches
+			if(source->componentObjLocationIds.size()==nComponents){
+			  sourceData.objLocationId= source->componentObjLocationIds[k];
+			}
+			else{
+				sourceData.objLocationId= eUNKNOWN_OBJECT_LOCATION;
+			}
+			if(source->componentObjClassIds.size()==nComponents){
+				sourceData.objClassId= source->componentObjClassIds[k];
+			}
+			else{
+				sourceData.objClassId= eUNKNOWN_OBJECT;
+			}
+			if(source->componentObjClassSubIds.size()==nComponents){
+				sourceData.objClassSubId= source->componentObjClassSubIds[k];
+			}
+			else{
+				sourceData.objClassSubId= eUNKNOWN_OBJECT;
+			}
+			if(source->componentObjConfirmed.size()==nComponents){
+				sourceData.objConfirmed= source->componentObjConfirmed[k];
+			}
+			else{
+				sourceData.objConfirmed= 0;
+			}
+
+			bool hasComponentAstroObjs= source->HasComponentAstroObjects();
+		
+			sourceData.hasAstroObjs= hasComponentAstroObjs;
+
+			if(hasComponentAstroObjs && !compAstroObjects.empty() && !compAstroObjects[k].empty()){
+				std::stringstream sstream;
+				if(compAstroObjects[k].size()==1){
+					sstream<<compAstroObjects[k][0].name;
+				}
+				else{
+					for(size_t j=0;j<compAstroObjects[k].size()-1;j++){
+						sstream<<compAstroObjects[k][j].name<<";";
+					}
+					sstream<<compAstroObjects[k][compAstroObjects[k].size()-1].name;		
+				}
+
+				sourceData.objName= sstream.str();
+
+			}//close if
+			else{
+				sourceData.objName= "XXX";
+			}
+
 			//## Fill TTree
 			dataTree->Fill();
 
@@ -2147,7 +2252,7 @@ int SourceExporter::FillSourceComponentTree(TTree* dataTree,SourceComponentTreeD
 	if(hasNestedSources && dumpNestedSourceInfo){
 		std::vector<Source*> nestedSources= source->GetNestedSources();
 		for(size_t k=0;k<nestedSources.size();k++){
-			FillSourceComponentTree(dataTree,sourceData,nestedSources[k],dumpNestedSourceInfo,wcsType,wcs);
+			FillSourceComponentTree(dataTree,sourceData,nestedSources[k],dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo);
 		}
 	}//close if has nested sources 
 	

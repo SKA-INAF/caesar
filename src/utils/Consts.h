@@ -353,6 +353,12 @@ enum AstroObjectType
 	eUNKNOWN_OBJECT=0,
 	eSTAR=1,
 	eGALAXY=2,
+	eGALAXY_C1=2001,
+	eGALAXY_C2=2002,
+	eGALAXY_C3=2003,
+	eGALAXY_C4=2004,
+	eGALAXY_C5=2005,
+	eGALAXY_C6=2006,	
 	ePN=3,
 	eSNR=4,
 	eBUBBLE=5,
@@ -374,6 +380,7 @@ enum AstroObjectType
 	eNOVA=21,
 	eTRANSIENT_EVENT=22,	
 	ePULSAR=23,
+	eYSO=24,
 	
 	//Generic unclassified objects by wavelength
 	eRADIO_OBJ=100,
@@ -430,6 +437,30 @@ enum AstroObjectLocation
 	eGALACTIC_OBJECT=1,
 	eEXTRAGALACTIC_OBJECT=2
 };
+
+
+/**
+* \brief Convert source fit quality enumeration to string
+*/
+inline int GetAstroObjectType(std::string typeStr)
+{
+	int type= eUNKNOWN_OBJECT;
+	if(typeStr=="STAR") type= eSTAR;	
+	else if(typeStr=="YSO") type= eYSO;
+	else if(typeStr=="PULSAR") type= ePULSAR;
+	else if(typeStr=="HII") type= eHII;
+	else if(typeStr=="PN") type= ePN;	
+	else if(typeStr=="SNR") type= eSNR;
+	else if(typeStr=="GALAXY_C1") type= eGALAXY_C1;
+	else if(typeStr=="GALAXY_C2") type= eGALAXY_C2;
+	else if(typeStr=="GALAXY_C3") type= eGALAXY_C3;
+	else if(typeStr=="GALAXY_C4") type= eGALAXY_C4;
+	else if(typeStr=="GALAXY_C5") type= eGALAXY_C5;
+	else if(typeStr=="GALAXY_C6") type= eGALAXY_C6;
+	else type= eUNKNOWN_OBJECT;
+
+	return type;
+}
 
 #ifdef __MAKECINT__
 #pragma link C++ enum WCSType+;

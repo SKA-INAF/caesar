@@ -108,7 +108,6 @@ struct SourceTreeData
 	double residualMin;
 	double residualMax;
 
-	/*
 	//Spectral index data
 	bool hasSpectralIndexData;
 	bool isMultiSourceMatchIndex;
@@ -118,14 +117,13 @@ struct SourceTreeData
 	double spectralFitChi2;
 	double spectralFitNDF;
 
-	//Astro object IDs
+	//Astro object match data
 	int objLocationId;
 	int objClassId;
 	int objClassSubId;
-
-	//Astro object cross-matched
-	//...
-	*/
+	int objConfirmed;
+	int hasAstroObjs;
+	std::string objName;
 
 };//close SourceTreeData
 
@@ -185,6 +183,24 @@ struct SourceComponentTreeData
 	int flag;//Fitted component flag (eReal=1,eCandidate=2,eFake=3)
 	int type;//Fitted component type (eUnknown=0,eCompact=1,ePoint-Like=2,eExtended=3)
 	
+	
+	//Spectral index data
+	int hasSpectralIndexData;
+	int isMultiSourceMatchIndex;
+	double spectralIndex;
+	double spectralIndexErr;
+	int isSpectralIndexFit;
+	double spectralFitChi2;
+	double spectralFitNDF;
+	
+	//Astro object match data
+	int objLocationId;
+	int objClassId;
+	int objClassSubId;
+	int objConfirmed;
+	int hasAstroObjs;
+	std::string objName;
+
 };//close SourceComponentTreeData()
 
 
@@ -257,11 +273,11 @@ class SourceExporter : public TObject
 		/**
 		* \brief Write ROOT file with TTree from source collection
 		*/
-		static int WriteToROOT(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
+		static int WriteToROOT(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool writeAdditionalSourceInfo=false);
 		/**
 		* \brief Write ROOT file with TTree from source fit component collection
 		*/
-		static int WriteComponentsToROOT(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
+		static int WriteComponentsToROOT(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool writeAdditionalSourceInfo=false);
 		
 
 		//=======================================
@@ -304,11 +320,11 @@ class SourceExporter : public TObject
 		/**
 		* \brief Fill ROOT TTree with source info
 		*/
-		static int FillSourceTTree(TTree* dataTree,SourceTreeData& sourceTreeData,Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
+		static int FillSourceTTree(TTree* dataTree,SourceTreeData& sourceTreeData,Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool writeAdditionalSourceInfo=false);
 		/**
 		* \brief Fill ROOT TTree with source fit component info
 		*/
-		static int FillSourceComponentTree(TTree* dataTree,SourceComponentTreeData& sourceData,Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0);
+		static int FillSourceComponentTree(TTree* dataTree,SourceComponentTreeData& sourceData,Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool writeAdditionalSourceInfo=false);
 	
 
 	private:
