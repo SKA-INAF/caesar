@@ -60,6 +60,7 @@
 #include <ctime>
 #include <complex>
 #include <cmath> 
+#include <numeric>
 
 //OpenMP headers
 #ifdef OPENMP_ENABLED

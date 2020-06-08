@@ -40,10 +40,15 @@
 
 #include <rtnorm.h>
 
+//ROOT headers
 #include <TObject.h>
 #include <TVector2.h>
 //#include <TRInterface.h>
 
+//OpenCV headers
+#include <opencv2/imgproc/types_c.h>
+
+//C++ headers
 #include <iomanip>
 #include <iostream>
 #include <fstream>
@@ -109,7 +114,7 @@ Image* MorphFilter::ComputeWatershedFilter(std::vector<Contour*>& contours,Image
 	std::vector<std::vector<cv::Point>> markerContours; // Vector for storing contour
   std::vector<cv::Vec4i> hierarchy;
 	cv::findContours(mark, markerContours, hierarchy,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_NONE, cv::Point(0,0) );
-
+	
 	Contour* aContour= 0;
 
 	for(size_t i=0; i<markerContours.size(); i++){ // iterate through each contour
@@ -185,7 +190,8 @@ Image* MorphFilter::ComputeWatershedFilter(Image* img,Image* markerImg)
 	cv::Mat mat= img->GetOpenCVMat("32");
 	cv::Mat mat_col;	
 	cv::Mat src;
-	cv::cvtColor(mat,mat_col,CV_GRAY2BGR);
+	//cv::cvtColor(mat,mat_col,CV_GRAY2BGR);//deprecated C API
+	cv::cvtColor(mat,mat_col,cv::COLOR_GRAY2BGR);
 	mat_col.convertTo(src,CV_8UC3); 
 	
 	cv::Mat mat_markers = markerImg->GetOpenCVMat("32I");

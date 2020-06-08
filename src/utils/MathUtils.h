@@ -34,8 +34,12 @@
 #endif
 
 //OpenCV
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
+/*
+#if OPENCV_MAJOR_VERSION < 4
+	#include <opencv/cv.h>
+	#include <opencv/highgui.h>
+#endif
+*/
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>

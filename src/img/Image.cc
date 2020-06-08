@@ -86,8 +86,10 @@
 
 
 //OpenCV headers
+/*
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
+*/
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -559,12 +561,14 @@ int Image::ReadFile(std::string filename,bool invert){
 	}
 	
 	//## Load image from file and set a matrix
-	cv::Mat mat = cv::imread(filename.c_str(), CV_LOAD_IMAGE_COLOR);
+	//cv::Mat mat = cv::imread(filename.c_str(), CV_LOAD_IMAGE_COLOR);//deprecated C API
+	cv::Mat mat = cv::imread(filename.c_str(), cv::IMREAD_COLOR);
 
 	//## Convert to gray scale
 	cv::Mat mat_gray;
-  cvtColor( mat, mat_gray, CV_RGB2GRAY );
-	
+  //cvtColor( mat, mat_gray, CV_RGB2GRAY );//deprecated C API
+	cvtColor( mat, mat_gray, cv::COLOR_RGB2GRAY);
+
 	//## Fill an image
 	int Nx= mat.cols;
 	int Ny= mat.rows;
