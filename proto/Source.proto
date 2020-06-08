@@ -1,3 +1,4 @@
+syntax = "proto2";
 //package SourcePB;
 package CaesarPB;
 
@@ -499,4 +500,5 @@ message AstroObjectCollection
 {
 	repeated AstroObject astroObjectList= 1;
 }
+
 
