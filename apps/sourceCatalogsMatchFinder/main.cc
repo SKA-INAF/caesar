@@ -48,6 +48,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <getopt.h>
+#include <numeric>
 
 using namespace std;
 using namespace Caesar;
