@@ -241,6 +241,36 @@ int Contour::ApplyOffset(double offsetX,double offsetY)
 }//close ApplyOffset()
 
 
+Contour* Contour::GetShrinkedContour(int npix)
+{
+	//Loop over points and apply offset	
+	Contour* shrinkedContour= new Contour;
+
+	/*
+	double x0= Centroid.X();
+	double y0= Centroid.Y();
+
+	for(size_t i=0;i<m_Points.size();i++)
+	{
+		double x= m_Points[i].X();
+		double y= m_Points[i].Y();
+		double x_plus= x + npix;
+		double x_minus= x - npix;
+		double d_plus= x_plus-x0;
+		double d_minus= x_plus-x0;
+		double x_new= x_minus;
+		if()
+
+		m_Points[i].SetX(x+offsetX);	
+		m_Points[i].SetY(y+offsetY);	
+	}
+	*/
+
+	return shrinkedContour;
+
+}//close GetShrinkedContour()
+
+
 TPolyLine* Contour::GetBoundingBoxLine()
 {
 	if(!HasPoints() || !HasParameters){

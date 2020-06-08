@@ -32,6 +32,9 @@
 #include <TMath.h>
 #include <TMatrixD.h>
 #include <TVectorD.h>
+#include <TDecompChol.h>
+#include <TRandom.h>
+#include <TRandom3.h>
 
 #include <iomanip>
 #include <iostream>
@@ -147,6 +150,116 @@ int StatsUtils::ComputePageRank(std::vector<double>& ranks,TMatrixD& M,double d,
 	return 0;
 
 }//close ComputePageRank()
+
+int StatsUtils::GenerateFitParsAroundCovMatrix(std::vector<std::vector<double>>& fitPars_rand,const std::vector<double>& fitPars,const std::vector<std::vector<double>>& fitCovMatrix,int nsamples)
+{
+	//## Check input data
+	//Clear data 
+	fitPars_rand.clear();
+
+	//Check input cov matrix
+	if(fitCovMatrix.empty()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Cov matrix vector is empty!");
+		#endif
+		return -1;
+	}
+
+	int nRows= static_cast<int>(fitCovMatrix.size());
+	int nCols= static_cast<int>(fitCovMatrix[0].size());
+	for(int i=1;i<nRows;i++){
+		int s= static_cast<int>(fitCovMatrix[i].size());
+		if(s!=nCols){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Cov matrix vector is not a square matrix!");
+			#endif
+			return -1;
+		}
+	}
+
+	//Create TMatrix	
+	TMatrixD C(nRows,nCols);
+	for(int i=0;i<nRows;i++){
+		for(int j=0;j<nCols;j++){
+			C(i,j)= fitCovMatrix[i][j];
+		}
+	}
+
+	//Generate random fit pars
+	return GenerateFitParsAroundCovMatrix(fitPars_rand,fitPars,C,nsamples);
+
+}//close GenerateFitParsAroundCovMatrix()
+
+
+int StatsUtils::GenerateFitParsAroundCovMatrix(std::vector<std::vector<double>>& fitPars_rand,const std::vector<double>& fitPars,TMatrixD& fitCovMatrix,int nsamples)
+{
+	//## Check inputs
+	//Clear data
+	fitPars_rand.clear();
+
+	//Check if fit pars are given
+	if(fitPars.empty()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No pars given in input!");
+		#endif
+		return -1;
+	}
+	//Check cov matrix size
+	int nRows= fitCovMatrix.GetNrows();
+	int nCols= fitCovMatrix.GetNcols();
+	if(nRows!=nCols || nRows<=0 || nCols<=0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Given cov matrix is not a square matrix ("<<nRows<<"!="<<nCols<<") or matrix is not initialized!");
+		#endif
+		return -1;
+	}
+	int nData= static_cast<int>(fitPars.size());
+	if(nRows!=nData){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Given cov matrix size is different from par size ("<<nData<<")!");
+		#endif
+		return -1;
+	}
+
+	
+	//## Find a Cholesky decomposition of the covariance matrix for error propagation
+	TDecompChol CCholDecomp(fitCovMatrix);
+  CCholDecomp.Decompose();
+	
+	TMatrixD* CCholDecompTriang= new TMatrixD(nRows,nCols);
+	CCholDecompTriang= (TMatrixD*)(&CCholDecomp.GetU());
+	
+	TMatrixD* CCholDecompTriangTransp= new TMatrixD(nRows,nCols);
+	CCholDecompTriangTransp->Transpose(*CCholDecompTriang);
+
+
+	//Generate rand pars
+	for(int k=0;k<nsamples;k++)
+	{
+		//Initialize rand fit pars
+		fitPars_rand.push_back( std::vector<double>(nRows,0) );
+
+		//Randomize pars
+		TMatrixD R(nRows,1);
+		TMatrixD V(nRows,1);
+		for(int i=0;i<nRows;i++) R(i,0)= gRandom->Gaus(0,1);		
+		V= (*CCholDecompTriangTransp)*R;
+
+		for(int i=0;i<nRows;i++) {
+			double parValue= fitPars[i];
+			double parValue_rand= parValue + V(i,0); 
+			fitPars_rand[k][i]= parValue_rand;
+		}
+
+	}//end loop samples
+
+	//## Delete data
+	if(CCholDecompTriang) CCholDecompTriang->Delete();
+	if(CCholDecompTriangTransp) CCholDecompTriangTransp->Delete();
+
+	return 0;
+
+}//close GenerateRandFitPars()
 
 }//close namespace
 

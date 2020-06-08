@@ -38,7 +38,7 @@
 
 #include <TObject.h>
 #include <TCanvas.h>
-#include <TGraphAsymmErrors.h>
+#include <TGraphErrors.h>
 
 #include <cstdlib>
 #include <iomanip>
@@ -607,23 +607,96 @@ class SourceMatchData : public TObject {
 		* \brief Get source spectral index data
 		*/
 		SpectralIndexData& GetSpectralIndexData(){return m_spectralIndexData;}
+		//PLSpectralIndexData& GetSpectralIndexData(){return m_spectralIndexData;}
 		/**
 		* \brief Get source spectral index
 		*/
 		double GetSpectralIndex(){return m_spectralIndexData.spectralIndex;}
+		//double GetSpectralIndex(){return m_spectralIndexData.alpha;}
+		/**
+		* \brief Get source spectral index error
+		*/
+		double GetSpectralIndexError(){return m_spectralIndexData.spectralIndexErr;}
+		//double GetSpectralIndexError(){return m_spectralIndexData.alphaErr;}
 		/**
 		* \brief Has spectral index
 		*/
 		double HasSpectralIndex(){return m_spectralIndexData.hasSpectralIndex;}
+		//double HasSpectralIndex(){return m_spectralIndexData.hasData;}
 		/**
 		* \brief Is multimatch spectral index
 		*/
 		double IsMultiMatchSpectralIndex(){return m_spectralIndexData.isMultiSourceMatchIndex;}
+		//double IsMultiMatchSpectralIndex(){return m_spectralIndexData.isMultiMatch;}
 
 		/**
 		* \brief Get component spectral index
 		*/
 		std::vector<SpectralIndexData>& GetSourceComponentSpectralIndexData(){return m_componentSpectralIndexData;}
+
+		/**
+		* \brief Get 3rd deg pol spectral index data
+		*/
+		PolSpectralIndexData& GetPolSpectralIndexData(){return m_polSpectralIndexData;}
+		/**
+		* \brief Get component pol spectral index data
+		*/
+		std::vector<PolSpectralIndexData>& GetSourceComponentPolSpectralIndexData(){return m_componentPolSpectralIndexData;}
+		/**
+		* \brief Has SSA spectral index
+		*/
+		double HasSSASpectralIndex(){return m_ssaSpectralIndexData.hasData;}
+		/**
+		* \brief Get synch self abs spectral index data
+		*/
+		SASpectralIndexData& GetSSASpectralIndexData(){return m_ssaSpectralIndexData;}
+		/**
+		* \brief Get component synch self abs spectral index data
+		*/
+		std::vector<SASpectralIndexData>& GetSourceComponentSSASpectralIndexData(){return m_componentSSASpectralIndexData;}
+
+		/**
+		* \brief Has synch internal free-free abs  spectral index
+		*/
+		double HasSIFFASpectralIndex(){return m_siffaSpectralIndexData.hasData;}
+		/**
+		* \brief Get synch internal free-free abs spectral index data
+		*/
+		SASpectralIndexData& GetSIFFASpectralIndexData(){return m_siffaSpectralIndexData;}
+		/**
+		* \brief Get component synch self abs spectral index data
+		*/
+		std::vector<SASpectralIndexData>& GetSourceComponentSIFFASpectralIndexData(){return m_componentSIFFASpectralIndexData;}
+		/**
+		* \brief Has synch external free-free abs  spectral index
+		*/
+		double HasSEFFASpectralIndex(){return m_seffaSpectralIndexData.hasData;}
+		/**
+		* \brief Get synch external free-free abs spectral index data
+		*/
+		SASpectralIndexData& GetSEFFASpectralIndexData(){return m_seffaSpectralIndexData;}
+		/**
+		* \brief Get component synch self abs spectral index data
+		*/
+		std::vector<SASpectralIndexData>& GetSourceComponentSEFFASpectralIndexData(){return m_componentSEFFASpectralIndexData;}
+
+		/**
+		* \brief Get source SED graph
+		*/
+		TGraphErrors* GetSEDGraph(){return m_sourceSED;}
+		/**
+		* \brief Get source component SED graph
+		*/
+		std::vector<TGraphErrors*>& GetSEDComponentGraphs(){return m_sourceComponentSED;}
+
+		/**
+		* \brief Fit source SED graph
+		*/
+		int FitSourceSED(bool useRobustFitter=false,double rob=0.75);
+		/**
+		* \brief Fit source SED component graphs
+		*/
+		int FitSourceComponentSED(bool useRobustFitter=false,double rob=0.75);
 
 		/**
 		* \brief Get source
@@ -661,7 +734,7 @@ class SourceMatchData : public TObject {
 		* \brief Get source match names
 		*/
 		int GetMatchedSourceNames(std::vector<std::string>& snames,int catalogIndex);
-
+		
 		/**
 		* \brief Get source match frequencies
 		*/
@@ -698,10 +771,56 @@ class SourceMatchData : public TObject {
 		std::vector<std::vector<ComponentMatchIndexGroup>>& GetSourceComponentMatchIndexGroup(){return m_componentMatchIndexes;}
 
 		/**
+		* \brief Get number of matched catalogs per component
+		*/
+		int GetComponentCatalogMatchMultiplicity(int componentId);
+
+		/**
 		* \brief Draw SED
 		*/
-		int DrawSED();
+		TCanvas* DrawSED();
+
+		/**
+		* \brief Shift flux
+		*/
+		void ShiftFlux(bool choice,double shift=0)
+		{
+			m_shiftFlux= choice;
+			m_fluxShift= shift;
+		}
+
+		/**
+		* \brief Is flux shifted
+		*/
+		bool IsFluxShifted(){return m_shiftFlux;}
 		
+		/**
+		* \brief Shift flux
+		*/
+		double GetFluxShift(){return m_fluxShift;}
+		
+
+	protected:
+		/**
+		* \brief Fit SED with power law
+		*/
+		int FitPLToSourceSED(SpectralIndexData& sid,TGraphErrors* sed,bool useRobustFitter=false,double rob=0.75);
+		/**
+		* \brief Fit SED with 3rd deg pol
+		*/
+		int FitPolToSourceSED(PolSpectralIndexData& sid,TGraphErrors* sed,bool useRobustFitter=false,double rob=0.75);
+		/**
+		* \brief Fit SED with synchrotron self-absorption model
+		*/
+		int FitSSAToSourceSED(SASpectralIndexData& sid,TGraphErrors* sed,bool useRobustFitter=false,double rob=0.75);
+		/**
+		* \brief Fit SED with synchrotron internal free-free absorption model
+		*/
+		int FitSIFFAToSourceSED(SASpectralIndexData& sid,TGraphErrors* sed,bool useRobustFitter=false,double rob=0.75);
+		/**
+		* \brief Fit SED with synchrotron external free-free absorption model
+		*/
+		int FitSEFFAToSourceSED(SASpectralIndexData& sid,TGraphErrors* sed,bool useRobustFitter=false,double rob=0.75);
 
 	private:
 		
@@ -735,12 +854,40 @@ class SourceMatchData : public TObject {
 		// - Spectral index (lgS vs lgNu fit)
 		SpectralIndexData m_spectralIndexData;
 		std::vector<SpectralIndexData> m_componentSpectralIndexData;
+		TF1* m_sedPLFitFcn;
+		std::vector<TF1*> m_sedComponentPLFitFcns;
+
+		// - 3rd degree polynomial fit (lgS vs lgNu fit)
+		PolSpectralIndexData m_polSpectralIndexData;
+		std::vector<PolSpectralIndexData> m_componentPolSpectralIndexData;
+
+		// - Synchtrotron self-absorption fit (lgS vs lgNu fit)
+		SASpectralIndexData m_ssaSpectralIndexData;
+		std::vector<SASpectralIndexData> m_componentSSASpectralIndexData;
+		TF1* m_sedSSAFitFcn;
+		std::vector<TF1*> m_sedComponentSSAFitFcns;
+		
+		// - Synchtrotron internal free-free absorption fit (lgS vs lgNu fit)
+		SASpectralIndexData m_siffaSpectralIndexData;
+		std::vector<SASpectralIndexData> m_componentSIFFASpectralIndexData;
+		TF1* m_sedSIFFAFitFcn;
+		std::vector<TF1*> m_sedComponentSIFFAFitFcns;
+
+		// - Synchtrotron external free-free absorption fit (lgS vs lgNu fit)
+		SASpectralIndexData m_seffaSpectralIndexData;
+		std::vector<SASpectralIndexData> m_componentSEFFASpectralIndexData;
+		TF1* m_sedSEFFAFitFcn;
+		std::vector<TF1*> m_sedComponentSEFFAFitFcns;
 		
 		//- Graph with source SED
-		TGraphAsymmErrors* m_sourceSED;
-		std::vector<TGraphAsymmErrors*> m_sourceComponentSED;
+		TGraphErrors* m_sourceSED;
+		std::vector<TGraphErrors*> m_sourceComponentSED;
 
-	ClassDef(SourceMatchData,1)
+		// - Shift flux of main source?
+		bool m_shiftFlux;
+		double m_fluxShift;
+
+	ClassDef(SourceMatchData,2)
 
 
 };//close class SourceMatchData

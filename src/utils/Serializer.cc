@@ -209,6 +209,7 @@ int Serializer::EncodeSourceFitParsToProtobuf(CaesarPB::SourceFitPars& sourceFit
 	sourceFitPars_pb.set_ncomponents(sourceFitPars.GetNComponents());
 	sourceFitPars_pb.set_chi2(sourceFitPars.GetChi2());
 	sourceFitPars_pb.set_ndof(sourceFitPars.GetNDF());
+	sourceFitPars_pb.set_npars(sourceFitPars.GetNPars());
 	sourceFitPars_pb.set_npars_free(sourceFitPars.GetNFreePars());
 	sourceFitPars_pb.set_npars_component(sourceFitPars.GetNComponentPars());
 	sourceFitPars_pb.set_nfit_points(sourceFitPars.GetNFitPoints());
@@ -231,6 +232,40 @@ int Serializer::EncodeSourceFitParsToProtobuf(CaesarPB::SourceFitPars& sourceFit
 	sourceFitPars_pb.set_fluxdensityerr(sourceFitPars.GetFluxDensityErr());
 
 	sourceFitPars_pb.set_fitquality(sourceFitPars.GetFitQuality());
+	sourceFitPars_pb.set_normfactor(sourceFitPars.GetNormFactor());
+
+	//Add fit covariance matrix
+	TMatrixD fitCovarianceMatrix= sourceFitPars.GetCovarianceMatrix();
+	int nCols= fitCovarianceMatrix.GetNcols();
+	int nRows= fitCovarianceMatrix.GetNrows();
+
+	CaesarPB::DMatrix* fitCovarianceMatrix_pb= new CaesarPB::DMatrix;
+	fitCovarianceMatrix_pb->set_rows(nRows);
+	fitCovarianceMatrix_pb->set_cols(nCols);
+	for(int i=0;i<nRows;i++){
+		for(int j=0;j<nCols;j++){
+			double w= fitCovarianceMatrix(i,j);
+			fitCovarianceMatrix_pb->add_data(w);
+		}
+	}	
+	sourceFitPars_pb.set_allocated_fitcovariancematrix(fitCovarianceMatrix_pb);
+
+	//Add derivative matrix
+	TMatrixD fluxDensityDerivMatrix= sourceFitPars.GetFluxDensityDerivMatrix();
+	nCols= fluxDensityDerivMatrix.GetNcols();
+	nRows= fluxDensityDerivMatrix.GetNrows();
+
+	CaesarPB::DMatrix* fluxDensityDerivMatrix_pb= new CaesarPB::DMatrix;
+	fluxDensityDerivMatrix_pb->set_rows(nRows);
+	fluxDensityDerivMatrix_pb->set_cols(nCols);
+	for(int i=0;i<nRows;i++){
+		for(int j=0;j<nCols;j++){
+			double w= fluxDensityDerivMatrix(i,j);
+			fluxDensityDerivMatrix_pb->add_data(w);
+		}
+	}
+	sourceFitPars_pb.set_allocated_fluxdensityderivmatrix(fluxDensityDerivMatrix_pb);
+
 
 	//Add component fit pars
 	std::vector<SourceComponentPars> pars= sourceFitPars.GetPars();
@@ -803,6 +838,7 @@ int Serializer::EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* sourc
 		source_pb.set_objlocationid(source->ObjLocationId);
 		source_pb.set_objclassid(source->ObjClassId);
 		source_pb.set_objclasssubid(source->ObjClassSubId);
+		source_pb.set_objconfirmed(source->ObjConfirmed);
 
 		//Set component object class ids
 		for(size_t i=0;i<(source->componentObjLocationIds).size();i++){
@@ -813,6 +849,9 @@ int Serializer::EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* sourc
 		}
 		for(size_t i=0;i<(source->componentObjClassSubIds).size();i++){
 			source_pb.add_componentobjclasssubid((source->componentObjClassSubIds)[i]);
+		}
+		for(size_t i=0;i<(source->componentObjConfirmed).size();i++){
+			source_pb.add_componentobjconfirmed((source->componentObjConfirmed)[i]);
 		}
 	
 		//Set blob field
@@ -1222,6 +1261,7 @@ int Serializer::EncodeProtobufToSourceFitPars(SourceFitPars& sourceFitPars,const
 		if(sourceFitPars_pb.has_ncomponents()) sourceFitPars.SetNComponents(sourceFitPars_pb.ncomponents());	
 		if(sourceFitPars_pb.has_chi2()) sourceFitPars.SetChi2(sourceFitPars_pb.chi2());	
 		if(sourceFitPars_pb.has_ndof()) sourceFitPars.SetNDF(sourceFitPars_pb.ndof());	
+		if(sourceFitPars_pb.has_npars()) sourceFitPars.SetNPars(sourceFitPars_pb.npars());
 		if(sourceFitPars_pb.has_npars_component()) sourceFitPars.SetNComponentPars(sourceFitPars_pb.npars_component());
 		if(sourceFitPars_pb.has_npars_free()) sourceFitPars.SetNFreePars(sourceFitPars_pb.npars_free());	
 		if(sourceFitPars_pb.has_nfit_points()) sourceFitPars.SetNFitPoints(sourceFitPars_pb.nfit_points());	
@@ -1245,6 +1285,41 @@ int Serializer::EncodeProtobufToSourceFitPars(SourceFitPars& sourceFitPars,const
 		if(sourceFitPars_pb.has_fluxdensityerr()) sourceFitPars.SetFluxDensityErr(sourceFitPars_pb.fluxdensityerr());
 		
 		if(sourceFitPars_pb.has_fitquality()) sourceFitPars.SetFitQuality(sourceFitPars_pb.fitquality());
+		if(sourceFitPars_pb.has_normfactor()) sourceFitPars.SetNormFactor(sourceFitPars_pb.normfactor());
+
+		//Set fit covariance matrix
+		if(sourceFitPars_pb.has_fitcovariancematrix()){
+			const CaesarPB::DMatrix& fitCovarianceMatrix_pb= sourceFitPars_pb.fitcovariancematrix();
+			int nRows= fitCovarianceMatrix_pb.rows();
+			int nCols= fitCovarianceMatrix_pb.cols();
+			TMatrixD fitCovarianceMatrix(nRows,nCols);
+			for(int i=0;i<nRows;i++){
+				for(int j=0;j<nCols;j++){
+					int index= j + i*nCols;
+					double w= fitCovarianceMatrix_pb.data(index);
+					fitCovarianceMatrix(i,j)= w;
+				}	
+			}
+			sourceFitPars.SetCovarianceMatrix(fitCovarianceMatrix);
+
+		}//close has fit covariance matrix
+
+		//Set flux derivarive matrix
+		if(sourceFitPars_pb.has_fluxdensityderivmatrix()){
+			const CaesarPB::DMatrix& fluxDerivMatrix_pb= sourceFitPars_pb.fluxdensityderivmatrix();
+			int nRows= fluxDerivMatrix_pb.rows();
+			int nCols= fluxDerivMatrix_pb.cols();
+			TMatrixD fluxDerivMatrix(nRows,nCols);
+			for(int i=0;i<nRows;i++){
+				for(int j=0;j<nCols;j++){
+					int index= j + i*nCols;
+					double w= fluxDerivMatrix_pb.data(index);
+					fluxDerivMatrix(i,j)= w;
+				}	
+			}
+			sourceFitPars.SetFluxDensityDerivMatrix(fluxDerivMatrix);
+
+		}//close has fit covariance matrix
 		
 		//Set fit component pars	
 		for(int i=0;i<sourceFitPars_pb.pars_size();i++){
@@ -1513,11 +1588,13 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 		if(source_pb.has_objlocationid()) source.ObjLocationId= source_pb.objlocationid();
 		if(source_pb.has_objclassid()) source.ObjClassId= source_pb.objclassid();		
 		if(source_pb.has_objclasssubid()) source.ObjClassSubId= source_pb.objclasssubid();
+		if(source_pb.has_objconfirmed()) source.ObjConfirmed= source_pb.objconfirmed();
 
 		//Set component object class ids
 		std::vector<int> compObjLocationIds;
 		std::vector<int> compObjClassIds;
 		std::vector<int> compObjClassSubIds;
+		std::vector<bool> compObjConfirmed;
 		for(int i=0;i<source_pb.componentobjlocationid_size();i++){
 			int objLocationId = source_pb.componentobjlocationid(i);
 			compObjLocationIds.push_back(objLocationId);
@@ -1529,10 +1606,15 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 		for(int i=0;i<source_pb.componentobjclasssubid_size();i++){
 			int objClassSubId = source_pb.componentobjclasssubid(i);
 			compObjClassSubIds.push_back(objClassSubId);
+		}	
+		for(int i=0;i<source_pb.componentobjconfirmed_size();i++){
+			bool objConfirmed = source_pb.componentobjconfirmed(i);
+			compObjConfirmed.push_back(objConfirmed);
 		}
 		source.componentObjLocationIds= compObjLocationIds;
 		source.componentObjClassIds= compObjClassIds;
 		source.componentObjClassSubIds= compObjClassSubIds;
+		source.componentObjConfirmed= compObjConfirmed;
 		
 
 		//Set blob fields

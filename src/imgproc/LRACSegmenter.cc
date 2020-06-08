@@ -286,7 +286,7 @@ Image* LRACSegmenter::FindSegmentation(Image* inputImg,Image* inputSegmMap,int n
 	#endif
 	if(inputImg_norm){
 		delete inputImg_norm;
-		inputImg_norm;
+		inputImg_norm= 0;
 	}
 	if(img){
 		delete[] img;

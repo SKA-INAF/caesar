@@ -60,6 +60,7 @@
 #include <ctime>
 #include <complex>
 #include <cmath> 
+#include <numeric>
 
 //OpenMP headers
 #ifdef OPENMP_ENABLED
@@ -1557,6 +1558,16 @@ class StatsUtils : public TObject {
 			return 0;
 
 		}//close ComputeStatsBootstrapError()
+
+		/**
+		* \brief Generate fit parameters randomized around fit covariance matrix
+		*/
+		static int GenerateFitParsAroundCovMatrix(std::vector<std::vector<double>>& fitPars_rand,const std::vector<double>& fitPars,TMatrixD& fitCovMatrix,int nsamples=1);
+		/**
+		* \brief Generate fit parameters randomized around fit covariance matrix
+		*/
+		static int GenerateFitParsAroundCovMatrix(std::vector<std::vector<double>>& fitPars_rand,const std::vector<double>& fitPars,const std::vector<std::vector<double>>& fitCovMatrix,int nsamples=1);
+		
 
 	private:
 	

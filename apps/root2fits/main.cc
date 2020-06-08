@@ -23,7 +23,7 @@
 #endif
 
 #include <TPython.h>
-#include <TFITS.h>
+//#include <TFITS.h>
 #include <TColor.h>
 #include <TCanvas.h>
 #include <TClonesArray.h>

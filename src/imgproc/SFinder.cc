@@ -605,8 +605,8 @@ int SFinder::Configure()
 
 	GET_OPTION_VALUE(mergeSourcesAtEdge,m_mergeSourcesAtEdge);
 	GET_OPTION_VALUE(mergeSources,m_mergeSources);
-	GET_OPTION_VALUE(mergeCompactSources,m_mergeCompactSources);
-	GET_OPTION_VALUE(mergeExtendedSources,m_mergeExtendedSources);
+	//GET_OPTION_VALUE(mergeCompactSources,m_mergeCompactSources);
+	//GET_OPTION_VALUE(mergeExtendedSources,m_mergeExtendedSources);
 	
 	
 	//Get user-supplied map & beam options
@@ -4452,8 +4452,8 @@ int SFinder::PrepareWorkerTasks()
 	long int tileSizeY= Ny;
 	double tileStepSizeX= 1;
 	double tileStepSizeY= 1;
-	long int tileOverlapX= 0;
-	long int tileOverlapY= 0;
+	float tileOverlapX= 0;
+	float tileOverlapY= 0;
 	if(m_splitInTiles){
 		tileSizeX= m_TileSizeX;
 		tileSizeY= m_TileSizeY;
@@ -5283,8 +5283,9 @@ int SFinder::MergeSourcesAtEdge()
 	bool computeStatPars= false;//do not compute stats& pars at each merging
 	bool computeMorphPars= false;
 	bool computeRobustStats= true;
-	bool forceRecomputing= false;//no need to re-compute moments (already updated in AddPixel())
-	
+	//bool forceRecomputing= false;//no need to re-compute moments (already updated in AddPixel())
+	bool sumMatchingPixels= false;//no sum done for matching pixels
+
 	m_SourcesMergedAtEdges.clear();
 
 	#ifdef LOGGING_ENABLED
@@ -5316,7 +5317,7 @@ int SFinder::MergeSourcesAtEdge()
 			long int tindex_adj= sourcesToBeMerged[index_adj].task_index; 
 			Source* source_adj= (m_taskDataPerWorkers[windex_adj][tindex_adj]->sources_edge)[sindex_adj];
 				
-			int status= merged_source->MergeSource(source_adj,copyPixels,checkIfAdjacent,computeStatPars,computeMorphPars);
+			int status= merged_source->MergeSource(source_adj,copyPixels,checkIfAdjacent,computeStatPars,computeMorphPars,sumMatchingPixels);
 			if(status<0){
 				#ifdef LOGGING_ENABLED
 					WARN_LOG("Failed to merge sources (i,j)=("<<index<<" {"<<sindex<<","<<windex<<","<<tindex<<"} , "<<index_adj<<" {"<<sindex_adj<<","<<windex_adj<<","<<tindex_adj<<"}), skip to next...");
@@ -5335,6 +5336,8 @@ int SFinder::MergeSourcesAtEdge()
 			#ifdef LOGGING_ENABLED
 				DEBUG_LOG("Recomputing stats & moments of merged source in merge group "<<i<<" after #"<<nMerged<<" merged source...");
 			#endif
+			bool forceRecomputing= false;
+			if(!merged_source->HasStats()) forceRecomputing= true;
 			if(merged_source->ComputeStats(computeRobustStats,forceRecomputing,m_useParallelMedianAlgo)<0){
 				#ifdef LOGGING_ENABLED
 					WARN_LOG("Failed to compute stats for merged source in merge group "<<i<<"...");

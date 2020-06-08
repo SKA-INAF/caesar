@@ -59,10 +59,15 @@
 using namespace std;
 
 ClassImp(Caesar::SpectralIndexData)
+ClassImp(Caesar::PLSpectralIndexData)
+ClassImp(Caesar::PolSpectralIndexData)
+ClassImp(Caesar::SASpectralIndexData)
 
 namespace Caesar {
 
-
+//============================================
+//==      SPECTRAL INDEX DATA
+//============================================
 SpectralIndexData::SpectralIndexData() 
 	: TObject()
 {
@@ -120,6 +125,109 @@ void SpectralIndexData::Init()
 	spectralFitChi2= -999;
 	spectralFitNDF= 0;
 	isSpectralIndexFit= false;
+	norm= 0;
+	normErr= 0;
+	spectralIndexFitStatus= -999;
 }
 
+//============================================
+//==      PL SPECTRAL DATA
+//============================================
+PLSpectralIndexData::PLSpectralIndexData() 
+	: TObject()
+{
+	//Initialize
+	Init();
+
+}//close costructor
+
+
+PLSpectralIndexData::~PLSpectralIndexData()
+{
+	//...
+
+}//close destructor
+
+void PLSpectralIndexData::Init()
+{
+	hasData= false;
+	isMultiMatch= false;
+	isFitted= false;
+	fitChi2= -999;
+	fitNDF= 0;
+	alpha= -999;
+	alphaErr= 0;
+	norm= 0;
+	normErr= 0;	
+	status= -999;
+}
+
+//============================================
+//==      POL SPECTRAL DATA
+//============================================
+PolSpectralIndexData::PolSpectralIndexData() 
+	: TObject()
+{
+	//Initialize
+	Init();
+
+}//close costructor
+
+
+PolSpectralIndexData::~PolSpectralIndexData()
+{
+	//...
+
+}//close destructor
+
+void PolSpectralIndexData::Init()
+{
+	hasData= false;
+	isMultiMatch= false;
+	fitChi2= -999;
+	fitNDF= 0;
+	polPars.clear();
+	polParErrors.clear();
+	status= -999;
+}
+
+
+//============================================
+//==      SA SPECTRAL DATA
+//============================================
+SASpectralIndexData::SASpectralIndexData() 
+	: TObject()
+{
+	//Initialize
+	Init();
+
+}//close costructor
+
+
+SASpectralIndexData::~SASpectralIndexData()
+{
+	//...
+
+}//close destructor
+
+void SASpectralIndexData::Init()
+{
+	hasData= false;
+	isMultiMatch= false;
+	fitChi2= -999;
+	fitNDF= 0;
+	alpha= -999;	
+	alphaErr= 0;
+	nu_t= -999;
+	nuErr_t= -999;
+	norm= 0;
+	normErr= 0;
+	status= -999;
+}
+
+
 }//close namespace
+
+
+
+

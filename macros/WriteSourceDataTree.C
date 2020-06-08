@@ -41,11 +41,16 @@ void WriteSourceDataTree(std::string filename="",std::string outfilename="source
 	}//end loop sources
 
 	//## Write source collection to simple TTree
+	bool dumpNestedSourceInfo= true;
+	int wcsType= eJ2000;
+	WCS* wcs= 0;
+	bool writeAdditionalSourceInfo= true;
+
 	cout<<"INFO: Writing source data TTree..."<<endl;
-	SourceExporter::WriteToROOT(outfilename,sources);
+	SourceExporter::WriteToROOT(outfilename,sources,dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo);
 
 	cout<<"INFO: Writing source component data TTree..."<<endl;
-	SourceExporter::WriteComponentsToROOT(outfilename_comp,sources);
+	SourceExporter::WriteComponentsToROOT(outfilename_comp,sources,dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo);
 
 }//close macro
 

@@ -62,7 +62,8 @@
 #include <string>
 #include <time.h>
 #include <ctime>
-
+#include <random>
+#include <numeric>
 
 using namespace std;
 
@@ -160,8 +161,9 @@ class CodeUtils : public TObject {
 		}
 
 		/**
-		* \brief Convert json to string
+		* \brief Convert json to string (DEPRECATED JSONCPP API)
 		*/
+		/*
 		static int JsonToString(std::string& jsonString,Json::Value& jsonObj,bool isMinified=true){
 			//Encode to string
 			try {
@@ -182,12 +184,38 @@ class CodeUtils : public TObject {
 			}		
 			return 0;
 		}//close JsonToString()
+		*/
+
+		/**
+		* \brief Convert json to string (NEW JSONCPP API)
+		*/
+		static int JsonToString(std::string& jsonString,Json::Value& jsonObj,bool isMinified=true)
+		{
+			//Encode to string
+			Json::StreamWriterBuilder builder;
+			builder["commentStyle"] = "None";
+			if(isMinified) builder["indentation"] = "";//written in a single line			
+			else builder["indentation"] = "  ";
+
+			try {
+				jsonString= Json::writeString(builder, jsonObj);
+			}
+			catch(...){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to encode to json string!");
+				#endif
+				return -1;
+			}
+			return 0;
+		}//close JsonToString()
 
 		/**
 		* \brief Convert string to json
 		*/
 		static int StringToJson(Json::Value& root,std::string& jsonString)
-		{			
+		{		
+			//DEPRECATED JSONCPP API
+			/*	
 			Json::Reader reader;
 			if(!reader.parse(jsonString, root)) {
 				#ifdef LOGGING_ENABLED
@@ -195,6 +223,27 @@ class CodeUtils : public TObject {
 				#endif
 				return -1;
 			}
+			*/
+
+			//NEW JSONCPP API
+			Json::CharReaderBuilder builder;
+			Json::CharReader* reader = builder.newCharReader();
+			Json::Value output;
+			std::string errors;
+
+			bool status= reader->parse(jsonString.c_str(), jsonString.c_str() + jsonString.length(), &root, &errors);
+			if(reader){
+				delete reader;
+				reader= 0;
+			}
+			if(!status){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Failed to encode string to json (err="<<errors<<")");
+				#endif
+				return -1;
+			}
+
+
 			return 0;
 		}//close StringToJson()
 

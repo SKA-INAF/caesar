@@ -115,6 +115,12 @@ void AstroObject::Init()
 	nu= 0;
 	dnu= 0;
 
+	hasSpectralIndexInfo= false;
+	isMultiSourceMatchIndex= false;
+	isSpectralIndexFit= false;
+	spectralIndex= -999;
+	spectralIndexErr= -999;
+
 }//close Init()
 
 

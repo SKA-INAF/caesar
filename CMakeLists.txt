@@ -121,6 +121,13 @@ if(ENABLE_MPI AND MPI_FOUND)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${MPI_CXX_LINK_FLAGS}")
 endif()
 
+#===================================================
+#==   INCLUDE OPENCV FLAGS?
+#===================================================
+add_definitions(-DOPENCV_MAJOR_VERSION=${OpenCV_VERSION_MAJOR})
+add_definitions(-DOPENCV_MINOR_VERSION=${OpenCV_VERSION_MINOR})
+add_definitions(-DOPENCV_PATCH_VERSION=${OpenCV_VERSION_REVISION})
+
 #==============================================================================================
 #===          SET INCLUDES & LIBS
 #==============================================================================================
@@ -285,31 +292,38 @@ list(REMOVE_DUPLICATES GEN_PROTO_HEADERS)
 set(PROTO_GEN_FILES "")
 list (APPEND PROTO_GEN_FILES ${GEN_PROTO_SRCS})
 list (APPEND PROTO_GEN_FILES ${GEN_PROTO_HEADERS})
-
+#set(PROTO_GEN_FILES_COPY ${PROTO_GEN_FILES})
 
 SET(proto_args 
 	PROTOFILES ${PROTO_FILES}
 	OUTPATH ${CMAKE_BINARY_DIR}
 )
-PROTOBUF_GENERATE_CPP(PROTO_GEN_SRCS PROTO_GEN_HEADERS ${proto_args})	
+#PROTOBUF_GENERATE_CPP(PROTO_GEN_SRCS PROTO_GEN_HEADERS ${proto_args})	
 
 SET_SOURCE_FILES_PROPERTIES(${GEN_PROTO_SRCS} ${GEN_PROTO_HEADERS} PROPERTIES GENERATED TRUE)
 	
 # Dummy output which is never actually produced. Anything that depends on this will always be rebuilt.
-add_custom_command(
-	OUTPUT always_rebuild
-  COMMAND cmake -E echo
-)
+#add_custom_command(
+#	OUTPUT always_rebuild
+#  COMMAND cmake -E echo
+#)
 
 # custom_output will always be rebuilt because it depends on always_rebuild
 add_custom_command(
-	#OUTPUT proto_generation
+  ####OUTPUT proto_generation
 	OUTPUT ${PROTO_GEN_FILES}
 	PRE_BUILD
 	COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} --proto_path=${PROTO_DIR} --cpp_out=${CMAKE_BINARY_DIR} ${PROTO_FILES}
-  #DEPENDS always_rebuild  ### Decomment this to always generate protobuf files
+	#####DEPENDS always_rebuild  ### Decomment this to always generate protobuf files
 	DEPENDS ${PROTO_FILES}
+	COMMENT "Generating Protobuf source files from schema"
+	VERBATIM
 )
+
+#add_custom_target(proto_generation
+#	COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} --proto_path=${PROTO_DIR} --cpp_out=${CMAKE_BINARY_DIR} ${PROTO_FILES}
+#	DEPENDS ${PROTO_FILES}
+#)
 
 add_custom_target(ProtobufSchema ALL 
 	#DEPENDS proto_generation
@@ -425,6 +439,18 @@ if(BUILD_APPS)
 	add_executable(SourceTreeWriterExe ${Task_SourceTreeWriter_SRCS})
 	target_link_libraries(SourceTreeWriterExe Caesar ${LINKED_LIBS})
 	set_target_properties(SourceTreeWriterExe PROPERTIES OUTPUT_NAME SourceTreeWriter)
+
+	add_executable(SourceAsciiExporterExe ${Task_SourceAsciiExporter_SRCS})
+	target_link_libraries(SourceAsciiExporterExe Caesar ${LINKED_LIBS})
+	set_target_properties(SourceAsciiExporterExe PROPERTIES OUTPUT_NAME SourceAsciiExporter)
+
+	add_executable(SourceMVClassifierExe ${Task_SourceMVClassifier_SRCS})
+	target_link_libraries(SourceMVClassifierExe Caesar ${LINKED_LIBS})
+	set_target_properties(SourceMVClassifierExe PROPERTIES OUTPUT_NAME SourceMVClassifier)
+
+	add_executable(SourceRefitterExe ${Task_SourceRefitter_SRCS})
+	target_link_libraries(SourceRefitterExe Caesar ${LINKED_LIBS})
+	set_target_properties(SourceRefitterExe PROPERTIES OUTPUT_NAME SourceRefitter)
 
 	if(ENABLE_MPI AND MPI_FOUND)
 		include_directories(${MPI_CXX_INCLUDE_PATH})
@@ -626,6 +652,9 @@ if(BUILD_APPS)
 		SourceCatalogsMatchFinder
 		SourceAstroCatalogsMatchFinder
 		SourceTreeWriter
+		SourceAsciiExporter
+		SourceMVClassifier
+		SourceRefitter
 	)
 	if(ENABLE_MPI)
 		list(APPEND EXE_FILES FindSourceMPI)
@@ -638,7 +667,12 @@ if(BUILD_APPS)
 endif()
 
 # -- Install library dict map
-install(FILES ${PROJECT_BINARY_DIR}/CaesarDict_rdict.pcm DESTINATION ${CMAKE_INSTALL_LIBDIR})
+if(EXISTS ${PROJECT_BINARY_DIR}/CaesarDict_rdict.pcm)
+	install(FILES ${PROJECT_BINARY_DIR}/CaesarDict_rdict.pcm DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()
+if(EXISTS ${PROJECT_BINARY_DIR}/libCaesarDict_rdict.pcm)
+	install(FILES ${PROJECT_BINARY_DIR}/libCaesarDict_rdict.pcm DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()
 
 # -- Install libraries
 install(TARGETS Caesar DESTINATION ${CMAKE_INSTALL_LIBDIR})

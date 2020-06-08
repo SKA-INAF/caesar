@@ -14,8 +14,48 @@ message (STATUS "BOOST HEADERS: ${Boost_INCLUDE_DIRS}, LIBS: ${Boost_LIBRARIES}"
 #=================================
 #==    Check for OPENCV        ===
 #=================================
-find_package(OpenCV REQUIRED)
-message (STATUS "OPENCV HEADERS: ${OpenCV_INCLUDE_DIRS}, LIBS: ${OpenCV_LIBS}, ${OpenCV_LIB_COMPONENTS}")
+# NB: C API was deprecated in OpenCV >4, so first determine version and skip cmake find accordingly
+set(OpenCV_DIR "$ENV{OPENCV_DIR}")
+message(STATUS "OpenCV_DIR: " "${OpenCV_DIR}")
+
+if(NOT EXISTS ${OPENCV_VERSION_FILE_DIR}) #may alreay be in cache
+	find_path(OPENCV_VERSION_FILE_DIR "version.hpp" 
+		PATHS "${OpenCV_DIR}" 
+		PATH_SUFFIXES "include" "include/opencv" "include/opencv2" "include/opencv2/core" "include/opencv4/opencv2/core" 
+		DOC ""
+		NO_DEFAULT_PATH
+	)
+	if(NOT EXISTS ${OPENCV_VERSION_FILE_DIR})
+		message(FATAL_ERROR "OpenCV version file not found")
+	else()
+		set(OPENCV_VERSION_FILE ${OPENCV_VERSION_FILE_DIR}/version.hpp)
+	endif()
+else()	
+	set(OPENCV_VERSION_FILE ${OPENCV_VERSION_FILE_DIR}/version.hpp)
+endif()
+
+message(STATUS "OPENCV_VERSION_FILE: " ${OPENCV_VERSION_FILE})
+
+#file(STRINGS ${OPENCV_VERSION_FILE} OpenCV_VERSIONS_TMP REGEX "^#define CV_[A-Z]+_VERSION[ \t]+[0-9]+$")
+file(STRINGS ${OPENCV_VERSION_FILE} OpenCV_VERSIONS_TMP REGEX "^#define CV_VERSION_[A-Z]+[ \t]+[0-9]+$")
+message(STATUS "OpenCV_VERSIONS_TMP: " ${OpenCV_VERSIONS_TMP})
+string(REGEX REPLACE ".*#define CV_VERSION_MAJOR[ \t]+([0-9]+).*" "\\1" OpenCV_VERSION_MAJOR "${OpenCV_VERSIONS_TMP}")
+string(REGEX REPLACE ".*#define CV_VERSION_MINOR[ \t]+([0-9]+).*" "\\1" OpenCV_VERSION_MINOR "${OpenCV_VERSIONS_TMP}")
+string(REGEX REPLACE ".*#define CV_VERSION_REVISION[ \t]+([0-9]+).*" "\\1" OpenCV_VERSION_REVISION "${OpenCV_VERSIONS_TMP}")
+
+message(STATUS "OpenCV_VERSION_MAJOR: " ${OpenCV_VERSION_MAJOR})
+message(STATUS "OpenCV_VERSION_MINOR: " ${OpenCV_VERSION_MINOR})
+message(STATUS "OpenCV_VERSION_REVISION: " ${OpenCV_VERSION_REVISION})
+
+set(OpenCV_VERSION ${OpenCV_VERSION_MAJOR}.${OpenCV_VERSION_MINOR}.${OpenCV_VERSION_REVISION} CACHE STRING "" FORCE)
+
+message(STATUS "OpenCV_VERSION: " ${OpenCV_VERSION})
+
+#if(${OpenCV_VERSION} VERSION_LESS 4.0.0)
+#	find_package(OpenCV REQUIRED)
+#	message (STATUS "OPENCV HEADERS: ${OpenCV_INCLUDE_DIRS}, LIBS: ${OpenCV_LIBS}, ${OpenCV_LIB_COMPONENTS}")
+#endif()
+
 find_package(OpenCV2 REQUIRED)
 message (STATUS "OPENCV2 HEADERS: ${OpenCV2_INCLUDE_DIRS}, LIBS: ${OpenCV2_LIBRARIES}")
 #-------------------------
@@ -56,13 +96,29 @@ if(NOT DEFINED ENV{ROOTSYS})
 	message(SEND_ERROR "ROOTSYS variable not defined!")
 endif()
 
-list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
-list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/etc/cmake)
-list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/cmake)
-list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/cmake/modules)
+#list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
+#list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS}/cmake)
+#list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/etc/cmake)
+#list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/cmake)
+#list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/cmake/modules)
+
+
+# - Include ROOTConfig.cmake
+SET (ROOT_CMAKE_CONFIG_FILE $ENV{ROOTSYS}/cmake/ROOTConfig.cmake)
+if(EXISTS ${ROOT_CMAKE_CONFIG_FILE})
+	MESSAGE(STATUS "Including ROOT config file ${ROOT_CMAKE_CONFIG_FILE}")
+  #include(${ROOT_CMAKE_CONFIG_FILE})
+	list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
+
+else()
+	MESSAGE(STATUS "ROOTConfig.cmake was not found, trying to use FindROOT.cmake ...")
+	list(APPEND CMAKE_MODULE_PATH $ENV{ROOTSYS}/etc/cmake)
+endif()
+
+	
 
 #---Locate the ROOT package and defines a number of variables (e.g. ROOT_INCLUDE_DIRS)
-SET (ROOT_REQUIRED_MODULES MathCore RIO Hist Tree Net PyROOT Minuit MathMore)
+SET (ROOT_REQUIRED_MODULES MathCore RIO Hist Tree Net PyROOT Minuit MathMore TMVA)
 SET (ROOT_OPTIONAL_MODULES Minuit2 FITSIO)
 if(ENABLE_R)
 	list(APPEND ROOT_REQUIRED_MODULES RInterface Rtools)
@@ -70,7 +126,9 @@ else()
 	#list(APPEND ROOT_OPTIONAL_MODULES RInterface Rtools) ## Do not link with ROOT-R if disabled
 endif()
  
-find_package(ROOT REQUIRED MODULE COMPONENTS ${ROOT_REQUIRED_MODULES} OPTIONAL_COMPONENTS ${ROOT_OPTIONAL_MODULES})
+find_package(ROOT CONFIG REQUIRED)
+#find_package(ROOT REQUIRED MODULE COMPONENTS ${ROOT_REQUIRED_MODULES} OPTIONAL_COMPONENTS ${ROOT_OPTIONAL_MODULES})
+find_package(ROOT REQUIRED COMPONENTS ${ROOT_REQUIRED_MODULES} OPTIONAL_COMPONENTS ${ROOT_OPTIONAL_MODULES})
 
 #---Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY)
 include(${ROOT_USE_FILE}) 
@@ -181,6 +239,7 @@ MARK_AS_ADVANCED (JSONCPP_INCLUDE_DIR JSONCPP_LIBRARIES)
 #=================================
 #==   Check for PROTOBUF       ===
 #=================================
+
 MESSAGE(STATUS "Looking for Protobuf lib")
 FIND_PACKAGE(Protobuf REQUIRED COMPONENTS protobuf protoc)
 IF (NOT PROTOBUF_FOUND)

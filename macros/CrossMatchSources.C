@@ -5,6 +5,7 @@
 #include <DS9RegionParser.h>
 
 #include <TFile.h>
+#include <TTree.h>
 #include <TProfile.h>
 #include <TH1D.h>
 #include <TH2D.h>
@@ -73,7 +74,7 @@ struct SourceInfo
 
 };//close struct SourceInfo
 
-enum CatalogType {eCAESAR_CATALOG=1,eSELAVY_CATALOG=2};
+enum CatalogType {eCAESAR_CATALOG=1,eSELAVY_CATALOG=2,eAEGEAN_CATALOG=3};
 
 struct MacroOptions
 {
@@ -121,6 +122,7 @@ int ReadData(std::vector<SourceInfo>& sources,std::string filename,int (*fcn)(So
 static int ParseData(SourceInfo& info,const std::vector<std::string>& fields);
 static int ParseData_caesar(SourceInfo& info,const std::vector<std::string>& fields);
 static int ParseData_selavy(SourceInfo& info,const std::vector<std::string>& fields);
+static int ParseData_aegean(SourceInfo& info,const std::vector<std::string>& fields);
 bool HasPattern(std::string,std::string);
 int FindSourceMatch(const std::vector<SourceInfo>& sources_ref,const std::vector<SourceInfo>& sources_rec);
 void Init();
@@ -156,12 +158,24 @@ std::vector<std::string> gSkipLinePatterns {};
 const int gNDataCols_caesar= 42;
 const int gNDataCols_caesar_v2= 47;
 const int gNDataCols_selavy= 37;
+const int gNDataCols_aegean= 27;
 std::vector<std::string> gSkipLinePatterns_caesar {};
 std::vector<std::string> gSkipLinePatterns_selavy {};
+std::vector<std::string> gSkipLinePatterns_aegean {"island"};
 std::vector<std::string> gFileNames_rec {};
 
 //- OUTPUT FILE
 TFile* gOutputFile= 0;
+TTree* gMatchDataTree= 0;
+std::string gSourceName_true;
+double gSourcePosX_true;
+double gSourcePosY_true;
+double gSourceFlux_true;
+std::string gSourceName_rec;
+double gSourcePosX_rec;
+double gSourcePosY_rec;
+double gSourceFlux_rec;
+bool gIsFound;
 
 //- HISTOS
 double gLgFluxMin_draw= -5;
@@ -264,7 +278,6 @@ TGraphErrors* gPosXResoGraph_sel= 0;
 TGraphErrors* gPosYResoGraph_sel= 0; 
 
 
-//int CrossMatchSources(std::string fileName_rec,std::string fileName,bool isFileList=false,int catalogType=eCAESAR_CATALOG,double matchPosThr=10.,bool saveToFile=false,bool applySelection=false,int catalogVersion=1,bool selectRegion=false,std::string regionFileName="") 
 int CrossMatchSources(std::string fileName_rec,std::string fileName,bool isFileList=false,MacroOptions options=MacroOptions()) 
 {
 	//================================
@@ -272,14 +285,6 @@ int CrossMatchSources(std::string fileName_rec,std::string fileName,bool isFileL
 	//================================
 	cout<<"INFO: Check macro args ..."<<endl;
 	
-	/*
-	gMatchPosThr= matchPosThr;
-	gCatalogType= catalogType;
-	gApplySelection= applySelection;
-	gCatalogVersion= catalogVersion;
-	gSelectRegion= selectRegion
-	gRegionFileName= regionFileName;
-	*/
 	gSaveToFile= options.saveToFile;
 	gMatchPosThr= options.matchPosThr;
 	gCatalogType= options.catalogType;
@@ -295,7 +300,7 @@ int CrossMatchSources(std::string fileName_rec,std::string fileName,bool isFileL
 	gBeamArea_wcs= MathUtils::ComputeEllipseArea(gBeamBmaj,gBeamBmin);
 	gUseWCS= options.useWCS;
 	
-	if( gCatalogType!=eCAESAR_CATALOG && gCatalogType!=eSELAVY_CATALOG )
+	if( gCatalogType!=eCAESAR_CATALOG && gCatalogType!=eSELAVY_CATALOG && gCatalogType!=eAEGEAN_CATALOG )
 	{
 		cerr<<"ERROR: Unknown catalog type given ("<<gCatalogType<<")!"<<endl;
 		return -1;
@@ -409,6 +414,9 @@ int CrossMatchSources(std::string fileName_rec,std::string fileName,bool isFileL
 		else if(gCatalogType==eSELAVY_CATALOG){
 			ReadData(sources_rec,gFileNames_rec[i],ParseData_selavy,gSkipLinePatterns_selavy);
 		}
+		else if(gCatalogType==eAEGEAN_CATALOG){
+			ReadData(sources_rec,gFileNames_rec[i],ParseData_aegean,gSkipLinePatterns_aegean);
+		}
 		else{
 			cerr<<"ERROR: Unknown/invalid catalog type ("<<gCatalogType<<")!"<<endl;
 			return -1;
@@ -444,6 +452,8 @@ void Save()
 	//Save file
 	if(gOutputFile && gOutputFile->IsOpen())
 	{
+		if(gMatchDataTree) gMatchDataTree->Write();
+
 		if(gPosXDiffHisto) gPosXDiffHisto->Write();
  		if(gPosYDiffHisto) gPosYDiffHisto->Write();
 		if(gFluxDiffHisto) gFluxDiffHisto->Write();
@@ -519,6 +529,19 @@ void Init()
 	//Create output file
 	gOutputFile= new TFile("output.root","RECREATE");
 	gOutputFile->cd();
+
+	gMatchDataTree= new TTree("MatchInfo","MatchInfo");
+	gMatchDataTree->Branch("name",&gSourceName_true);
+	gMatchDataTree->Branch("x",&gSourcePosX_true);
+	gMatchDataTree->Branch("y",&gSourcePosY_true);
+	gMatchDataTree->Branch("flux",&gSourceFlux_true);
+	gMatchDataTree->Branch("isFound",&gIsFound);
+	gMatchDataTree->Branch("name_rec",&gSourceName_rec);
+	gMatchDataTree->Branch("x_rec",&gSourcePosX_rec);
+	gMatchDataTree->Branch("y_rec",&gSourcePosY_rec);
+	gMatchDataTree->Branch("flux_rec",&gSourceFlux_rec);
+	
+
 
 	//Init histos
 	int nBins= (int)(gLgFluxBins.size()-1);
@@ -1315,6 +1338,12 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 		double flux= sources[i].flux;
 		double lgFlux= log10(flux);
 
+		gIsFound= false;
+		gSourceName_true= name;
+		gSourcePosX_true= x;
+		gSourcePosY_true= y;
+		gSourceFlux_true= flux;
+
 		//Skip source if outside mosaic region
 		if(gSelectRegion){
 			bool isInside= false;
@@ -1335,6 +1364,9 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 	
 		bool found= false;
 		bool selected= false;
+		std::vector<std::string> name_list;
+		std::vector<double> xrec_list;
+		std::vector<double> yrec_list;
 		std::vector<double> dx_list;
 		std::vector<double> dy_list;
 		std::vector<double> reclgflux_list;
@@ -1418,6 +1450,9 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 
 			//Fill vectors for matched sources
 			recindex_list.push_back(j);
+			name_list.push_back(name_rec);
+			xrec_list.push_back(x_rec);
+			yrec_list.push_back(y_rec);
 			dx_list.push_back(dx);
 			dy_list.push_back(dy);	
 			reclgflux_list.push_back(lgflux_rec);
@@ -1436,11 +1471,21 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 		
 
 		//Fill histos & vector
+		gIsFound= false;
+		gSourceName_rec= "";
+		gSourcePosX_rec= -999;
+		gSourcePosY_rec= -999;
+		gSourceFlux_rec= -999;
+
+
 		if(found){
 			nMatch++;
 			
 			//Check for multiple detections and select the closest
-			int nFound= (int)(dx_list.size());	
+			int nFound= (int)(dx_list.size());
+			std::string name_rec= name_list[0];
+			double x_rec= xrec_list[0];
+			double y_rec= yrec_list[0];
 			double dx= dx_list[0];
 			double dy= dy_list[0];
 			double dpos= sqrt(dx*dx + dy*dy); 	
@@ -1465,6 +1510,9 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 					}
 				}//end loop match
 
+				name_rec= name_list[best_index];
+				x_rec= xrec_list[best_index];
+				y_rec= yrec_list[best_index];
 				dx= dx_list[best_index];
 				dy= dy_list[best_index];
 				dpos= sqrt(dx*dx + dy*dy); 
@@ -1478,10 +1526,17 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 				areaRatio= arearatio_list[best_index];
 				rotAngle= rotangle_list[best_index];
 				recIndex= recindex_list[best_index];
-
+	
 				cout<<"INFO: #"<<nFound<<" match found, match no. "<<best_index<<" selected as the best..."<<endl;
 
 			}//close nFound>1
+
+			gIsFound= true;
+			gSourceName_rec= name_rec;
+			gSourcePosX_rec= x_rec;
+			gSourcePosY_rec= y_rec;
+			gSourceFlux_rec= pow(10,lgFlux_rec);
+
 
 			isRecSourceFound[recIndex]= true;
 
@@ -1556,6 +1611,8 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 				cout<<"Bright source not found (name="<<name<<", x="<<x<<", y="<<y<<", flux="<<flux<<endl;
 			}			
 		}
+
+		gMatchDataTree->Fill();
 
 	}//end loop ref sources
 
@@ -2201,6 +2258,68 @@ int ParseData_selavy(SourceInfo& info,const std::vector<std::string>& fields)
 	return 0;
 
 }//close ParseData_selavy()
+
+
+
+
+int ParseData_aegean(SourceInfo& info,const std::vector<std::string>& fields)
+{
+	//Check number of fields present
+	if(fields.size()<gNDataCols_aegean){
+		cerr<<"ERROR: Invalid number of fields found in line ("<<fields.size()<<") when "<<gNDataCols_aegean<<" expected!"<<endl;
+		return -1;
+	}
+	
+	//#   island	source	background	local_rms	ra_str	dec_str	ra	err_ra	dec	err_dec	peak_flux	err_peak_flux	int_flux	err_int_flux	a	err_a	b	err_b	pa	err_pa	flags	residual_mean	residual_std	uuid	psf_a	psf_b	psf_pa
+
+	//Set var values
+	std::string blobName= std::string(fields[0]);
+	std::string compId= std::string(fields[1]);
+	std::string name= std::string("S") + blobName + std::string("_fitcomp") + compId;
+	double x_wcs= atof(fields[6].c_str());
+	double y_wcs= atof(fields[8].c_str());
+	double A= atof(fields[10].c_str());//in Jy/beam
+	double flux= atof(fields[12].c_str());//in Jy
+	double rms= atof(fields[3].c_str());//in Jy/beam
+	double snr= A/rms;
+	double chi2= 0;//not present in catalogue
+	double ndf= 0;//not present in catalogue
+
+	double bmaj_pix= 0;//not defined in catalog
+	double bmin_pix= 0;//not defined in catalog
+	double pa_pix= 0;//not defined in catalog
+	double bmaj_wcs= atof(fields[14].c_str());
+	double bmin_wcs= atof(fields[16].c_str());
+	double pa_wcs= atof(fields[18].c_str());
+
+	info.name= name;
+	if(gUseWCS){
+		info.x= x_wcs;
+		info.y= y_wcs;
+	}
+	else{
+		cerr<<"ERROR: Aegean does not provide source centroid in pixel coordinates!"<<endl;
+		return -1;
+	}
+	info.flux= flux;
+	info.rms= rms;
+	info.snr= snr;
+	info.chi2= chi2;
+	info.ndf= ndf;
+	info.A= A;
+
+	info.bmaj_pix= bmaj_pix;
+	info.bmin_pix= bmin_pix;
+	info.pa_pix= pa_pix;
+	info.bmaj_wcs= bmaj_wcs;
+	info.bmin_wcs= bmin_wcs;
+	info.pa_wcs= pa_wcs;
+
+	//cout<<"Source {name="<<info.name<<", x="<<info.x<<", y="<<info.y<<", flux="<<info.flux<<", beam="<<beamArea<<", fluxDensity="<<fluxDensity<<", rmsSum="<<rmsSum<<", avgRMS="<<avgRMS<<", snr="<<snr<<"}"<<endl;
+	
+	return 0;
+
+}//close ParseData_aegean()
 
 int ParseData(SourceInfo& info,const std::vector<std::string>& fields)
 {

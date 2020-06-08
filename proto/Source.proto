@@ -1,3 +1,4 @@
+syntax = "proto2";
 //package SourcePB;
 package CaesarPB;
 
@@ -272,6 +273,12 @@ message Dict {
 	optional float val= 2; 
 }
 
+message DMatrix {
+  optional uint32 rows = 1;
+  optional uint32 cols = 2;
+  repeated double data = 3 [packed=true];
+}
+
 //==============================
 //==   SOURCE COMPONENT PARS
 //==============================
@@ -333,31 +340,37 @@ message SourceFitPars {
 	optional int32 nComponents= 1;
 	optional float chi2= 2;
 	optional float ndof= 3;
-	optional int32 npars_free= 4;	
-	optional int32 npars_component= 5;//to be added
-	optional int32 nfit_points= 6;
-	optional int32 status= 7;
-	optional int32 minimizer_status= 8;
-	optional float offset= 9;
-	optional float offset_err= 10;
+	optional int32 npars= 4;	
+	optional int32 npars_free= 5;	
+	optional int32 npars_component= 6;//to be added
+	optional int32 nfit_points= 7;
+	optional int32 status= 8;
+	optional int32 minimizer_status= 9;
+	optional float offset= 10;
+	optional float offset_err= 11;
 
-	optional float residualMean= 11;
-	optional float residualRMS= 12;
-	optional float residualMedian= 13;
-	optional float residualMAD= 14;
-	optional float residualMin= 15;
-	optional float residualMax= 16;
+	optional float residualMean= 12;
+	optional float residualRMS= 13;
+	optional float residualMedian= 14;
+	optional float residualMAD= 15;
+	optional float residualMin= 16;
+	optional float residualMax= 17;
 
-	repeated SourceComponentPars pars= 17;
+	repeated SourceComponentPars pars= 18;
 
-	optional bool thetaFixed= 18;
-	optional bool offsetFixed= 19;
-	optional bool sigmaFixed= 20;
-	optional float fluxDensity= 21;
-	optional float fluxDensityErr= 22;
+	optional bool thetaFixed= 19;
+	optional bool offsetFixed= 20;
+	optional bool sigmaFixed= 21;
+	optional float fluxDensity= 22;
+	optional float fluxDensityErr= 23;
 	
-	optional int32 fitQuality= 23;
+	optional int32 fitQuality= 24;
 
+	optional DMatrix fitCovarianceMatrix= 25;
+	optional DMatrix fluxDensityDerivMatrix= 26;
+
+	optional float normFactor= 27;
+		
 }//close SourceFitPars()
 
 //==============================
@@ -398,15 +411,18 @@ message Source {
 	optional int32 ObjLocationId= 22;
 	optional int32 ObjClassId= 23;
 	optional int32 ObjClassSubId= 24;
-	repeated int32 componentObjLocationId= 25;
-	repeated int32 componentObjClassId= 26;
-	repeated int32 componentObjClassSubId= 27;
+	optional bool ObjConfirmed= 25;
+	repeated int32 componentObjLocationId= 26;
+	repeated int32 componentObjClassId= 27;
+	repeated int32 componentObjClassSubId= 28;
+	repeated bool componentObjConfirmed= 29;
+
 
 	//Astro objects
-	optional bool m_hasAstroObjectData= 28;
-	optional AstroObjectCollection m_astroObjects= 29;
-	optional bool m_hasComponentAstroObjectData= 30;
-	repeated AstroObjectCollection m_componentAstroObjects= 31;
+	optional bool m_hasAstroObjectData= 30;
+	optional AstroObjectCollection m_astroObjects= 31;
+	optional bool m_hasComponentAstroObjectData= 32;
+	repeated AstroObjectCollection m_componentAstroObjects= 33;
 
 }//close Source schema
 
@@ -484,4 +500,5 @@ message AstroObjectCollection
 {
 	repeated AstroObject astroObjectList= 1;
 }
+
 

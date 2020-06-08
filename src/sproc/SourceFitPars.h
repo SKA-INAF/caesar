@@ -667,6 +667,19 @@ class SourceFitPars : public TObject {
 		}//close SetCovarianceMatrix()
 
 		/**
+		* \brief Set fit covariance matrix
+		*/
+		int SetCovarianceMatrix(TMatrixD& M)
+		{
+			int nCols= M.GetNcols();
+			int nRows= M.GetNrows();
+			if(nRows<=0 || nCols<=0) return -1;
+			fitCovarianceMatrix.ResizeTo(nRows,nCols);
+			fitCovarianceMatrix= M;
+			return 0;
+		}
+
+		/**
 		* \brief Remove component(s) from covariance matrix
 		*/
 		/*
@@ -769,6 +782,20 @@ class SourceFitPars : public TObject {
 		TMatrixD& GetFluxDensityDerivMatrix(){return fluxDensityDerivMatrix;}
 
 		/**
+		* \brief Set flux density derivative matrix
+		*/
+		int SetFluxDensityDerivMatrix(TMatrixD& M)
+		{	
+			int nCols= M.GetNcols();
+			int nRows= M.GetNrows();
+			if(nRows<=0 || nCols<=0) return -1;
+			fluxDensityDerivMatrix.ResizeTo(nRows,nCols);
+			fluxDensityDerivMatrix= M;
+			return 0;
+		}
+
+
+		/**
 		* \brief Print flux density derivative matrix
 		*/
 		void PrintFluxDensityDerivMatrix(){
@@ -799,7 +826,8 @@ class SourceFitPars : public TObject {
 			for(int i=0;i<nComponents;i++){
 				//Retrieve fitted pars for this component
 				double A= pars[i].GetParValue("A");
-				A*= 1.e+3;//convert to mJy
+				//A*= 1.e+3;//convert to mJy
+				A*= normFactor;//convert to mJy
 				double sigmaX= pars[i].GetParValue("sigmaX");
 				double sigmaY= pars[i].GetParValue("sigmaY");
 
@@ -884,7 +912,8 @@ class SourceFitPars : public TObject {
 			fluxDensityErr= sqrt(fluxDensityVariance);
 
 			//Convert back to Jy
-			fluxDensityErr/= 1.e+3;
+			//fluxDensityErr/= 1.e+3;
+			fluxDensityErr/= normFactor;
 			
 			return 0;
 		}//close ComputeFluxDensityError()
@@ -1019,7 +1048,14 @@ class SourceFitPars : public TObject {
 		*/
 		bool IsOffsetFixed(){return offsetFixed;}
 
-		
+		/**
+		* \brief Set norm factor
+		*/
+		void SetNormFactor(double value){normFactor=value;}
+		/**
+		* \brief Get norm factor
+		*/
+		double GetNormFactor(){return normFactor;}
 
 		/**
 		* \brief Get number of free parameters per component
@@ -1044,7 +1080,7 @@ class SourceFitPars : public TObject {
 			int nCols= fluxDensityDerivMatrix.GetNcols(); 
 			if(nCols<=last_index){
 				#ifdef LOGGING_ENABLED
-					WARN_LOG("Trying to access to an not-existing element (index="<<last_index<<") of derivative matrix (dim="<<nCols<<") (hint: derivative matrix not initialized)!");	
+					WARN_LOG("Trying to access to an not-existing element (index="<<last_index<<") of derivative matrix (dim="<<nCols<<", npars_component="<<npars_component<<") (hint: derivative matrix not initialized)!");	
 				#endif
 				return -1;
 			}
@@ -1161,7 +1197,18 @@ class SourceFitPars : public TObject {
 		*/
 		void SetFitQuality(int flag){fitQuality=flag;}
 
-		
+		/**
+		* \brief Reset fit pars
+		*/
+		void Reset()
+		{
+			
+		};
+
+		/**
+		* \brief Get fit pars vector
+		*/
+		int GetFitParVec(std::vector<std::vector<double>>& parVector);
 
 	private:
 
@@ -1198,10 +1245,11 @@ class SourceFitPars : public TObject {
 		bool sigmaFixed;
 		double fluxDensity;
 		double fluxDensityErr;
-
 		int fitQuality;
 
-	ClassDef(SourceFitPars,5)
+		double normFactor;
+
+	ClassDef(SourceFitPars,6)
 
 };//close class
 

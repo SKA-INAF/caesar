@@ -153,11 +153,13 @@ void Source::Copy(TObject &obj) const
 	((Source&)obj).ObjClassId= ObjClassId;
 	((Source&)obj).ObjClassSubId= ObjClassSubId;
 	((Source&)obj).ObjLocationId= ObjLocationId;
+	((Source&)obj).ObjConfirmed= ObjConfirmed;
 	
 	//Set object component class ids
 	((Source&)obj).componentObjLocationIds= componentObjLocationIds;
 	((Source&)obj).componentObjClassIds= componentObjClassIds;
 	((Source&)obj).componentObjClassSubIds= componentObjClassSubIds;
+	((Source&)obj).componentObjConfirmed= componentObjConfirmed;
 	
 
 	//Delete first a previously existing vector
@@ -237,11 +239,13 @@ void Source::Init(){
 	ObjLocationId= eUNKNOWN_OBJECT_LOCATION;
 	ObjClassId= eUNKNOWN_OBJECT;
 	ObjClassSubId= eUNKNOWN_OBJECT;
+	ObjConfirmed= false;
 
 	//Init component object class ids
 	componentObjLocationIds.clear();
 	componentObjClassIds.clear();
 	componentObjClassSubIds.clear();
+	componentObjConfirmed.clear();
 
 }//close Init()
 
@@ -1186,20 +1190,29 @@ int Source::MergeSource(Source* aSource,bool copyPixels,bool checkIfAdjacent,boo
 		}//close if found
 	}//close if sim type
 
-	//At this stage stats (mean/median/etc...) are invalid and need to be recomputed if desired
-	this->SetHasStats(false);//set stats to false to remember that current stats are not valid anymore and need to be recomputed
-	if(computeStatPars){
-		bool computeRobustStats= true;
-		bool forceRecomputing= false;//no need to re-compute moments (already updated in AddPixel())
-		if(sumMatchingPixels) forceRecomputing= true;
-		this->ComputeStats(computeRobustStats,forceRecomputing);
-	}
+	//Invalidate stats, pars if some pixels have been merged
+	if(nMergedPixels>0){
+		//At this stage stats (mean/median/etc...) are invalid and need to be recomputed if desired
+		this->SetHasStats(false);//set stats to false to remember that current stats are not valid anymore and need to be recomputed
+		if(computeStatPars){
+			bool computeRobustStats= true;
+			bool forceRecomputing= false;//no need to re-compute moments (already updated in AddPixel())
+			if(sumMatchingPixels) forceRecomputing= true;
+			this->ComputeStats(computeRobustStats,forceRecomputing);
+		}
 
-	//Contour and other parameters are also invalid
-	this->SetHasParameters(false);
-	if(computeMorphPars){
-		this->ComputeMorphologyParams();
-	}
+		//Contour and other parameters are also invalid
+		this->SetHasParameters(false);
+		if(computeMorphPars){
+			this->ComputeMorphologyParams();
+		}
+
+		//At this stage fitting information (if present) is invalid (there are new pixels that have not been fitted)
+		this->m_HasFitInfo= false;
+		this->m_fitStatus= eFitUnknownStatus;
+		this->m_fitPars.Reset();
+
+	}//close if
 
 	return 0;
 	
@@ -1259,6 +1272,44 @@ int Source::Fit(SourceFitOptions& fitOptions)
 	//Create source fitter
 	SourceFitter fitter;
 	if(fitter.FitSource(this,fitOptions)<0){	
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to fit source "<<this->GetName()<<" ...");
+		#endif
+		m_HasFitInfo= false;
+		m_fitStatus= fitter.GetFitStatus();
+		return -1;
+	}
+	
+	//Get fit results
+	SourceFitPars fitPars= fitter.GetFitPars();
+	fitPars.Print();
+
+	int fitStatus= fitter.GetFitStatus();
+	if(fitStatus==eFitConverged || fitStatus==eFitConvergedWithWarns){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Fit of source "<<this->GetName()<<" converged (status="<<fitStatus<<"), storing fit parameters...");	
+		#endif
+		m_fitPars= fitPars;
+		m_HasFitInfo= true;
+	}
+	
+	//Store latest fit status
+	m_fitStatus= fitStatus;
+
+	return 0;
+
+}//close Fit()
+
+
+int Source::Fit(SourceFitOptions& fitOptions,SourceFitPars& initfitPars)
+{
+	//Get start fit pars vector
+	std::vector<std::vector<double>> fitPars_start;
+	initfitPars.GetFitParVec(fitPars_start);
+
+	//Create source fitter
+	SourceFitter fitter;
+	if(fitter.FitSource(this,fitOptions,fitPars_start)<0){	
 		#ifdef LOGGING_ENABLED
 			WARN_LOG("Failed to fit source "<<this->GetName()<<" ...");
 		#endif
@@ -1759,7 +1810,7 @@ int Source::GetSpectralAxisInfo(double& val,double& dval,std::string& units)
 
 int Source::ComputeObjClassId()
 {
-	return ComputeObjClassId(ObjClassId,ObjClassSubId,m_astroObjects);
+	return ComputeObjClassId(ObjClassId,ObjClassSubId,ObjConfirmed,m_astroObjects);
 }
 
 
@@ -1783,14 +1834,17 @@ int Source::ComputeComponentObjClassId()
 	//Loop over components and compute 
 	componentObjClassIds.clear();
 	componentObjClassSubIds.clear();
+	componentObjConfirmed.clear();
 
 	for(size_t i=0;i<m_componentAstroObjects.size();i++)
 	{
 		int classId= eUNKNOWN_OBJECT;
 		int classSubId= eUNKNOWN_OBJECT; 
-		ComputeObjClassId(classId,classSubId,m_componentAstroObjects[i]);
+		bool confirmed= false;
+		ComputeObjClassId(classId,classSubId,confirmed,m_componentAstroObjects[i]);
 		componentObjClassIds.push_back(classId);
 		componentObjClassSubIds.push_back(classSubId);
+		componentObjConfirmed.push_back(confirmed);
 	}
 
 
@@ -1799,12 +1853,13 @@ int Source::ComputeComponentObjClassId()
 }//close ComputeComponentObjClassId()
 
 
-int Source::ComputeObjClassId(int& classId,int& classSubId,std::vector<AstroObject>& astroObjects)
+int Source::ComputeObjClassId(int& classId,int& classSubId,bool& confirmed,std::vector<AstroObject>& astroObjects)
 {
 	//Set to unknown if no astro object data present
 	if(astroObjects.empty()){
 		classId= eUNKNOWN_OBJECT; 
 		classSubId= eUNKNOWN_OBJECT; 
+		confirmed= false;
 		return 0;
 	}
 
@@ -1814,13 +1869,16 @@ int Source::ComputeObjClassId(int& classId,int& classSubId,std::vector<AstroObje
 	if(nObjs==1){
 		classId= astroObjects[0].id;
 		classSubId= astroObjects[0].subid;
+		confirmed= astroObjects[0].confirmed;
 	}
 	else{
 		std::vector<int> objIds;
-		std::vector<int> objSubIds;		
+		std::vector<int> objSubIds;
+		std::vector<bool> objConfirmeds;		
 		for(int i=0;i<nObjs;i++){
 			objIds.push_back(astroObjects[i].id);
 			objSubIds.push_back(astroObjects[i].subid);	
+			objConfirmeds.push_back(astroObjects[i].confirmed);
 		}
 		int nmodes_id= 0;
 		int mode_id= CodeUtils::FindVectorMode(objIds.begin(),objIds.end(),nmodes_id);
@@ -1830,11 +1888,18 @@ int Source::ComputeObjClassId(int& classId,int& classSubId,std::vector<AstroObje
 		else classId= eMULTI_CLASS_OBJECT;
 		if(nmodes_subid==1) classSubId= mode_subid;
 		else classSubId= eMULTI_CLASS_OBJECT;
+		int nmodes_confirmed= 0;
+		bool mode_confirmed= CodeUtils::FindVectorMode(objConfirmeds.begin(),objConfirmeds.end(),nmodes_confirmed);
+		if(nmodes_confirmed==1) confirmed= mode_confirmed;
+		else confirmed= false;
 	}
 
 	return 0;
 
 }//close ComputeObjClassId()
+
+
+
 
 int Source::AddAstroObject(AstroObject& astroObject)
 {
@@ -1846,6 +1911,25 @@ int Source::AddAstroObject(AstroObject& astroObject)
 		return 0;
 	}
 
+	//Search if object is already present 
+	bool found= false;
+	for(size_t i=0;i<m_astroObjects.size();i++)
+	{
+		std::string thisObjName= m_astroObjects[i].name; 
+		if(astroObject.name==thisObjName){
+			found= true;
+			break;
+		}	
+	}
+
+	//Add to collection if not present and re-compute class id
+	if(!found){
+		m_astroObjects.push_back(astroObject);
+		m_hasAstroObjectData= true;
+		ComputeObjClassId();
+	}
+
+	/*
 	//Search if object is already present 
 	auto it= std::find_if(
 		m_astroObjects.begin(),
@@ -1861,6 +1945,7 @@ int Source::AddAstroObject(AstroObject& astroObject)
 		m_hasAstroObjectData= true;
 		ComputeObjClassId();
 	}
+	*/
 
 	return 0;
 
@@ -1901,6 +1986,31 @@ int Source::AddComponentAstroObject(int componentIndex,AstroObject& astroObject)
 	}
 
 	//Search if object is already present 
+	bool found= false;
+	for(size_t i=0;i<m_componentAstroObjects[componentIndex].size();i++)
+	{
+		std::string thisObjName= m_componentAstroObjects[componentIndex][i].name; 
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Astro object no. "<<i+1<<": name="<<thisObjName<<" (objName="<<astroObject.name<<")");
+		#endif
+		if(astroObject.name==thisObjName){
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Astro object no. "<<i+1<<": name="<<thisObjName<<" (objName="<<astroObject.name<<") found!");
+			#endif
+			found= true;
+			break;
+		}	
+	}
+
+	//Add to collection if not present and re-compute class id
+	if(!found){
+		m_componentAstroObjects[componentIndex].push_back(astroObject);
+		m_hasComponentAstroObjectData= true;
+		ComputeComponentObjClassId();
+	}
+
+	/*
+	//Search if object is already present 
 	auto it= std::find_if(
 		m_componentAstroObjects[componentIndex].begin(),
 		m_componentAstroObjects[componentIndex].end(), 
@@ -1915,6 +2025,7 @@ int Source::AddComponentAstroObject(int componentIndex,AstroObject& astroObject)
 		m_hasComponentAstroObjectData= true;
 		ComputeComponentObjClassId();
 	}
+	*/
 	
 	return 0;
 

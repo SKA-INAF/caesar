@@ -131,9 +131,13 @@ class SourceSelector : public TObject
 		*/
 		static bool SourceComponentPeakFluxCut(Source* aSource,Cut* cut);
 		/**
-		* \brief Select source fitted components by peak amplitude flux 
+		* \brief Select source fitted components by peak flux significance (Z=(S-bkg)/rms) 
 		*/
 		static bool SourceComponentPeakSignificanceCut(Source* aSource,Cut* cut);
+		/**
+		* \brief Select source fitted components by peak flux signal to noise (SNR=S/rms)
+		*/
+		static bool SourceComponentPeakSNRCut(Source* aSource,Cut* cut);
 		/**
 		* \brief Select source fitted components by type
 		*/
@@ -146,6 +150,15 @@ class SourceSelector : public TObject
 		* \brief Select source fitted components by centroid distance
 		*/
 		static bool SourceComponentCentroidDistanceCut(Source* aSource,Cut* cut);
+		/**
+		* \brief Select source fitted components by fit ellipse/beam eccentricity ratio
+		*/
+		static bool SourceComponentEccentricityRatioCut(Source* aSource,Cut* cut);
+		/**
+		* \brief Select source fitted components by fit ellipse/beam area ratio
+		*/
+		static bool SourceComponentBeamAreaRatioCut(Source* aSource,Cut* cut);
+
 
 		/**
 		* \brief Select source by number of pixels

@@ -439,8 +439,8 @@ class SFinder : public TObject {
 		double m_TileStepSizeY;
 		bool m_mergeSourcesAtEdge;
 		bool m_mergeSources;
-		bool m_mergeExtendedSources;
-		bool m_mergeCompactSources;	
+		//bool m_mergeExtendedSources;
+		//bool m_mergeCompactSources;	
 
 		//Stat computation
 		bool m_useParallelMedianAlgo;

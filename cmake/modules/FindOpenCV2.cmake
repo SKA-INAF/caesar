@@ -25,6 +25,7 @@ find_path(OpenCV2_ROOT_INC_DIR NAMES opencv2/opencv.hpp
         #--- WINDOWS
         C:/Developer/include                # Windows
         "$ENV{OPENCV_DIR}/include"     # *NIX: custom install
+				"$ENV{OPENCV_DIR}/include/opencv4"     # *NIX: custom install (OpenCV >=4)
         /usr/local/include                  # Linux: default dir by CMake
         /usr/include                        # Linux
         /opt/local/include                  # OS X: default MacPorts location

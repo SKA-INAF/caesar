@@ -269,6 +269,16 @@
 #pragma link C++ class Caesar::SpectralIndexData+;
 #pragma link C++ class vector<Caesar::SpectralIndexData>+;
 #pragma link C++ class vector<Caesar::SpectralIndexData*>+;
+#pragma link C++ class Caesar::PLSpectralIndexData+;
+#pragma link C++ class vector<Caesar::PLSpectralIndexData>+;
+#pragma link C++ class vector<Caesar::PLSpectralIndexData*>+;
+#pragma link C++ class Caesar::PolSpectralIndexData+;
+#pragma link C++ class vector<Caesar::PolSpectralIndexData>+;
+#pragma link C++ class vector<Caesar::PolSpectralIndexData*>+;
+#pragma link C++ class Caesar::SASpectralIndexData+;
+#pragma link C++ class vector<Caesar::SASpectralIndexData>+;
+#pragma link C++ class vector<Caesar::SASpectralIndexData*>+;
+
 #pragma link C++ class Caesar::SourceMatchPars+;
 #pragma link C++ class vector<Caesar::SourceMatchPars>+;
 #pragma link C++ class vector<Caesar::SourceMatchPars*>+;

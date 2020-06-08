@@ -79,6 +79,10 @@ class AstroObjectParser : public TObject
 		*/
 		static int ParseSimbadData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='|');
 		/**
+		* \brief Get objects from GAIA ascii catalog
+		*/
+		static int ParseGaiaData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='|');
+		/**
 		* \brief Get objects from NED ascii catalog
 		*/
 		static int ParseNedData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='|');
@@ -86,6 +90,10 @@ class AstroObjectParser : public TObject
 		* \brief Get objects from HASH ascii catalog
 		*/
 		static int ParseHASHData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='|');
+		/**
+		* \brief Get objects from MASH ascii catalog
+		*/
+		static int ParseMASHData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='|');
 		/**
 		* \brief Get objects from Wise HII ascii catalog
 		*/
@@ -106,6 +114,14 @@ class AstroObjectParser : public TObject
 		* \brief Get objects from Selavy ascii catalog
 		*/
 		static int ParseSelavyData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter=' ');
+		/**
+		* \brief Get objects from Aegean ascii catalog
+		*/
+		static int ParseAegeanData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='\t');
+		/**
+		* \brief Get objects from Caesar ascii catalog
+		*/
+		static int ParseCaesarData(std::vector<AstroObject*>& astroObjects,std::string filename,char delimiter='\t');
 	
 
 	protected:
@@ -114,6 +130,10 @@ class AstroObjectParser : public TObject
 		*/
 		static int ParseSimbadObjectData(AstroObject& astroObject,std::string data,char delimiter='|');
 		/**
+		* \brief Parse GAIA ascii catalog line
+		*/
+		static int ParseGaiaObjectData(AstroObject& astroObject,std::string data,char delimiter='|');
+		/**
 		* \brief Parse NED ascii catalog line
 		*/
 		static int ParseNedObjectData(AstroObject& astroObject,std::string data,char delimiter='|');	
@@ -121,6 +141,10 @@ class AstroObjectParser : public TObject
 		* \brief Parse HASH ascii catalog line
 		*/
 		static int ParseHASHObjectData(AstroObject& astroObject,std::string data,char delimiter='|');
+		/**
+		* \brief Parse MASH ascii catalog line
+		*/
+		static int ParseMASHObjectData(AstroObject& astroObject,std::string data,char delimiter='|');
 		/**
 		* \brief Parse Wise HII ascii catalog line
 		*/
@@ -141,6 +165,14 @@ class AstroObjectParser : public TObject
 		* \brief Parse Selavy component ascii catalog line
 		*/
 		static int ParseSelavyObjectData(AstroObject& astroObject,std::string data,char delimiter=' ');
+		/**
+		* \brief Parse Aegean component ascii catalog line
+		*/
+		static int ParseAegeanObjectData(AstroObject& astroObject,std::string data,char delimiter='\t');
+		/**
+		* \brief Parse Caesar component ascii catalog line
+		*/
+		static int ParseCaesarObjectData(AstroObject& astroObject,std::string data,char delimiter='\t');
 		/**
 		* \brief Read catalog ascii data
 		*/

@@ -185,9 +185,6 @@ int SourceGroup::AddSource(Source* aSource,int clone)
 int SourceGroup::GetSourceNames(std::vector<std::string>& snames)
 {
 	snames.clear();
-	#ifdef LOGGING_ENABLED
-		INFO_LOG("m_sources size="<<m_sources.size());	
-	#endif
 
 	if(m_sources.empty()) return -1;
 

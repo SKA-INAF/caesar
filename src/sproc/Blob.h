@@ -454,6 +454,27 @@ class Blob : public TNamed {
 			ymin= m_Ymin;
 			ymax= m_Ymax;
 		}
+
+		/**
+		* \brief Get source pixel x_min
+		*/
+		long int GetXmin(){return m_Xmin;}
+
+		/**
+		* \brief Get source pixel x_max
+		*/
+		long int GetXmax(){return m_Xmax;}
+
+		/**
+		* \brief Get source pixel y_min
+		*/
+		long int GetYmin(){return m_Ymin;}
+
+		/**
+		* \brief Get source pixel y_max
+		*/
+		long int GetYmax(){return m_Ymax;}
+
 		/**
 		* \brief Set source x-y range
 		*/
@@ -493,6 +514,7 @@ class Blob : public TNamed {
 		* \brief Get source pixel iy_max
 		*/
 		long int GetIyMax(){return m_Iy_max;}
+
 
 		/**
 		* \brief Set source pixel coordinate range

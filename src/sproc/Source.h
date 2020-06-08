@@ -457,6 +457,10 @@ class Source : public Blob {
 		* \brief Fit source with a multi-component gaussian model
 		*/
 		int Fit(SourceFitOptions& fitOptions);
+		/**
+		* \brief Fit source with a multi-component gaussian model using provided start fit parameters
+		*/
+		int Fit(SourceFitOptions& fitOptions,SourceFitPars& initfitPars);
 
 		/**
 		* \brief Set true source info
@@ -502,6 +506,24 @@ class Source : public Blob {
 		void SetFitPars(SourceFitPars& fitPars){
 			m_fitPars= fitPars;
 			m_HasFitInfo= true;
+		}
+
+		/**
+		* \brief Set fit component flag
+		*/
+		int SetFitComponentFlag(int componentId,int flag)
+		{
+			if(!m_HasFitInfo) return -1;
+			return m_fitPars.SetComponentFlag(componentId,flag);
+		}
+
+		/**
+		* \brief Get fit component flag
+		*/
+		int GetFitComponentFlag(int& flag,int componentId)
+		{
+			if(!m_HasFitInfo) return -1;
+			return m_fitPars.GetComponentFlag(flag,componentId);
 		}
 
 		/**
@@ -746,6 +768,7 @@ class Source : public Blob {
 		*/
 		int ComputeComponentObjClassId();
 
+
 	protected:
 		/**
 		* \brief Find source match by position
@@ -760,7 +783,8 @@ class Source : public Blob {
 		/**
 		* \brief Compute object class id from astro object data (if available)
 		*/
-		int ComputeObjClassId(int& id,int& subid,std::vector<AstroObject>& data);
+		int ComputeObjClassId(int& id,int& subid,bool& confirmed,std::vector<AstroObject>& data);
+		
 
 	private:
 	
@@ -781,11 +805,13 @@ class Source : public Blob {
 		int ObjLocationId;
 		int ObjClassId;
 		int ObjClassSubId;
+		bool ObjConfirmed;
 
 		//Component object type
 		std::vector<int> componentObjLocationIds;
 		std::vector<int> componentObjClassIds;
 		std::vector<int> componentObjClassSubIds;
+		std::vector<bool> componentObjConfirmed;
 
 	private:
 		double m_BeamFluxIntegral;
@@ -822,7 +848,7 @@ class Source : public Blob {
 		bool m_hasComponentAstroObjectData;
 		std::vector<std::vector<AstroObject>> m_componentAstroObjects;
 		
-		ClassDef(Source,7)
+		ClassDef(Source,8)
 
 	public:
 		

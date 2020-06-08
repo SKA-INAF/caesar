@@ -65,6 +65,7 @@ int ResoPars::nPars;
 int BiasPars::nPars;
 int EfficiencyPars::nPars;
 int SpectrumPars::nPars;
+int SourceCountsResoBiasPars::nPars;
 
 
 //==========================================
@@ -468,9 +469,12 @@ TF1* SpectrumUtils::ComputeResoModel(ResoPars& resoPars,double xmin,double xmax,
 		resoModelFcn= new TF1("ResoModel","[0]",xmin,xmax);
 	}	
 	else if(resoModel==eEXP_RESO){
-		resoModelFcn= new TF1("ResoModel",SpectrumUtils::ResolutionModel,xmin,xmax,nResoPars);
+		resoModelFcn= new TF1("ResoModel",SpectrumUtils::ExpResolutionModel,xmin,xmax,nResoPars);
 	}	
-	
+	else if(resoModel==eEXP_STEP_RESO){
+		resoModelFcn= new TF1("ResoModel",SpectrumUtils::ExpStepResolutionModel,xmin,xmax,nResoPars);
+	}
+
 	//Set model parameters
 	resoModelFcn->SetNpx(npts);
 	resoModelFcn->SetParameters(resoParList.data());	
@@ -682,7 +686,7 @@ TH2D* SpectrumUtils::ComputeParametricResponse(SpectrumPars& spectrumPars,BiasPa
 	}
 
 	//## Init response matrix
-	TH2D* ResponseMat= new TH2D("ResponseMat","ResponseMat",NTrueBins,BinEdge_True,NRecBins,BinEdge_Rec);
+	TH2D* ResponseMat= new TH2D("","",NTrueBins,BinEdge_True,NRecBins,BinEdge_Rec);
 	ResponseMat->Sumw2();
 
 
@@ -822,7 +826,7 @@ TH2D* SpectrumUtils::BuildResponseMatrix(SpectrumPars& spectrumPars,BiasPars& bi
 	
 
 	//## Init response matrix
-	TH2D* ResponseMat= new TH2D("ResponseMat","ResponseMat",NTrueBins,BinEdge_True,NRecBins,BinEdge_Rec);
+	TH2D* ResponseMat= new TH2D("","",NTrueBins,BinEdge_True,NRecBins,BinEdge_Rec);
 	ResponseMat->Sumw2();
 
 	
@@ -859,7 +863,7 @@ TH2D* SpectrumUtils::BuildResponseMatrix(SpectrumPars& spectrumPars,BiasPars& bi
 			double Rji= eff*response;
 			
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("lgS_true="<<lgS_true<<" ["<<lgSMin_true<<","<<lgSMax_true<<"], lgS_rec="<<lgS_rec<<" ["<<lgSMin_rec<<","<<lgSMax_rec<<"], N="<<N<<", eff="<<eff<<", bias="<<bias<<", reso="<<reso<<", Rji="<<Rji);
+				DEBUG_LOG("lgS_true="<<lgS_true<<" ["<<lgSMin_true<<","<<lgSMax_true<<"], lgS_rec="<<lgS_rec<<" ["<<lgSMin_rec<<","<<lgSMax_rec<<"], N="<<N<<", eff="<<eff<<", bias="<<bias<<", reso="<<reso<<", Rji="<<Rji);
 			#endif
 			
 			ResponseMat->SetBinContent(i+1,j+1,Rji);
@@ -1127,7 +1131,9 @@ double SpectrumUtils::GetTwoBrokenPowerLawIntegral(double Gamma1,double Gamma2,d
 
 }//close GetTwoBrokenPowerLawIntegral()
 
-double SpectrumUtils::ResolutionModel(double* x, double* par)
+
+
+double SpectrumUtils::ExpResolutionModel(double* x, double* par)
 {
 	double lgS= x[0];
 	double norm= par[0];
@@ -1135,8 +1141,21 @@ double SpectrumUtils::ResolutionModel(double* x, double* par)
 	double fval= norm*exp(-beta*lgS);
 	return fval;
 
-}//close ResolutionModel()
+}//close ExpResolutionModel()
 
+double SpectrumUtils::ExpStepResolutionModel(double* x, double* par)
+{
+	double lgS= x[0];
+	double norm= par[0];
+	double beta= par[1];
+	double lgS_step= par[2];
+	double fval= norm*exp(-beta*lgS);
+	double fval_step= norm*exp(-beta*lgS_step);
+	if(lgS<=lgS_step) fval= fval_step; 
+
+	return fval;
+
+}//close ExpStepResolutionModel()
 
 double SpectrumUtils::ExpBiasModel(double* x, double* par)
 {
@@ -1314,6 +1333,9 @@ double SpectrumUtils::ResponseModel(double* x, double* par)
 	else if(resoModel==eEXP_RESO){
 		nResoPars= ExpResoPars::GetParNumber();
 	}
+	else if(resoModel==eEXP_STEP_RESO){
+		nResoPars= ExpStepResoPars::GetParNumber();
+	}
 	else{
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Invalid/unknown reso model given ("<<resoModel<<"), returning zero!");
@@ -1335,9 +1357,11 @@ double SpectrumUtils::ResponseModel(double* x, double* par)
 		reso= resoPars[0];
 	}	
 	else if(resoModel==eEXP_RESO){
-		reso= ResolutionModel(&lgS_true,resoPars);
+		reso= ExpResolutionModel(&lgS_true,resoPars);
 	}
-	
+	else if(resoModel==eEXP_STEP_RESO){
+		reso= ExpStepResolutionModel(&lgS_true,resoPars);
+	}
 
 	//## Set efficiency pars
 	int effModel= par[par_counter++];
@@ -1387,9 +1411,124 @@ double SpectrumUtils::ResponseModel(double* x, double* par)
 }//close ResponseModel()
 
 
+//==========================================
+//      SOURCE COUNTS RESO BIAS MODEL
+//==========================================
+double SpectrumUtils::PhiMaxModel(double* x,double* pars)
+{
+	double S_Jy= x[0];
+	double S= S_Jy*1.e+3;//mJy
+	double bmaj= pars[0];
+	double bmin= pars[1];
+	double Sthr= pars[2];//in mJy
+	double sourceAngSize= 0;
+	if(S/Sthr>1) sourceAngSize= sqrt(bmaj*bmin)*sqrt(S/Sthr-1);
+	
+	return sourceAngSize;
+
+}//close PhiMaxPDF()
 
 
+double SpectrumUtils::PhiMinModel(double* x,double* pars)
+{
+	double Sp_Jy= x[0];
+	double Sp= Sp_Jy*1.e+3;//mJy
+	double bmaj= pars[0];
+	double bmin= pars[1];
+	double rms= pars[2];//mJy
+	double p0= pars[3];
+	double p1= pars[4];
+	double beta= pars[5];
+	
+	double arg= p0+p1/pow(Sp/rms,beta);
+	//double arg= p0+p1/pow(Sp/rms,beta)-1;
+	double sourceAngSize= 0;
+	if(arg>=0) sourceAngSize= sqrt(bmaj*bmin)*sqrt(arg);
+	
+	return sourceAngSize;
 
+}//close PhiMinPDF()
+
+double SpectrumUtils::PhiMedianModel(double* x,double* pars)
+{
+	double S_Jy= x[0];
+	double S= S_Jy*1.e+3;//mJy
+	double nu= pars[0];
+	double alpha= pars[1];
+	double beta= pars[2];
+	double S_break= pars[3];//in mJy
+	double scaleFactor= pars[4]; 
+
+	double nu_ref= 1.4;//GHz
+	double S_ref= S*pow(nu_ref/nu,alpha);
+	double phi0= 2.0;//in arcsec
+	double phi= 0;//in arcsec
+	
+	//if(S<S_break) phi= phi0;
+	if(S_ref<S_break) phi= phi0;
+	else phi= phi0*pow(S_ref,beta);
+	
+
+	phi*= scaleFactor;
+	
+	//cout<<"S="<<S<<", S_ref="<<S_ref<<", alpha="<<alpha<<", nu="<<nu<<", beta="<<beta<<", scaleFactor="<<scaleFactor<<endl;
+
+	return phi;
+
+}//close PhiMedianPDF()
+
+
+double SpectrumUtils::SourceCountsResoBiasModel(double* x,double* pars)
+{
+	double S_Jy= x[0];
+	double S= S_Jy*1.e+3;//mJy
+	double bmaj= pars[0];
+	double bmin= pars[1];
+	double rms= pars[2];
+	double Sthr= pars[3];
+	double p0= pars[4];
+	double p1= pars[5];
+	double beta= pars[6];
+	double nu= pars[7];
+	double alpha= pars[8];
+	double beta_phimedian= pars[9];
+	double S_break= pars[10];
+	double scaleFactor= pars[11];
+	
+	//Compute phi min/max
+	double pars_phiMin[]= {bmaj,bmin,rms,p0,p1,beta};
+	double phiMin= SpectrumUtils::PhiMinModel(x,pars_phiMin);
+
+	double pars_phiMax[]= {bmaj,bmin,Sthr};
+	double phiMax= SpectrumUtils::PhiMaxModel(x,pars_phiMax);
+	
+	//Compute phi limit
+	double phiLimit= std::max(phiMin,phiMax);
+	
+	//Compute phi median
+	double pars_phiMedian[]= {nu,alpha,beta_phimedian,S_break,scaleFactor};
+	double phiMedian= SpectrumUtils::PhiMedianModel(x,pars_phiMedian);
+
+	//Compute h fcn
+	double h= exp(-log(2.)*pow(phiLimit/phiMedian,0.62));
+
+	//cout<<"S="<<S<<", phi min/max/prime="<<phiMin<<"/"<<phiMax<<"/"<<phiMaxPrime<<", phiLimit="<<phiLimit<<", phiMedian="<<phiMedian<<", phiLimit/phiMedian="<<phiLimit/phiMedian<<", h="<<h<<endl; 
+	
+	return h;
+
+}//close SourceCountsResoBiasModel()
+
+double SpectrumUtils::SourceCountsResoBiasCorrFactor(double* x,double* pars)
+{
+	double lgS= x[0];
+	double S= pow(10,lgS);
+	double h= SpectrumUtils::SourceCountsResoBiasModel(&S,pars);
+	double corrFactor= 1;
+	if(h!=1) corrFactor= 1./(1.-h);
+
+	return corrFactor;
+
+}//close SourceCountsResoBiasCorrFactor()
 
 //==========================================
 //      SPECTRUM PARS
@@ -1425,4 +1564,7 @@ double TwoBrokenPowerLawsPars::GetIntegral(double xmin,double xmax)
 	double Break= pars.GetPar(3)->GetValue();
 	return SpectrumUtils::GetTwoBrokenPowerLawIntegral(Gamma1,Gamma2,Break,xmin,xmax);
 }
+
+
+
 

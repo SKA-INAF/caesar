@@ -25,7 +25,7 @@ from astropy.units import Quantity
 from astropy.modeling.parameters import Parameter
 from astropy.modeling.core import Fittable2DModel
 from astropy.modeling.models import Box2D, Gaussian2D, Ring2D, Ellipse2D, TrapezoidDisk2D, Disk2D, AiryDisk2D, Sersic2D
-from photutils.datasets import make_noise_image
+#from photutils.datasets import make_noise_image
 from astropy import wcs
 
 ## ROOT
@@ -91,9 +91,22 @@ def get_args():
 	parser.add_argument('--no-compactsources', dest='enable_compactsources', action='store_false')	
 	parser.set_defaults(enable_compactsources=True)	
 	parser.add_argument('-nsources', '--nsources', dest='nsources', required=False, type=int, default=0, action='store',help='Compact source number (if >0 overrides the density generation) (default=0)')
+	parser.add_argument('-nx_gen', '--nx_gen', dest='nx_gen', required=False, type=int, default=501, action='store',help='Blob image width in pixels')
+	parser.add_argument('-ny_gen', '--ny_gen', dest='ny_gen', required=False, type=int, default=501, action='store',help='Blob image height in pixels')
 	parser.add_argument('-zmin', '--zmin', dest='zmin', required=False, type=float, default=1, action='store',help='Minimum source significance level in sigmas above the bkg (default=1)')
 	parser.add_argument('-zmax', '--zmax', dest='zmax', required=False, type=float, default=30, action='store',help='Maximum source significance level in sigmas above the bkg (default=30)')
 	parser.add_argument('-source_density', '--source_density', dest='source_density', required=False, type=float, default=1000, action='store',help='Compact source density (default=1000)')
+	parser.add_argument('-bmaj_min', '--bmaj_min', dest='bmaj_min', required=False, type=float, default=4, action='store',help='Gaussian components min bmaj in arcsec (default=4)')
+	parser.add_argument('-bmaj_max', '--bmaj_max', dest='bmaj_max', required=False, type=float, default=10, action='store',help='Gaussian components max bmaj in arcsec (default=10)')
+	parser.add_argument('-bmin_min', '--bmin_min', dest='bmin_min', required=False, type=float, default=4, action='store',help='Gaussian components  min bmin in arcsec (default=4)')
+	parser.add_argument('-bmin_max', '--bmin_max', dest='bmin_max', required=False, type=float, default=10, action='store',help='Gaussian components  max bmin in arcsec (default=10)')
+	parser.add_argument('-pa_min', '--pa_min', dest='pa_min', required=False, type=float, default=-90, action='store',help='Gaussian components  min position angle in deg (default=0)')
+	parser.add_argument('-pa_max', '--pa_max', dest='pa_max', required=False, type=float, default=90, action='store',help='Gaussian components  max position angle in deg (default=180)')
+	parser.add_argument('-Smin', '--Smin', dest='Smin', required=False, type=float, default=1.e-6, action='store',help='Minimum source flux in Jy (default=1.e-6)')
+	parser.add_argument('-Smax', '--Smax', dest='Smax', required=False, type=float, default=1, action='store',help='Maximum source flux in Jy (default=1)')	
+	parser.add_argument('-Smodel', '--Smodel', dest='Smodel', required=False, type=str, default='uniform', action='store',help='Source flux generation model (default=uniform)')
+	parser.add_argument('-Sslope', '--Sslope', dest='Sslope', required=False, type=float, default=1.6, action='store',help='Slope par in expo source flux generation model (default=1.6)')
+	
 
 	# - EXTENDED SOURCES
 	parser.add_argument('--extsources', dest='enable_extsources', action='store_true')	
@@ -213,6 +226,7 @@ class RingSector2D(Fittable2DModel):
 ###########################
 ##     SIMULATOR CLASS
 ###########################
+SIGMA_TO_FWHM= np.sqrt(8*np.log(2))
 
 class SkyMapSimulator(object):
 
@@ -257,6 +271,10 @@ class SkyMapSimulator(object):
 
 		## Compact source parameters
 		self.simulate_compact_sources= True
+		self.nx_gen= 1001
+		self.ny_gen= 1001
+		self.gridy_gen, self.gridx_gen = np.mgrid[0:self.ny_gen, 0:self.nx_gen]
+
 		self.nsources= 0 # default is density generator
 		self.source_density= 2000. # in sources/deg^2
 		self.beam_bmaj= 6.5 # in arcsec
@@ -266,6 +284,17 @@ class SkyMapSimulator(object):
 		self.zmin= 1 # in sigmas 
 		self.zmax= 30 # in sigmas
 		self.npixels_min= 5
+
+		self.beam_bpa_min= -90 # deg
+		self.beam_bpa_max= 90 # deg
+		self.beam_bmaj_min= 4	# arcsec
+		self.beam_bmaj_max= 10 # arcsec
+		self.beam_bmin_min= 4	# arcsec 
+		self.beam_bmin_max= 10 # arcsec
+		self.Smin= 1.e-6 # in Jy 
+		self.Smax= 1 # in Jy
+		self.Smodel= 'uniform'
+		self.Sslope= 1.6
 		
 		## Extended source parameters
 		self.simulate_ext_sources= True
@@ -345,6 +374,11 @@ class SkyMapSimulator(object):
 		self.ctype1= x
 		self.ctype2= y
 	
+	def set_gen_blob_img_size(self,nx,ny):
+		""" Set size of blob image used for compact source generation (must be odd) """
+		self.nx_gen= nx
+		self.ny_gen= ny
+
 	def enable_compact_sources(self,choice):
 		""" Enable/disable compact source generation """
 		self.simulate_compact_sources= choice
@@ -417,6 +451,34 @@ class SkyMapSimulator(object):
 		""" Set compact source density in deg^-2 """
 		self.source_density= density
 
+	def set_source_flux_rand_model(self,model):
+		""" Set the source flux random model """
+		self.Smodel= model
+
+	def set_source_flux_rand_exp_slope(self,slope):
+		""" Set the source flux expo model slope par """
+		self.Sslope= slope	
+	
+	def set_source_flux_range(self,Smin,Smax):
+		""" Set source flux range """
+		self.Smin= Smin
+		self.Smax= Smax
+
+	def set_beam_bmaj_range(self,bmaj_min,bmaj_max):
+		""" Set beam bmaj range """
+		self.beam_bmaj_min= bmaj_min
+		self.beam_bmaj_max= bmaj_max	
+	
+	def set_beam_bmin_range(self,bmin_min,bmin_max):
+		""" Set beam bmin range """
+		self.beam_bmin_min= bmin_min
+		self.beam_bmin_max= bmin_max	
+
+	def set_beam_pa_range(self,pa_min,pa_max):
+		""" Set beam pa range """
+		self.beam_bpa_min= pa_min
+		self.beam_bpa_max= pa_max	
+
 	def set_ext_nsources(self,n):
 		""" Set number of extended sources to be generated """
 		if n<0:	
@@ -482,10 +544,35 @@ class SkyMapSimulator(object):
 		sigma= fwhm/(2.*np.sqrt(2.*np.log(2.)))
 		return sigma
 
+	def check_random_state(self,seed):
+		""" Turn seed into a np.random.RandomState instance """
+		if seed is None or seed is np.random:
+			return np.random.mtrand._rand
+		if isinstance(seed, (numbers.Integral, np.integer)):
+			return np.random.RandomState(seed)
+		if isinstance(seed, np.random.RandomState):
+			return seed
+		raise ValueError('%r cannot be used to seed a numpy.random.RandomState instance' % seed)
+
+	def make_gaus_noise_image(self,shape, mean=None, stddev=None,random_state=None):
+		""" Generate gaussian noise numpy array """
+
+		if mean is None:
+			raise ValueError('"mean" must be input')
+		if stddev is None:
+			raise ValueError('"stddev" must be input for Gaussian noise')
+
+		prng = self.check_random_state(random_state)
+		image = prng.normal(loc=mean, scale=stddev, size=shape)
+  
+		return image
+
+
 	def generate_bkg(self):
 		""" Generate bkg data """
 		shape = (self.ny, self.nx)
-		bkg_data = make_noise_image(shape, type='gaussian', mean=self.bkg_level, stddev=self.bkg_rms)
+		#bkg_data = make_noise_image(shape, type='gaussian', mean=self.bkg_level, stddev=self.bkg_rms)
+		bkg_data = self.make_gaus_noise_image(shape, mean=self.bkg_level, stddev=self.bkg_rms)
 		return bkg_data
     
 	def generate_blob(self,ampl,x0,y0,sigmax,sigmay,theta,trunc_thr=0.01):
@@ -499,18 +586,17 @@ class SkyMapSimulator(object):
 		"""
 		#modelFcn= Gaussian2D(ampl,x0,y0,sigmax,sigmay,theta=math.radians(theta)) 
 		data= Gaussian2D(ampl,x0,y0,sigmax,sigmay,theta=math.radians(theta))(self.gridx, self.gridy)
-		
 
 		## Truncate data such that sum(data)_trunc/sum(data)<f
 		f= trunc_thr 
 		if self.truncate_models:
 			totFlux= (float)(np.sum(data,axis=None))
-			print('Blob total flux=%s' % str(totFlux))
+			#print('Blob total flux=%s' % str(totFlux))
 
 			data_vect_sorted= np.ravel(data)
 			data_csum= np.cumsum(data_vect_sorted)/totFlux
 			fluxThr= data_vect_sorted[np.argmin(data_csum<f)]
-			print('Blob fluxThr=%s' % str(fluxThr))
+			#print('Blob fluxThr=%s' % str(fluxThr))
 			data[data<fluxThr] = 0		
 
 		## Truncate data at minimum significance
@@ -519,6 +605,32 @@ class SkyMapSimulator(object):
 		#	data[data<ampl_min] = 0		
 
 		return data
+
+
+	def generate_blob_faster(self,ampl,x0,y0,sigmax,sigmay,theta,trunc_thr=0.01):
+		""" Generate a blob 
+				Arguments: 
+					ampl: peak flux in Jy
+					x0, y0: gaussian means in pixels
+					sigmax, sigmay: gaussian sigmas in pixels
+					theta: rotation in degrees
+					trunc_thr: truncation significance threshold
+		"""
+		data= Gaussian2D(ampl,x0,y0,sigmax,sigmay,theta=math.radians(theta))(self.gridx_gen, self.gridy_gen)
+
+		## Truncate data such that sum(data)_trunc/sum(data)<f
+		f= trunc_thr 
+		if self.truncate_models:
+			totFlux= (float)(np.sum(data,axis=None))
+			
+			data_vect_sorted= np.ravel(data)
+			data_csum= np.cumsum(data_vect_sorted)/totFlux
+			fluxThr= data_vect_sorted[np.argmin(data_csum<f)]
+			data[data<fluxThr] = 0		
+
+		return data
+
+
 
 	def generate_ring(self,ampl,x0,y0,radius,width):
 		""" Generate a ring 
@@ -600,7 +712,7 @@ class SkyMapSimulator(object):
 
 		return data
 
-	def make_caesar_source(self,source_data,source_name,source_id,source_type,source_sim_type,ampl=None,x0=None,y0=None,source_max_scale=None):
+	def make_caesar_source(self,source_data,source_name,source_id,source_type,source_sim_type,ampl=None,x0=None,y0=None,source_max_scale=None,offsetx=0,offsety=0):
 		""" Create Caesar source from source data array """
 
 		# Create Caesar source
@@ -618,7 +730,7 @@ class SkyMapSimulator(object):
 			iy= rowId
 			#iy= nRows-1-rowId
 			gbin= ix + iy*nCols
-			pixel= Caesar.Pixel(gbin,ix,iy,ix,iy,S)
+			pixel= Caesar.Pixel(gbin,ix,iy,ix+offsetx,iy+offsety,S)
 			source.AddPixel(pixel)
 
 			# Is at edge
@@ -639,6 +751,8 @@ class SkyMapSimulator(object):
 			data_binary= np.where(source_data!=0,1,0)
 			#print 'INFO: data_binary sum=%d', sum(data_binary)
 			[y0,x0]= ndimage.measurements.center_of_mass(data_binary)
+			x0+= offsetx
+			y0+= offsety	
 
 		if ampl is None:
 			print ('INFO: No source true flux given, computing integral from data...')
@@ -715,21 +829,48 @@ class SkyMapSimulator(object):
 		"""
 		# Compute number of sources to be generated given map area in pixels
 		#area= (self.nx*self.ny)*self.pixsize/(3600.*3600.) # in deg^2
-		area= ((self.nx-2*self.marginx)*(self.ny-2*self.marginy))*self.pixsize/(3600.*3600.) # in deg^2
+		dx_deg= (self.nx-2*self.marginx)*self.pixsize/3600.
+		dy_deg= (self.ny-2*self.marginy)*self.pixsize/3600.
+		#area= ((self.nx-2*self.marginx)*(self.ny-2*self.marginy))*self.pixsize/(3600.*3600.) # in deg^2
+		area= dx_deg*dy_deg
 
 		if self.nsources>0:
 			nsources= self.nsources
 		else: # density generator
 			nsources= int(round(self.source_density*area))
-		S_min= (self.zmin*self.bkg_rms) + self.bkg_level
-		S_max= (self.zmax*self.bkg_rms) + self.bkg_level
-		lgS_min= np.log(S_min)
-		lgS_max= np.log(S_max)
+		#S_min= (self.zmin*self.bkg_rms) + self.bkg_level
+		#S_max= (self.zmax*self.bkg_rms) + self.bkg_level
+		#lgS_min= np.log(S_min)
+		#lgS_max= np.log(S_max)
+		#randomize_flux= False
+		#if self.zmin<self.zmax:
+		#	randomize_flux= True
+
+		S_min= self.Smin # Jy/pixel
+		S_max= self.Smax # Jy/pixel
+		lgS_min= np.log10(S_min)
+		lgS_max= np.log10(S_max)
 		randomize_flux= False
-		if self.zmin<self.zmax:
+		if self.Smin<self.Smax:
 			randomize_flux= True
 
-		print 'INFO: Generating #',nsources,' compact sources in map...'
+		## Set gaus pars generation
+		randomize_gaus= False
+		Bmaj_min= self.beam_bmaj_min
+		Bmaj_max= self.beam_bmaj_max
+		Bmin_min= self.beam_bmin_min
+		Bmin_max= self.beam_bmin_max
+		Pa_min= self.beam_bpa_min
+		Pa_max= self.beam_bpa_max	
+		if self.beam_bmaj_min<self.beam_bmaj_max:
+			randomize_gaus= True
+		if self.beam_bmin_min<self.beam_bmin_max:
+			randomize_gaus= True
+		if self.beam_bpa_min<self.beam_bpa_max:
+			randomize_gaus= True
+
+
+		print('INFO: Generating #%d compact sources in map...' % nsources)
 
 		# Compute blob sigma pars given beam info
 		sigmax= self.compute_beam_sigma(self.beam_bmaj)
@@ -753,20 +894,60 @@ class SkyMapSimulator(object):
 			x0= np.random.uniform(self.marginx,self.nx-self.marginx-1)
 			y0= np.random.uniform(self.marginy,self.ny-self.marginy-1)
 
+			ix= int(np.round(x0))
+			iy= int(np.round(y0))
+
 			## Compute amplitude given significance level and bkg
 			## Generate flux uniform in log
+			#if randomize_flux:
+			#	lgS= np.random.uniform(lgS_min,lgS_max)
+			#	S= np.exp(lgS)
+			#	z= (S-self.bkg_level)/self.bkg_rms
+			#else:
+			#	S= (self.zmin*self.bkg_rms) + self.bkg_level
+			#	z= self.zmin
+
+			## Compute amplitude given significance level and bkg
+			## Generate flux uniform or expo in log
+			## Flux are in Jy/pixel
 			if randomize_flux:
-				lgS= np.random.uniform(lgS_min,lgS_max)
-				S= np.exp(lgS)
-				z= (S-self.bkg_level)/self.bkg_rms
+				if self.Smodel=='uniform':
+					lgS= np.random.uniform(lgS_min,lgS_max)
+				elif self.Smodel=='exp':
+					x= np.random.exponential(scale=1./self.Sslope)
+					lgS= x + lgS_min
+					if lgS>lgS_max:
+						continue
+				else:
+					lgS= np.random.uniform(lgS_min,lgS_max)
+				S= np.power(10,lgS)
 			else:
-				S= (self.zmin*self.bkg_rms) + self.bkg_level
-				z= self.zmin
+				S= S_min
 	
+			z= (S-self.bkg_level)/self.bkg_rms
+	
+			## Generate gaus pars
+			if randomize_gaus:
+				bmin= random.uniform(Bmin_min,Bmin_max)
+				bmaj= random.uniform(bmin,Bmaj_max)
+				pa= random.uniform(Pa_min,Pa_max)
+			else:
+				bmin= self.beam_bmin_min
+				bmaj= self.beam_bmaj_min
+				pa= self.beam_bpa_min
+
+			sigmax= bmaj/(self.pixsize * SIGMA_TO_FWHM)
+			sigmay= bmaj/(self.pixsize * SIGMA_TO_FWHM)
+			theta = 90 + pa	# NB: BPA is the positional angle of the major axis measuring from North (up) counter clockwise, while theta is measured wrt to x axis		
+			source_max_scale= 2*max(bmaj,bmin)
+			
 			## Generate blob
 			t0 = time.time()
-			#blob_data= self.generate_blob(ampl=S,x0=x0,y0=y0,sigmax=sigmax/self.pixsize,sigmay=sigmay/self.pixsize,theta=theta,trunc_thr=self.trunc_model_zmin)
-			blob_data= self.generate_blob(ampl=S,x0=x0,y0=y0,sigmax=sigmax/self.pixsize,sigmay=sigmay/self.pixsize,theta=theta,trunc_thr=self.trunc_thr)
+			#blob_data= self.generate_blob(ampl=S,x0=x0,y0=y0,sigmax=sigmax/self.pixsize,sigmay=sigmay/self.pixsize,theta=theta,trunc_thr=self.trunc_thr)
+
+			x0_tile_gen= int(self.nx_gen/2.)
+			y0_tile_gen= int(self.ny_gen/2.)
+			blob_data= self.generate_blob_faster(ampl=S,x0=x0_tile_gen,y0=y0_tile_gen,sigmax=sigmax/self.pixsize,sigmay=sigmay/self.pixsize,theta=theta,trunc_thr=self.trunc_thr)
 			t1 = time.time()
 			elapsed_time = t1-t0
 
@@ -776,21 +957,58 @@ class SkyMapSimulator(object):
 			
 			print ('INFO: Generated blob no. %s in %s (s)' % (str(index),str(elapsed_time)) )				
 
-			sources_data+= blob_data
+			
+			## - Add blob to source data
+			#sources_data+= blob_data
+
+			xmin_t, xmax_t= 0, self.nx_gen
+			ymin_t, ymax_t= 0, self.ny_gen
+			dx_t= int(self.nx_gen/2.)
+			dy_t= int(self.ny_gen/2.)
+			xmin, ymin = (ix - dx_t), (iy - dy_t)
+			xmax, ymax = (ix + dx_t + 1), (iy + dy_t +1)
+			if xmin<0 and xmax<0:
+				print('WARN: Tile outside mat along x, skip and regenerate!')
+				continue
+			if xmin>self.nx and xmax>self.nx:
+				print('WARN: Tile outside mat along x, skip and regenerate!')
+				continue
+			if ymin<0 and ymax<0:
+				print('WARN: Tile outside mat along y, skip and regenerate!')
+				continue
+			if ymin>self.ny and ymax>self.ny:
+				print('WARN: Tile outside mat along y, skip and regenerate!')
+				continue
+			if xmin<0:
+				xmin= 0
+				xmin_t= dx_t-ix
+			if ymin<0:
+				ymin= 0
+				ymin_t= dy_t-iy
+			if xmax>self.nx:
+				xmax= self.nx
+				xmax_t= self.nx - ix + dx_t
+			if ymax>self.ny:
+				ymax= self.ny
+				ymax_t= self.ny - iy + dy_t
+
+			#sources_data[xmin:xmax,ymin:ymax] += blob_data[xmin_t:xmax_t,ymin_t:ymax_t]
+			sources_data[ymin:ymax,xmin:xmax] += blob_data[ymin_t:ymax_t,xmin_t:xmax_t]
+
 
 			## Set model map
-			#ix= int(np.floor(x0))
-			#iy= int(np.floor(y0))
-			ix= int(np.round(x0))
-			iy= int(np.round(y0))
 			mask_data[iy,ix]+= S
 
 			# Make Caesar source	
+			#offset_x= x0 - x0_tile_gen
+			#offset_y= y0 - y0_tile_gen
+			offset_x= ix - x0_tile_gen
+			offset_y= iy - y0_tile_gen
 			source_name= 'S' + str(index+1)
 			source_id= index+1
 			source_type= Caesar.ePointLike
 			t0 = time.time()
-			caesar_source= self.make_caesar_source(blob_data,source_name,source_id,source_type,Caesar.eBlobLike,ampl=S,x0=x0,y0=y0,source_max_scale=source_max_scale)
+			caesar_source= self.make_caesar_source(blob_data,source_name,source_id,source_type,Caesar.eBlobLike,ampl=S,x0=x0,y0=y0,source_max_scale=source_max_scale,offsetx=offset_x,offsety=offset_y)
 			t1 = time.time()
 			elapsed_time = t1-t0
 
@@ -819,8 +1037,11 @@ class SkyMapSimulator(object):
 		"""
 		
 		# Compute number of sources to be generated given map area in pixels
-		#area= (self.nx*self.ny)*self.pixsize/(3600.*3600.) # in deg^2
-		area= ((self.nx-2*self.marginx)*(self.ny-2*self.marginy))*self.pixsize/(3600.*3600.) # in deg^2
+		dx_deg= (self.nx-2*self.marginx)*self.pixsize/3600.
+		dy_deg= (self.ny-2*self.marginy)*self.pixsize/3600.
+		#area= ((self.nx-2*self.marginx)*(self.ny-2*self.marginy))*self.pixsize/(3600.*3600.) # in deg^2
+		area= dx_deg*dy_deg
+
 		if self.ext_nsources>0:
 			nsources= self.ext_nsources
 		else:
@@ -833,7 +1054,7 @@ class SkyMapSimulator(object):
 		if self.zmin_ext<self.zmax_ext:
 			randomize_flux= True
 
-		print 'INFO: Generating #',nsources,' extended sources in map...'
+		print('INFO: Generating #%d extended sources in map...' % nsources)
 
 		print('INFO: zmin_ext=%s, zmax_ext=%s, Smin=%s, Smax=%s' % (str(self.zmin_ext),str(self.zmax_ext),str(S_min),str(S_max)) )
 
@@ -973,7 +1194,7 @@ class SkyMapSimulator(object):
 			taken_pixels= np.where(sources_data[source_mask_indexes]!=0) # get list of taken pixels in main mask corresponding to this source
 			has_taken_pixels= np.any(taken_pixels)
 			if has_taken_pixels:
-				print 'INFO: Source pixels have been already taken by a previous generated source, regenerate...'
+				print('INFO: Source pixels have been already taken by a previous generated source, regenerate...')
 				continue
 				
 			# Add to extended source data and mask
@@ -1257,6 +1478,8 @@ def main():
 
 	# - Compact source args
 	enable_compactsources= args.enable_compactsources 
+	nx_gen= args.nx_gen
+	ny_gen= args.ny_gen
 	Bmaj= args.bmaj
 	Bmin= args.bmin
 	Bpa= args.bpa
@@ -1264,6 +1487,16 @@ def main():
 	Zmax= args.zmax
 	source_density= args.source_density
 	nsources= args.nsources
+	Smodel= args.Smodel
+	Sslope= args.Sslope
+	Smin= args.Smin
+	Smax= args.Smax
+	bmaj_min= args.bmaj_min
+	bmaj_max= args.bmaj_max
+	bmin_min= args.bmin_min
+	bmin_max= args.bmin_max
+	pa_min= args.pa_min
+	pa_max= args.pa_max	
 
 	# - Extended source args
 	enable_extsources= args.enable_extsources
@@ -1341,9 +1574,16 @@ def main():
 	simulator.set_bkg_pars(bkg_level,bkg_rms)
 	simulator.set_beam_info(Bmaj,Bmin,Bpa)	
 	simulator.enable_compact_sources(enable_compactsources)
+	simulator.set_gen_blob_img_size(nx_gen,ny_gen)
 	simulator.set_nsources(nsources)
+	simulator.set_source_flux_rand_model(Smodel)
+	simulator.set_source_flux_rand_exp_slope(Sslope)
+	simulator.set_source_flux_range(Smin,Smax)
 	simulator.set_source_significance_range(Zmin,Zmax)
 	simulator.set_source_density(source_density)
+	simulator.set_beam_bmaj_range(bmaj_min,bmaj_max)
+	simulator.set_beam_bmin_range(bmin_min,bmin_max)
+	simulator.set_beam_pa_range(pa_min,pa_max)
 	simulator.enable_extended_sources(enable_extsources)
 	simulator.set_ext_nsources(ext_nsources)
 	simulator.set_ext_source_type(ext_source_type)

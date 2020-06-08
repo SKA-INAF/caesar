@@ -86,8 +86,10 @@
 
 
 //OpenCV headers
+/*
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
+*/
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -559,12 +561,14 @@ int Image::ReadFile(std::string filename,bool invert){
 	}
 	
 	//## Load image from file and set a matrix
-	cv::Mat mat = cv::imread(filename.c_str(), CV_LOAD_IMAGE_COLOR);
+	//cv::Mat mat = cv::imread(filename.c_str(), CV_LOAD_IMAGE_COLOR);//deprecated C API
+	cv::Mat mat = cv::imread(filename.c_str(), cv::IMREAD_COLOR);
 
 	//## Convert to gray scale
 	cv::Mat mat_gray;
-  cvtColor( mat, mat_gray, CV_RGB2GRAY );
-	
+  //cvtColor( mat, mat_gray, CV_RGB2GRAY );//deprecated C API
+	cvtColor( mat, mat_gray, cv::COLOR_RGB2GRAY);
+
 	//## Fill an image
 	int Nx= mat.cols;
 	int Ny= mat.rows;
@@ -2464,7 +2468,7 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 }//close GetBkgInfoAroundSource()
 
 
-Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,bool invert)
+Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,bool invert,bool searchSourceCoords)
 {
 	//## Clone map
 	long int Nx= this->GetNx();
@@ -2488,17 +2492,57 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 		return maskedImage;	
 	}
 
+	//## Search source pixel coordinates in image?
+	//## If sources are extracted from the same map there is no need to do that
+	//## however for sources extracted from submaps or tiles it is needed
+	std::vector<long int> masked_pix_ids;
+	if(searchSourceCoords) {
+		#ifdef OPENMP_ENABLED
+		#pragma omp parallel for
+		#endif
+		for(int k=0;k<nSources;k++){
+			for(int l=0;l<sources[k]->GetNPixels();l++){
+				Pixel* pixel= sources[k]->GetPixel(l);
+				double x= pixel->x;
+				double y= pixel->y;
+				long int id= this->FindBin(x,y);
+				if(id<0) continue;
+				masked_pix_ids.push_back(id);	
+			}
+		}
+	}//close if
+	else{
+		#ifdef OPENMP_ENABLED
+		#pragma omp parallel for
+		#endif
+		for(int k=0;k<nSources;k++){
+			for(int l=0;l<sources[k]->GetNPixels();l++){
+				Pixel* pixel= sources[k]->GetPixel(l);
+				long int id= pixel->id;
+				masked_pix_ids.push_back(id);	
+			}
+		}
+	}//close else
+
+
 	if(invert){
 		if(isBinary){
 			#ifdef OPENMP_ENABLED
 			#pragma omp parallel for
 			#endif
+			for(size_t i=0;i<masked_pix_ids.size();i++){
+				long int id= masked_pix_ids[i];
+				maskedImage->SetPixelValue(id,0);
+			}
+			/*
 			for(int k=0;k<nSources;k++){
 				for(int l=0;l<sources[k]->GetNPixels();l++){
 					long int id= (sources[k]->GetPixel(l))->id;
+					//cout<<"Source "<<sources[k]->GetName()<<": pix id="<<id<<", ix="<<this->GetBinX(id)<<", iy="<<this->GetBinY(id)<<endl;//DEBUG!!!
 					maskedImage->SetPixelValue(id,0);
 				}//end loop pixels
 			}//end loop sources	
+			*/
 
 			#ifdef OPENMP_ENABLED
 			#pragma omp parallel for
@@ -2515,12 +2559,19 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 			#ifdef OPENMP_ENABLED
 			#pragma omp parallel for
 			#endif
+			for(size_t i=0;i<masked_pix_ids.size();i++){
+				long int id= masked_pix_ids[i];
+				maskedImage->SetPixelValue(id,0);
+			}
+			/*
 			for(int k=0;k<nSources;k++){
 				for(int l=0;l<sources[k]->GetNPixels();l++){
 					long int id= (sources[k]->GetPixel(l))->id;
 					maskedImage->SetPixelValue(id,0);
 				}//end loop pixels
 			}//end loop sources		
+			*/
+
 		}//close else
 
 		//Force re-computation of stats
@@ -2534,7 +2585,12 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 		if(isBinary){	
 			#ifdef OPENMP_ENABLED
 			#pragma omp parallel for
-			#endif		
+			#endif	
+			for(size_t i=0;i<masked_pix_ids.size();i++){
+				long int id= masked_pix_ids[i];
+				maskedImage->SetPixelValue(id,1);
+			}	
+			/*
 			for(int k=0;k<nSources;k++){
 				for(int l=0;l<sources[k]->GetNPixels();l++){
 					long int id= (sources[k]->GetPixel(l))->id;
@@ -2542,11 +2598,19 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 					maskedImage->SetPixelValue(id,1);
 				}//end loop pixels
 			}//end loop sources		
+			*/
+
 		}//close if
 		else{
 			#ifdef OPENMP_ENABLED
 			#pragma omp parallel for
 			#endif
+			for(size_t i=0;i<masked_pix_ids.size();i++){
+				long int id= masked_pix_ids[i];
+				double w= this->GetPixelValue(id);
+				maskedImage->SetPixelValue(id,w);
+			}
+			/*
 			for(int k=0;k<nSources;k++){
 				for(int l=0;l<sources[k]->GetNPixels();l++){
 					long int id= (sources[k]->GetPixel(l))->id;
@@ -2554,7 +2618,8 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 					//maskedImage->FillPixel(id,w);
 					maskedImage->SetPixelValue(id,w);
 				}//end loop pixels
-			}//end loop sources		
+			}//end loop sources	
+			*/	
 		}//close else
 
 		//Force re-computation of stats
@@ -3030,39 +3095,39 @@ TGraph* Image::ComputePeakGraph(std::vector<int> kernelSizes,int peakShiftTolera
 
 }//close ComputePeakGraph()
 
-Image* Image::GetMorphDilatedImage(int kernSize,int niters)
+Image* Image::GetMorphDilatedImage(int kernSize,int niters,bool skipZeroPixels)
 {
-	return MorphFilter::ComputeMorphFilter(this,eMORPH_DILATION,kernSize,eMORPH_RECT,niters);
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_DILATION,kernSize,eMORPH_RECT,niters,skipZeroPixels);
 
 }//close GetMorphDilatedImage()
 
-Image* Image::GetMorphErodedImage(int kernSize,int niters)
+Image* Image::GetMorphErodedImage(int kernSize,int niters,bool skipZeroPixels)
 {
-	return MorphFilter::ComputeMorphFilter(this,eMORPH_EROSION,kernSize,eMORPH_RECT,niters);
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_EROSION,kernSize,eMORPH_RECT,niters,skipZeroPixels);
 
 }//close GetMorphErodedImage()
 
-Image* Image::GetMorphClosingImage(int kernSize,int niters)
+Image* Image::GetMorphClosingImage(int kernSize,int niters,bool skipZeroPixels)
 {
-	return MorphFilter::ComputeMorphFilter(this,eMORPH_CLOSING,kernSize,eMORPH_RECT,niters);
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_CLOSING,kernSize,eMORPH_RECT,niters,skipZeroPixels);
 
 }//close GetMorphClosingImage()
 
-Image* Image::GetMorphOpeningImage(int kernSize,int niters)
+Image* Image::GetMorphOpeningImage(int kernSize,int niters,bool skipZeroPixels)
 {
-	return MorphFilter::ComputeMorphFilter(this,eMORPH_OPENING,kernSize,eMORPH_RECT,niters);
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_OPENING,kernSize,eMORPH_RECT,niters,skipZeroPixels);
 
 }//close GetMorphOpeningImage()
 
-Image* Image::GetMorphTopHatImage(int kernSize,int niters)
+Image* Image::GetMorphTopHatImage(int kernSize,int niters,bool skipZeroPixels)
 {
-	return MorphFilter::ComputeMorphFilter(this,eMORPH_TOPHAT,kernSize,eMORPH_RECT,niters);
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_TOPHAT,kernSize,eMORPH_RECT,niters,skipZeroPixels);
 
 }//close GetMorphTopHatImage()
 
-Image* Image::GetMorphGradientImage(int kernSize,int niters)
+Image* Image::GetMorphGradientImage(int kernSize,int niters,bool skipZeroPixels)
 {
-	return MorphFilter::ComputeMorphFilter(this,eMORPH_GRADIENT,kernSize,eMORPH_RECT,niters);
+	return MorphFilter::ComputeMorphFilter(this,eMORPH_GRADIENT,kernSize,eMORPH_RECT,niters,skipZeroPixels);
 
 }//close GetMorphGradientImage()
 

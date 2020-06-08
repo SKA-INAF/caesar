@@ -412,7 +412,10 @@ class Contour : public TObject {
   		return v;
 		}//close EllipseFitChi2()
 
-		
+		/**
+		* \brief Get shrinked contour
+		*/
+		Contour* GetShrinkedContour(int npix);
 
 	public:	
 		bool HasParameters;
