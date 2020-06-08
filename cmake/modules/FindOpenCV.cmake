@@ -48,13 +48,22 @@
 #----------------------------------------------------------
 
 set(OpenCV_DIR "$ENV{OPENCV_DIR}")
-set(OpenCV_CFGDIR "${OpenCV_DIR}/share/OpenCV")
+
+#set(OpenCV_CFGDIR "${OpenCV_DIR}/share/OpenCV")
+#message(STATUS "OpenCV cfg dir: ${OpenCV_CFGDIR}")
+#find_path(OPENCV_CFGDIR "OpenCVConfig.cmake" DOC "Root directory of OpenCV")
+
+message(STATUS "OpenCV dir: ${OpenCV_DIR}")
+find_path(OPENCV_CFGDIR NAMES "OpenCVConfig.cmake" 
+	PATHS "${OpenCV_DIR}" 
+	PATH_SUFFIXES "share/OpenCV" "lib/cmake/opencv4" 
+	#NO_DEFAULT_PATH
+	DOC "Root directory of OpenCV"
+)
 message(STATUS "OpenCV cfg dir: ${OpenCV_CFGDIR}")
 
-find_path(OPENCV_CFGDIR "OpenCVConfig.cmake" DOC "Root directory of OpenCV")
-
 set(OpenCV_configScript "${OpenCV_CFGDIR}/OpenCVConfig.cmake")
-message(STATUS "OpenCV cfg dir: ${OpenCV_configScript}")
+message(STATUS "OpenCV config script: ${OpenCV_configScript}")
 
 if(NOT EXISTS "${OpenCV_DIR}")
   if(NOT WIN32)
@@ -108,19 +117,22 @@ if(EXISTS "${OpenCV_DIR}")
     if(NOT EXISTS ${VERSION_FILE_DIR}) #may alreay be in cache
 
       #Find OpenCV version by looking at cvver.h or core/version.hpp
-      find_path(VERSION_FILE_DIR "version.hpp" PATHS "${OpenCV_DIR}" PATH_SUFFIXES "include" "include/opencv" "include/opencv2" "include/opencv2/core" DOC "")
+      find_path(VERSION_FILE_DIR "version.hpp" 
+				PATHS "${OpenCV_DIR}" 
+				PATH_SUFFIXES "include" "include/opencv" "include/opencv2" "include/opencv2/core" "include/opencv4/opencv2/core" 
+				DOC ""
+			)
+
       if(NOT EXISTS ${VERSION_FILE_DIR})
-	find_path(VERSION_FILE_DIR "cvver.h" PATHS "${OpenCV_DIR}" PATH_SUFFIXES "include" "include/opencv" DOC "")
-	if(NOT EXISTS ${VERSION_FILE_DIR})
-	  message(FATAL_ERROR "OpenCV version file not found")
-	else(NOT EXISTS ${VERSION_FILE_DIR})
-	  set(VERSION_FILE ${VERSION_FILE_DIR}/cvver.h)  
-	endif(NOT EXISTS ${VERSION_FILE_DIR})
-
-      else(NOT EXISTS ${VERSION_FILE_DIR})
-	set(VERSION_FILE ${VERSION_FILE_DIR}/version.hpp)
-
-      endif(NOT EXISTS ${VERSION_FILE_DIR})
+				find_path(VERSION_FILE_DIR "cvver.h" PATHS "${OpenCV_DIR}" PATH_SUFFIXES "include" "include/opencv" DOC "")
+				if(NOT EXISTS ${VERSION_FILE_DIR})
+	  			message(FATAL_ERROR "OpenCV version file not found")
+				else(NOT EXISTS ${VERSION_FILE_DIR})
+	  			set(VERSION_FILE ${VERSION_FILE_DIR}/cvver.h)  
+				endif(NOT EXISTS ${VERSION_FILE_DIR})
+			else(NOT EXISTS ${VERSION_FILE_DIR})
+				set(VERSION_FILE ${VERSION_FILE_DIR}/version.hpp)
+    	endif(NOT EXISTS ${VERSION_FILE_DIR})
 
       #file(STRINGS ${OpenCV_INCLUDE_DIR}/cvver.h OpenCV_VERSIONS_TMP REGEX "^#define CV_[A-Z]+_VERSION[ \t]+[0-9]+$")
       file(STRINGS ${VERSION_FILE} OpenCV_VERSIONS_TMP REGEX "^#define CV_[A-Z]+_VERSION[ \t]+[0-9]+$")
@@ -131,7 +143,7 @@ if(EXISTS "${OpenCV_DIR}")
       set(OpenCV_VERSION ${OpenCV_VERSION_MAJOR}.${OpenCV_VERSION_MINOR}.${OpenCV_VERSION_PATCH} CACHE STRING "" FORCE)
 
       if(WIN32 OR NOT PKG_CONFIG_FOUND)
-	set(CVLIB_SUFFIX "${OpenCV_VERSION_MAJOR}${OpenCV_VERSION_MINOR}${OpenCV_VERSION_PATCH}")
+				set(CVLIB_SUFFIX "${OpenCV_VERSION_MAJOR}${OpenCV_VERSION_MINOR}${OpenCV_VERSION_PATCH}")
       endif(WIN32 OR NOT PKG_CONFIG_FOUND)
       
       ##Boris:TODO: check for correct OpenCV version in pklg-config case !!!
