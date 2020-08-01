@@ -175,7 +175,8 @@ bool SysUtils::CheckFile(std::string path,Caesar::FileInfo& info,bool match_exte
 		info.filename= file_path.filename().string();
 		info.filename_wext= file_path.stem().string();
 		info.size= boost::filesystem::file_size(file_path);
-        	
+        
+		/*	
 		//Check extension
 		if(!file_path.has_extension()){
 			#ifdef LOGGING_ENABLED
@@ -192,6 +193,39 @@ bool SysUtils::CheckFile(std::string path,Caesar::FileInfo& info,bool match_exte
 				ERROR_LOG("Invalid file extension detected ("<<file_extension<<"!="<<extension<<")...");
 			#endif
 			return false;
+		}
+		*/
+
+		if(match_extension)
+		{
+			//Check extension
+			if(!file_path.has_extension()){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Given file without extension!");
+				#endif
+				return false;
+			}
+
+			std::string file_extension= file_path.extension().string();	
+			info.extension= file_extension;
+		
+			//Check extension match with desired one
+			if(file_extension!=extension){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Invalid file extension detected ("<<file_extension<<"!="<<extension<<")...");
+				#endif
+				return false;
+			}
+		}
+		else{
+			//Set extension
+			if(!file_path.has_extension()){
+				info.extension= "";
+			}
+			else{
+				std::string file_extension= file_path.extension().string();	
+				info.extension= file_extension;
+			}
 		}
 	
 		//Dump file info

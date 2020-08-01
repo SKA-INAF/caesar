@@ -10,6 +10,7 @@ file(GLOB MACRO_FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/TestFitSource.C
 	${CMAKE_CURRENT_SOURCE_DIR}/ApplySelTagsToDS9Regions.C
 	${CMAKE_CURRENT_SOURCE_DIR}/WriteSourceDataTree.C
+	${CMAKE_CURRENT_SOURCE_DIR}/WriteSourceAsciiCatalogs.C
 	${CMAKE_CURRENT_SOURCE_DIR}/SelavyCatalogToTTree.C
 	${CMAKE_CURRENT_SOURCE_DIR}/PlotSourceCounts.C
 	${CMAKE_CURRENT_SOURCE_DIR}/SetSourceMetadata.C
@@ -33,6 +34,8 @@ file(GLOB MACRO_FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/ComputePhotApertureFluxes.C
 	${CMAKE_CURRENT_SOURCE_DIR}/ExtractSourceCutout.C
 	${CMAKE_CURRENT_SOURCE_DIR}/SetAstroObjLabels.C
+	${CMAKE_CURRENT_SOURCE_DIR}/MergeSources.C
+	${CMAKE_CURRENT_SOURCE_DIR}/MakeMask.C
 	#${CMAKE_CURRENT_SOURCE_DIR}/SelectSimSourcesInMosaic.C
 )
 

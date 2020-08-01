@@ -444,7 +444,7 @@ enum AstroObjectLocation
 
 
 /**
-* \brief Convert source fit quality enumeration to string
+* \brief Convert astro object type enumeration to string
 */
 inline int GetAstroObjectType(std::string typeStr)
 {
@@ -495,6 +495,9 @@ static const double GausSigma2FWHM= 2.*sqrt(2*log(2.));
 static const double SrToDeg2= pow(180/TMath::Pi(),2);
 static const double SrToArcmin2= SrToDeg2*60*60;
 static const double SrToArcsec2= SrToDeg2*3600*3600;
+static const double Arcsec2ToDeg2= 7.71615e-8;
+static const double Arcsec2ToArcmin2= 2.77778e-4;
+static const double Arcsec2ToSr= 1./SrToArcsec2;
 
 }//close namespace
 

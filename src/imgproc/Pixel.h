@@ -48,6 +48,7 @@
 #include <iostream>
 #include <time.h>
 #include <ctime>
+#include <math.h>
 
 using namespace std;
 

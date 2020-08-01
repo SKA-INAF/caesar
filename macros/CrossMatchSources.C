@@ -1,6 +1,7 @@
-
+#include <Image.h>
 #include <MathUtils.h>
 #include <StatsUtils.h>
+#include <AstroUtils.h>
 #include <DS9Region.h>
 #include <DS9RegionParser.h>
 
@@ -26,6 +27,10 @@ struct SourceInfo
 	std::string name;
 	double x;
 	double y;
+	double ra;
+	double dec;
+	double l;
+	double b;
 	double flux;
 	double rms;
 	double snr;
@@ -49,6 +54,10 @@ struct SourceInfo
 		name= "";
 		x= 0;
 		y= 0;
+		ra= 0;
+		dec= 0;
+		l= 0;
+		b= 0;
 		flux= 0;
 		rms= 0;
 		snr= 0;
@@ -90,6 +99,14 @@ struct MacroOptions
 	bool useWCS;
 	bool selectSourcesInRegion;
 	std::string regionFileName;
+	std::string mapFileName;
+
+	double galMinLong;
+	double galMaxLong;
+	double galLongStep; 
+	double galMinLat;
+	double galMaxLat;
+	double galLatStep;
 
 	MacroOptions()
 	{
@@ -105,12 +122,20 @@ struct MacroOptions
 		beamBmin= 20.992698;//in arcsec	
 		catalogType= 1;
 		catalogVersion= 2;
-		matchPosThr= 10;//arcsec
+		matchPosThr= 8;//arcsec
 		saveToFile= true;
 		applySelection= true;
 		selectSourcesInRegion= false;
 		regionFileName= "";
 		useWCS= true;
+		mapFileName= "";
+
+		galMinLong= 335; 
+		galMaxLong= 355;
+		galLongStep= 1; 
+		galMinLat= -5;
+		galMaxLat= 5;
+		galLatStep= 0.25;
 	}
 	
 };//close struct MacroOptions()
@@ -133,6 +158,7 @@ int AnalyzeData();
 //==========================================
 //==     VARS
 //==========================================
+MacroOptions gOpts;
 double gMatchPosThr= 10;//in arcsec
 int gCatalogType= eCAESAR_CATALOG;
 int gCatalogVersion= 2;
@@ -146,6 +172,10 @@ bool gSelectRegion= false;
 bool gUseWCS= true;
 std::string gRegionFileName= "";
 std::vector<DS9Region*> gRegions;
+std::string gMapFileName;
+Image* gImage= 0;
+WCS* gGalWCS= 0;
+WCS* gWCS= 0;
 bool gSaveToFile= true;
 
 //- REFERENCE CATALOG
@@ -170,11 +200,19 @@ TTree* gMatchDataTree= 0;
 std::string gSourceName_true;
 double gSourcePosX_true;
 double gSourcePosY_true;
+double gSourceGalPosX_true;
+double gSourceGalPosY_true;
+double gSourceJ2000PosX_true;
+double gSourceJ2000PosY_true;
 double gSourceFlux_true;
 std::string gSourceName_rec;
 double gSourcePosX_rec;
 double gSourcePosY_rec;
 double gSourceFlux_rec;
+double gSourceGalPosX_rec;
+double gSourceGalPosY_rec;
+double gSourceJ2000PosX_rec;
+double gSourceJ2000PosY_rec;
 bool gIsFound;
 
 //- HISTOS
@@ -185,6 +223,7 @@ double gLgFluxMax_draw= 1;
 std::vector<double> gLgFluxBins {-5,-4.5,-4,-3.5,-3,-2.75,-2.5,-2.25,-2,-1.5,-1,-0.5,0,0.5,1};
 std::vector<double> gLgRecFluxBins {-5,-4.5,-4,-3.5,-3,-2.75,-2.5,-2.25,-2,-1.5,-1,-0.5,0,0.5,1};
 std::vector<double> gSNRBins {0,1,2,3,4,5,6,7,8,9,10,15,20,25,30,40,50,100,1000,10000};
+std::vector<double> gGalLatBins {-5,-4,-3,-2,-1,0,1,2,3,4,5};
 TProfile* gPosXDiffHisto= 0;
 TProfile* gPosYDiffHisto= 0;
 TProfile* gFluxDiffHisto= 0;
@@ -192,10 +231,20 @@ TProfile* gFluxDiffVSRecFluxHisto= 0;
 TH1D* gFluxHisto= 0;
 TH1D* gFluxHisto_reliability= 0;
 TH1D* gFluxHisto_fdr= 0;
-
+TH2D* gFluxGalLatHisto2D= 0;
+TH2D* gFluxGalLatHisto2D_reliability= 0;
 TH2D* gFluxHisto2D= 0;
-TH2D* gFluxHisto2D_rec= 0;
 TH2D* gCompleteness2D= 0;
+TH2D* gCompletenessVSFluxVSGalLat= 0;
+TH2D* gReliabilityVSFluxVSGalLat= 0;
+
+TH2D* gSourceCountsHisto2D_galcoord= 0;
+TH2D* gSourceCountsHisto2D_galcoord_rec= 0;
+TH2D* gCompleteness2D_galcoord= 0;
+
+std::vector<TH2D*> gSourceCountsHistos2D_galcoord;
+std::vector<TH2D*> gSourceCountsHistos2D_galcoord_rec;
+std::vector<TH2D*> gCompletenessList2D_galcoord;
 
 TH1D* gEccentricityRatioHisto= 0;
 TH1D* gAreaRatioHisto= 0;
@@ -222,6 +271,13 @@ std::vector<TF1*> gFluxDiffFitFcns;
 TH1D* gFluxHisto_rec= 0;
 TH1D* gFluxHisto_rec_reliability= 0;
 TH1D* gFluxHisto_rec_fdr= 0;
+TH2D* gFluxHisto2D_rec= 0;
+TH2D* gFluxGalLatHisto2D_rec= 0;
+TH2D* gFluxGalLatHisto2D_rec_reliability= 0;
+std::vector<TH2D*> gSourceCountsHistos2D_galcoord_reliability;
+std::vector<TH2D*> gSourceCountsHistos2D_galcoord_rec_reliability;
+std::vector<TH2D*> gReliabilityList2D_galcoord;
+
 TEfficiency* gCompleteness= 0;
 TGraphAsymmErrors* gCompletenessGraph= 0;
 TEfficiency* gReliability= 0;
@@ -284,7 +340,7 @@ int CrossMatchSources(std::string fileName_rec,std::string fileName,bool isFileL
 	//==      CHECK ARGS
 	//================================
 	cout<<"INFO: Check macro args ..."<<endl;
-	
+	gOpts= options;
 	gSaveToFile= options.saveToFile;
 	gMatchPosThr= options.matchPosThr;
 	gCatalogType= options.catalogType;
@@ -292,6 +348,7 @@ int CrossMatchSources(std::string fileName_rec,std::string fileName,bool isFileL
 	gCatalogVersion= options.catalogVersion;
 	gSelectRegion= options.selectSourcesInRegion;
 	gRegionFileName= options.regionFileName;
+	gMapFileName= options.mapFileName;
 
 	gRedChi2Thr= options.redChi2Thr;
 	gMapPixSize= options.mapPixSize;
@@ -390,6 +447,40 @@ int CrossMatchSources(std::string fileName_rec,std::string fileName,bool isFileL
 
 
 	//================================
+	//==      READ MAP
+	//================================
+	if(gMapFileName!="")
+	{
+		//Read image
+		cout<<"INFO: Reading map from file "<<gMapFileName<<" ..."<<endl;
+		gImage= new Image;
+		if(gImage->ReadFITS(gMapFileName)<0){
+			cerr<<"ERROR: Failed to read map from file "<<gMapFileName<<"!"<<endl;
+			return -1;
+		}
+
+		//Get metadata
+		ImgMetaData* metadata= gImage->GetMetaData();
+		if(!metadata){
+			cerr<<"ERROR: Failed to get image metadata!"<<endl;
+			return -1;
+		}
+			
+		//Get WCS
+		gGalWCS= metadata->GetWCS(eGALACTIC);
+		if(!gGalWCS){
+			cerr<<"ERROR: Failed to get galactic WCS!"<<endl;
+			return -1;
+		}
+	
+		gWCS= metadata->GetWCS(eJ2000);
+		if(!gWCS){
+			cerr<<"ERROR: Failed to get galactic WCS!"<<endl;
+			return -1;
+		}
+	}
+
+	//================================
 	//==      INIT
 	//================================
 	cout<<"INFO: Init macro data ..."<<endl;
@@ -459,11 +550,18 @@ void Save()
 		if(gFluxDiffHisto) gFluxDiffHisto->Write();
 		if(gFluxDiffVSRecFluxHisto) gFluxDiffVSRecFluxHisto->Write();
 		if(gFluxHisto) gFluxHisto->Write();
-		if(gFluxHisto_reliability) gFluxHisto_reliability->Write();	
+		if(gFluxHisto_reliability) gFluxHisto_reliability->Write();			
 		if(gFluxHisto_fdr) gFluxHisto_fdr->Write();	
 		if(gFluxHisto2D) gFluxHisto2D->Write();
-		if(gFluxHisto2D_rec) gFluxHisto2D_rec->Write(); 
+		if(gFluxGalLatHisto2D) gFluxGalLatHisto2D->Write();	
+		if(gFluxGalLatHisto2D_reliability) gFluxGalLatHisto2D_reliability->Write();	
 		if(gCompleteness2D) gCompleteness2D->Write();
+		if(gCompletenessVSFluxVSGalLat) gCompletenessVSFluxVSGalLat->Write();
+		if(gSourceCountsHisto2D_galcoord) gSourceCountsHisto2D_galcoord->Write();
+		if(gSourceCountsHisto2D_galcoord_rec) gSourceCountsHisto2D_galcoord_rec->Write(); 
+		if(gCompleteness2D_galcoord) gCompleteness2D_galcoord->Write();
+		for(size_t i=0;i<gCompletenessList2D_galcoord.size();i++) gCompletenessList2D_galcoord[i]->Write();
+		for(size_t i=0;i<gReliabilityList2D_galcoord.size();i++) gReliabilityList2D_galcoord[i]->Write();
 
 		if(gEccentricityRatioHisto) gEccentricityRatioHisto->Write();
 		if(gAreaRatioHisto) gAreaRatioHisto->Write();
@@ -472,11 +570,15 @@ void Save()
 		//Write rec histos & graphs
 		if(gFluxHisto_rec) gFluxHisto_rec->Write();
 		if(gFluxHisto_rec_reliability) gFluxHisto_rec_reliability->Write();
+		if(gFluxHisto2D_rec) gFluxHisto2D_rec->Write();		
+		if(gFluxGalLatHisto2D_rec) gFluxGalLatHisto2D_rec->Write();		
+		if(gFluxGalLatHisto2D_rec_reliability) gFluxGalLatHisto2D_rec_reliability->Write();
 		if(gFluxHisto_rec_fdr) gFluxHisto_rec_fdr->Write();
 		if(gCompleteness) gCompleteness->Write();
 		if(gCompletenessGraph) gCompletenessGraph->Write();
 		if(gReliability) gReliability->Write();
 		if(gReliabilityGraph) gReliabilityGraph->Write();
+		if(gReliabilityVSFluxVSGalLat) gReliabilityVSFluxVSGalLat->Write();
 		if(gFalseDetectionRate) gFalseDetectionRate->Write();
 		if(gFalseDetectionRateGraph) gFalseDetectionRateGraph->Write();
 		if(gFluxBiasGraph) gFluxBiasGraph->Write();
@@ -534,11 +636,19 @@ void Init()
 	gMatchDataTree->Branch("name",&gSourceName_true);
 	gMatchDataTree->Branch("x",&gSourcePosX_true);
 	gMatchDataTree->Branch("y",&gSourcePosY_true);
+	gMatchDataTree->Branch("l",&gSourceGalPosX_true);
+	gMatchDataTree->Branch("b",&gSourceGalPosY_true);
+	gMatchDataTree->Branch("ra",&gSourceJ2000PosX_true);
+	gMatchDataTree->Branch("dec",&gSourceJ2000PosY_true);
 	gMatchDataTree->Branch("flux",&gSourceFlux_true);
 	gMatchDataTree->Branch("isFound",&gIsFound);
 	gMatchDataTree->Branch("name_rec",&gSourceName_rec);
 	gMatchDataTree->Branch("x_rec",&gSourcePosX_rec);
 	gMatchDataTree->Branch("y_rec",&gSourcePosY_rec);
+	gMatchDataTree->Branch("l_rec",&gSourceGalPosX_rec);
+	gMatchDataTree->Branch("b_rec",&gSourceGalPosY_rec);
+	gMatchDataTree->Branch("ra_rec",&gSourceJ2000PosX_rec);
+	gMatchDataTree->Branch("dec_rec",&gSourceJ2000PosY_rec);
 	gMatchDataTree->Branch("flux_rec",&gSourceFlux_rec);
 	
 
@@ -547,6 +657,7 @@ void Init()
 	int nBins= (int)(gLgFluxBins.size()-1);
 	int nBins_snr= (int)(gSNRBins.size()-1);
 	int nBins_rec= (int)(gLgRecFluxBins.size()-1);
+	int nBins_galLat= (int)(gGalLatBins.size()-1);
 	
 	gPosXDiffHisto= new TProfile("posXDiffHisto","",nBins,gLgFluxBins.data(),"S");
 	gPosXDiffHisto->Sumw2();
@@ -569,6 +680,12 @@ void Init()
 	gFluxHisto_fdr= new TH1D("fluxHisto_fdr","",nBins,gLgFluxBins.data());
 	gFluxHisto_fdr->Sumw2();
 
+	gFluxGalLatHisto2D= new TH2D("fluxGalLatHisto2D","",nBins,gLgFluxBins.data(),nBins_galLat,gGalLatBins.data());
+	gFluxGalLatHisto2D->Sumw2();
+	
+	gFluxGalLatHisto2D_reliability= new TH2D("fluxGalLatHisto2D_reliability","",nBins,gLgFluxBins.data(),nBins_galLat,gGalLatBins.data());
+	gFluxGalLatHisto2D_reliability->Sumw2();
+
 	gEccentricityRatioHisto= new TH1D("eccentricityRatio","",100,0,10);
 	gEccentricityRatioHisto->Sumw2();
 
@@ -587,6 +704,12 @@ void Init()
 
 	gFluxHisto_rec_fdr= new TH1D("fluxHisto_rec_fdr","",nBins,gLgFluxBins.data());
 	gFluxHisto_rec_fdr->Sumw2();
+
+	gFluxGalLatHisto2D_rec= new TH2D("fluxGalLatHisto2D_rec","",nBins,gLgFluxBins.data(),nBins_galLat,gGalLatBins.data());
+	gFluxGalLatHisto2D_rec->Sumw2();	
+
+	gFluxGalLatHisto2D_rec_reliability= new TH2D("fluxGalLatHisto2D_rec_reliability","",nBins,gLgFluxBins.data(),nBins_galLat,gGalLatBins.data());
+	gFluxGalLatHisto2D_rec_reliability->Sumw2();
 
 	gSNRHisto_rec= new TH1D("snrHisto","",nBins_snr,gSNRBins.data());
 	gSNRHisto_rec->Sumw2();
@@ -735,6 +858,23 @@ void Draw()
 	gCompleteness2D= (TH2D*)gFluxHisto2D_rec->Clone("Completeness2D");
 	gCompleteness2D->Divide(gFluxHisto2D);
 
+	cout<<"INFO: Compute Completeness 2D map in gal coord ..."<<endl;
+	gCompleteness2D_galcoord= (TH2D*)gSourceCountsHisto2D_galcoord_rec->Clone("Completeness2D_galcoord");
+	gCompleteness2D_galcoord->Divide(gSourceCountsHisto2D_galcoord);
+
+	//Compute completeness vs flux vs gal lat
+	gCompletenessVSFluxVSGalLat= (TH2D*)gFluxGalLatHisto2D_rec->Clone("CompletenessVSFluxVSGalLat");
+	gCompletenessVSFluxVSGalLat->Divide(gFluxGalLatHisto2D);
+
+	TH2D* hh= 0;
+	for(size_t k=0;k<gSourceCountsHistos2D_galcoord.size();k++)
+	{
+		TString histoName= Form("Completeness2D_galcoord_fluxBin%d",(int)(k+1));
+		hh= (TH2D*)gSourceCountsHistos2D_galcoord_rec[k]->Clone(histoName);
+		hh->Divide(gSourceCountsHistos2D_galcoord[k]);
+		gCompletenessList2D_galcoord.push_back(hh);
+	}
+
 	//Compute reliability
 	cout<<"INFO: Compute Reliability ..."<<endl;
 	gReliability= new TEfficiency(*gFluxHisto_rec_reliability,*gFluxHisto_reliability); 
@@ -751,6 +891,16 @@ void Draw()
 	gReliabilityGraph_sel= gReliability_sel->CreateGraph(); 
 	gReliabilityGraph_sel->SetNameTitle("ReliabilityGraph_sel","ReliabilityGraph_sel");
 
+	gReliabilityVSFluxVSGalLat= (TH2D*)gFluxGalLatHisto2D_rec_reliability->Clone("ReliabilityVSFluxVSGalLat");
+	gReliabilityVSFluxVSGalLat->Divide(gFluxGalLatHisto2D_reliability);
+
+	for(size_t k=0;k<gSourceCountsHistos2D_galcoord_reliability.size();k++)
+	{
+		TString histoName= Form("Reliability2D_galcoord_fluxBin%d",(int)(k+1));
+		hh= (TH2D*)gSourceCountsHistos2D_galcoord_rec_reliability[k]->Clone(histoName);
+		hh->Divide(gSourceCountsHistos2D_galcoord_reliability[k]);
+		gReliabilityList2D_galcoord.push_back(hh);
+	}
 
 	//Compute false detection rate
 	cout<<"INFO: Compute False Detection Rate ..."<<endl;
@@ -1304,8 +1454,29 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 	double y_min= (*(yrange_it.first)).y;
 	double y_max= (*(yrange_it.second)).y;
 	
+	cout<<"=== DEBUG ===="<<endl;
+	for(size_t i=0;i<sources.size();i++){
+		cout<<"(l,b)=("<<sources[i].l<<","<<sources[i].b<<")"<<endl;
+	}	
+	cout<<"=============="<<endl;
+
+	auto l_range_it = std::minmax_element( sources.begin(), sources.end(),
+                             []( const SourceInfo& l, const SourceInfo& r)
+                             {
+                                 return l.l < r.l;
+                             } );
+	auto b_range_it = std::minmax_element( sources.begin(), sources.end(),
+                             []( const SourceInfo& l, const SourceInfo& r)
+                             {
+                                 return l.b < r.b;
+                             } );
 	
-	cout<<"INFO: Source ref catalog spatial range: x("<<x_min<<","<<x_max<<"), y("<<y_min<<","<<y_max<<")"<<endl;
+	double l_min= (*(l_range_it.first)).l;
+	double l_max= (*(l_range_it.second)).l;
+	double b_min= (*(b_range_it.first)).b;
+	double b_max= (*(b_range_it.second)).b;
+
+	cout<<"INFO: Source ref catalog spatial range: x("<<x_min<<","<<x_max<<"), y("<<y_min<<","<<y_max<<"), l("<<l_min<<","<<l_max<<"), b("<<b_min<<","<<b_max<<")"<<endl;
 
 	
 	//## Creating map histos
@@ -1319,6 +1490,53 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 	if(!gFluxHisto2D_rec){
 		gFluxHisto2D_rec= new TH2D("fluxHisto2D_rec","",nBins,x_min-offset,x_max+offset,nBins,y_min-offset,y_max+offset);
 		gFluxHisto2D_rec->Sumw2();
+	}
+
+	int nBinsX= (gOpts.galMaxLong-gOpts.galMinLong)/gOpts.galLongStep;
+	int nBinsY= (gOpts.galMaxLat-gOpts.galMinLat)/gOpts.galLatStep;
+
+	if(!gSourceCountsHisto2D_galcoord){
+		gSourceCountsHisto2D_galcoord= new TH2D("sourceCounts2D_galcoord","",nBinsX,gOpts.galMinLong,gOpts.galMaxLong,nBinsY,gOpts.galMinLat,gOpts.galMaxLat);
+		gSourceCountsHisto2D_galcoord->Sumw2();
+	}
+
+	if(!gSourceCountsHisto2D_galcoord_rec){
+		gSourceCountsHisto2D_galcoord_rec= new TH2D("sourceCounts2D_galcoord_rec","",nBinsX,gOpts.galMinLong,gOpts.galMaxLong,nBinsY,gOpts.galMinLat,gOpts.galMaxLat);
+		gSourceCountsHisto2D_galcoord_rec->Sumw2();
+	}
+
+	//std::vector<double> gLgFluxBins {-5,-4.5,-4,-3.5,-3,-2.75,-2.5,-2.25,-2,-1.5,-1,-0.5,0,0.5,1};
+	//std::vector<double> gLgRecFluxBins {-5,-4.5,-4,-3.5,-3,-2.75,-2.5,-2.25,-2,-1.5,-1,-0.5,0,0.5,1};
+
+	
+	TH2D* hh= 0;
+	if(gSourceCountsHistos2D_galcoord.empty()){
+		for(size_t i=0;i<gLgFluxBins.size();i++)
+		{
+			TString histoName= Form("sourceCounts2D_galcoord_fluxbin%d",(int)(i+1));
+			hh= new TH2D(histoName,"",nBinsX,gOpts.galMinLong,gOpts.galMaxLong,nBinsY,gOpts.galMinLat,gOpts.galMaxLat);
+			hh->Sumw2();
+			gSourceCountsHistos2D_galcoord.push_back(hh);
+
+			histoName= Form("sourceCounts2D_galcoord_rec_fluxbin%d",(int)(i+1));
+			hh= new TH2D(histoName,"",nBinsX,gOpts.galMinLong,gOpts.galMaxLong,nBinsY,gOpts.galMinLat,gOpts.galMaxLat);
+			hh->Sumw2();
+			gSourceCountsHistos2D_galcoord_rec.push_back(hh);
+		}
+	}
+	if(gSourceCountsHistos2D_galcoord_reliability.empty()){
+		for(size_t i=0;i<gLgRecFluxBins.size();i++)
+		{
+			TString histoName= Form("sourceCounts2D_galcoord_reliability_fluxbin%d",(int)(i+1));
+			hh= new TH2D(histoName,"",nBinsX,gOpts.galMinLong,gOpts.galMaxLong,nBinsY,gOpts.galMinLat,gOpts.galMaxLat);
+			hh->Sumw2();
+			gSourceCountsHistos2D_galcoord_reliability.push_back(hh);
+
+			histoName= Form("sourceCounts2D_galcoord_rec_reliability_fluxbin%d",(int)(i+1));
+			hh= new TH2D(histoName,"",nBinsX,gOpts.galMinLong,gOpts.galMaxLong,nBinsY,gOpts.galMinLat,gOpts.galMaxLat);
+			hh->Sumw2();
+			gSourceCountsHistos2D_galcoord_rec_reliability.push_back(hh);
+		}
 	}
 	
 	//## Find if ref source if found in rec catalog
@@ -1335,6 +1553,10 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 		std::string name= sources[i].name;
 		double x= sources[i].x;
 		double y= sources[i].y;
+		double ra= sources[i].ra;
+		double dec= sources[i].dec;
+		double l= sources[i].l;
+		double b= sources[i].b;
 		double flux= sources[i].flux;
 		double lgFlux= log10(flux);
 
@@ -1343,12 +1565,17 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 		gSourcePosX_true= x;
 		gSourcePosY_true= y;
 		gSourceFlux_true= flux;
+		gSourceJ2000PosX_true= ra;
+		gSourceJ2000PosY_true= dec;
+		gSourceGalPosX_true= l;
+		gSourceGalPosY_true= b;
 
 		//Skip source if outside mosaic region
 		if(gSelectRegion){
 			bool isInside= false;
 			for(size_t k=0;k<gRegions.size();k++){
-				if(gRegions[k]->IsPointInsideRegion(x,y)){
+				//if(gRegions[k]->IsPointInsideRegion(x,y)){
+				if(gRegions[k]->IsPointInsideRegion(ra,dec)){
 					isInside= true;
 					break;
 				}
@@ -1356,9 +1583,22 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 			if(!isInside) continue;
 		}//close if gSelectRegion
 
+		//Find flux bin
+		int fluxBinIndex= -1;
+		for(size_t k=0;k<gLgFluxBins.size()-1;k++){
+			if(lgFlux>=gLgFluxBins[k] && lgFlux<=gLgFluxBins[k+1]){
+				fluxBinIndex= k;
+				break;
+			}
+		}
 
+	
 		gFluxHisto->Fill(lgFlux,1);
-		gFluxHisto2D->Fill(x,y,1);
+		//gFluxHisto2D->Fill(x,y,1);
+		gFluxHisto2D->Fill(ra,dec,1);
+		gFluxGalLatHisto2D->Fill(lgFlux,b,1);
+		gSourceCountsHisto2D_galcoord->Fill(l,b,1);
+		if(fluxBinIndex!=-1) gSourceCountsHistos2D_galcoord[fluxBinIndex]->Fill(l,b,1);
 		
 		nSources++;
 	
@@ -1367,8 +1607,14 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 		std::vector<std::string> name_list;
 		std::vector<double> xrec_list;
 		std::vector<double> yrec_list;
+		std::vector<double> ra_rec_list;
+		std::vector<double> dec_rec_list;
+		std::vector<double> l_rec_list;
+		std::vector<double> b_rec_list;
 		std::vector<double> dx_list;
 		std::vector<double> dy_list;
+		std::vector<double> dra_list;
+		std::vector<double> ddec_list;
 		std::vector<double> reclgflux_list;
 		std::vector<double> dflux_list;
 		std::vector<double> dlgflux_list;
@@ -1382,11 +1628,16 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 		std::vector<double> ellipseArea_wcs_list;
 		std::vector<size_t> recindex_list;	
 
+
 		for(size_t j=0;j<sources_rec.size();j++)
 		{	
 			std::string name_rec= sources_rec[j].name;
 			double x_rec= sources_rec[j].x;
 			double y_rec= sources_rec[j].y;
+			double ra_rec= sources_rec[j].ra;
+			double dec_rec= sources_rec[j].dec;
+			double l_rec= sources_rec[j].l;
+			double b_rec= sources_rec[j].b;
 			double flux_rec= sources_rec[j].flux;
 			double lgflux_rec= log10(flux_rec);
 			double rms_rec= sources_rec[j].rms;
@@ -1413,20 +1664,27 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 			double rotAngle= sources_rec[j].rotAngleVSBeam;
 
 			//Check if sources match given position
-			//double dx= (x_rec-x)*3600.;//in arcsec
-			//double dy= (y_rec-y)*3600.;//in arcsec
+			double dx= (x_rec-x);//in pixels
+			double dy= (y_rec-y);//in pixels
+			double dra= (ra_rec-ra)*3600.;//in arcsec
+			double ddec= (dec_rec-dec)*3600.;//in arcsec
+			/*
 			double dx= 0;		
 			double dy= 0;
 			if(gUseWCS){
-				dx= (x_rec-x)*3600.;//in arcsec
-				dy= (y_rec-y)*3600.;//in arcsec
+				//dx= (x_rec-x)*3600.;//in arcsec
+				//dy= (y_rec-y)*3600.;//in arcsec
+				dx= (ra_rec-ra)*3600.;//in arcsec
+				dy= (dec_rec-dec)*3600.;//in arcsec
 			}
 			else{
 				dx= (x_rec-x);//in pixels
 				dy= (y_rec-y);//in pixels
 			}
-	
-			double dpos= sqrt(dx*dx + dy*dy); 
+			*/
+
+			double dpos= sqrt(dx*dx + dy*dy);
+			double dpos_wcs= sqrt(dra*dra + ddec*ddec);
 			double dflux= flux_rec-flux;
 			double dflux_rel= flux_rec/flux-1;
 			double dlgflux= log10(flux_rec) - log10(flux);
@@ -1435,7 +1693,8 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 			if(gSelectRegion){
 				bool isInside= false;
 				for(size_t k=0;k<gRegions.size();k++){
-					if(gRegions[k]->IsPointInsideRegion(x_rec,y_rec)){
+					//if(gRegions[k]->IsPointInsideRegion(x_rec,y_rec)){
+					if(gRegions[k]->IsPointInsideRegion(ra_rec,dec_rec)){
 						isInside= true;
 						break;
 					}
@@ -1443,7 +1702,8 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 				if(!isInside) continue;
 			}//close if gSelectRegion
 
-			if(dpos>gMatchPosThr) continue;
+			//if(dpos>gMatchPosThr) continue;
+			if(dpos_wcs>gMatchPosThr) continue;
 
 			//cout<<"Match source (name="<<name<<", x="<<x<<", y="<<y<<") with source (name="<<name_rec<<", x="<<x_rec<<", y="<<y_rec<<"), dx="<<dx<<", dy="<<dy<<", snr="<<snr_rec<<endl;
 			found= true;
@@ -1453,8 +1713,14 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 			name_list.push_back(name_rec);
 			xrec_list.push_back(x_rec);
 			yrec_list.push_back(y_rec);
+			ra_rec_list.push_back(ra_rec);
+			dec_rec_list.push_back(dec_rec);
+			l_rec_list.push_back(l_rec);
+			b_rec_list.push_back(b_rec);
 			dx_list.push_back(dx);
-			dy_list.push_back(dy);	
+			dy_list.push_back(dy);
+			dra_list.push_back(dra);
+			ddec_list.push_back(ddec);	
 			reclgflux_list.push_back(lgflux_rec);
 			dflux_list.push_back(dflux_rel);
 			dlgflux_list.push_back(dlgflux);
@@ -1476,7 +1742,10 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 		gSourcePosX_rec= -999;
 		gSourcePosY_rec= -999;
 		gSourceFlux_rec= -999;
-
+		gSourceJ2000PosX_rec= -999;
+		gSourceJ2000PosY_rec= -999;
+		gSourceGalPosX_rec= -999;
+		gSourceGalPosY_rec= -999;
 
 		if(found){
 			nMatch++;
@@ -1486,9 +1755,16 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 			std::string name_rec= name_list[0];
 			double x_rec= xrec_list[0];
 			double y_rec= yrec_list[0];
+			double ra_rec= ra_rec_list[0];
+			double dec_rec= dec_rec_list[0];
+			double l_rec= l_rec_list[0];
+			double b_rec= b_rec_list[0];
 			double dx= dx_list[0];
 			double dy= dy_list[0];
-			double dpos= sqrt(dx*dx + dy*dy); 	
+			double dra= dra_list[0];
+			double ddec= ddec_list[0];
+			double dpos= sqrt(dx*dx + dy*dy); 
+			double dpos_wcs= sqrt(dra*dra + ddec*ddec); 	
 			double lgFlux_rec= reclgflux_list[0];
 			double dflux_rel= dflux_list[0];
 			double dlgflux= dlgflux_list[0];
@@ -1503,19 +1779,33 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 			if(nFound>1){
 				int best_index= 0;
 				for(int k=1;k<nFound;k++){
+					/*
 					double dpos_k= sqrt(dx_list[k]*dx_list[k] + dy_list[k]*dy_list[k]);
 					if(dpos_k<dpos){
 						best_index= k;
 						dpos= dpos_k;
+					}
+					*/
+					double dpos_k= sqrt(dra_list[k]*dra_list[k] + ddec_list[k]*ddec_list[k]);
+					if(dpos_k<dpos_wcs){
+						best_index= k;
+						dpos_wcs= dpos_k;
 					}
 				}//end loop match
 
 				name_rec= name_list[best_index];
 				x_rec= xrec_list[best_index];
 				y_rec= yrec_list[best_index];
+				ra_rec= ra_rec_list[best_index];
+				dec_rec= dec_rec_list[best_index];
+				l_rec= l_rec_list[best_index];
+				b_rec= b_rec_list[best_index];
 				dx= dx_list[best_index];
 				dy= dy_list[best_index];
 				dpos= sqrt(dx*dx + dy*dy); 
+				dra= dra_list[best_index];
+				ddec= ddec_list[best_index];
+				dpos_wcs= sqrt(dra*dra + ddec*ddec); 
 				lgFlux_rec= reclgflux_list[best_index];
 				dflux_rel= dflux_list[best_index];
 				dlgflux= dlgflux_list[best_index];
@@ -1536,7 +1826,10 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 			gSourcePosX_rec= x_rec;
 			gSourcePosY_rec= y_rec;
 			gSourceFlux_rec= pow(10,lgFlux_rec);
-
+			gSourceJ2000PosX_rec= ra_rec;
+			gSourceJ2000PosY_rec= dec_rec;
+			gSourceGalPosX_rec= l_rec;
+			gSourceGalPosY_rec= b_rec;
 
 			isRecSourceFound[recIndex]= true;
 
@@ -1553,12 +1846,18 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 			}
 
 			//Fill histos
-			gPosXDiffHisto->Fill(lgFlux,dx);
-			gPosYDiffHisto->Fill(lgFlux,dy);
+			//gPosXDiffHisto->Fill(lgFlux,dx);
+			//gPosYDiffHisto->Fill(lgFlux,dy);
+			gPosXDiffHisto->Fill(lgFlux,dra);
+			gPosYDiffHisto->Fill(lgFlux,ddec);
 			gFluxDiffHisto->Fill(lgFlux,dflux_rel);
 			gFluxDiffVSRecFluxHisto->Fill(lgFlux_rec,dflux_rel);
 			gFluxHisto_rec->Fill(lgFlux,1);
-			gFluxHisto2D_rec->Fill(x,y,1);
+			//gFluxHisto2D_rec->Fill(x,y,1);
+			gFluxHisto2D_rec->Fill(ra,dec,1);
+			gFluxGalLatHisto2D_rec->Fill(lgFlux,b,1);
+			gSourceCountsHisto2D_galcoord_rec->Fill(l,b,1);
+			if(fluxBinIndex!=-1) gSourceCountsHistos2D_galcoord_rec[fluxBinIndex]->Fill(l,b,1);
 			gSNRHisto_rec->Fill(snr_rec);
 			gEccentricityRatioHisto->Fill(eccentricityRatio);
 			gAreaRatioHisto->Fill(areaRatio);
@@ -1575,15 +1874,19 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 				gFluxBinData[binId-1].push_back(lgFlux);
 				gFluxDiffBinData[binId-1].push_back(dflux_rel);
 				gLgFluxDiffBinData[binId-1].push_back(dlgflux);
-				gPosXDiffBinData[binId-1].push_back(dx);
-				gPosYDiffBinData[binId-1].push_back(dy);
+				//gPosXDiffBinData[binId-1].push_back(dx);
+				//gPosYDiffBinData[binId-1].push_back(dy);
+				gPosXDiffBinData[binId-1].push_back(dra);
+				gPosYDiffBinData[binId-1].push_back(ddec);
 
 				if(selected){
 					gFluxBinData_sel[binId-1].push_back(lgFlux);
 					gFluxDiffBinData_sel[binId-1].push_back(dflux_rel);
 					gLgFluxDiffBinData_sel[binId-1].push_back(dlgflux);
-					gPosXDiffBinData_sel[binId-1].push_back(dx);
-					gPosYDiffBinData_sel[binId-1].push_back(dy);	
+					//gPosXDiffBinData_sel[binId-1].push_back(dx);
+					//gPosYDiffBinData_sel[binId-1].push_back(dy);	
+					gPosXDiffBinData_sel[binId-1].push_back(dra);
+					gPosYDiffBinData_sel[binId-1].push_back(ddec);
 				}
 			}//close if
 
@@ -1601,14 +1904,16 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 			if(binId_snr>0 && binId_snr<gSNRBinData.size()) {
 				gSNRBinData[binId_snr-1].push_back(snr_rec);
 				gFluxDiffVSSNRBinData[binId_snr-1].push_back(dflux_rel);
-				gPosXDiffVSSNRBinData[binId_snr-1].push_back(dx);
-				gPosYDiffVSSNRBinData[binId_snr-1].push_back(dy);
+				//gPosXDiffVSSNRBinData[binId_snr-1].push_back(dx);
+				//gPosYDiffVSSNRBinData[binId_snr-1].push_back(dy);
+				gPosXDiffVSSNRBinData[binId_snr-1].push_back(dra);
+				gPosYDiffVSSNRBinData[binId_snr-1].push_back(ddec);
 			}//close if
 
 		}//close if found
 		else{
 			if(flux>1.e-1){
-				cout<<"Bright source not found (name="<<name<<", x="<<x<<", y="<<y<<", flux="<<flux<<endl;
+				cout<<"Bright source not found (name="<<name<<", pos("<<x<<","<<y<<"), skypos("<<ra<<","<<dec<<"), flux="<<flux<<endl;
 			}			
 		}
 
@@ -1630,14 +1935,19 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 		if(j%100==0) cout<<"--> "<<j+1<<"/"<<sources_rec.size()<<" sources in rec catalog processed..."<<endl;
 		double x_rec= sources_rec[j].x;
 		double y_rec= sources_rec[j].y;
+		double ra_rec= sources_rec[j].ra;
+		double dec_rec= sources_rec[j].dec;
 		double flux_rec= sources_rec[j].flux;
 		double lgFlux_rec= log10(flux_rec);
+		double l_rec= sources_rec[j].l;
+		double b_rec= sources_rec[j].b;
 
 		//Skip source if outside mosaic region
 		if(gSelectRegion){
 			bool isInside= false;
 			for(size_t k=0;k<gRegions.size();k++){
-				if(gRegions[k]->IsPointInsideRegion(x_rec,y_rec)){
+				//if(gRegions[k]->IsPointInsideRegion(x_rec,y_rec)){
+				if(gRegions[k]->IsPointInsideRegion(ra_rec,dec_rec)){
 					isInside= true;
 					break;
 				}
@@ -1645,11 +1955,23 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 			if(!isInside) continue;
 		}//close if gSelectRegion
 
+		//Find flux bin
+		int fluxBinIndex= -1;
+		for(size_t k=0;k<gLgRecFluxBins.size()-1;k++){
+			if(lgFlux_rec>=gLgRecFluxBins[k] && lgFlux_rec<=gLgRecFluxBins[k+1]){
+				fluxBinIndex= k;
+				break;
+			}
+		}
 
 		gFluxHisto_reliability->Fill(lgFlux_rec,1);
+		gFluxGalLatHisto2D_reliability->Fill(lgFlux_rec,b_rec,1);
+		if(fluxBinIndex!=-1) gSourceCountsHistos2D_galcoord_reliability[fluxBinIndex]->Fill(l_rec,b_rec,1);
 		gFluxHisto_fdr->Fill(lgFlux_rec,1);
 		if(isRecSourceFound[j]) {
 			gFluxHisto_rec_reliability->Fill(lgFlux_rec,1);
+			gFluxGalLatHisto2D_rec_reliability->Fill(lgFlux_rec,b_rec,1);
+			if(fluxBinIndex!=-1) gSourceCountsHistos2D_galcoord_rec_reliability[fluxBinIndex]->Fill(l_rec,b_rec,1);
 			nRecSources_true++;
 		}
 		else {
@@ -2165,8 +2487,17 @@ int ParseData_caesar(SourceInfo& info,const std::vector<std::string>& fields)
 	double avgRMS= rmsSum/(double)(nPix);
 	double snr= A/avgRMS;
 	
+	double ra= 0;
+	double dec= 0;
+	AstroUtils::PixelToWCSCoords(ra,dec,gWCS,x,y); 
+
+	double l= 0;
+	double b= 0;
+	AstroUtils::PixelToWCSCoords(l,b,gGalWCS,x,y); 
+	//cout<<"(x,y)=("<<x<<","<<y<<"), (l,b)=("<<l<<","<<b<<")"<<endl;
 
 	info.name= name;
+	/*
 	if(gUseWCS){
 		info.x= x_wcs;
 		info.y= y_wcs;
@@ -2175,6 +2506,14 @@ int ParseData_caesar(SourceInfo& info,const std::vector<std::string>& fields)
 		info.x= x;
 		info.y= y;
 	}
+	*/
+	info.x= x;
+	info.y= y;
+
+	info.ra= ra;
+	info.dec= dec;
+	info.l= l;
+	info.b= b;
 	info.flux= flux;
 	info.rms= avgRMS;
 	info.snr= snr;
@@ -2230,15 +2569,39 @@ int ParseData_selavy(SourceInfo& info,const std::vector<std::string>& fields)
 	double bmin_wcs= atof(fields[11].c_str());
 	double pa_wcs= atof(fields[12].c_str());
 
+	double x= 0;
+	double y= 0;
+	AstroUtils::WCSToPixelCoords(x,y,gWCS,x_wcs,y_wcs); 
+	
+	double ra= x_wcs;
+	double dec= y_wcs;
+	
+	double l= 0;
+	double b= 0;
+	AstroUtils::PixelToWCSCoords(l,b,gGalWCS,x,y); 
+
+
 	info.name= name;
+	/*
 	if(gUseWCS){
 		info.x= x_wcs;
 		info.y= y_wcs;
 	}
 	else{
-		cerr<<"ERROR: Selavy does not provide source centroid in pixel coordinates!"<<endl;
-		return -1;
+		//cerr<<"ERROR: Selavy does not provide source centroid in pixel coordinates!"<<endl;
+		//return -1;
+		info.x= x;
+		info.y= y;
 	}
+	*/
+	info.x= x;
+	info.y= y;
+
+	info.ra= ra;
+	info.dec= dec;
+	info.l= l;
+	info.b= b;
+
 	info.flux= flux;
 	info.rms= rms;
 	info.snr= snr;
@@ -2292,15 +2655,40 @@ int ParseData_aegean(SourceInfo& info,const std::vector<std::string>& fields)
 	double bmin_wcs= atof(fields[16].c_str());
 	double pa_wcs= atof(fields[18].c_str());
 
+	double x= 0;
+	double y= 0;
+	AstroUtils::WCSToPixelCoords(x,y,gWCS,x_wcs,y_wcs); 
+	
+	double ra= x_wcs;
+	double dec= y_wcs;
+	
+	double l= 0;
+	double b= 0;
+	AstroUtils::PixelToWCSCoords(l,b,gGalWCS,x,y); 
+
+
 	info.name= name;
+
+	/*
 	if(gUseWCS){
 		info.x= x_wcs;
 		info.y= y_wcs;
 	}
 	else{
-		cerr<<"ERROR: Aegean does not provide source centroid in pixel coordinates!"<<endl;
-		return -1;
+		//cerr<<"ERROR: Aegean does not provide source centroid in pixel coordinates!"<<endl;
+		//return -1;
+		info.x= x;
+		info.y= y;
 	}
+	*/
+	info.x= x;
+	info.y= y;
+
+	info.ra= ra;
+	info.dec= dec;
+	info.l= l;
+	info.b= b;
+
 	info.flux= flux;
 	info.rms= rms;
 	info.snr= snr;
@@ -2329,19 +2717,46 @@ int ParseData(SourceInfo& info,const std::vector<std::string>& fields)
 		return -1;
 	}
 	
+	//Parse data
+	std::string name= std::string(fields[0]);
+	double x= atof(fields[1].c_str());
+	double y= atof(fields[2].c_str());
+	double x_wcs= atof(fields[3].c_str());//wcs x
+	double y_wcs= atof(fields[4].c_str());//wcs y
+	double flux= atof(fields[5].c_str());
+	
+	double ra= 0;
+	double dec= 0;
+	AstroUtils::PixelToWCSCoords(ra,dec,gWCS,x,y); 
+
+	double l= 0;
+	double b= 0;
+	AstroUtils::PixelToWCSCoords(l,b,gGalWCS,x,y); 
+
 	//Set var values
-	info.name= std::string(fields[0]);
+	info.name= name;
 	 
+	/*
 	if(gUseWCS){
-		info.x= atof(fields[3].c_str());//wcs x
-		info.y= atof(fields[4].c_str());//wcs y
+		info.x= x_wcs;
+		info.y= y_wcs;
 	}
 	else{
-		info.x= atof(fields[1].c_str());
-		info.y= atof(fields[2].c_str());
+		info.x= x;
+		info.y= y;
 	}
-	info.flux= atof(fields[5].c_str());
+	*/
+	info.x= x;
+	info.y= y;
 
+	info.flux= flux;
+
+	info.ra= ra;
+	info.dec= dec;
+	info.l= l;
+	info.b= b;
+
+	
 	return 0;
 
 }//close ParseData()

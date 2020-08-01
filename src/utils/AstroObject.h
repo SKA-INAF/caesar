@@ -109,6 +109,7 @@ class AstroObject : public TObject
 		double yerr;
 		std::string refs;//catalog references
 		bool confirmed;//whether the object is confirmed or not
+		std::string confirmed_str;
 		
 		bool hasFrequencyInfo;
 		double nu;
@@ -141,7 +142,7 @@ class AstroObject : public TObject
 		double spectralIndex;
 		double spectralIndexErr;
 
-	ClassDef(AstroObject,5)
+	ClassDef(AstroObject,6)
 
 };//close class AstroObject
 

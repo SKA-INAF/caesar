@@ -15,7 +15,6 @@ AstroObject* gAstroObject= 0;
 TTree* gOutputTree= 0;
 TFile* gOutputFile= 0;
 std::string gOutputFileName= "output.root";
-std::string gOutputFileName_ascii= "output.dat";
 std::string gRegionOutFileName= "ds9.reg";
 
 //Functions
@@ -26,12 +25,12 @@ int WriteDS9Regions();
 int SelectObjects();
 int Save();
 
-int ReadHASHObjects(std::string hashFileName,std::string regionFileName="",std::string outputFileName="output.root",std::string regionOutFileName="ds9.reg")
+int ReadMASHObjects(std::string mashFileName,std::string regionFileName="",std::string outputFileName="output.root",std::string regionOutFileName="ds9.reg")
 {
 	//===================================
 	//==       GET ARGS
 	//===================================
-	gCatalogFileName= hashFileName;
+	gCatalogFileName= mashFileName;
 	gOutputFileName= outputFileName;		
 	gRegionFileName= regionFileName;
 	gRegionOutFileName= regionOutFileName;
@@ -122,7 +121,7 @@ int ReadRegions()
 int ReadObjects()
 {
 	cout<<"INFO: Reading objects from catalog file "<<gCatalogFileName<<" ..."<<endl;
-	int status= AstroObjectParser::ParseHASHData(gAstroObjects,gCatalogFileName,'|');
+	int status= AstroObjectParser::ParseMASHData(gAstroObjects,gCatalogFileName,'|');
 	if(status<0){
 		cerr<<"ERROR: Failed to read objects from catalog file "<<gCatalogFileName<<"!"<<endl;
 		return -1;
@@ -185,10 +184,7 @@ int WriteDS9Regions()
 	//Loop over sources
 	for(size_t i=0;i<gAstroObjects_sel.size();i++)
 	{
-		//std::string color,std::vector<std::string> tags
-		std::string objName= gAstroObjects_sel[i]->name;
-		std::string objConfirmedFlag= gAstroObjects_sel[i]->confirmed_str;
-		std::string regionText= gAstroObjects_sel[i]->GetDS9Region(objName,"green",{objConfirmedFlag});
+		std::string regionText= gAstroObjects_sel[i]->GetDS9Region();
 		fprintf(fout,"%s\n",regionText.c_str());
 	}
 
@@ -201,7 +197,6 @@ int WriteDS9Regions()
 
 int Save()
 {
-	//Save to ROOT
 	if(gOutputFile)
 	{
 		//Save data to TTree
@@ -220,18 +215,6 @@ int Save()
 		gOutputFile->Close();
 
 	}//close if
-
-	//Save to ASCII
-	FILE* fout= fopen(gOutputFileName_ascii.c_str(),"w");
-	
-	for(size_t i=0;i<gAstroObjects_sel.size();i++)
-	{
-		gAstroObject= gAstroObjects_sel[i];
-		fprintf(fout,"%s,%f,%f,%s\n",gAstroObject->name.c_str(),gAstroObject->x,gAstroObject->y,gAstroObject->confirmed_str.c_str());		
-	
-	}//end loop objects
-
-	fclose(fout);
 
 	//Save DS9 regions
 	cout<<"INFO: Saving objects to DS9 region..."<<endl;

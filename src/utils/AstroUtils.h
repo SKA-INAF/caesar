@@ -88,6 +88,11 @@ class AstroUtils : public TObject {
 		
 
 		/**
+		* \brief Get image coordinates corresponding to WCS coordinates
+		*/
+		static int WCSToPixelCoords(double& ix, double& iy,WCS* wcs,double xpos,double ypos);
+
+		/**
 		* \brief Get WCS coordinates corresponding to image coordinates
 		*/
 		static int PixelToWCSCoords(double& xpos, double& ypos,WCS* wcs,double ix,double iy);

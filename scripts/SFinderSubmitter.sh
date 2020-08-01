@@ -8,7 +8,7 @@
 NARGS="$#"
 echo "INFO: NARGS= $NARGS"
 
-if [ "$NARGS" -lt 2 ]; then
+if [ "$NARGS" -lt 1 ]; then
 	echo "ERROR: Invalid number of arguments...see script usage!"
   echo ""
 	echo "**************************"

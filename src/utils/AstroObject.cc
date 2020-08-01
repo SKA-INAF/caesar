@@ -89,6 +89,7 @@ void AstroObject::Init()
 	yerr= 0;
 	refs= "";
 	confirmed= false;
+	confirmed_str= "";
 
 	hasFluxInfo= false;
 	peakFlux= 0;
@@ -157,10 +158,12 @@ Contour* AstroObject::GetContour(bool computePars)
 	}
 	
 	//Compute ellipse pars
-	double X0= x;
-	double Y0= y;
-	double a= bmaj/2;
-	double b= bmin/2;
+	double X0= x;//in deg
+	double Y0= y;//in deg
+	double a= bmaj/2;//in arcsec
+	double b= bmin/2;//in arcsec
+	a/= 3600.;//in deg
+	b/= 3600.;//in deg
 	double theta= pa+90;
 
 	//Create contour

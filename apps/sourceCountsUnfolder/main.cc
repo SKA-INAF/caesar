@@ -41,6 +41,7 @@
 #include <TLegend.h>
 #include <TGraph.h>
 #include <TGraphErrors.h>
+#include <TGaxis.h>
 
 #include <iostream>
 #include <vector>
@@ -86,6 +87,7 @@ void Usage(char* exeName)
 	cout<<"-F, --lgSfit-max=[LGSFIT_MAX] \t Maximum flux density range used in fitting (default=1.5)"<<endl;
 	cout<<"-n, --freq=[FREQ] \t Data frequency in GHz used to convert source count literature fit models (default=1.4 GHz)"<<endl;	
 	cout<<"-N, --sindex=[SPECTRAL_INDEX] \t Data frequency spectral index used to convert source count literature fit models (default=-0.9)"<<endl;
+	cout<<"-A, --area=[AREA] \t Normalization area in deg squared (default=37.7)"<<endl;
 	cout<<"-v, --verbosity=[LEVEL] \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	cout<<"=============================="<<endl;
 
@@ -122,6 +124,7 @@ static const struct option options_tab[] = {
 	{ "lgSfit-max", required_argument, 0, 'F' },
 	{ "freq", required_argument, 0, 'n' },
 	{ "sindex", required_argument, 0, 'N' },	
+	{ "area", required_argument, 0, 'A' },	
 	{ "interactive", no_argument, 0, 'I' },
   {(char*)0, (int)0, (int*)0, (int)0}
 };
@@ -404,7 +407,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:H:o:v:Ig:G:l:c:C:e:b:r:E:B:R:S:s:d:t:uwLn:N:jmf:F:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:H:o:v:Ig:G:l:c:C:e:b:r:E:B:R:S:s:d:t:uwLn:N:jmf:F:A:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -617,6 +620,11 @@ int ParseOptions(int argc, char *argv[])
 			case 'N':	
 			{	
 				gDataSpectralIndex= atof(optarg);
+				break;
+			}
+			case 'A':	
+			{	
+				gArea= atof(optarg);
 				break;
 			}
 			case 'v':	
@@ -938,9 +946,11 @@ int UnfoldData()
 		for(int i=0;i<gUnfoldedSpectrum_totErrors->GetNbinsX();i++){
 			for(int j=0;j<gUnfoldedSpectrum_totErrors->GetNbinsY();j++){
 				double binContent= gUnfoldedSpectrum_totErrors->GetBinContent(i+1,j+1);
+				double binError_stats= gUnfoldedSpectrum->GetBinError(i+1,j+1);
 				double binError_unfolding= gUnfoldedSpectrum_totErrors->GetBinError(i+1,j+1);
 				double binError_resoBias= gSourceCountsResoBiasCorrErr*binContent;
-				double binError_tot= sqrt( binError_unfolding*binError_unfolding + binError_resoBias*binError_resoBias);
+				//double binError_tot= sqrt( binError_unfolding*binError_unfolding + binError_resoBias*binError_resoBias);
+				double binError_tot= sqrt( binError_stats*binError_stats + binError_unfolding*binError_unfolding + binError_resoBias*binError_resoBias);
 				gUnfoldedSpectrum_totErrors->SetBinError(i+1,j+1,binError_tot);
 			}
 		}
@@ -1623,14 +1633,66 @@ void Draw()
 	diagFcn->SetLineColor(kWhite);
 
 	if(gResponseMatrix){
+		gStyle->SetPalette(kRainBow);
+
 		TCanvas* ResponseMatrixPlot= new TCanvas("ResponseMatrixPlot","ResponseMatrixPlot");
 		ResponseMatrixPlot->cd();
 
 		gResponseMatrix->SetStats(0);
 		gResponseMatrix->GetXaxis()->SetTitle("log_{10}(S_{gen}/Jy)");
 		gResponseMatrix->GetYaxis()->SetTitle("log_{10}(S_{meas}/Jy)");
+		gResponseMatrix->GetXaxis()->CenterTitle(true);
+		gResponseMatrix->GetYaxis()->CenterTitle(true);
 		gResponseMatrix->GetZaxis()->SetRangeUser(-0.0001,1);
 		gResponseMatrix->Draw("COLZ");
+
+		//Draw mJy axis
+		double ymin_h= gResponseMatrix->GetYaxis()->GetXmin();
+		double ymax_h= gResponseMatrix->GetYaxis()->GetXmax();
+		double xmin_h= gResponseMatrix->GetXaxis()->GetXmin();
+		double xmax_h= gResponseMatrix->GetXaxis()->GetXmax();
+		double xmin_shifted= xmin_h + 3;
+		double xmax_shifted= xmax_h + 3;
+		double ymin_shifted= ymin_h + 3;
+		double ymax_shifted= ymax_h + 3;	
+
+		TGaxis* ResponseMatrixPlotXAxis= new TGaxis(
+			xmin_h,ymin_h,
+			xmax_h,ymin_h,
+			xmin_shifted,xmax_shifted,510,"+L"
+		);
+		ResponseMatrixPlotXAxis->SetLineColor(kBlack);
+		ResponseMatrixPlotXAxis->SetTitleFont(52);
+		ResponseMatrixPlotXAxis->SetTitleSize(0.06);	
+		ResponseMatrixPlotXAxis->SetTitleOffset(0.85);
+		ResponseMatrixPlotXAxis->SetLabelFont(42);
+		ResponseMatrixPlotXAxis->SetLabelSize(0.04);
+		ResponseMatrixPlotXAxis->CenterTitle(true);
+		ResponseMatrixPlotXAxis->SetTitle("log_{10}(S_{gen}/mJy)");
+
+		TGaxis* ResponseMatrixPlotYAxis= new TGaxis(
+			xmin_h,ymin_h,
+			xmin_h,ymax_h,
+			ymin_shifted,ymax_shifted,510,""
+		);
+		ResponseMatrixPlotYAxis->SetLineColor(kBlack);
+		ResponseMatrixPlotYAxis->SetTitleFont(52);
+		ResponseMatrixPlotYAxis->SetTitleSize(0.06);	
+		ResponseMatrixPlotYAxis->SetTitleOffset(0.87);
+		ResponseMatrixPlotYAxis->SetLabelFont(42);
+		ResponseMatrixPlotYAxis->SetLabelSize(0.04);
+		ResponseMatrixPlotYAxis->CenterTitle(true);
+		ResponseMatrixPlotYAxis->SetTitle("log_{10}(S_{meas}/mJy)");
+
+		gResponseMatrix->GetXaxis()->SetTitle("");
+  	gResponseMatrix->GetXaxis()->SetLabelOffset(999);
+  	gResponseMatrix->GetXaxis()->SetLabelSize(0);
+		ResponseMatrixPlotXAxis->Draw();
+
+		gResponseMatrix->GetYaxis()->SetTitle("");
+  	gResponseMatrix->GetYaxis()->SetLabelOffset(999);
+  	gResponseMatrix->GetYaxis()->SetLabelSize(0);
+		ResponseMatrixPlotYAxis->Draw();
 	
 		diagFcn->Draw("lsame");
 	}
@@ -1780,7 +1842,14 @@ void Draw()
 	TCanvas* DiffCountsPlot= new TCanvas("DiffCountsPlot","DiffCountsPlot");
 	DiffCountsPlot->cd();
 
-	TH2D* DiffCountsPlotBkg= new TH2D("DiffCountsPlotBkg","",100,gDiffSourceCounts->GetXaxis()->GetXmin(),gDiffSourceCounts->GetXaxis()->GetXmax(),100,1.e-3,1.e+5);
+	//double DiffCountsPlotBkg_xmin= gDiffSourceCounts->GetXaxis()->GetXmin();
+	//double DiffCountsPlotBkg_xmax= gDiffSourceCounts->GetXaxis()->GetXmax();
+	double DiffCountsPlotBkg_xmin= -3.45;
+	double DiffCountsPlotBkg_xmax= 0.7;
+	double DiffCountsPlotBkg_ymin= 1.e-3;
+	double DiffCountsPlotBkg_ymax= 1.e+4;
+
+	TH2D* DiffCountsPlotBkg= new TH2D("DiffCountsPlotBkg","",100,DiffCountsPlotBkg_xmin,DiffCountsPlotBkg_xmax,100,DiffCountsPlotBkg_ymin,DiffCountsPlotBkg_ymax);
 	DiffCountsPlotBkg->SetTitle(0);
 	DiffCountsPlotBkg->SetStats(0);
 	DiffCountsPlotBkg->GetXaxis()->SetTitle("log_{10}(S/Jy)");
@@ -1788,7 +1857,9 @@ void Draw()
 	DiffCountsPlotBkg->GetXaxis()->SetTitleOffset(0.8);
 	DiffCountsPlotBkg->GetYaxis()->SetTitle("S^{2.5} x dN/dS (Jy^{1.5}sr^{-1})");
 	DiffCountsPlotBkg->GetYaxis()->SetTitleSize(0.06);
-	DiffCountsPlotBkg->GetYaxis()->SetTitleOffset(1.3);
+	DiffCountsPlotBkg->GetYaxis()->SetTitleOffset(1.2);
+	DiffCountsPlotBkg->GetXaxis()->CenterTitle(true);
+	DiffCountsPlotBkg->GetYaxis()->CenterTitle(true);
 	DiffCountsPlotBkg->Draw();
 
 	gExpDataFitAreaGraph->SetFillStyle(1001);
@@ -1843,13 +1914,14 @@ void Draw()
 	unfoldedDiffSpectrumGraph->SetLineColor(kBlack);
 	unfoldedDiffSpectrumGraph->SetMarkerSize(1.1);
 	unfoldedDiffSpectrumGraph->SetMarkerStyle(24);
-	unfoldedDiffSpectrumGraph->Draw("PZ");
+	//unfoldedDiffSpectrumGraph->Draw("PZ");
 
 	unfoldedDiffSpectrumGraph_totErrors->SetMarkerColor(kBlack);
 	unfoldedDiffSpectrumGraph_totErrors->SetLineColor(kBlack);
 	unfoldedDiffSpectrumGraph_totErrors->SetMarkerSize(1.1);
 	unfoldedDiffSpectrumGraph_totErrors->SetMarkerStyle(24);
-	unfoldedDiffSpectrumGraph_totErrors->Draw("[]");
+	//unfoldedDiffSpectrumGraph_totErrors->Draw("[]");
+	unfoldedDiffSpectrumGraph_totErrors->Draw("PZ");
 
 	gUnfoldedDiffSpectrum_resoBiasCorrected->SetMarkerColor(kBlue);
 	gUnfoldedDiffSpectrum_resoBiasCorrected->SetLineColor(kBlue);
@@ -1862,12 +1934,40 @@ void Draw()
 	gFFDiffSpectrum->SetMarkerStyle(23);
 	//gFFDiffSpectrum->Draw("L hist same");
 
+	//Draw mJy axis
+	double ymin_h= DiffCountsPlotBkg->GetYaxis()->GetXmin();
+	double ymax_h= DiffCountsPlotBkg->GetYaxis()->GetXmax();
+	double xmin_h= DiffCountsPlotBkg->GetXaxis()->GetXmin();
+	double xmax_h= DiffCountsPlotBkg->GetXaxis()->GetXmax();
+	double xmin_shifted= xmin_h + 3;
+	double xmax_shifted= xmax_h + 3;
+
+	TGaxis* DiffCountsPlotBkgXAxis= new TGaxis(
+		xmin_h,ymin_h,
+		xmax_h,ymin_h,
+		xmin_shifted,xmax_shifted,510,"+L"
+	);
+	DiffCountsPlotBkgXAxis->SetLineColor(kBlack);
+	DiffCountsPlotBkgXAxis->SetTitleFont(52);
+	DiffCountsPlotBkgXAxis->SetTitleSize(0.06);	
+	DiffCountsPlotBkgXAxis->SetTitleOffset(0.87);
+	DiffCountsPlotBkgXAxis->SetLabelFont(42);
+	DiffCountsPlotBkgXAxis->SetLabelSize(0.04);
+	DiffCountsPlotBkgXAxis->CenterTitle(true);
+	DiffCountsPlotBkgXAxis->SetTitle("log_{10}(S/mJy)");
+
+	DiffCountsPlotBkg->GetXaxis()->SetTitle("");
+  DiffCountsPlotBkg->GetXaxis()->SetLabelOffset(999);
+  DiffCountsPlotBkg->GetXaxis()->SetLabelSize(0);
+	DiffCountsPlotBkgXAxis->Draw();
+
+
 	TLegend* DiffCountsPlotLegend= new TLegend(0.6,0.6,0.8,0.8);	
 	DiffCountsPlotLegend->SetTextSize(0.04);
 	DiffCountsPlotLegend->SetTextFont(52);
 	DiffCountsPlotLegend->AddEntry(gDiffSourceCounts,"measured","PL");
 	DiffCountsPlotLegend->AddEntry(gUnfoldedDiffSpectrum,"unfolded","PL");
-	DiffCountsPlotLegend->AddEntry(gExpDataFitAreaGraph,Form("1.4 GHz data shifted @ %1.0f MHz",gDataFrequency*1000),"F");
+	DiffCountsPlotLegend->AddEntry(gExpDataFitAreaGraph,Form("1.4 GHz data shifted to %1.0f MHz",gDataFrequency*1000),"F");
 	//DiffCountsPlotLegend->AddEntry(gFFDiffSpectrum,"fit","L");
 	//DiffCountsPlotLegend->AddEntry(trueDiffModelCounts,"model","L");
 	DiffCountsPlotLegend->Draw("same");
