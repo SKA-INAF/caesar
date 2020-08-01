@@ -667,10 +667,10 @@ if(BUILD_APPS)
 endif()
 
 # -- Install library dict map
-if(EXISTS ${PROJECT_BINARY_DIR}/CaesarDict_rdict.pcm)
+if(EXISTS "${PROJECT_BINARY_DIR}/CaesarDict_rdict.pcm")
 	install(FILES ${PROJECT_BINARY_DIR}/CaesarDict_rdict.pcm DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
-if(EXISTS ${PROJECT_BINARY_DIR}/libCaesarDict_rdict.pcm)
+if(EXISTS "${PROJECT_BINARY_DIR}/libCaesarDict_rdict.pcm")
 	install(FILES ${PROJECT_BINARY_DIR}/libCaesarDict_rdict.pcm DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
 
