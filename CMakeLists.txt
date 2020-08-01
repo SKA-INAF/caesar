@@ -14,7 +14,8 @@ endif()
 # -------------------------------------------
 # CMAKE VERSIONS
 # -------------------------------------------
-cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
+#cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.0.2 FATAL_ERROR)
 cmake_policy(SET CMP0005 NEW)
 
 #---------------------------------------------
@@ -667,12 +668,16 @@ if(BUILD_APPS)
 endif()
 
 # -- Install library dict map
-if(EXISTS "${PROJECT_BINARY_DIR}/CaesarDict_rdict.pcm")
-	install(FILES ${PROJECT_BINARY_DIR}/CaesarDict_rdict.pcm DESTINATION ${CMAKE_INSTALL_LIBDIR})
-endif()
-if(EXISTS "${PROJECT_BINARY_DIR}/libCaesarDict_rdict.pcm")
-	install(FILES ${PROJECT_BINARY_DIR}/libCaesarDict_rdict.pcm DESTINATION ${CMAKE_INSTALL_LIBDIR})
-endif()
+# NB: EXISTS macro not working because these files are generated only after make, try use the OPTIONAL
+#if(EXISTS "${PROJECT_BINARY_DIR}/CaesarDict_rdict.pcm")
+#	install(FILES ${PROJECT_BINARY_DIR}/CaesarDict_rdict.pcm DESTINATION ${CMAKE_INSTALL_LIBDIR})
+#endif()
+#if(EXISTS "${PROJECT_BINARY_DIR}/libCaesarDict_rdict.pcm")
+#	install(FILES ${PROJECT_BINARY_DIR}/libCaesarDict_rdict.pcm DESTINATION ${CMAKE_INSTALL_LIBDIR})
+#endif()
+install(FILES ${PROJECT_BINARY_DIR}/CaesarDict_rdict.pcm DESTINATION ${CMAKE_INSTALL_LIBDIR} OPTIONAL)
+install(FILES ${PROJECT_BINARY_DIR}/libCaesarDict_rdict.pcm DESTINATION ${CMAKE_INSTALL_LIBDIR} OPTIONAL)
+
 
 # -- Install libraries
 install(TARGETS Caesar DESTINATION ${CMAKE_INSTALL_LIBDIR})
