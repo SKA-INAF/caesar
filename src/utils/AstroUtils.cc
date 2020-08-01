@@ -151,6 +151,26 @@ std::string AstroUtils::GetDS9WCSTypeHeader(int coordSys)
 }//close GetDS9WCSTypeHeader()
 
 
+
+int AstroUtils::WCSToPixelCoords(double& ix, double& iy,WCS* wcs,double xpos,double ypos)
+{
+	//Check WCS
+	if(!wcs){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given WCS!");
+		#endif
+		return -1;
+	}
+
+	//Convert coords
+	int offscl;
+	WCSUtils::wcs2pix (wcs,xpos,ypos,&ix,&iy,&offscl);
+
+	return 0;
+
+}//close WCSToPixelCoords()
+
+
 int AstroUtils::PixelToWCSCoords(double& xpos, double& ypos,WCS* wcs,double ix,double iy) 
 {
 	//Check WCS

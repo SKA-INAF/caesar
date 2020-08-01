@@ -1992,6 +1992,8 @@ int AstroObjectParser::ParseHASHObjectData(AstroObject& astroObject,std::string 
 	std::string flag_str= fields[3];
 	CodeUtils::RemovePatternInString(flag_str,"\t");
 	CodeUtils::StripBlankSpaces(flag_str);
+
+	astroObject.confirmed_str= flag_str;
 	
 	if(flag_str=="T"){
 		astroObject.confirmed= true;

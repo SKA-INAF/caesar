@@ -84,7 +84,7 @@ void WCSUtils::DeleteWCS(WCS** wcs)
 	//Free WCS structure if allocated but not filled
 	if (nowcs (*wcs)) {
 		if (*wcs) {
-			cout<<"Freeing WCS structure (allocated but not filled)..."<<endl;
+			//cout<<"Freeing WCS structure (allocated but not filled)..."<<endl;
 			free (*wcs);
 			*wcs= NULL;//ADDED
 		}
@@ -93,7 +93,7 @@ void WCSUtils::DeleteWCS(WCS** wcs)
 
   // Free WCS on which this WCS depends
   if ( (*wcs)->wcs) {
-		cout<<"Freeing WCS structure on which this WCS depends..."<<endl;
+		//cout<<"Freeing WCS structure on which this WCS depends..."<<endl;
 		DeleteWCS( &((*wcs)->wcs) );
 		//wcsfree (wcs->wcs);
 		//wcs->wcs = NULL;
@@ -111,7 +111,7 @@ void WCSUtils::DeleteWCS(WCS** wcs)
   if ( (*wcs)->inv_y != NULL)
 		poly_end ( (*wcs)->inv_y);
 
-	cout<<"Freeing WCS structure ..."<<endl;
+	//cout<<"Freeing WCS structure ..."<<endl;
   free (*wcs);
 
 	*wcs= NULL;//ADDED
@@ -1950,7 +1950,7 @@ void WCSUtils::wcsfree(WCS* wcs)
 	//Free WCS structure if allocated but not filled
 	if (nowcs (wcs)) {
 		if (wcs) {
-			cout<<"Freeing WCS structure (allocated but not filled)..."<<endl;
+			//cout<<"Freeing WCS structure (allocated but not filled)..."<<endl;
 			free (wcs);
 			//wcs= NULL;//ADDED
 		}
@@ -1959,7 +1959,7 @@ void WCSUtils::wcsfree(WCS* wcs)
 
   // Free WCS on which this WCS depends
   if (wcs->wcs) {
-		cout<<"Freeing WCS structure on which this WCS depends..."<<endl;
+		//cout<<"Freeing WCS structure on which this WCS depends..."<<endl;
 		wcsfree (wcs->wcs);
 		wcs->wcs = NULL;
 	}
@@ -1976,7 +1976,7 @@ void WCSUtils::wcsfree(WCS* wcs)
   if (wcs->inv_y != NULL)
 		poly_end (wcs->inv_y);
 
-	cout<<"Freeing WCS structure ..."<<endl;
+	//cout<<"Freeing WCS structure ..."<<endl;
   free (wcs);
 
 	//wcs= NULL;//ADDED

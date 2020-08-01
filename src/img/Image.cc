@@ -2492,14 +2492,14 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 		return maskedImage;	
 	}
 
+	//cout<<"Image::GetSourceMask(): pto 1"<<endl;
+
 	//## Search source pixel coordinates in image?
 	//## If sources are extracted from the same map there is no need to do that
 	//## however for sources extracted from submaps or tiles it is needed
 	std::vector<long int> masked_pix_ids;
 	if(searchSourceCoords) {
-		#ifdef OPENMP_ENABLED
-		#pragma omp parallel for
-		#endif
+		
 		for(int k=0;k<nSources;k++){
 			for(int l=0;l<sources[k]->GetNPixels();l++){
 				Pixel* pixel= sources[k]->GetPixel(l);
@@ -2512,9 +2512,7 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 		}
 	}//close if
 	else{
-		#ifdef OPENMP_ENABLED
-		#pragma omp parallel for
-		#endif
+		
 		for(int k=0;k<nSources;k++){
 			for(int l=0;l<sources[k]->GetNPixels();l++){
 				Pixel* pixel= sources[k]->GetPixel(l);
@@ -2523,6 +2521,8 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 			}
 		}
 	}//close else
+
+	//cout<<"Image::GetSourceMask(): pto 2"<<endl;
 
 
 	if(invert){
@@ -2579,8 +2579,15 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 
 	}//close if invert
 	else{
+
+		//cout<<"Image::GetSourceMask(): pto 3"<<endl;
+
+
 		//Reset map and loop over sources
 		maskedImage->Reset();
+
+		//cout<<"Image::GetSourceMask(): pto 4"<<endl;
+
 
 		if(isBinary){	
 			#ifdef OPENMP_ENABLED
@@ -2599,6 +2606,9 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 				}//end loop pixels
 			}//end loop sources		
 			*/
+
+			//cout<<"Image::GetSourceMask(): pto 5"<<endl;
+
 
 		}//close if
 		else{
@@ -2620,16 +2630,29 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 				}//end loop pixels
 			}//end loop sources	
 			*/	
+
+			//cout<<"Image::GetSourceMask(): pto 5"<<endl;
+
+
 		}//close else
 
 		//Force re-computation of stats
 		maskedImage->ComputeStats(true,false,true);
 
+		//cout<<"Image::GetSourceMask(): pto 6"<<endl;
+
+
 	}//close else
+
+	//cout<<"Image::GetSourceMask(): pto 7"<<endl;
+
 
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("(after) pixel size="<<maskedImage->GetPixelDataSize()<<" (original size="<<this->GetPixelDataSize()<<")");
 	#endif
+
+	//cout<<"Image::GetSourceMask(): pto 8"<<endl;
+
 
 	return maskedImage;
 

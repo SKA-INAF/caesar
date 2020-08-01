@@ -140,6 +140,8 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 		#ifdef LOGGING_ENABLED
 			DEBUG_LOG("Computing the significance map ...");
 		#endif
+		//cout<<"pto 1"<<endl;
+
 		Image* significanceMap= img->GetSignificanceMap(bkgData,computeLocalBkg);
 		if(!significanceMap){
 			#ifdef LOGGING_ENABLED
@@ -159,6 +161,9 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 		//bool findNegativeExcess= true;
 		//bool mergeBelowSeed= false;
 		//int status= img->FindCompactSource(blobs,significanceMap,bkgData,seedThr,mergeThr,minPixels,findNegativeExcess,mergeBelowSeed,findNestedSources);
+
+		//cout<<"pto 2"<<endl;
+
 		int status= img->FindCompactSource(blobs,significanceMap,bkgData,seedThr,mergeThr,minPixels,findNestedSources);
 		if(status<0){
 			#ifdef LOGGING_ENABLED
@@ -175,6 +180,8 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 		#ifdef LOGGING_ENABLED
 			DEBUG_LOG("Computing image without outliers (set to zero)...");
 		#endif
+		
+		//cout<<"pto 3"<<endl;
 
 		Image* img_wOutliers= img->GetSourceMask(blobs,false,true);//invert mask
 		if(!img_wOutliers){
@@ -205,6 +212,8 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 			DEBUG_LOG("Recomputing bkg on residual map...");
 		#endif
 
+		//cout<<"pto 4"<<endl;
+
 		ImgBkgData* robustBkgData= FindBkg(img_wOutliers,estimator,computeLocalBkg,boxSizeX,boxSizeY,gridStepSizeX,gridStepSizeY,use2ndPass,false,seedThr,mergeThr,minPixels,useRange, minThr,maxThr);
 		if(!robustBkgData){
 			#ifdef LOGGING_ENABLED
@@ -229,6 +238,8 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 			#endif
 		}
 
+		//cout<<"pto 5"<<endl;
+
 		//Override main bkgData with robust estimates
 		for(size_t i=0;i<(robustBkgData->BkgSamplings).size();i++) {
 			(bkgData->BkgSamplings)[i]= (robustBkgData->BkgSamplings)[i];
@@ -239,6 +250,8 @@ ImgBkgData* BkgFinder::FindBkg(Image* img,int estimator,bool computeLocalBkg,int
 		bkgData->gNoise= robustBkgData->gNoise;
 				
 		//Delete stuff
+		//cout<<"pto 6"<<endl;
+
 		delete significanceMap;
 		significanceMap= 0;
 		for(unsigned int i=0;i<blobs.size();i++){
