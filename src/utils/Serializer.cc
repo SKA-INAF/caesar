@@ -837,6 +837,7 @@ int Serializer::EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* sourc
 		//Set object class ids
 		source_pb.set_objlocationid(source->ObjLocationId);
 		source_pb.set_objclassid(source->ObjClassId);
+		source_pb.set_objclassstrid(source->ObjClassStrId);
 		source_pb.set_objclasssubid(source->ObjClassSubId);
 		source_pb.set_objconfirmed(source->ObjConfirmed);
 
@@ -846,6 +847,9 @@ int Serializer::EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* sourc
 		}
 		for(size_t i=0;i<(source->componentObjClassIds).size();i++){
 			source_pb.add_componentobjclassid((source->componentObjClassIds)[i]);
+		}
+		for(size_t i=0;i<(source->componentObjClassStrIds).size();i++){
+			source_pb.add_componentobjclassstrid((source->componentObjClassStrIds)[i]);
 		}
 		for(size_t i=0;i<(source->componentObjClassSubIds).size();i++){
 			source_pb.add_componentobjclasssubid((source->componentObjClassSubIds)[i]);
@@ -1586,13 +1590,15 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 
 		//Set object class ids
 		if(source_pb.has_objlocationid()) source.ObjLocationId= source_pb.objlocationid();
-		if(source_pb.has_objclassid()) source.ObjClassId= source_pb.objclassid();		
+		if(source_pb.has_objclassid()) source.ObjClassId= source_pb.objclassid();
+		if(source_pb.has_objclassstrid()) source.ObjClassStrId= source_pb.objclassstrid();		
 		if(source_pb.has_objclasssubid()) source.ObjClassSubId= source_pb.objclasssubid();
 		if(source_pb.has_objconfirmed()) source.ObjConfirmed= source_pb.objconfirmed();
 
 		//Set component object class ids
 		std::vector<int> compObjLocationIds;
 		std::vector<int> compObjClassIds;
+		std::vector<std::string> compObjClassStrIds;
 		std::vector<int> compObjClassSubIds;
 		std::vector<bool> compObjConfirmed;
 		for(int i=0;i<source_pb.componentobjlocationid_size();i++){
@@ -1602,6 +1608,10 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 		for(int i=0;i<source_pb.componentobjclassid_size();i++){
 			int objClassId = source_pb.componentobjclassid(i);
 			compObjClassIds.push_back(objClassId);
+		}
+		for(int i=0;i<source_pb.componentobjclassstrid_size();i++){
+			std::string objClassStrId = source_pb.componentobjclassstrid(i);
+			compObjClassStrIds.push_back(objClassStrId);
 		}
 		for(int i=0;i<source_pb.componentobjclasssubid_size();i++){
 			int objClassSubId = source_pb.componentobjclasssubid(i);
@@ -1613,6 +1623,7 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 		}
 		source.componentObjLocationIds= compObjLocationIds;
 		source.componentObjClassIds= compObjClassIds;
+		source.componentObjClassStrIds= compObjClassStrIds;
 		source.componentObjClassSubIds= compObjClassSubIds;
 		source.componentObjConfirmed= compObjConfirmed;
 		
