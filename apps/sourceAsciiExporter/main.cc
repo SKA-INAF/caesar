@@ -58,6 +58,7 @@ void Usage(char* exeName)
 	cout<<"-i, --input=[INPUT_FILE] \t Input ROOT file produced by CAESAR containing the source collection to be read and written in a simpler ROOT TTree format"<<endl;
 	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (ROOT format) where to store source islands TTree (default=sources.dat)"<<endl;
 	cout<<"-O, --output-comp=[OUTPUT_FILE] \t Output file name (ROOT format) where to store source components TTree (default=sourceComponents.dat)"<<endl;	
+	cout<<"-b, --writeFluxInfoInBrightnessUnits \t Write flux information in brighteness units (Jy/beam) (default=no)"<<endl;
 	cout<<"-a, --writeAdditionalSourceInfo \t Write additional source info (spectral index, cross-match objects) (default=no)"<<endl;
 	cout<<"-w, --wcsType=[WCS_TYPE] \t WCS type to be used for sky coordinates (0=J2000,1=B1950,2=GALACTIC,3=ECLIPTIC,4=ALTAZ,5=LINEAR) (default=J2000)"<<endl;
 	cout<<"-d, --delimiter=[ASCII_DELIMITER] \t Delimiter used to separate ascii columns (1=tab,2=comma,3=pipe) (default=tab)"<<endl;
@@ -73,6 +74,7 @@ static const struct option options_tab[] = {
 	{ "input", required_argument, 0, 'i' },
 	{ "output", required_argument, 0, 'o' },
 	{ "output-comp", required_argument, 0, 'O' },
+	{ "writeFluxInfoInBrightnessUnits", no_argument, 0, 'b' },
 	{ "writeAdditionalSourceInfo", no_argument, 0, 'a' },
 	{ "wcsType", required_argument, 0, 'w' },
 	{ "delimiter", required_argument, 0, 'd' },
@@ -87,6 +89,7 @@ std::string outputFileName= "sources.dat";
 std::string outputFileName_comp= "sourceComponents.dat";
 int verbosity= 4;//INFO level
 bool writeAdditionalSourceInfo= false;
+bool convertBrightnessToFlux= true;
 int wcsType= eJ2000;
 enum AsciiDelimiter 
 {
@@ -165,7 +168,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:o:O:aw:d:v:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:o:O:abw:d:v:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -196,6 +199,11 @@ int ParseOptions(int argc, char *argv[])
 			{
 				writeAdditionalSourceInfo= true;
 				break;	
+			}
+			case 'b':	
+			{
+				convertBrightnessToFlux= false;
+				break;
 			}
 			case 'd':	
 			{
@@ -354,7 +362,7 @@ int Save()
 		INFO_LOG("Writing source island catalog to file "<<outputFileName<<" ...");
 	#endif
 	bool dumpNestedSourceInfo= true;
-	int status= SourceExporter::WriteToAscii(outputFileName,m_sources,dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,asciiDelimiter);
+	int status= SourceExporter::WriteToAscii(outputFileName,m_sources,dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,convertBrightnessToFlux,asciiDelimiter);
 	if(status<0){
 		#ifdef LOGGING_ENABLED
 			WARN_LOG("Writing source catalog to file "<<outputFileName<<" failed!");
@@ -365,7 +373,7 @@ int Save()
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Writing source component catalog to file "<<outputFileName_comp<<" ...");
 	#endif
-	status= SourceExporter::WriteComponentsToAscii(outputFileName_comp,m_sources,dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,asciiDelimiter);
+	status= SourceExporter::WriteComponentsToAscii(outputFileName_comp,m_sources,dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,convertBrightnessToFlux,asciiDelimiter);
 	if(status<0){
 		#ifdef LOGGING_ENABLED
 			WARN_LOG("Writing source fitted component catalog to file "<<outputFileName_comp<<" failed!");
