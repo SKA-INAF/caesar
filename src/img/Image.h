@@ -1001,7 +1001,12 @@ class Image : public TNamed {
 		*/
 		//int FindExtendedSource_HClust(std::vector<Source*>&,Img* saliencyImg,Img* edgeImg);
 
-		
+		//=========================================
+		//==    SIMULATION METHODS               ==
+		//=========================================
+		int AddSimPointSources(long int nGenSources,float Smin=1.e-4,float Smax=1.,float Sslope=1.6,int marginX=0,int marginY=0,std::string genFileName="gensources.dat");		
+		int AddSimPointSourceDensity(double sourceDensity,float Smin=1.e-4,float Smax=1.,float Sslope=1.6,int marginX=0,int marginY=0,std::string genFileName="gensources.dat");		
+
 		//=========================================
 		//==     FILTER METHODS                  ==
 		//=========================================

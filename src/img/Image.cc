@@ -83,13 +83,9 @@
 #include <TGaxis.h>
 #include <TExec.h>
 #include <TF1.h>
-
+#include <TRandom3.h>
 
 //OpenCV headers
-/*
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
-*/
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -4217,21 +4213,250 @@ int Image::Plot(std::vector<Source*>const& sources,bool useCurrentCanvas,bool dr
 
 }//close Plot()
 
-/*
-void Image::SetDrawRange(double zmin,double zmax){
 
-	if(zmin>=zmax) return;
+int Image::AddSimPointSources(long int nGenSources,float Smin,float Smax,float Sslope,int marginX,int marginY,std::string genFileName)
+{
+	//Check args
+	if(nGenSources<=0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("nGenSources must be >0!");
+		#endif
+		return -1;
+	}
+	if(Smax<Smin){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Smax must be >= Smin!");
+		#endif
+		return -1;
+	}
+	if(Smax<0 || Smin<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Smax & Smin must be >0!");
+		#endif
+		return -1;
+	}
+	
+	if (marginX<0 || marginX>=m_Nx/2.){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid marginX specified (<0 or larger than image half size)!");
+		#endif
+		return -1;
+	}
+	if (marginY<0 || marginY>=m_Ny/2.){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid marginY specified (<0 or larger than image half size)!");
+		#endif
+		return -1;
+	}
 
-	for(long int i=0;i<this->GetNbinsX();i++){
-		for(int j=0;j<this->GetNbinsY();j++){
-			double w= this->GetBinContent(i+1,j+1);
-			if(w<zmin) this->SetBinContent(i+1,j+1,zmin);
-			if(w>zmax) this->SetBinContent(i+1,j+1,zmax);
-		}//end loop bins y
-	}//end loop bins x
+	//Check metadata
+	if(!m_HasMetaData){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No metadata available in this image, cannot retrieve beam information needed for source generation!");
+		#endif
+		return -1;
+	}
 
-}//close Img::SetDrawRange()
-*/
+	//Check WCS
+	WCS* wcs= m_MetaData->GetWCS(eJ2000);
+	if(!wcs){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get WCS from metadata!");
+		#endif
+		return -1;
+	}
+
+	//Set generation pars
+	bool randomizeFlux= (Smin!=Smax);
+	double bmaj= m_MetaData->Bmaj*3600;//in arcsec
+	double bmin= m_MetaData->Bmin*3600;//in arcsec
+	double pa= m_MetaData->Bpa;//defined from north
+	double pixSizeX= m_MetaData->dX*3600;//in arcsec 
+	double pixSizeY= m_MetaData->dY*3600;//in arcsec 
+	double pixSize= std::min(fabs(pixSizeX),fabs(pixSizeY));
+	double bmaj_pix= bmaj/pixSize;//in pix
+	double bmin_pix= bmin/pixSize;//in pix
+	double sigmaX= bmaj_pix/GausSigma2FWHM;//in pix
+	double sigmaY= bmin_pix/GausSigma2FWHM;//in pix
+	double theta= pa + 90.;//# NB: BPA is the positional angle of the major axis measuring from North (up) counter clockwise, while theta is measured wrt to x axis
+	double theta_rad= theta*TMath::DegToRad();//rad
+	double lgS_min= log10(Smin);
+	double lgS_max= log10(Smax);
+	
+	//Generate source positions
+	
+	long int index= 0;
+	delete gRandom;
+	gRandom= new TRandom3(0);
+	std::vector<long int> takenBinIds;
+
+	struct GenSourceInfo
+	{
+		std::string sname;
+		double S;
+		double x;
+		double y;
+		long int ix;
+		long int iy;
+		double ra;
+		double dec;
+		GenSourceInfo(std::string name,double _S,double _x,double _y,long int _ix,long int _iy,double _ra,double _dec)
+			: sname(name),S(_S),x(_x),y(_y),ix(_ix),iy(_iy),ra(_ra),dec(_dec)
+		{}
+		
+	};
+	std::vector<GenSourceInfo> genSourceList;
+	
+	while(index < nGenSources)
+	{				
+		// Generate random coordinates
+		double x0= m_Xmin + gRandom->Uniform(marginX,m_Nx-marginX-1);
+		double y0= m_Ymin + gRandom->Uniform(marginY,m_Ny-marginY-1);
+		long int gBin= this->FindBin(x0,y0);
+
+		// Find if pixel was already taken by a previous source
+		auto it= std::find(takenBinIds.begin(),takenBinIds.end(),gBin);
+		if(!takenBinIds.empty() && it!=takenBinIds.end()){
+			continue;
+		}
+
+		//Skip if flux in generation bin is =0 or NAN
+		double w= this->GetPixelValue(gBin);
+		if(w==0 || TMath::IsNaN(w) || fabs(w)==TMath::Infinity()){
+			continue;
+		}
+
+		//Get bin WCS coords
+		long int ix= this->GetBinX(gBin);
+		long int iy= this->GetBinY(gBin);
+		double ra= 0;
+		double dec= 0;
+		AstroUtils::PixelToWCSCoords(ra,dec,wcs,x0,y0);
+
+		// Generate source Speak expo in log
+		double S= Smin;
+		if(randomizeFlux){
+			double lgS_rand= gRandom->Exp(1./Sslope);
+			double lgS= lgS_min + lgS_rand;
+			if(lgS>lgS_max) continue;
+			S= pow(10,lgS);
+		}
+			
+
+		// Add source to list
+		index++;
+		std::string sname= Form("S%ld",index);
+		genSourceList.push_back(GenSourceInfo(sname,S,x0,y0,ix,iy,ra,dec));
+
+	}//end while loop
+
+	//Add sources to map
+	long int sourceGenBoxHalfSize= static_cast<long int>(std::round(10*max(sigmaX,sigmaY)));
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Generating sources: sigma("<<sigmaX<<","<<sigmaY<<"), theta="<<theta<<", genBoxSize="<<2*sourceGenBoxHalfSize<<" ...");
+	#endif
+
+	for(size_t k=0;k<genSourceList.size();k++)
+	{
+		double xs= genSourceList[k].x;
+		double ys= genSourceList[k].y;
+		long int ix= genSourceList[k].ix;
+		long int iy= genSourceList[k].iy;
+		double xs_bin= this->GetX(ix);
+		double ys_bin= this->GetY(iy);
+		double x0= xs-xs_bin;
+		double y0= ys-ys_bin;
+
+		double Speak= genSourceList[k].S;
+
+		for(long int i=ix-sourceGenBoxHalfSize;i<=ix+sourceGenBoxHalfSize;i++)
+		{
+			double x_bin= this->GetX(i);
+			double x= x_bin - xs_bin;
+
+			for(long int j=iy-sourceGenBoxHalfSize;j<=iy+sourceGenBoxHalfSize;j++){
+				long int id= this->GetBin(i,j);
+				double y_bin= this->GetY(j);
+				double y= y_bin - ys_bin;
+				if(id<0) continue;
+				double S_old= this->GetPixelValue(id);
+				double w= MathUtils::EvalGaus2D(x,y,Speak,x0,y0,sigmaX,sigmaY,theta_rad);
+				if(TMath::IsNaN(w) || fabs(w)==TMath::Infinity()) {
+					#ifdef LOGGING_ENABLED
+						DEBUG_LOG("Given source gen flux value (w="<<w<<") for bin "<<id<<" is NaN or inf, skipping!");
+					#endif
+					continue;
+				}
+				double S_new= S_old + w;
+				this->SetPixelValue(id,S_new);
+
+			}//end loop y
+		}//end loop x
+
+	}//end loop sources
+
+
+	//Write true source info to ascii file
+	FILE* fout= fopen(genFileName.c_str(),"w");
+	for(size_t i=0;i<genSourceList.size();i++)
+	{
+		std::string sname= genSourceList[i].sname;
+		double x= genSourceList[i].x;
+		double y= genSourceList[i].y;
+		double ra= genSourceList[i].ra;
+		double dec= genSourceList[i].dec;
+		double S= genSourceList[i].S;
+		fprintf(fout,"%s %f %f %f %f %f\n",sname.c_str(),x,y,ra,dec,S);
+	}
+	fclose(fout);
+
+	return 0;
+
+}//close AddSimPointSources()
+
+int Image::AddSimPointSourceDensity(double sourceDensity,float Smin,float Smax,float Sslope,int marginX,int marginY,std::string genFileName)
+{
+	//Check margin
+	if (marginX<0 || marginX>=m_Nx/2.){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid marginX specified (<0 or larger than image half size)!");
+		#endif
+		return -1;
+	}
+	if (marginY<0 || marginY>=m_Ny/2.){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid marginY specified (<0 or larger than image half size)!");
+		#endif
+		return -1;
+	}
+
+	//Check metadata
+	if(!m_HasMetaData){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No metadata available in this image, cannot retrieve beam information needed for source generation!");
+		#endif
+		return -1;
+	}
+	double pixSizeX= fabs(m_MetaData->dX);//in deg
+	double pixSizeY= fabs(m_MetaData->dY);//in deg 
+	
+	//Compute number of sources to be generated given map area in pixels
+	long int nx_gen= m_Nx - 2*marginX;
+	double nx_gen_deg= nx_gen*pixSizeX;
+	long int ny_gen= m_Ny - 2*marginY;
+	double ny_gen_deg= ny_gen*pixSizeY;
+	  
+	double genArea= (nx_gen_deg*ny_gen_deg);
+	long int nSources= static_cast<long int>(std::round(sourceDensity*genArea));
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Generating #"<<nSources<<" (density="<<sourceDensity<<") ...");
+	#endif
+
+	return AddSimPointSources(nSources,Smin,Smax,Sslope,marginX,marginY,genFileName);
+
+}//close AddSimPointSourceDensity()
+	
+
 
 
 }//close namespace
