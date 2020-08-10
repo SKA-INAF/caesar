@@ -74,12 +74,14 @@ SourceExporter::~SourceExporter()
 //=================================================
 //==        ASCII EXPORTER
 //=================================================
-int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs,bool writeAdditionalSourceInfo,char delimiter)
+int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs,bool writeAdditionalSourceInfo,bool convertBrightnessToFlux,char delimiter)
 {
 	//Open output file
 	FILE* fout= fopen(filename.c_str(),"w");
 
 	//Write header
+	std::stringstream ss_coldescr;
+
 	std::stringstream ss;
 	ss<<"#======== CAESAR RESULTS ======\n";
 	ss<<"# This ascii file contains source islands (or blobs) found by CAESAR.\n";
@@ -89,39 +91,85 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 	ss<<"#\n";
 	ss<<"# ---- HEADER ----\n";
 	ss<<"# name - Source name assigned by finder\n";
-	ss<<"# IAU name - Source name in IAU notation\n";
-	ss<<"# Npix - Number of pixels in source\n";
-	ss<<"# nFittedComponents - Number of fitted components (=0 if fit not performed or failed)\n";
+	ss<<"# iauName - Source name in IAU notation\n";
+	ss<<"# npix - Number of pixels in source\n";
+	ss<<"# nComponents - Number of fitted components (=0 if fit not performed or failed)\n";
 	ss<<"# nNestedSources - Number of nested sources detected\n";
-	ss<<"# X0 - Source centroid in image coordinates along x axis \n";
-	ss<<"# Y0 - Source centroid in image coordinates along y axis \n";
-	ss<<"# X0w - Source centroid in image coordinates along x axis, weighted by pixel fluxes \n";
-	ss<<"# Y0w - Source centroid in image coordinates along y axis, weighted by pixel fluxes \n";
-	ss<<"# X0_wcs - Source centroid in world coordinates (deg) along x axis\n";
-	ss<<"# Y0_wcs - Source centroid in world coordinates (deg) along y axis\n";
-	ss<<"# X0w_wcs - Source centroid in world coordinates (deg) along x axis, weighted by pixel fluxes\n";
-	ss<<"# Y0w_wcs - Source centroid in world coordinates (deg) along y axis, weighted by pixel fluxes\n";
-	ss<<"# Xmin - Source minimum pixel image coordinate along x axis\n";
-	ss<<"# Xmax - Source maximum pixel image coordinate along x axis\n";
-	ss<<"# Ymin - Source minimum pixel image coordinate along y axis\n";
-	ss<<"# Ymax - Source maximum pixel image coordinate along y axis\n";
-	ss<<"# Xmin_wcs - Source minimum pixel WCS coordinate (deg) along x axis\n";
-	ss<<"# Xmax_wcs - Source maximum pixel WCS coordinate (deg) along x axis\n";
-	ss<<"# Ymin_wcs - Source minimum pixel WCS coordinate (deg) along y axis\n";
-	ss<<"# Ymax_wcs - Source maximum pixel WCS coordinate (deg) along y axis\n";
-	ss<<"# Nu - Spectral axis value present in image header. If frequency it is given in GHz units.\n";
-	//ss<<"# dNu - Spectral axis width present in image header. If frequency it is given in GHz units.\n";
-	ss<<"# S - Sum of source pixel fluxes in Jy/beam units.\n";
+	ss<<"# x - Source centroid in image coordinates along x axis \n";
+	ss<<"# y - Source centroid in image coordinates along y axis \n";
+	ss<<"# x_w - Source centroid in image coordinates along x axis, weighted by pixel fluxes \n";
+	ss<<"# y_w - Source centroid in image coordinates along y axis, weighted by pixel fluxes \n";
+	ss<<"# x_wcs - Source centroid in world coordinates (deg) along x axis\n";
+	ss<<"# y_wcs - Source centroid in world coordinates (deg) along y axis\n";
+	ss<<"# x_w_wcs - Source centroid in world coordinates (deg) along x axis, weighted by pixel fluxes\n";
+	ss<<"# y_w_wcs - Source centroid in world coordinates (deg) along y axis, weighted by pixel fluxes\n";
+	ss<<"# xmin - Source minimum pixel image coordinate along x axis\n";
+	ss<<"# xmax - Source maximum pixel image coordinate along x axis\n";
+	ss<<"# ymin - Source minimum pixel image coordinate along y axis\n";
+	ss<<"# ymax - Source maximum pixel image coordinate along y axis\n";
+	ss<<"# xmin_wcs - Source minimum pixel WCS coordinate (deg) along x axis\n";
+	ss<<"# xmax_wcs - Source maximum pixel WCS coordinate (deg) along x axis\n";
+	ss<<"# ymin_wcs - Source minimum pixel WCS coordinate (deg) along y axis\n";
+	ss<<"# ymax_wcs - Source maximum pixel WCS coordinate (deg) along y axis\n";
+	ss<<"# nu - Spectral axis value present in image header. If frequency it is given in GHz units.\n";
+	ss<<"# Stot - Sum of source pixel brightness in Jy/beam units.\n";
 	ss<<"# Smax - Maximum source pixel flux in Jy/beam units.\n";
-	ss<<"# FluxDensity - Fitted source flux density in Jy/beam units (not corrected by beam area).\n";
-	ss<<"# FluxDensityErr - Fitted source flux density error in Jy/beam units (not corrected by beam area).\n";
-	ss<<"# BeamArea- Number of pixels in beam. Used to convert flux parameters from Jy/beam to Jy/pixel (e.g. Jy/pixel=Jy/beam/beamarea).\n";
-	ss<<"# BkgSum- Background estimator summed over all source pixels (in Jy/beam).\n";
-	ss<<"# RMSSum- Noise (rms) estimator summed over all source pixels (in Jy/beam).\n";
-	ss<<"# Type- Source type tag (eUnknownType=0,eCompact=1,ePointLike=2,eExtended=3,eCompactPlusExtended=4)\n";
-	ss<<"# Flag- Source flag (eReal=1,eCandidate=2,eFake=3)\n";
-	ss<<"# IsGoodSource- Bool flag indicating if source was tagged as good (true) or bad (false) in the finding process\n";
-	ss<<"# DepthLevel- Source depth level (0=mother source,1=nested source,...)\n";
+	if(convertBrightnessToFlux){
+		ss<<"# S - Fitted source flux in Jy units\n";
+		ss<<"# SErr - Fitted source flux error in Jy units\n";
+	}
+	else{
+		ss<<"# S - Fitted source brighteness in Jy/beam units (not corrected by beam area).\n";
+		ss<<"# SErr - Fitted source brighteness error in Jy/beam units (not corrected by beam area).\n";
+	}
+	ss<<"# beamArea - Number of pixels in beam. Used to convert flux parameters from Jy/beam to Jy/pixel (e.g. Jy/pixel=Jy/beam/beamarea).\n";
+	ss<<"# bkgSum - Background estimator summed over all source pixels (in Jy/beam).\n";
+	ss<<"# rmsSum - Noise (rms) estimator summed over all source pixels (in Jy/beam).\n";
+	ss<<"# sourceType - Source type tag (eUnknownType=0,eCompact=1,ePointLike=2,eExtended=3,eCompactPlusExtended=4)\n";
+	ss<<"# sourceFlag - Source flag (eReal=1,eCandidate=2,eFake=3)\n";
+	ss<<"# isGoodSource - Bool flag indicating if source was tagged as good (true) or bad (false) in the finding process\n";
+	ss<<"# sourceNestedLevel - Source nested level (0=mother source,1=nested source,...)\n";
+
+	ss_coldescr<<"# ";
+	ss_coldescr<<"name"<<delimiter;
+	ss_coldescr<<"iauName"<<delimiter;
+	ss_coldescr<<"npix"<<delimiter;
+	ss_coldescr<<"nComponents"<<delimiter;
+	ss_coldescr<<"nNestedSources"<<delimiter;
+	ss_coldescr<<"x"<<delimiter;
+	ss_coldescr<<"y"<<delimiter;
+	ss_coldescr<<"x_w"<<delimiter;
+	ss_coldescr<<"y_w"<<delimiter;
+	ss_coldescr<<"x_wcs(deg)"<<delimiter;
+	ss_coldescr<<"y_wcs(deg)"<<delimiter;
+	ss_coldescr<<"x_w_wcs(deg)"<<delimiter;
+	ss_coldescr<<"y_w_wcs(deg)"<<delimiter;
+	ss_coldescr<<"xmin"<<delimiter;
+	ss_coldescr<<"xmax"<<delimiter;
+	ss_coldescr<<"ymin"<<delimiter;
+	ss_coldescr<<"ymax"<<delimiter;
+	ss_coldescr<<"xmin_wcs(deg)"<<delimiter;
+	ss_coldescr<<"xmax_wcs(deg)"<<delimiter;
+	ss_coldescr<<"ymin_wcs(deg)"<<delimiter;
+	ss_coldescr<<"ymax_wcs(deg)"<<delimiter;
+	ss_coldescr<<"nu(GHz)"<<delimiter;
+	ss_coldescr<<"Stot(Jy/beam)"<<delimiter;
+	ss_coldescr<<"Smax(Jy/beam)"<<delimiter;
+	if(convertBrightnessToFlux){
+		ss_coldescr<<"S(Jy)"<<delimiter;
+		ss_coldescr<<"Serr(Jy)"<<delimiter;
+	}
+	else{
+		ss_coldescr<<"S(Jy/beam)"<<delimiter;
+		ss_coldescr<<"Serr(Jy/beam)"<<delimiter;
+	}
+	ss_coldescr<<"beamArea"<<delimiter;
+	ss_coldescr<<"bkgSum(Jy/beam)"<<delimiter;
+	ss_coldescr<<"rmsSum(Jy/beam)"<<delimiter;
+	ss_coldescr<<"sourceType"<<delimiter;
+	ss_coldescr<<"sourceFlag"<<delimiter;
+	ss_coldescr<<"isGoodSource"<<delimiter;
+	ss_coldescr<<"sourceNestedLevel"<<delimiter;
 
 	if(writeAdditionalSourceInfo)
 	{
@@ -135,18 +183,37 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 		ss<<"# spectralFitNDF - Spectral index fit ndf\n";
 
 		// - Astro object ids
-		ss<<"# objLocationId - Object location id (0=UNKNOWN,1=GALACTIC,2=EXTRAGALACTIC)\n";
+		//ss<<"# objLocationId - Object location id (0=UNKNOWN,1=GALACTIC,2=EXTRAGALACTIC)\n";
+		ss<<"# objClassStrId - Object class string id\n";
 		ss<<"# objClassId - Object class id\n";
 		ss<<"# objClassSubId - Object class subid\n";
 		ss<<"# objConfirmed - Object confirmed\n";
 
 		// - Astro crossmatched object names
+		ss<<"# hasMatchedObject - Bool flag indicating if source has matched astro object\n";
 		ss<<"# matchedObjNames - Cross-matched astronomical object names\n";
 
+		ss_coldescr<<"hasSpectralIndexData"<<delimiter;
+		ss_coldescr<<"isMultiSourceMatchIndex"<<delimiter;
+		ss_coldescr<<"spectralIndex"<<delimiter;
+		ss_coldescr<<"spectralIndexErr"<<delimiter;
+		ss_coldescr<<"isSpectralIndexFit"<<delimiter;
+		ss_coldescr<<"spectralFitChi2"<<delimiter;
+		ss_coldescr<<"spectralFitNDF"<<delimiter;
+		//ss_coldescr<<"objLocationId"<<delimiter;
+		ss_coldescr<<"objClassStrId"<<delimiter;
+		ss_coldescr<<"objClassId"<<delimiter;
+		ss_coldescr<<"objClassSubId"<<delimiter;
+		ss_coldescr<<"objConfirmed"<<delimiter;
+		ss_coldescr<<"hasMatchedObject"<<delimiter;
+		ss_coldescr<<"matchedObjNames";
+	
 	}//close if
 
 	ss<<"# ---------------\n";
 	ss<<"#\n";
+	ss<<ss_coldescr.str()<<endl;
+
 	fprintf(fout,"%s",ss.str().c_str());
 
 	//Loop sources
@@ -173,7 +240,7 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 		}
 
 		//Print source info to ascii
-		std::vector<std::string> slist= SourceToAscii(sources[k],dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,delimiter);
+		std::vector<std::string> slist= SourceToAscii(sources[k],dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,convertBrightnessToFlux,delimiter);
 		for(size_t j=0;j<slist.size();j++){
 			fprintf(fout,"%s\n",slist[j].c_str());
 		}
@@ -191,7 +258,7 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 }//close WriteToAscii()
 
 
-const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool dumpNestedSourceInfo,int wcsType,WCS* wcs,bool writeAdditionalSourceInfo,char delimiter)
+const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool dumpNestedSourceInfo,int wcsType,WCS* wcs,bool writeAdditionalSourceInfo,bool convertBrightnessToFlux,char delimiter)
 {
 	//Init string list
 	std::vector<std::string> sourceStrList;
@@ -253,13 +320,19 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 		dNu/= 1.e+9;
 	}
 	
+	
+	double beamArea= source->GetBeamFluxIntegral();
 	double fluxDensity= 0;
 	double fluxDensityErr= 0;
+	double flux= 0;
+	double fluxErr= 0;
 	if(source->HasFitInfo()){
 		source->GetFluxDensity(fluxDensity);
 		source->GetFluxDensityErr(fluxDensityErr);
+		flux= fluxDensity/beamArea;
+		fluxErr= fluxDensityErr/beamArea;
 	}
-
+	
 	//Get WCS bounding box
 	float xmin, xmax, ymin, ymax;
 	source->GetSourceRange(xmin,xmax,ymin,ymax);
@@ -297,9 +370,17 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 	//- Flux 
 	ss<<source->GetS()<<delimiter;
 	ss<<source->GetSmax()<<delimiter;
-	ss<<fluxDensity<<delimiter;
-	ss<<fluxDensityErr<<delimiter;
-	ss<<source->GetBeamFluxIntegral()<<delimiter;
+
+	
+	if(convertBrightnessToFlux){
+		ss<<flux<<delimiter;
+		ss<<fluxErr<<delimiter;
+	}
+	else{
+		ss<<fluxDensity<<delimiter;
+		ss<<fluxDensityErr<<delimiter;
+	}
+	ss<<beamArea<<delimiter;
 
 	//- Bkg/noise estimators
 	ss<<source->GetBkgSum()<<delimiter;
@@ -328,7 +409,8 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 		ss<<sid.spectralFitNDF<<delimiter;
 	
 		//- Astro object IDs
-		ss<<source->ObjLocationId<<delimiter;
+		//ss<<source->ObjLocationId<<delimiter;
+		ss<<"\""<<source->ObjClassStrId<<"\""<<delimiter;
 		ss<<source->ObjClassId<<delimiter;
 		ss<<source->ObjClassSubId<<delimiter;
 		ss<<source->ObjConfirmed<<delimiter;
@@ -351,11 +433,13 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 				sstream<<astroObjs[astroObjs.size()-1].name;
 			}
 			
-			ss<<sstream.str();
-
+			//ss<<sstream.str();
+			ss<<"\""<<sstream.str()<<"\"";
+	
 		}//close if
 		else{
-			ss<<"XXX";
+			//ss<<"XXX";
+			ss<<"\"XXX\"";
 		}
 		
 	}//close if writeAdditionalSourceInfo
@@ -369,7 +453,7 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 		std::vector<Source*> nestedSources= source->GetNestedSources();
 		for(size_t k=0;k<nestedSources.size();k++)
 		{
-			std::vector<std::string> sourceStrList_nested= SourceToAscii(nestedSources[k],dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,delimiter);
+			std::vector<std::string> sourceStrList_nested= SourceToAscii(nestedSources[k],dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,convertBrightnessToFlux,delimiter);
 			if(!sourceStrList_nested.empty()){
 				sourceStrList.insert(sourceStrList.end(),sourceStrList_nested.begin(),sourceStrList_nested.end());
 			}
@@ -386,12 +470,14 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 
 
 
-int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs,bool writeAdditionalSourceInfo,char delimiter)
+int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo,int wcsType,WCS* wcs,bool writeAdditionalSourceInfo,bool convertBrightnessToFlux,char delimiter)
 {
 	//Open output file
 	FILE* fout= fopen(filename.c_str(),"w");
 
 	//Write header
+	std::stringstream ss_coldescr;
+
 	std::stringstream ss;
 	ss<<"#======== CAESAR RESULTS ======\n";
 	ss<<"# This ascii file contains source components fitted to islands/blobs detected by CAESAR.\n";
@@ -399,57 +485,119 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 	ss<<"#\n";
 	ss<<"# ---- HEADER ----\n";
 	ss<<"# name - Island source name assigned by finder\n";
-	ss<<"# Npix - Number of pixels in source\n";
+	ss<<"# npix - Number of pixels in source\n";
 	ss<<"# componentId - Fitted component id\n";
-	ss<<"# IAU name - Fitted component name in IAU notation\n";
-	ss<<"# X0 - Fitted component centroid in image coordinates along x axis \n";
-	ss<<"# Y0 - Fitted component centroid in image coordinates along y axis \n";
-	ss<<"# X0_err - Fitted component centroid error in image coordinates along x axis \n";
-	ss<<"# Y0_err - Fitted component centroid error in image coordinates along y axis \n";
-	ss<<"# X0_wcs - Fitted component centroid in world coordinates (deg) along x axis\n";
-	ss<<"# Y0_wcs - Fitted component centroid in world coordinates (deg) along y axis\n";
-	ss<<"# X0_err_wcs - Fitted component centroid error in world coordinates (deg) along x axis\n";
-	ss<<"# Y0_err_wcs - Fitted component centroid error in world coordinates (deg) along y axis\n";
-	ss<<"# Nu - Spectral axis value present in image header. If frequency it is given in GHz units.\n";
-	
-	ss<<"# A - Fitted component amplitude in Jy/beam units (not corrected by beam area).\n";
-	ss<<"# A_err - Fitted component amplitude error in Jy/beam units (not corrected by beam area).\n";
-	ss<<"# FluxDensity - Fitted component flux density in Jy/beam units (not corrected by beam area).\n";
-	ss<<"# FluxDensity_err - Fitted component flux density error in Jy/beam units (not corrected by beam area).\n";
-	ss<<"# Island FluxDensity - Fitted source flux density in Jy/beam units (not corrected by beam area).\n";
-	ss<<"# Island FluxDensity_err - Fitted source flux density error in Jy/beam units (not corrected by beam area).\n";
-	ss<<"# BeamArea- Number of pixels in beam. Used to convert flux parameters from Jy/beam to Jy/pixel (e.g. Jy/pixel=Jy/beam/beamarea).\n";
-	
-	ss<<"# Bmaj - Fitted component ellipse major axis in image coordinates\n";
-	ss<<"# Bmin - Fitted component ellipse major axis in image coordinates\n";
-	ss<<"# Pa - Fitted component ellipse position angles in deg (measured counterclock-wise from North)\n";
-	ss<<"# Bmaj_err - Fitted component ellipse major axis error in image coordinates\n";
-	ss<<"# Bmin_err - Fitted component ellipse major axis error in image coordinates\n";
-	ss<<"# Pa_err - Fitted component ellipse position angles error in deg\n";
-	ss<<"# Bmaj_wcs - Fitted component ellipse major axis in world coordinates (arcsec)\n";
-	ss<<"# Bmin_wcs - Fitted component ellipse major axis in world coordinates (arcsec)\n";
-	ss<<"# Pa_wcs - Fitted component ellipse position angles in deg (measured counterclock-wise from North)\n";
-	ss<<"# Bmaj_wcs_err - Fitted component ellipse major axis error in world coordinates (arcsec)\n";
-	ss<<"# Bmin_wcs_err - Fitted component ellipse major axis error in world coordinates (arcsec)\n";
-	ss<<"# Pa_wcs_err - Fitted component ellipse position angles error in deg\n";
-	ss<<"# Bmaj_beam - Beam ellipse major axis (arcsec)\n";
-	ss<<"# Bmin_beam - Beam ellipse minor axis (arcsec)\n";
-	ss<<"# Pa_beam - Beam ellipse position angles in deg (measured counterclock-wise from North)\n";
-	ss<<"# Bmaj_deconv_wcs - Fitted component ellipse major axis in world coordinates, deconvolved by beam (arcsec)\n";
-	ss<<"# Bmin_deconv_wcs - Fitted component ellipse major axis in world coordinates, deconvolved by beam (arcsec)\n";
-	ss<<"# Pa_deconv_wcs - Fitted component ellipse position angles in deg, deconvolved by beam (measured counterclock-wise from North)\n";
+	ss<<"# iauName - Fitted component name in IAU notation\n";
+	ss<<"# x - Fitted component centroid in image coordinates along x axis \n";
+	ss<<"# y - Fitted component centroid in image coordinates along y axis \n";
+	ss<<"# x_err - Fitted component centroid error in image coordinates along x axis \n";
+	ss<<"# y_err - Fitted component centroid error in image coordinates along y axis \n";
+	ss<<"# x_wcs - Fitted component centroid in world coordinates (deg) along x axis\n";
+	ss<<"# y_wcs - Fitted component centroid in world coordinates (deg) along y axis\n";
+	ss<<"# x_wcs_err - Fitted component centroid error in world coordinates (deg) along x axis\n";
+	ss<<"# y_wcs_err - Fitted component centroid error in world coordinates (deg) along y axis\n";
+	ss<<"# nu - Spectral axis value present in image header. If frequency it is given in GHz units.\n";
+	ss<<"# Speak - Fitted component peak in Jy/beam units (not corrected by beam area).\n";
+	ss<<"# Speak_err - Fitted component peak error in Jy/beam units (not corrected by beam area).\n";
+	if(convertBrightnessToFlux){
+		ss<<"# S - Fitted component flux in Jy units\n";
+		ss<<"# S_err - Fitted component flux error in Jy units\n";
+		ss<<"# S_island - Fitted island flux in Jy units\n";
+		ss<<"# S_island_err - Fitted island flux error in Jy units\n";
+	}
+	else{
+		ss<<"# S - Fitted component brighteness in Jy/beam units (not corrected by beam area).\n";
+		ss<<"# S_err - Fitted component brightness error in Jy/beam units (not corrected by beam area).\n";
+		ss<<"# S_island - Fitted island brightness in Jy/beam units (not corrected by beam area).\n";
+		ss<<"# S_island_err - Fitted island brightness error in Jy/beam units (not corrected by beam area).\n";
+	}
+	ss<<"# beamArea - Number of pixels in beam. Used to convert flux parameters from Jy/beam to Jy/pixel (e.g. Jy/pixel=Jy/beam/beamarea).\n";
+	ss<<"# bmaj - Fitted component ellipse major axis in image coordinates\n";
+	ss<<"# bmin - Fitted component ellipse major axis in image coordinates\n";
+	ss<<"# pa - Fitted component ellipse position angles in deg (measured counterclock-wise from North)\n";
+	ss<<"# bmaj_err - Fitted component ellipse major axis error in image coordinates\n";
+	ss<<"# bmin_err - Fitted component ellipse major axis error in image coordinates\n";
+	ss<<"# pa_err - Fitted component ellipse position angles error in deg\n";
+	ss<<"# bmaj_wcs - Fitted component ellipse major axis in world coordinates (arcsec)\n";
+	ss<<"# bmin_wcs - Fitted component ellipse major axis in world coordinates (arcsec)\n";
+	ss<<"# pa_wcs - Fitted component ellipse position angles in deg (measured counterclock-wise from North)\n";
+	ss<<"# bmaj_wcs_err - Fitted component ellipse major axis error in world coordinates (arcsec)\n";
+	ss<<"# bmin_wcs_err - Fitted component ellipse major axis error in world coordinates (arcsec)\n";
+	ss<<"# pa_wcs_err - Fitted component ellipse position angles error in deg\n";
+	ss<<"# bmaj_beam - Beam ellipse major axis (arcsec)\n";
+	ss<<"# bmin_beam - Beam ellipse minor axis (arcsec)\n";
+	ss<<"# pa_beam - Beam ellipse position angles in deg (measured counterclock-wise from North)\n";
+	ss<<"# bmaj_deconv_wcs - Fitted component ellipse major axis in world coordinates, deconvolved by beam (arcsec)\n";
+	ss<<"# bmin_deconv_wcs - Fitted component ellipse major axis in world coordinates, deconvolved by beam (arcsec)\n";
+	ss<<"# pa_deconv_wcs - Fitted component ellipse position angles in deg, deconvolved by beam (measured counterclock-wise from North)\n";
+	ss<<"# fitBeamEllipseEccentricityRatio - Ratio between eccentricities of fitted and beam ellipses\n";
+	ss<<"# fitBeamEllipseAreaRatio - Ratio between areas of fitted ellipse and beam ellipse \n";
+	ss<<"# fitBeamEllipseRotAngle - Rotation angle in degrees (range 0-180) between fit ellipse and beam ellipse \n";
+	ss<<"# bkgSum - Background estimator summed over all source pixels (in Jy/beam).\n";
+	ss<<"# rmsSum - Noise (rms) estimator summed over all source pixels (in Jy/beam).\n";
+	ss<<"# chi2 - Fit chisquare.\n";
+	ss<<"# ndf - Fit number of degrees of freedom.\n";
+	ss<<"# fitQuality - Fit quality flag (eBadFit=0,eLQFit=1,eMQFit=2,eHQFit=3)\n";
+	ss<<"# fitComponentFlag- Fitted component flag (eReal=1,eCandidate=2,eFake=3)\n";
+	ss<<"# fitComponentType- Fitted component type (eUnknown=0,eCompact=1,ePoint-Like=2,eExtended=3)\n";
 
-	ss<<"# Eccentricity_fit/Eccentricity_beam - Ratio between eccentricities of fitted and beam ellipses\n";
-	ss<<"# Area_fit/Area_beam - Ratio between areas of fitted ellipse and beam ellipse \n";
-	ss<<"# RotAngle_fit_wrt_beam - Rotation angle in degrees (range 0-180) between fit ellipse and beam ellipse \n";
-
-	ss<<"# BkgSum- Background estimator summed over all source pixels (in Jy/beam).\n";
-	ss<<"# RMSSum- Noise (rms) estimator summed over all source pixels (in Jy/beam).\n";
-	ss<<"# Chi2- Fit chisquare.\n";
-	ss<<"# NDF - Fit number of degrees of freedom.\n";
-	ss<<"# FitQuality - Fit quality flag (eBadFit=0,eLQFit=1,eMQFit=2,eHQFit=3)\n";
-	ss<<"# Flag- Fitted component flag (eReal=1,eCandidate=2,eFake=3)\n";
-	ss<<"# Type- Fitted component type (eUnknown=0,eCompact=1,ePoint-Like=2,eExtended=3)\n";
+	ss_coldescr<<"# ";
+	ss_coldescr<<"name"<<delimiter;
+	ss_coldescr<<"npix"<<delimiter;
+	ss_coldescr<<"componentId"<<delimiter;
+	ss_coldescr<<"iauName"<<delimiter;
+	ss_coldescr<<"x"<<delimiter;
+	ss_coldescr<<"y"<<delimiter;
+	ss_coldescr<<"x_err"<<delimiter;
+	ss_coldescr<<"y_err"<<delimiter;
+	ss_coldescr<<"x_wcs(deg)"<<delimiter;
+	ss_coldescr<<"y_wcs(deg)"<<delimiter;
+	ss_coldescr<<"x_wcs_err(deg)"<<delimiter;
+	ss_coldescr<<"y_wcs_err(deg)"<<delimiter;
+	ss_coldescr<<"nu(GHz)"<<delimiter;
+	ss_coldescr<<"Speak(Jy/beam)"<<delimiter;
+	ss_coldescr<<"Speak_err(Jy/beam)"<<delimiter;
+	if(convertBrightnessToFlux){
+		ss_coldescr<<"S(Jy)"<<delimiter;
+		ss_coldescr<<"S_err(Jy)"<<delimiter;
+		ss_coldescr<<"S_island(Jy)"<<delimiter;
+		ss_coldescr<<"S_island_err(Jy)"<<delimiter;
+	}
+	else{
+		ss_coldescr<<"S(Jy/beam)"<<delimiter;
+		ss_coldescr<<"S_err(Jy/beam)"<<delimiter;
+		ss_coldescr<<"S_island(Jy/beam)"<<delimiter;
+		ss_coldescr<<"S_island_err(Jy/beam)"<<delimiter;
+	}
+	ss_coldescr<<"beamArea"<<delimiter;
+	ss_coldescr<<"bmaj"<<delimiter;
+	ss_coldescr<<"bmin"<<delimiter;
+	ss_coldescr<<"pa"<<delimiter;
+	ss_coldescr<<"bmaj_err"<<delimiter;
+	ss_coldescr<<"bmin_err"<<delimiter;
+	ss_coldescr<<"pa_err"<<delimiter;
+	ss_coldescr<<"bmaj_wcs(arcsec)"<<delimiter;
+	ss_coldescr<<"bmin_wcs(arcsec)"<<delimiter;
+	ss_coldescr<<"pa_wcs(deg)"<<delimiter;
+	ss_coldescr<<"bmaj_wcs_err(arcsec)"<<delimiter;
+	ss_coldescr<<"bmin_wcs_err(arcsec)"<<delimiter;
+	ss_coldescr<<"pa_wcs_err(deg)"<<delimiter;
+	ss_coldescr<<"bmaj_beam(arcsec)"<<delimiter;
+	ss_coldescr<<"bmin_beam(arcsec)"<<delimiter;
+	ss_coldescr<<"pa_beam(deg)"<<delimiter;
+	ss_coldescr<<"bmaj_deconv_wcs(arcsec)"<<delimiter;
+	ss_coldescr<<"bmin_deconv_wcs(arcsec)"<<delimiter;
+	ss_coldescr<<"pa_deconv_wcs(deg)"<<delimiter;
+	ss_coldescr<<"fitBeamEllipseEccentricityRatio"<<delimiter;
+	ss_coldescr<<"fitBeamEllipseAreaRatio"<<delimiter;
+	ss_coldescr<<"fitBeamEllipseRotAngle"<<delimiter;
+	ss_coldescr<<"bkgSum(Jy/beam)"<<delimiter;
+	ss_coldescr<<"rmsSum(Jy/beam)"<<delimiter;
+	ss_coldescr<<"chi2"<<delimiter;
+	ss_coldescr<<"ndf"<<delimiter;
+	ss_coldescr<<"fitQuality"<<delimiter;
+	ss_coldescr<<"fitComponentFlag"<<delimiter;
+	ss_coldescr<<"fitComponentType"<<delimiter;
 
 	if(writeAdditionalSourceInfo)
 	{
@@ -463,7 +611,8 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 		ss<<"# spectralFitNDF - Spectral index fit ndf\n";
 
 		// - Astro object ids
-		ss<<"# objLocationId - Object location id (0=UNKNOWN,1=GALACTIC,2=EXTRAGALACTIC)\n";
+		//ss<<"# objLocationId - Object location id (0=UNKNOWN,1=GALACTIC,2=EXTRAGALACTIC)\n";
+		ss<<"# objClassStrId - Object class string id\n";
 		ss<<"# objClassId - Object class id\n";
 		ss<<"# objClassSubId - Object class subid\n";
 		ss<<"# objClassConfirmed - Object confirmed\n";
@@ -472,10 +621,25 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 		ss<<"# hasMatchedObject - Bool flag indicating if source component has matched astro object\n";
 		ss<<"# matchedObjNames - Cross-matched astronomical object names\n";
 
+		ss_coldescr<<"hasSpectralIndexData"<<delimiter;
+		ss_coldescr<<"isMultiSourceMatchIndex"<<delimiter;
+		ss_coldescr<<"spectralIndex"<<delimiter;
+		ss_coldescr<<"spectralIndexErr"<<delimiter;
+		ss_coldescr<<"isSpectralIndexFit"<<delimiter;
+		ss_coldescr<<"spectralFitChi2"<<delimiter;
+		ss_coldescr<<"spectralFitNDF"<<delimiter;
+		ss_coldescr<<"objClassStrId"<<delimiter;
+		ss_coldescr<<"objClassId"<<delimiter;
+		ss_coldescr<<"objClassSubId"<<delimiter;
+		ss_coldescr<<"objClassConfirmed"<<delimiter;
+		ss_coldescr<<"hasMatchedObject"<<delimiter;
+		ss_coldescr<<"matchedObjNames";
+
 	}//close if
 
 	ss<<"# ---------------\n";
 	ss<<"#\n";
+	ss<<ss_coldescr.str()<<endl;
 	fprintf(fout,"%s",ss.str().c_str());
 
 	//Loop sources
@@ -503,7 +667,7 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 		}
 
 		//Print source info to ascii
-		std::vector<std::string> slist= SourceComponentsToAscii(sources[k],dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,delimiter);
+		std::vector<std::string> slist= SourceComponentsToAscii(sources[k],dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,convertBrightnessToFlux,delimiter);
 		for(size_t j=0;j<slist.size();j++){
 			fprintf(fout,"%s\n",slist[j].c_str());
 		}
@@ -521,7 +685,7 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 }//close WriteComponentsToAscii()
 
 
-const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* source,bool dumpNestedSourceInfo,int wcsType,WCS* wcs,bool writeAdditionalSourceInfo,char delimiter)
+const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* source,bool dumpNestedSourceInfo,int wcsType,WCS* wcs,bool writeAdditionalSourceInfo,bool convertBrightnessToFlux,char delimiter)
 {
 	//Init vector
 	std::vector<std::string> fitComponentStrList;
@@ -576,11 +740,14 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 		}
 
 		//Get total flux density
+		double beamArea= source->GetBeamFluxIntegral();
 		double fluxDensityTot= 0;
 		double fluxDensityTot_err= 0;
 		source->GetFluxDensity(fluxDensityTot);
 		source->GetFluxDensityErr(fluxDensityTot_err);
-	
+		double fluxTot= fluxDensityTot/beamArea;
+		double fluxTot_err= fluxDensityTot_err/beamArea;
+		
 		//Retrieve component spectral index data
 		std::vector<SpectralIndexData> compSpectralIndexData= source->GetComponentSpectralIndexData();
 		
@@ -602,6 +769,8 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			//- Flux density
 			double fluxDensity= fitPars.GetComponentFluxDensity(k);
 			double fluxDensity_err= fitPars.GetComponentFluxDensityErr(k);
+			double flux= fluxDensity/beamArea;
+			double flux_err= fluxDensity_err/beamArea;
 
 			//- Fit ellipse pars
 			double x0= 0;
@@ -745,9 +914,15 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 		
 			//- Flux amplitude & density
 			ss<<A<<delimiter<<A_err<<delimiter;
-			ss<<fluxDensity<<delimiter<<fluxDensity_err<<delimiter;
-			ss<<fluxDensityTot<<delimiter<<fluxDensityTot_err<<delimiter;
-			ss<<source->GetBeamFluxIntegral()<<delimiter;
+			if(convertBrightnessToFlux){
+				ss<<flux<<delimiter<<flux_err<<delimiter;
+				ss<<fluxTot<<delimiter<<fluxTot_err<<delimiter;
+			}
+			else{
+				ss<<fluxDensity<<delimiter<<fluxDensity_err<<delimiter;
+				ss<<fluxDensityTot<<delimiter<<fluxDensityTot_err<<delimiter;
+			}
+			ss<<beamArea<<delimiter;
 	
 			//- Ellipse pars in pixel coordinates
 			ss<<bmaj<<delimiter<<bmin<<delimiter<<pa<<delimiter;
@@ -806,11 +981,19 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 				}
 
 				//- Astro object IDs
+				/*
 				if(source->componentObjLocationIds.size()==nComponents){
 					ss<<source->componentObjLocationIds[k]<<delimiter;
 				}
 				else{
 					ss<<eUNKNOWN_OBJECT_LOCATION<<delimiter;
+				}
+				*/
+				if(source->componentObjClassStrIds.size()==nComponents){
+					ss<<"\""<<source->componentObjClassStrIds[k]<<"\""<<delimiter;
+				}
+				else{
+					ss<<"\"0000\""<<delimiter;
 				}
 				if(source->componentObjClassIds.size()==nComponents){
 					ss<<source->componentObjClassIds[k]<<delimiter;
@@ -830,6 +1013,7 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 				else{
 					ss<<eUNKNOWN_OBJECT<<delimiter;
 				}
+				
 							
 				//- Astro object cross matches
 				bool hasComponentAstroObjs= source->HasComponentAstroObjects();
@@ -848,11 +1032,13 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 						sstream<<compAstroObjects[k][compAstroObjects[k].size()-1].name;
 					}
 			
-					ss<<sstream.str();
+					//ss<<sstream.str();
+					ss<<"\""<<sstream.str()<<"\"";
 
 				}//close if
 				else{
-					ss<<"XXX";
+					//ss<<"XXX";
+					ss<<"\"XXX\"";
 				}
 		
 			}//close if writeAdditionalSourceInfo
@@ -871,7 +1057,7 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 		std::vector<Source*> nestedSources= source->GetNestedSources();
 		for(size_t k=0;k<nestedSources.size();k++)
 		{
-			std::vector<std::string> fitComponentStrList_nested= SourceComponentsToAscii(nestedSources[k],dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,delimiter);
+			std::vector<std::string> fitComponentStrList_nested= SourceComponentsToAscii(nestedSources[k],dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,convertBrightnessToFlux,delimiter);
 			if(!fitComponentStrList_nested.empty()){
 				fitComponentStrList.insert(fitComponentStrList.end(),fitComponentStrList_nested.begin(),fitComponentStrList_nested.end());
 			}
