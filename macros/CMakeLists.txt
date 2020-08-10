@@ -36,6 +36,7 @@ file(GLOB MACRO_FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/SetAstroObjLabels.C
 	${CMAKE_CURRENT_SOURCE_DIR}/MergeSources.C
 	${CMAKE_CURRENT_SOURCE_DIR}/MakeMask.C
+	${CMAKE_CURRENT_SOURCE_DIR}/GeneratePointSourceMaps.C
 	#${CMAKE_CURRENT_SOURCE_DIR}/SelectSimSourcesInMosaic.C
 )
 
