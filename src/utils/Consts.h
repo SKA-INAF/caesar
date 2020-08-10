@@ -455,12 +455,20 @@ inline int GetAstroObjectType(std::string typeStr)
 	else if(typeStr=="HII") type= eHII;
 	else if(typeStr=="PN") type= ePN;	
 	else if(typeStr=="SNR") type= eSNR;
+	/*
 	else if(typeStr=="GALAXY_C1") type= eGALAXY_C1;
 	else if(typeStr=="GALAXY_C2") type= eGALAXY_C2;
 	else if(typeStr=="GALAXY_C3") type= eGALAXY_C3;
 	else if(typeStr=="GALAXY_C4") type= eGALAXY_C4;
 	else if(typeStr=="GALAXY_C5") type= eGALAXY_C5;
 	else if(typeStr=="GALAXY_C6") type= eGALAXY_C6;
+	*/
+	else if(typeStr=="GALAXY_C1") type= eGALAXY;
+	else if(typeStr=="GALAXY_C2") type= eGALAXY;
+	else if(typeStr=="GALAXY_C3") type= eGALAXY;
+	else if(typeStr=="GALAXY_C4") type= eGALAXY;
+	else if(typeStr=="GALAXY_C5") type= eGALAXY;
+	else if(typeStr=="GALAXY_C6") type= eGALAXY;
 	else type= eUNKNOWN_OBJECT;
 
 	return type;
