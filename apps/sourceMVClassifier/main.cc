@@ -1347,6 +1347,9 @@ int ApplyClassifier(std::string weightFileName)
 	//#########################################
 	//##   APPLY CLASSIFICATION TO SOURCES
 	//#########################################
+	long int nBkgSources= 0;
+	long int nSignalSources= 0;
+
 	for (int i=0;i<gDataTree->GetEntries();i++) 
 	{
 		gDataTree->GetEntry(i);
@@ -1377,8 +1380,14 @@ int ApplyClassifier(std::string weightFileName)
 			
 		//Set source component flag
 		int componentFlag= 0;
-		if(isClassifiedAsSignal) componentFlag= eReal;
-		else componentFlag= eFake;
+		if(isClassifiedAsSignal) {
+			componentFlag= eReal;
+			nSignalSources++;
+		}
+		else {
+			componentFlag= eFake;
+			nBkgSources++;
+		}
 
 		if(source->SetFitComponentFlag(gFitComponentIndex,componentFlag)<0){
 			#ifdef LOGGING_ENABLED
@@ -1387,6 +1396,10 @@ int ApplyClassifier(std::string weightFileName)
 			continue;
 		}
 	}//end loop source data
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<gDataTree->GetEntries()<<" sources processed: #"<<nBkgSources<<" false, #"<<nSignalSources<<" real");
+	#endif
 
 	//double mvaErr = reader->GetMVAError();
 
