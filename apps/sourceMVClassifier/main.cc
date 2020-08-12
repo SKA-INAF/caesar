@@ -194,7 +194,12 @@ float gEccentricityRatioMin= 0;
 float gEccentricityRatioMax= 10;
 float gSourceToBeamRatioMin= 0;
 float gSourceToBeamRatioMax= 100;
-
+float gLogPeakSNRMin= -0.5;
+float gLogPeakSNRMax= 4;
+float gLogEccentricityRatioMin= -2;
+float gLogEccentricityRatioMax= 1;
+float gLogSourceToBeamRatioMin= -4;
+float gLogSourceToBeamRatioMax= 2;
 
 //Globar vars
 TFile* outputFile= 0;
@@ -815,7 +820,15 @@ int MakeClassifierData()
 	int nVars= 3;
 	std::vector<std::vector<double>> dataVarList;
 	std::vector<std::vector<double>> classifierData;
-	
+
+	std::vector<double> dataVars_fixed_min {gPeakSNRMin,gEccentricityRatioMin,gSourceToBeamRatioMin};
+	std::vector<double> dataVars_fixed_max {gPeakSNRMax,gEccentricityRatioMax,gSourceToBeamRatioMax};
+	if(gApplyLogTransformToVariables){
+		dataVars_fixed_min.clear();
+		dataVars_fixed_max.clear();
+		dataVars_fixed_min= {gLogPeakSNRMin,gLogEccentricityRatioMin,gLogSourceToBeamRatioMin};
+		dataVars_fixed_max= {gLogPeakSNRMax,gLogEccentricityRatioMax,gLogSourceToBeamRatioMax};
+	}
 
 	for(int j=0;j<nVars;j++){
 		dataVarList.push_back( std::vector<double>() );
@@ -862,11 +875,13 @@ int MakeClassifierData()
 		BoxStats<double> stats= StatsUtils::ComputeBoxStats(dataVarList[j],false);
 		double wmin= stats.minVal;
 		double wmax= stats.maxVal;
+		double wmin_fixed= dataVars_fixed_min[j];
+		double wmax_fixed= dataVars_fixed_max[j];
 		dataVars_min.push_back(wmin);
 		dataVars_max.push_back(wmax);
 
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("Data var "<<j+1<<": original range ("<<wmin<<","<<wmax<<"), norm range ("<<gDataNormMin<<","<<gDataNormMax<<")");
+			INFO_LOG("Data var "<<j+1<<": range ("<<wmin<<","<<wmax<<"), norm values ("<<wmin_fixed<<","<<wmax_fixed<<"), norm range ("<<gDataNormMin<<","<<gDataNormMax<<")");
 		#endif
 
 		dataVars_stats.push_back(stats);
@@ -879,8 +894,11 @@ int MakeClassifierData()
 
 	for(size_t i=0;i<classifierData.size();i++){//loop on events
 		for(size_t j=0;j<classifierData[i].size()-4;j++){//loop on data vars
-			double wmin= dataVars_min[j];
-			double wmax= dataVars_max[j];
+			//double wmin= dataVars_min[j];
+			//double wmax= dataVars_max[j];
+			double wmin= dataVars_fixed_min[j];
+			double wmax= dataVars_fixed_max[j];
+
 			double w= classifierData[i][j];
 			double w_norm= gDataNormMin + (gDataNormMax-gDataNormMin)*(w-wmin)/(wmax-wmin);
 			classifierData[i][j]= w_norm;
