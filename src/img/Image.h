@@ -790,10 +790,9 @@ class Image : public TNamed {
 		*/
 		Image* GetTile(long int ix_min,long int ix_max,long int iy_min,long int iy_max,std::string imgname="");
 		/**
-		* \brief Get tile pixels
+		* \brief Get tile pixels. It excludes NAN/inf and masked pixels (=0 by default) and optionally also pixels outside range
 		*/
-		//int GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool skipNegativePixels=false);
-		int GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity());
+		int GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),std::vector<float> maskedValues={0});
 
 		
 		/**
@@ -839,9 +838,9 @@ class Image : public TNamed {
 		//==       STATS methods
 		//================================
 		/**
-		* \brief Update moments (multithreaded version)
+		* \brief Update moments (multithreaded version). It excludes NAN/inf and masked (e.g. =0 by default) pixels and optionally also pixels outside given range
 		*/
-		int ComputeMoments(bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity());
+		int ComputeMoments(bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),std::vector<float> maskedValues={0});
 
 		/**
 		* \brief Get stats information
@@ -854,9 +853,9 @@ class Image : public TNamed {
 		bool HasStats(){return (m_HasStats && m_Stats);}
 
 		/**
-		* \brief Compute stats information 
+		* \brief Compute stats information. It excludes NAN/inf and masked (e.g. =0 by default) pixels and optionally also pixels outside given range
 		*/
-		int ComputeStats(bool computeRobustStats,bool forceRecomputing=false,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),bool useParallelVersion=false);
+		int ComputeStats(bool computeRobustStats,bool forceRecomputing=false,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),bool useParallelVersion=false,std::vector<float> maskedValues={0});
 
 		/**
 		* \brief Print stats information 
@@ -890,22 +889,22 @@ class Image : public TNamed {
 		/**
 		* \brief Get tile mean stats
 		*/
-		int GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity()); 
+		int GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),std::vector<float> maskedValues={}); 
 		
 		/**
 		* \brief Get tile median stats
 		*/
-		int GetTileMedianStats(float& median,float& mad,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity()); 
+		int GetTileMedianStats(float& median,float& mad,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),std::vector<float> maskedValues={}); 
 		
 		/**
 		* \brief Get tile median stats
 		*/
-		int GetTileClippedStats(Caesar::ClippedStats<float>& clipped_stats,long int& npix,double clipsigma,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity()); 
+		int GetTileClippedStats(Caesar::ClippedStats<float>& clipped_stats,long int& npix,double clipsigma,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),std::vector<float> maskedValues={}); 
 		
 		/**
 		* \brief Get tile biweight stats
 		*/
-		int GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,double C,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity()); 
+		int GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,double C,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),std::vector<float> maskedValues={}); 
 		
 		//================================
 		//==       BKG METHODS
@@ -1247,9 +1246,9 @@ class Image : public TNamed {
 		}
 		
 		/**
-		* \brief Compute image stats parameters from moments 
+		* \brief Compute image stats parameters from moments. It excludes NAN/inf pixels from the computation and optionally also masked pixels (e.g. =0) and pixels outside given range. 
 		*/
-		void ComputeStatsParams(bool computeRobustStats=true,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),bool useParallelVersion=false);
+		void ComputeStatsParams(bool computeRobustStats=true,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),bool useParallelVersion=false,std::vector<float> maskedValues={0});
 		
 		/**
 		* \brief Clear stats
