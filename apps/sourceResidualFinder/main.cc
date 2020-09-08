@@ -976,6 +976,9 @@ int SetOptionsFromConfig()
 int ComputeSourceResidual()
 {
 	//- Compute residual
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing source residual map ...");
+	#endif
 	residualImg= inputImg->GetSourceResidual(
 		sources,
 		dilateKernelSize,
@@ -1408,6 +1411,9 @@ int ComputeBkg(Image* img)
 	}
 
 	//Compute significance
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Compute significance map ...");
+	#endif
 	significanceMap= img->GetSignificanceMap(bkgData,useLocalBkg);
 	if(!significanceMap){
 		#ifdef LOGGING_ENABLED
@@ -1423,8 +1429,6 @@ int ComputeBkg(Image* img)
 
 int ReadImage()
 {
-	
-	
 	//## Check given input file and get info
 	Caesar::FileInfo info;
 	if(!Caesar::SysUtils::CheckFile(inputFileName,info,false)){
