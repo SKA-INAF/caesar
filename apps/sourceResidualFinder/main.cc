@@ -770,6 +770,23 @@ int SetOptionsFromConfig()
 	}
 	if(nThreads>0) SysUtils::SetOMPThreads(nThreads);
 
+
+	//============================
+	//== INPUT FILE OPTIONS
+	//============================
+	if(GET_OPTION_VALUE(inputFile,inputFileName)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get inputFile option!");
+		#endif
+		return -1;
+	}	
+	if(GET_OPTION_VALUE(inputImage,imageName)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get inputImage option!");
+		#endif
+		return -1;
+	}
+
 	//============================
 	//== SOURCE RESIDUAL OPTIONS
 	//============================
@@ -1406,19 +1423,7 @@ int ComputeBkg(Image* img)
 
 int ReadImage()
 {
-	//## Get options
-	if(GET_OPTION_VALUE(inputFile,inputFileName)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to get inputFile option!");
-		#endif
-		return -1;
-	}	
-	if(GET_OPTION_VALUE(inputImage,imageName)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to get inputImage option!");
-		#endif
-		return -1;
-	}
+	
 	
 	//## Check given input file and get info
 	Caesar::FileInfo info;
