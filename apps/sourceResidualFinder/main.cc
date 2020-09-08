@@ -47,12 +47,14 @@ void Usage(char* exeName){
 	cout<<endl;
 	cout<<"Options:"<<endl;
   cout<<"-h, --help \t Show help message and exit"<<endl;
-	cout<<"-c, --config \t Config file containing option settings"<<endl;	
-	cout<<"-i, --inputfile \t Filename (fits/root) with input image."<<endl;
-	cout<<"-s, --sourcefile \t Caesar ROOT file with source list. If provided no sources will be searched."<<endl;
+	cout<<"-c, --config=[FILENAME] \t Config file containing option settings"<<endl;	
+	cout<<"-i, --inputfile=[FILENAME] \t Filename (fits/root) with input image."<<endl;
+	cout<<"-s, --sourcefile=[FILENAME] \t Caesar ROOT file with source list. If provided no sources will be searched."<<endl;
+	cout<<"-o, --outputfile=[FILENAME] \t Filename where to store output image (default=resmap.fits)"<<endl;
 	cout<<"-p, --psSubtractionMethod=[METHOD] - Method used to remove point sources (1=DILATION,2=MODEL SUBTRACTION) (default=1)"<<endl;
 	cout<<"-r, --resZThr=[NSIGMAS] - Significance threshold (in sigmas) above which sources are removed (if selected for removal) (default=5)"<<endl;
 	cout<<"-R, --resZHighThr=[NSIGMAS] - Significance threshold (in sigmas) above which sources are always removed (even if they have nested or different type) (default=10)"<<endl;
+	cout<<"-l, --removedSourceType=[TYPE] - Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"<<endl;
 	cout<<"-T, --seedthr=[NSIGMAS] - Seed threshold in flood-fill algorithm in nsigmas significance (default=5)"<<endl;
 	cout<<"-t, --mergethr=[NSIGMAS] - Merge threshold in flood-fill algorithm in nsigmas significance (default=2.6)"<<endl;
 	cout<<"-m, --minnpixels=[NPIX] - Minimum number of pixels in a blob (default=5)"<<endl;
@@ -76,6 +78,7 @@ static const struct option options_tab[] = {
 	{ "psSubtractionMethod", required_argument, 0, 'p' },
 	{ "resZThr", required_argument, 0, 'r' },
 	{ "resZHighThr", required_argument, 0, 'R' },
+	{ "removedSourceType", required_argument, 0, 'l' },
 	{ "seedthr", required_argument, 0, 'T'},
 	{ "mergethr", required_argument, 0, 't'},
 	{ "minnpixels", required_argument, 0, 'm'},
@@ -97,7 +100,6 @@ static const struct option options_tab[] = {
 //--> Main options
 int verbosity= 4;//INFO level
 int nThreads= 1;
-//Img* inputImg= 0;
 Image* inputImg= 0;
 TFile* inputFile= 0;
 std::string inputFileName= "";
@@ -111,10 +113,10 @@ bool searchNestedSources= true;
 
 TFile* outputFile= 0;	
 std::string outputFileName;
-//Img* residualImg= 0;
 Image* residualImg= 0;
 Image* smaskImg= 0;
 std::vector<Source*> sources;	
+/*
 bool saveToFile;
 bool saveConfig;
 bool saveResidualMap;
@@ -131,6 +133,7 @@ std::string saliencyMapFITSFile;
 std::string bkgMapFITSFile;
 std::string noiseMapFITSFile;
 std::string significanceMapFITSFile;
+*/
 
 //--> Source residual options
 bool removeNestedSources= true;
@@ -175,7 +178,7 @@ int CheckOptions();
 int ReadImage();
 int ComputeStats(Image*);
 int ComputeBkg(Image*);
-int OpenOutputFile();
+//int OpenOutputFile();
 int FindSources();
 int SelectSources();
 int ReadSources();
@@ -203,6 +206,7 @@ int main(int argc, char *argv[]){
 	auto t1_parse = chrono::steady_clock::now();
 	double dt_parse= chrono::duration <double, milli> (t1_parse-t0_parse).count();
 
+	/*
 	//=======================
 	//== OPEN OUTPUT FILE
 	//=======================
@@ -216,7 +220,7 @@ int main(int argc, char *argv[]){
 	}
 	auto t1_outfile = chrono::steady_clock::now();
 	double dt_outfile= chrono::duration <double, milli> (t1_outfile-t0_outfile).count();
-
+	*/
 	
 	//=======================
 	//== READ INPUT IMAGE
@@ -447,7 +451,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hc:i:s:p:r:R:T:t:m:n:Nb:Bg:e:PSv:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hc:i:s:o:p:r:R:l:T:t:m:n:Nb:Bg:e:PSv:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -487,6 +491,15 @@ int ParseOptions(int argc, char *argv[])
 				if(sourceFileName!="") findSources= false;
 				break;	
 			}
+			case 'o':	
+			{
+				if(!optarg){
+					cerr<<"ERROR: Null string to output file argument given!"<<endl;
+					exit(1);
+				}
+				outputFileName= std::string(optarg);	
+				break;	
+			}
 			case 'p':	
 			{
 				psSubtractionMethod= atoi(optarg);
@@ -500,6 +513,11 @@ int ParseOptions(int argc, char *argv[])
 			case 'R':	
 			{
 				residualZHighThr= atof(optarg);
+				break;	
+			}
+			case 'l':	
+			{
+				removedSourceType= atoi(optarg);
 				break;	
 			}
 			case 'T':	
@@ -1466,6 +1484,7 @@ int ReadImage()
 
 }//close ReadImage()
 
+/*
 int OpenOutputFile()
 {
 	//Get options
@@ -1586,10 +1605,10 @@ int OpenOutputFile()
 	return 0;
 
 }//close OpenOutputFile()
+*/
 
-
-int Clear(){
-
+int Clear()
+{
 	//Clear input image
 	if(inputImg) inputImg->Delete();
 
@@ -1621,8 +1640,9 @@ int Clear(){
 
 }//close Clear()
 
-int Save(){
-
+int Save()
+{
+	/*
 	//## Save to ROOT?
 	if(saveToFile && outputFile){
 		outputFile->cd();
@@ -1666,6 +1686,15 @@ int Save(){
 			significanceMap->WriteFITS(significanceMapFITSFile);
 		}
 		if(saveResidualMap && residualImg) residualImg->WriteFITS(residualMapFITSFile);
+	}
+	*/
+
+	//Save residual map
+	if(residualImg){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving residual map to file "<<outputFileName);
+		#endif	
+		residualImg->WriteFITS(outputFileName);
 	}
 
 	return 0;
