@@ -112,7 +112,7 @@ int minNPix= 5;
 bool searchNestedSources= true;
 
 TFile* outputFile= 0;	
-std::string outputFileName;
+std::string outputFileName= "resmap.fits";
 Image* residualImg= 0;
 Image* smaskImg= 0;
 std::vector<Source*> sources;	
