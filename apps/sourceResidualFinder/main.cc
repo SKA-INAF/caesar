@@ -53,7 +53,6 @@ void Usage(char* exeName){
 	cout<<"-p, --psSubtractionMethod=[METHOD] - Method used to remove point sources (1=DILATION,2=MODEL SUBTRACTION) (default=1)"<<endl;
 	cout<<"-r, --resZThr=[NSIGMAS] - Significance threshold (in sigmas) above which sources are removed (if selected for removal) (default=5)"<<endl;
 	cout<<"-R, --resZHighThr=[NSIGMAS] - Significance threshold (in sigmas) above which sources are always removed (even if they have nested or different type) (default=10)"<<endl;
-
 	cout<<"-T, --seedthr=[NSIGMAS] - Seed threshold in flood-fill algorithm in nsigmas significance (default=5)"<<endl;
 	cout<<"-t, --mergethr=[NSIGMAS] - Merge threshold in flood-fill algorithm in nsigmas significance (default=2.6)"<<endl;
 	cout<<"-m, --minnpixels=[NPIX] - Minimum number of pixels in a blob (default=5)"<<endl;
@@ -76,7 +75,7 @@ static const struct option options_tab[] = {
 	{ "sourcefile", required_argument, 0, 's' },
 	{ "psSubtractionMethod", required_argument, 0, 'p' },
 	{ "resZThr", required_argument, 0, 'r' },
-	{ "resHighZThr", required_argument, 0, 'R' },
+	{ "resZHighThr", required_argument, 0, 'R' },
 	{ "seedthr", required_argument, 0, 'T'},
 	{ "mergethr", required_argument, 0, 't'},
 	{ "minnpixels", required_argument, 0, 'm'},
