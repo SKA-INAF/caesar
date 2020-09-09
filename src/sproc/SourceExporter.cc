@@ -99,10 +99,10 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 	ss<<"# y - Source centroid in image coordinates along y axis \n";
 	ss<<"# x_w - Source centroid in image coordinates along x axis, weighted by pixel fluxes \n";
 	ss<<"# y_w - Source centroid in image coordinates along y axis, weighted by pixel fluxes \n";
-	ss<<"# x_wcs - Source centroid in world coordinates (deg) along x axis\n";
-	ss<<"# y_wcs - Source centroid in world coordinates (deg) along y axis\n";
-	ss<<"# x_w_wcs - Source centroid in world coordinates (deg) along x axis, weighted by pixel fluxes\n";
-	ss<<"# y_w_wcs - Source centroid in world coordinates (deg) along y axis, weighted by pixel fluxes\n";
+	ss<<"# x_wcs - Source centroid in selected WCS coordinate (deg) along x axis\n";
+	ss<<"# y_wcs - Source centroid in selected WCS coordinate (deg) along y axis\n";
+	ss<<"# x_w_wcs - Source centroid in selected selected WCS coordinate (deg) along x axis, weighted by pixel fluxes\n";
+	ss<<"# y_w_wcs - Source centroid in selected selected WCS coordinate (deg) along y axis, weighted by pixel fluxes\n";
 	ss<<"# xmin - Source minimum pixel image coordinate along x axis\n";
 	ss<<"# xmax - Source maximum pixel image coordinate along x axis\n";
 	ss<<"# ymin - Source minimum pixel image coordinate along y axis\n";
@@ -115,12 +115,12 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 	ss<<"# Stot - Sum of source pixel brightness in Jy/beam units.\n";
 	ss<<"# Smax - Maximum source pixel flux in Jy/beam units.\n";
 	if(convertBrightnessToFlux){
-		ss<<"# S - Fitted source flux in Jy units\n";
-		ss<<"# SErr - Fitted source flux error in Jy units\n";
+		ss<<"# S - Fitted source flux density in Jy units\n";
+		ss<<"# SErr - Fitted source flux density error in Jy units\n";
 	}
 	else{
-		ss<<"# S - Fitted source brighteness in Jy/beam units (not corrected by beam area).\n";
-		ss<<"# SErr - Fitted source brighteness error in Jy/beam units (not corrected by beam area).\n";
+		ss<<"# S - Fitted source brightness in Jy/beam units (divide by beam area to obtain flux density).\n";
+		ss<<"# SErr - Fitted source brightness error in Jy/beam units (divide by beam area to obtain flux density).\n";
 	}
 	ss<<"# beamArea - Number of pixels in beam. Used to convert flux parameters from Jy/beam to Jy/pixel (e.g. Jy/pixel=Jy/beam/beamarea).\n";
 	ss<<"# bkgSum - Background estimator summed over all source pixels (in Jy/beam).\n";
@@ -492,24 +492,24 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 	ss<<"# y - Fitted component centroid in image coordinates along y axis \n";
 	ss<<"# x_err - Fitted component centroid error in image coordinates along x axis \n";
 	ss<<"# y_err - Fitted component centroid error in image coordinates along y axis \n";
-	ss<<"# x_wcs - Fitted component centroid in world coordinates (deg) along x axis\n";
-	ss<<"# y_wcs - Fitted component centroid in world coordinates (deg) along y axis\n";
-	ss<<"# x_wcs_err - Fitted component centroid error in world coordinates (deg) along x axis\n";
-	ss<<"# y_wcs_err - Fitted component centroid error in world coordinates (deg) along y axis\n";
+	ss<<"# x_wcs - Fitted component centroid in selected WCS coordinate (deg) along x axis\n";
+	ss<<"# y_wcs - Fitted component centroid in selected WCS coordinate (deg) along y axis\n";
+	ss<<"# x_wcs_err - Fitted component centroid error in selected WCS coordinate (deg) along x axis\n";
+	ss<<"# y_wcs_err - Fitted component centroid error in selected WCS coordinate (deg) along y axis\n";
 	ss<<"# nu - Spectral axis value present in image header. If frequency it is given in GHz units.\n";
-	ss<<"# Speak - Fitted component peak in Jy/beam units (not corrected by beam area).\n";
-	ss<<"# Speak_err - Fitted component peak error in Jy/beam units (not corrected by beam area).\n";
+	ss<<"# Speak - Fitted component peak brightness in Jy/beam units.\n";
+	ss<<"# Speak_err - Fitted component peak brightness error in Jy/beam units.\n";
 	if(convertBrightnessToFlux){
-		ss<<"# S - Fitted component flux in Jy units\n";
-		ss<<"# S_err - Fitted component flux error in Jy units\n";
-		ss<<"# S_island - Fitted island flux in Jy units\n";
-		ss<<"# S_island_err - Fitted island flux error in Jy units\n";
+		ss<<"# S - Fitted component flux density in Jy units\n";
+		ss<<"# S_err - Fitted component flux density error in Jy units\n";
+		ss<<"# S_island - Fitted island flux density in Jy units\n";
+		ss<<"# S_island_err - Fitted island flux density error in Jy units\n";
 	}
 	else{
-		ss<<"# S - Fitted component brighteness in Jy/beam units (not corrected by beam area).\n";
-		ss<<"# S_err - Fitted component brightness error in Jy/beam units (not corrected by beam area).\n";
-		ss<<"# S_island - Fitted island brightness in Jy/beam units (not corrected by beam area).\n";
-		ss<<"# S_island_err - Fitted island brightness error in Jy/beam units (not corrected by beam area).\n";
+		ss<<"# S - Fitted component brightness in Jy/beam units (divide by beam area to obtain flux density).\n";
+		ss<<"# S_err - Fitted component brightness error in Jy/beam units (divide by beam area to obtain flux density).\n";
+		ss<<"# S_island - Fitted island brightness in Jy/beam units (divide by beam area to obtain flux density).\n";
+		ss<<"# S_island_err - Fitted island brightness error in Jy/beam units (divide by beam area to obtain flux density).\n";
 	}
 	ss<<"# beamArea - Number of pixels in beam. Used to convert flux parameters from Jy/beam to Jy/pixel (e.g. Jy/pixel=Jy/beam/beamarea).\n";
 	ss<<"# bmaj - Fitted component ellipse major axis in image coordinates\n";
@@ -518,17 +518,17 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 	ss<<"# bmaj_err - Fitted component ellipse major axis error in image coordinates\n";
 	ss<<"# bmin_err - Fitted component ellipse major axis error in image coordinates\n";
 	ss<<"# pa_err - Fitted component ellipse position angles error in deg\n";
-	ss<<"# bmaj_wcs - Fitted component ellipse major axis in world coordinates (arcsec)\n";
-	ss<<"# bmin_wcs - Fitted component ellipse major axis in world coordinates (arcsec)\n";
+	ss<<"# bmaj_wcs - Fitted component ellipse major axis in selected WCS coordinates (arcsec)\n";
+	ss<<"# bmin_wcs - Fitted component ellipse major axis in selected WCS coordinates (arcsec)\n";
 	ss<<"# pa_wcs - Fitted component ellipse position angles in deg (measured counterclock-wise from North)\n";
-	ss<<"# bmaj_wcs_err - Fitted component ellipse major axis error in world coordinates (arcsec)\n";
-	ss<<"# bmin_wcs_err - Fitted component ellipse major axis error in world coordinates (arcsec)\n";
+	ss<<"# bmaj_wcs_err - Fitted component ellipse major axis error in selected WCS coordinates (arcsec)\n";
+	ss<<"# bmin_wcs_err - Fitted component ellipse major axis error in selected WCS coordinates (arcsec)\n";
 	ss<<"# pa_wcs_err - Fitted component ellipse position angles error in deg\n";
 	ss<<"# bmaj_beam - Beam ellipse major axis (arcsec)\n";
 	ss<<"# bmin_beam - Beam ellipse minor axis (arcsec)\n";
 	ss<<"# pa_beam - Beam ellipse position angles in deg (measured counterclock-wise from North)\n";
-	ss<<"# bmaj_deconv_wcs - Fitted component ellipse major axis in world coordinates, deconvolved by beam (arcsec)\n";
-	ss<<"# bmin_deconv_wcs - Fitted component ellipse major axis in world coordinates, deconvolved by beam (arcsec)\n";
+	ss<<"# bmaj_deconv_wcs - Fitted component ellipse major axis in selected WCS coordinates, deconvolved by beam (arcsec)\n";
+	ss<<"# bmin_deconv_wcs - Fitted component ellipse major axis in selected WCS coordinates, deconvolved by beam (arcsec)\n";
 	ss<<"# pa_deconv_wcs - Fitted component ellipse position angles in deg, deconvolved by beam (measured counterclock-wise from North)\n";
 	ss<<"# fitBeamEllipseEccentricityRatio - Ratio between eccentricities of fitted and beam ellipses\n";
 	ss<<"# fitBeamEllipseAreaRatio - Ratio between areas of fitted ellipse and beam ellipse \n";
