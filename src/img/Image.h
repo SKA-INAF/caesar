@@ -792,7 +792,7 @@ class Image : public TNamed {
 		/**
 		* \brief Get tile pixels. It excludes NAN/inf and masked pixels (=0 by default) and optionally also pixels outside range
 		*/
-		int GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),std::vector<float> maskedValues={0});
+		int GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),std::vector<float> maskedValues={},bool requireFinitePixValues=false);
 
 		
 		/**

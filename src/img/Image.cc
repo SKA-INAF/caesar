@@ -600,11 +600,18 @@ int Image::ReadFile(std::string filename,bool invert){
 
 }//close ReadFile()
 
-Image* Image::GetTile(long int ix_min,long int ix_max,long int iy_min,long int iy_max,std::string imgname){
-
+Image* Image::GetTile(long int ix_min,long int ix_max,long int iy_min,long int iy_max,std::string imgname)
+{
 	//Extract pixel rectangular selection
+	//NB: Include all pixels otherwise the image size would be not the one expected from ix_min/ix_max/iy_min/iy_max
 	std::vector<float> tile_pixels;
-	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max)<0){
+	bool useRange= false;
+	double minThr= -std::numeric_limits<double>::infinity();
+	double maxThr= std::numeric_limits<double>::infinity();
+	std::vector<float> maskedValues= {};//include also 0!
+	bool requireFiniteValues= false;//include also inf/nan
+
+	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr,maskedValues,requireFiniteValues)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to extract pixel rectangular data, returning nullptr!");
 		#endif
@@ -1347,7 +1354,7 @@ int Image::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool useRa
 }//close ComputeStats()
 
 
-int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr,std::vector<float> maskedValues)
+int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr,std::vector<float> maskedValues,bool requireFinitePixValues)
 {
 	//Check range given
 	if(ix_min<0 || ix_max<0 || ix_max>=m_Nx || ix_min>=ix_max){
@@ -1386,9 +1393,10 @@ int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_
 				m_pixels.begin() + gBin_min, 
 				m_pixels.begin() + gBin_max + 1, 
 				std::back_inserter(pixels), 
-				[&maskedValues,minThr,maxThr](float w){
-					bool finite= std::isfinite(w);
-					bool inRange= w>minThr && w<maxThr;
+				[&maskedValues,&minThr,&maxThr,&requireFinitePixValues](float w){
+					bool goodValue= true;
+					if(requireFinitePixValues) goodValue= std::isfinite(w);
+					bool inRange= (w>minThr && w<maxThr);
 					bool notMasked= true;
 					for(size_t l=0;l<maskedValues.size();l++){
 						if(w==maskedValues[l]){
@@ -1396,8 +1404,8 @@ int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_
 							break;
 						}
 					}
-					bool selected= finite && inRange && notMasked;
-					//return (w>minThr && w<maxThr);
+					bool selected= goodValue && inRange && notMasked;
+					
 					return selected;
 				}
 			);
@@ -1418,8 +1426,9 @@ int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_
 				m_pixels.begin() + gBin_min, 
 				m_pixels.begin() + gBin_max + 1, 
 				std::back_inserter(pixels), 
-				[&maskedValues,minThr,maxThr](float w){
-					bool finite= std::isfinite(w);
+				[&maskedValues,&minThr,&maxThr,&requireFinitePixValues](float w){
+					bool goodValue= true;
+					if(requireFinitePixValues) goodValue= std::isfinite(w);
 					bool notMasked= true;
 					for(size_t l=0;l<maskedValues.size();l++){
 						if(w==maskedValues[l]){
@@ -1427,7 +1436,7 @@ int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_
 							break;
 						}
 					}
-					bool selected= finite && notMasked;
+					bool selected= goodValue && notMasked;
 					return selected;
 				}
 			);
@@ -1449,7 +1458,8 @@ int Image::GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix
 
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
-	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr,maskedValues)<0){
+	bool requireFiniteValues= true;
+	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr,maskedValues,requireFiniteValues)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to extract pixel rectangular data!");
 		#endif
@@ -1474,7 +1484,8 @@ int Image::GetTileMedianStats(float& median,float& mad_rms,long int& npix,long i
 
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
-	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr,maskedValues)<0){
+	bool requireFiniteValues= true;
+	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr,maskedValues,requireFiniteValues)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to extract pixel rectangular data!");
 		#endif
@@ -1499,7 +1510,8 @@ int Image::GetTileClippedStats(ClippedStats<float>& clipped_stats,long int& npix
 	
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
-	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr,maskedValues)<0){
+	bool requireFiniteValues= true;
+	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr,maskedValues,requireFiniteValues)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to extract pixel rectangular data!");
 		#endif
@@ -1533,7 +1545,8 @@ int Image::GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,
 
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
-	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr,maskedValues)<0){
+	bool requireFiniteValues= true;
+	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr,maskedValues,requireFiniteValues)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to extract pixel rectangular data!");
 		#endif
