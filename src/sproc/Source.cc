@@ -1779,8 +1779,11 @@ int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WCS* wcs,in
 		return -1;
 	}
 
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Source "<<this->GetName()<<std::setprecision(12)<<": pos("<<x<<","<<y<<"), pos_wcs("<<xwcs<<","<<ywcs<<")");
+	#endif
+
 	//Delete WCS
-	//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	return 0;

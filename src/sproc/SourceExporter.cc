@@ -222,6 +222,9 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 	for(size_t k=0;k<sources.size();k++){
 		//If wcs is not given, retrieve it from metadata
 		if(!wcs){
+			#ifdef LOGGING_ENABLED
+			 INFO_LOG("WCS not given, retrieving it from the first source ...");
+			#endif
 			ImgMetaData* metadata= sources[k]->GetImageMetaData();
 			if(!metadata){
 				#ifdef LOGGING_ENABLED
@@ -295,9 +298,16 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 	
 
 	//Compute IAU name
+	WCS* wcs_j2000= metadata->GetWCS(eJ2000);
+	if(!wcs_j2000){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to get J2000 WCS from metadata!");
+		#endif
+	}
 	bool useWeightedPos= false;
 	std::string iauName= source->GetName();
-	if(wcs) iauName= source->GetIAUName(useWeightedPos,wcs,wcsType);
+	//if(wcs) iauName= source->GetIAUName(useWeightedPos,wcs,wcsType);
+	if(wcs_j2000) iauName= source->GetIAUName(useWeightedPos,wcs_j2000,eJ2000);
 
 	//Compute WCS centroid
 	double X0_wcs= 0;
@@ -462,7 +472,10 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 		
 
 	//Delete WCS
-	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
+	if(deleteWCS) {
+		WCSUtils::DeleteWCS(&wcs);
+		WCSUtils::DeleteWCS(&wcs_j2000);
+	}
 
 	return sourceStrList;
 
@@ -655,7 +668,6 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 				#endif
 				return -1;
 			}
-			//wcs= metadata->GetWorldCoord(wcsType);
 			wcs= metadata->GetWCS(wcsType);
 			if(!wcs){
 				#ifdef LOGGING_ENABLED
