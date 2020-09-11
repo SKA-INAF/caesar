@@ -732,6 +732,13 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 		}		
 	}
 
+	//Compute WCS J2000
+	WCS* wcs_j2000= metadata->GetWCS(eJ2000);
+	if(!wcs_j2000){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Failed to get J2000 WCS from metadata!");
+		#endif
+	}
 
 	//Check if fit info are available
 	bool hasFitInfo= source->HasFitInfo();
@@ -871,9 +878,9 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			ssname<<source->GetName()<<"_fitcomp"<<k+1;
 			std::string iau_default= ssname.str();		
 			std::string iau= iau_default;
-			if(wcs){
+			if(wcs_j2000){
 				std::string wcspos_str= "";
-				AstroUtils::PixelToWCSStrCoords(wcspos_str,wcs,x0,y0);	
+				AstroUtils::PixelToWCSStrCoords(wcspos_str,wcs_j2000,x0,y0);	
 				int status= AstroUtils::GetIAUCoords(iau,wcspos_str);
 				if(status<0){
 					#ifdef LOGGING_ENABLED
