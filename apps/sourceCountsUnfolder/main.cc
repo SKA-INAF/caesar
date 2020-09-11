@@ -88,6 +88,7 @@ void Usage(char* exeName)
 	cout<<"-n, --freq=[FREQ] \t Data frequency in GHz used to convert source count literature fit models (default=1.4 GHz)"<<endl;	
 	cout<<"-N, --sindex=[SPECTRAL_INDEX] \t Data frequency spectral index used to convert source count literature fit models (default=-0.9)"<<endl;
 	cout<<"-A, --area=[AREA] \t Normalization area in deg squared (default=37.7)"<<endl;
+	cout<<"-I, --interactive \t Run interatively with plotting (default=no)"<<endl;	
 	cout<<"-v, --verbosity=[LEVEL] \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	cout<<"=============================="<<endl;
 
@@ -2129,15 +2130,24 @@ void Save()
 		outputFile->cd();		
 		
 		//Write source counts
-		if(gSourceCounts) gSourceCounts->Write();		
+		if(gSourceCounts) gSourceCounts->Write();	
+		if(gUnfoldedSpectrum) gUnfoldedSpectrum->Write();	
 		if(gDiffSourceCounts) gDiffSourceCounts->Write();
 		if(gUnfoldedDiffSpectrum) gUnfoldedDiffSpectrum->Write();
 		if(gUnfoldedDiffSpectrum_totErrors) gUnfoldedDiffSpectrum_totErrors->Write();
 		if(gUnfoldedDiffSpectrum_resoBiasCorrected) gUnfoldedDiffSpectrum_resoBiasCorrected->Write();
 		if(gFFDiffSpectrum) gFFDiffSpectrum->Write();
 
+		if(gExpDataFitAreaGraph){
+			gExpDataFitAreaGraph->SetName("expDataFitAreaGraph");
+			gExpDataFitAreaGraph->Write();
+		}
+
 		//Write response matrix
-		if(gResponseMatrix) gResponseMatrix->Write();
+		if(gResponseMatrix) {
+			gResponseMatrix->SetName("ResponseMatrix");
+			gResponseMatrix->Write();
+		}
 		if(gResponseModelFcn) {
 			gResponseModelFcn->SetNameTitle("responseModelFcn","responseModelFcn");
 			gResponseModelFcn->Write();

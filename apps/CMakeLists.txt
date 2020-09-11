@@ -20,6 +20,7 @@ add_subdirectory(sourceTreeWriter)
 add_subdirectory(sourceAsciiExporter)
 add_subdirectory(sourceMVClassifier)
 add_subdirectory(sourceRefitter)
+add_subdirectory(crossMatchSimSources)
 
 
 set (INCLUDE_DIRS ${INCLUDE_DIRS} PARENT_SCOPE)
@@ -45,4 +46,5 @@ set (Task_SourceTreeWriter_SRCS ${Task_SourceTreeWriter_SRCS} PARENT_SCOPE)
 set (Task_SourceAsciiExporter_SRCS ${Task_SourceAsciiExporter_SRCS} PARENT_SCOPE)
 set (Task_SourceMVClassifier_SRCS ${Task_SourceMVClassifier_SRCS} PARENT_SCOPE)
 set (Task_SourceRefitter_SRCS ${Task_SourceRefitter_SRCS} PARENT_SCOPE)
+set (Task_CrossMatchSimSources_SRCS ${Task_CrossMatchSimSources_SRCS} PARENT_SCOPE)
 

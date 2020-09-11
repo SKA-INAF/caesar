@@ -282,6 +282,9 @@ int ParseOptions(int argc, char *argv[])
 		return -1;
 	}	
 
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("wcsType="<<wcsType);
+	#endif
 
 	return 0;
 
@@ -349,6 +352,9 @@ int Save()
 	}
 
 	//Retrieve source WCS
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Retrieve source WCS (type="<<wcsType<<") ...");
+	#endif
 	WCS* wcs= m_sources[0]->GetWCS(wcsType);
 	if(!wcs) {
 		#ifdef LOGGING_ENABLED
@@ -359,7 +365,7 @@ int Save()
 
 	//Saving island/blob catalog to ascii file
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Writing source island catalog to file "<<outputFileName<<" ...");
+		INFO_LOG("Writing source island catalog to file "<<outputFileName<<" (wcsType="<<wcsType<<") ...");
 	#endif
 	bool dumpNestedSourceInfo= true;
 	int status= SourceExporter::WriteToAscii(outputFileName,m_sources,dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,convertBrightnessToFlux,asciiDelimiter);
@@ -371,7 +377,7 @@ int Save()
 	
 	//Saving source fitted components to ascii file
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Writing source component catalog to file "<<outputFileName_comp<<" ...");
+		INFO_LOG("Writing source component catalog to file "<<outputFileName_comp<<" (wcsType="<<wcsType<<") ...");
 	#endif
 	status= SourceExporter::WriteComponentsToAscii(outputFileName_comp,m_sources,dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,convertBrightnessToFlux,asciiDelimiter);
 	if(status<0){
