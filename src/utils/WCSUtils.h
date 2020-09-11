@@ -106,6 +106,11 @@ class WCSUtils : public TObject {
 		static char* getwcsout(WCS* wcs);
 
 		/**
+		* \brief Return current input coordinate system
+		*/
+		static char* getwcsin(WCS* wcs);
+
+		/**
 		* \brief Return current value of WCS output coordinate system set by -wcsout
 		*/
 		static std::string GetWCSTypeStr(WCS* wcs);
