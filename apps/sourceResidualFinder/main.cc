@@ -122,6 +122,7 @@ TFile* outputFile= 0;
 std::string outputFileName= "resmap.fits";
 Image* residualImg= 0;
 std::string outputFileName_mask= "smask.fits";
+std::string outputFileName_bkg= "bkg.fits";
 Image* smaskImg= 0;
 std::vector<Source*> sources;	
 /*
@@ -214,22 +215,6 @@ int main(int argc, char *argv[]){
 	auto t1_parse = chrono::steady_clock::now();
 	double dt_parse= chrono::duration <double, milli> (t1_parse-t0_parse).count();
 
-	/*
-	//=======================
-	//== OPEN OUTPUT FILE
-	//=======================
-	auto t0_outfile = chrono::steady_clock::now();
-	if(OpenOutputFile()<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to open output file!");
-		#endif
-		Clear();
-		return -1;	
-	}
-	auto t1_outfile = chrono::steady_clock::now();
-	double dt_outfile= chrono::duration <double, milli> (t1_outfile-t0_outfile).count();
-	*/
-	
 	//=======================
 	//== READ INPUT IMAGE
 	//=======================
@@ -337,8 +322,25 @@ int main(int argc, char *argv[]){
 	//====================================
 	//- Compute source masks
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Computing source mask ...");	
+		INFO_LOG("Mask source pixels in original image ...");	
 	#endif
+	smaskImg= (Image*)inputImg->GetCloned("smaskImg");
+	if(!smaskImg){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to clone input map!");	
+		#endif
+		Clear();
+		return -1;
+	}
+	if(smaskImg->MaskSources(sources)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to mask sources in input map!");	
+		#endif
+		Clear();
+		return -1;
+	}
+
+	/*
 	smaskImg= inputImg->GetSourceMask(sources);
 	if(!smaskImg){
 		#ifdef LOGGING_ENABLED
@@ -347,6 +349,7 @@ int main(int argc, char *argv[]){
 		Clear();
 		return -1;
 	}
+	*/
 
 	//Compute stats for source mask
 	#ifdef LOGGING_ENABLED
@@ -1724,6 +1727,14 @@ int Save()
 		if(saveResidualMap && residualImg) residualImg->WriteFITS(residualMapFITSFile);
 	}
 	*/
+
+	//Save bkg map
+	if(bkgData->BkgMap){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving bkg map to file "<<outputFileName_bkg);
+		#endif	
+		(bkgData->BkgMap)->WriteFITS(outputFileName_bkg);
+	}
 
 	//Save mask map
 	if(smaskImg){
