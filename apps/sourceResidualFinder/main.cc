@@ -50,11 +50,14 @@ void Usage(char* exeName){
 	cout<<"-c, --config=[FILENAME] \t Config file containing option settings"<<endl;	
 	cout<<"-i, --inputfile=[FILENAME] \t Filename (fits/root) with input image."<<endl;
 	cout<<"-s, --sourcefile=[FILENAME] \t Caesar ROOT file with source list. If provided no sources will be searched."<<endl;
-	cout<<"-o, --outputfile=[FILENAME] \t Filename where to store output image (default=resmap.fits)"<<endl;
+	cout<<"-o, --outputfile=[FILENAME] \t Filename where to store output residual image (default=resmap.fits)"<<endl;
+	cout<<"-O, --outputfile_mask=[FILENAME] \t Filename where to store output source mask image (default=smask.fits)"<<endl;
 	cout<<"-p, --psSubtractionMethod=[METHOD] - Method used to remove point sources (1=DILATION,2=MODEL SUBTRACTION) (default=1)"<<endl;
 	cout<<"-r, --resZThr=[NSIGMAS] - Significance threshold (in sigmas) above which sources are removed (if selected for removal) (default=5)"<<endl;
 	cout<<"-R, --resZHighThr=[NSIGMAS] - Significance threshold (in sigmas) above which sources are always removed (even if they have nested or different type) (default=10)"<<endl;
 	cout<<"-l, --removedSourceType=[TYPE] - Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"<<endl;
+	cout<<"-a, --removeNestedSources - Remove nested sources from the image (default=no)"<<endl;
+	cout<<"-k, --dilateKernelSize=[SIZE] - Kernel size in pixel used to dilate image around sources (default=9)"<<endl;
 	cout<<"-T, --seedthr=[NSIGMAS] - Seed threshold in flood-fill algorithm in nsigmas significance (default=5)"<<endl;
 	cout<<"-t, --mergethr=[NSIGMAS] - Merge threshold in flood-fill algorithm in nsigmas significance (default=2.6)"<<endl;
 	cout<<"-m, --minnpixels=[NPIX] - Minimum number of pixels in a blob (default=5)"<<endl;
@@ -74,11 +77,15 @@ static const struct option options_tab[] = {
   { "help", no_argument, 0, 'h' },
 	{ "config", required_argument, 0, 'c' },
 	{ "inputfile", required_argument, 0, 'i' },
+	{ "outputfile", required_argument, 0, 'o' },
+	{ "outputfile_mask", required_argument, 0, 'O' },
 	{ "sourcefile", required_argument, 0, 's' },
 	{ "psSubtractionMethod", required_argument, 0, 'p' },
 	{ "resZThr", required_argument, 0, 'r' },
 	{ "resZHighThr", required_argument, 0, 'R' },
 	{ "removedSourceType", required_argument, 0, 'l' },
+	{ "removeNestedSources", no_argument, 0, 'a' },
+	{ "dilateKernelSize", required_argument, 0, 'k' },
 	{ "seedthr", required_argument, 0, 'T'},
 	{ "mergethr", required_argument, 0, 't'},
 	{ "minnpixels", required_argument, 0, 'm'},
@@ -114,6 +121,7 @@ bool searchNestedSources= true;
 TFile* outputFile= 0;	
 std::string outputFileName= "resmap.fits";
 Image* residualImg= 0;
+std::string outputFileName_mask= "smask.fits";
 Image* smaskImg= 0;
 std::vector<Source*> sources;	
 /*
@@ -136,7 +144,7 @@ std::string significanceMapFITSFile;
 */
 
 //--> Source residual options
-bool removeNestedSources= true;
+bool removeNestedSources= false;
 int dilateKernelSize= 9;
 int removedSourceType= 2;
 int residualModel= 1;
@@ -451,7 +459,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hc:i:s:o:p:r:R:l:T:t:m:n:Nb:Bg:e:PSv:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hc:i:s:o:O:p:r:R:l:ak:T:t:m:n:Nb:Bg:e:PSv:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -499,6 +507,15 @@ int ParseOptions(int argc, char *argv[])
 				}
 				outputFileName= std::string(optarg);	
 				break;	
+			}		
+			case 'O':	
+			{
+				if(!optarg){
+					cerr<<"ERROR: Null string to output file mask argument given!"<<endl;
+					exit(1);
+				}
+				outputFileName_mask= std::string(optarg);	
+				break;	
 			}
 			case 'p':	
 			{
@@ -519,6 +536,16 @@ int ParseOptions(int argc, char *argv[])
 			{
 				removedSourceType= atoi(optarg);
 				break;	
+			}
+			case 'a':
+			{
+				removeNestedSources= true;		
+				break;
+			}
+			case 'k':
+			{
+				dilateKernelSize= atoi(optarg);		
+				break;
 			}
 			case 'T':	
 			{
@@ -1697,6 +1724,14 @@ int Save()
 		if(saveResidualMap && residualImg) residualImg->WriteFITS(residualMapFITSFile);
 	}
 	*/
+
+	//Save mask map
+	if(smaskImg){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving source mask map to file "<<outputFileName_mask);
+		#endif	
+		smaskImg->WriteFITS(outputFileName_mask);
+	}
 
 	//Save residual map
 	if(residualImg){
