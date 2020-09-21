@@ -68,6 +68,14 @@ void Usage(char* exeName){
 	cout<<"-e, --estimator=[ESTIMATOR] - Bkg estimator used in the sampling box (1=mean, 2=median, 3=biweight, 4=clipped median) (default=2)"<<endl;
 	cout<<"-P, --2ndpass - If given, perform a 2nd pass in bkg calculation (default=no)"<<endl;
 	cout<<"-S, --skipblobs - If given, skip blobs using a flood-fill algorithm (default=no)"<<endl;
+	cout<<"-A, --no-selection - Do not select and retag input sources (default=apply selection)"<<endl;
+	cout<<"-d, --no-maxnpixcut - Do not apply max n pixel cut (default=apply)"<<endl;
+	cout<<"-D, --maxnpix=[MAX_NPIX] - max number of pixel to consider a source as point-like (default=1000)"<<endl;
+	cout<<"-f, --no-elongcut - Do not apply elongation cut (default=apply)"<<endl;
+	cout<<"-G, --no-circratiocut - Do not apply circular ratio cut (default=apply)"<<endl;
+	cout<<"-q, --no-ellipsearearatiocut - Do not apply ellipse area ratio cut (default=apply)"<<endl;
+	cout<<"-u, --no-nbeamscut - Do not apply nbeams cut (default=apply)"<<endl;
+	cout<<"-U, --maxnbeams=[MAX_NBEAMS] - Max number of beams in source to consider it as point-like (default=10)"<<endl;
 	cout<<"-n, --nthreads \t Number of threads to be used (default=1)"<<endl;
 	cout<<"-v [LEVEL], --verbosity=[LEVEL] - Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	cout<<"=============================="<<endl;
@@ -96,6 +104,14 @@ static const struct option options_tab[] = {
 	{ "estimator", required_argument, 0, 'e' },
 	{ "2ndpass", no_argument, 0, 'P'},
 	{ "skipblobs", no_argument, 0, 'S'},
+	{ "no-selection", no_argument, 0, 'A'},
+	{ "no-maxnpixcut", no_argument, 0, 'd'},
+	{ "maxnpix", required_argument, 0, 'D'},
+	{ "no-elongcut", no_argument, 0, 'f'},
+	{ "no-circratiocut", no_argument, 0, 'G'},
+	{ "no-ellipsearearatiocut", no_argument, 0, 'q'},
+	{ "no-nbeamscut", no_argument, 0, 'u'},
+	{ "maxnbeams", required_argument, 0, 'U'},
 	{ "nthreads", required_argument, 0, 'n' },
 	{ "verbosity", required_argument, 0, 'v'},
   {(char*)0, (int)0, (int*)0, (int)0}
@@ -125,24 +141,7 @@ std::string outputFileName_mask= "smask.fits";
 std::string outputFileName_bkg= "bkg.fits";
 Image* smaskImg= 0;
 std::vector<Source*> sources;	
-/*
-bool saveToFile;
-bool saveConfig;
-bool saveResidualMap;
-bool saveBkgMap;
-bool saveNoiseMap;
-bool saveSignificanceMap;
-bool saveInputMap;
-bool saveSaliencyMap;
-bool saveSources;
-bool saveToFITSFile;
-std::string residualMapFITSFile;
-std::string inputMapFITSFile;
-std::string saliencyMapFITSFile;
-std::string bkgMapFITSFile;
-std::string noiseMapFITSFile;
-std::string significanceMapFITSFile;
-*/
+
 
 //--> Source residual options
 bool removeNestedSources= false;
@@ -157,11 +156,17 @@ int psSubtractionMethod= 1;
 //--> Source selection
 bool applySourceSelection= true;
 double sourceMinBoundingBox= 2;
+bool useCircRatioCut= true;
 double psCircRatioThr= 0.4;
+bool useElongCut= true;
 double psElongThr= 0.7;
+bool useEllipseAreaRatioCut= true;
 double psEllipseAreaRatioMinThr= 0.6;
 double psEllipseAreaRatioMaxThr= 1.4;
+bool useMaxNPixCut= true;
 int psMaxNPix= 1000;
+bool useNBeamsCut= true;
+double psNBeamsThr= 10;
 
 //--> Bkg options
 ImgBkgData* bkgData= 0;
@@ -283,20 +288,7 @@ int main(int argc, char *argv[]){
 		auto t1_sfinder = chrono::steady_clock::now();
 		dt_sfinder= chrono::duration <double, milli> (t1_sfinder-t0_sfinder).count();
 
-		//=======================
-		//== SELECT SOURCES
-		//=======================
-		auto t0_ssel = chrono::steady_clock::now();	
-		if(SelectSources()<0){
-			#ifdef LOGGING_ENABLED
-				ERROR_LOG("Failed to select sources!");	
-			#endif
-			Clear();
-			return -1;
-		}
-		auto t1_ssel = chrono::steady_clock::now();
-		dt_ssel= chrono::duration <double, milli> (t1_ssel-t0_ssel).count();
-
+		
 	}//close if findSources 
 	else
 	{
@@ -315,6 +307,26 @@ int main(int argc, char *argv[]){
 		dt_sfinder= chrono::duration <double, milli> (t1_sfinder-t0_sfinder).count();
 
 	}//close else
+
+
+	//=======================
+	//== SELECT SOURCES
+	//=======================
+	auto t0_ssel = chrono::steady_clock::now();	
+	if(applySourceSelection){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Selecting sources ...");
+		#endif
+		if(SelectSources()<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to select sources ...");
+			#endif
+			Clear();
+			return -1;
+		}
+	}
+	auto t1_ssel = chrono::steady_clock::now();
+	dt_ssel= chrono::duration <double, milli> (t1_ssel-t0_ssel).count();
 
 	
 	//====================================
@@ -462,7 +474,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hc:i:s:o:O:p:r:R:l:ak:T:t:m:n:Nb:Bg:e:PSv:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hc:i:s:o:O:p:r:R:l:ak:T:t:m:n:Nb:Bg:e:PSAdD:fGquU:v:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -599,6 +611,46 @@ int ParseOptions(int argc, char *argv[])
 			{
 				skipOutliers= true;
 				break;	
+			}
+			case 'A':	
+			{
+				applySourceSelection= false;
+				break;	
+			}
+			case 'd':
+			{
+				useMaxNPixCut= false;
+				break;
+			}
+			case 'D':
+			{
+				psMaxNPix= atoi(optarg);
+				break;
+			}
+			case 'f':
+			{
+				useElongCut= false;
+				break;
+			}
+			case 'G':
+			{
+				useCircRatioCut= false;
+				break;
+			}
+			case 'q':
+			{
+				useEllipseAreaRatioCut= false;
+				break;
+			}
+			case 'u':
+			{
+				useNBeamsCut= false;
+				break;
+			}
+			case 'U':
+			{
+				psNBeamsThr= atof(optarg);
+				break;
 			}
 			case 'n':	
 			{
@@ -916,15 +968,36 @@ int SetOptionsFromConfig()
 		#endif
 		return -1;
 	}
+
+	if(GET_OPTION_VALUE(useCircRatioCut,useCircRatioCut)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get useCircRatioCut option!");
+		#endif
+		return -1;
+	}
 	if(GET_OPTION_VALUE(psCircRatioThr,psCircRatioThr)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to get psCircRatioThr option!");
 		#endif
 		return -1;
 	}
+
+	if(GET_OPTION_VALUE(useElongCut,useElongCut)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get useElongCut option!");
+		#endif
+		return -1;
+	}
 	if(GET_OPTION_VALUE(psElongThr,psElongThr)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to get psElongThr option!");
+		#endif
+		return -1;
+	}
+
+	if(GET_OPTION_VALUE(useEllipseAreaRatioCut,useEllipseAreaRatioCut)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get useEllipseAreaRatioCut option!");
 		#endif
 		return -1;
 	}
@@ -940,6 +1013,13 @@ int SetOptionsFromConfig()
 		#endif
 		return -1;
 	}
+
+	if(GET_OPTION_VALUE(useMaxNPixCut,useMaxNPixCut)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get psMaxNPix option!");
+		#endif
+		return -1;
+	}
 	if(GET_OPTION_VALUE(psMaxNPix,psMaxNPix)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to get psMaxNPix option!");
@@ -947,7 +1027,18 @@ int SetOptionsFromConfig()
 		return -1;
 	}
 
-
+	if(GET_OPTION_VALUE(useNBeamsCut,useNBeamsCut)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get useNBeamsCut option!");
+		#endif
+		return -1;
+	}
+	if(GET_OPTION_VALUE(psNBeamsThr,psNBeamsThr)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get psNBeamsThr option!");
+		#endif
+		return -1;
+	}
 
 	//============================
 	//== BACKGROUND OPTIONS
@@ -1094,18 +1185,7 @@ int FindSources()
 		return -1;
 	}
 
-	//- Select sources?
-	if(applySourceSelection){
-		#ifdef LOGGING_ENABLED
-			INFO_LOG("Selecting sources ...");
-		#endif
-		if(SelectSources()<0){
-			#ifdef LOGGING_ENABLED
-				ERROR_LOG("Failed to select sources ...");
-			#endif
-			return -1;
-		}
-	}
+	
 
 	return 0;
 
@@ -1242,17 +1322,15 @@ bool IsPointLikeSource(Source* aSource)
 	for(unsigned int i=0;i<contours.size();i++){
 		Contour* thisContour= contours[i];
 
-		/*
 		//Test circularity ratio: 1= circle
-		if(thisContour->CircularityRatio<psCircRatioThr) {
+		if(useCircRatioCut && thisContour->CircularityRatio<psCircRatioThr) {
 			cout<<"SourceFinder::IsCompactSource(): INFO: Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass CircularityRatio cut (CR="<<thisContour->CircularityRatio<<"<"<<psCircRatioThr<<")"<<endl;
 			isPointLike= false;
 			break;
 		}
-		*/
 
 		//Test elongation (how symmetrical is the shape): 0=circle,square
-		if(thisContour->Elongation>psElongThr) {
+		if(useElongCut && thisContour->Elongation>psElongThr) {
 			#ifdef LOGGING_ENABLED
 				DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass Elongation cut (ELONG="<<thisContour->CircularityRatio<<">"<<psElongThr<<")");
 			#endif
@@ -1261,7 +1339,7 @@ bool IsPointLikeSource(Source* aSource)
 		}
 
 		//Test ellipse fit
-		if(thisContour->EllipseAreaRatio<psEllipseAreaRatioMinThr || thisContour->EllipseAreaRatio>psEllipseAreaRatioMaxThr) {
+		if(useEllipseAreaRatioCut && (thisContour->EllipseAreaRatio<psEllipseAreaRatioMinThr || thisContour->EllipseAreaRatio>psEllipseAreaRatioMaxThr) ) {
 			#ifdef LOGGING_ENABLED
 				DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass EllipseAreaRatio cut (EAR="<<thisContour->EllipseAreaRatio<<" outside range ["<<psEllipseAreaRatioMinThr<<","<<psEllipseAreaRatioMaxThr<<"])");
 			#endif
@@ -1271,11 +1349,24 @@ bool IsPointLikeSource(Source* aSource)
 
 	}//end contour loop
 	
+
+	//Check number of beams contained in source
+	double beamArea= aSource->GetBeamFluxIntegral();
+	if(useNBeamsCut && beamArea>0){	
+		double nBeams= (double)(aSource->NPix)/beamArea;
+		if(nBeams>psNBeamsThr){
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass nBeams cut (beamArea="<<beamArea<<", NPix="<<aSource->NPix<<", nBeams="<<nBeams<<">"<<psNBeamsThr<<")");
+			#endif
+			isPointLike= false;
+		}
+	}
+
 	//Check number of pixels
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") (NPix="<<aSource->NPix<<">"<<psMaxNPix<<")");
 	#endif
-	if(aSource->NPix>psMaxNPix){
+	if(useMaxNPixCut && aSource->NPix>psMaxNPix){
 		#ifdef LOGGING_ENABLED
 			DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass nMaxPix cut (NPix="<<aSource->NPix<<">"<<psMaxNPix<<")");
 		#endif
