@@ -2129,6 +2129,9 @@ Image* SFinder::FindExtendedSources(Image* inputImg,ImgBkgData* bkgData,TaskData
 	//****************************
 	Image* smoothedImg= 0;
 	if(m_UsePreSmoothing){
+		#ifdef LOGGING_ENABLED	
+			INFO_LOG("Computing smoothed map using filter "<<m_SmoothFilter<<" ...");
+		#endif
 		smoothedImg= ComputeSmoothedImage(residualImg,m_SmoothFilter);
 		if(!smoothedImg){
 			#ifdef LOGGING_ENABLED
