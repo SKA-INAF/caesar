@@ -2230,6 +2230,10 @@ Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,T
 	//==    PRELIMINARY STAGES
 	//==========================================
 	//## Compute saliency
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Compute multiscale saliency map using these parameters: reso="<<m_SaliencyResoMin<<"/"<<m_SaliencyResoMax<<"/"<<m_SaliencyResoStep<<", beta="<<m_spBeta<<", minArea="<<m_spMinArea<<", nnFactor="<<m_SaliencyNNFactor<<", useRobustPars ?"<<m_SaliencyUseRobustPars<<", expFalloff="<<m_SaliencyDissExpFalloffPar<<", spatialDistRegPar="<<m_SaliencySpatialDistRegPar<<", multiResoCombFactor="<<m_SaliencyMultiResoCombThrFactor<<", useBkgMap?"<<m_SaliencyUseBkgMap<<", useNoiseMap?"<<m_SaliencyUseNoiseMap<<", thrFactor="<<m_SaliencyThrFactor<<", imgThrFactor="<<m_SaliencyImgThrFactor<<", useOptThr? "<<m_SaliencyUseOptimalThr);
+	#endif
+
 	Image* saliencyImg= img->GetMultiResoSaliencyMap(
 		m_SaliencyResoMin,m_SaliencyResoMax,m_SaliencyResoStep,
 		m_spBeta,m_spMinArea,m_SaliencyNNFactor,m_SaliencyUseRobustPars,m_SaliencyDissExpFalloffPar,m_SaliencySpatialDistRegPar,
