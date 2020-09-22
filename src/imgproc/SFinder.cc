@@ -2078,24 +2078,34 @@ Image* SFinder::FindExtendedSources(Image* inputImg,ImgBkgData* bkgData,TaskData
 	//** Find residual map
 	//****************************
 	//NB: Compute residual map if not already computed
-	Image* residualImg= m_ResidualImg;
-	if(!residualImg){
-		#ifdef LOGGING_ENABLED
-			DEBUG_LOG("Computing residual image (was not computed before) ...");
-		#endif
-		residualImg= FindResidualMap(inputImg,bkgData,taskData->sources);
-		if(!residualImg){
+	Image* residualImg= m_ResidualImg;	
+	
+	if(!residualImg)
+	{
+		if(m_computeResidualMap){
 			#ifdef LOGGING_ENABLED
-				ERROR_LOG("Residual map computation failed!");
+				INFO_LOG("Computing residual image (was not computed before) ...");
 			#endif
-			return nullptr;
+			residualImg= FindResidualMap(inputImg,bkgData,taskData->sources);
+			if(!residualImg){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Residual map computation failed!");
+				#endif
+				return nullptr;
+			}
 		}
+		else{
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("No residual image available and requested to be computed, setting residual image to input image ...");
+			#endif
+			residualImg= inputImg->GetCloned("",true,true);
+		}
+
 		if(storeData) m_ResidualImg= residualImg;
 		searchImg= residualImg;
 	}
 	
 
-	
 	//Compute bkg & noise map for residual img
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Computing residual image stats & bkg...");
