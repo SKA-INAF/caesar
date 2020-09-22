@@ -2093,12 +2093,12 @@ Image* SFinder::FindExtendedSources(Image* inputImg,ImgBkgData* bkgData,TaskData
 				#endif
 				return nullptr;
 			}
-		}
+		}//close if compute res map
 		else{
 			#ifdef LOGGING_ENABLED
 				INFO_LOG("No residual image available and requested to be computed, setting residual image to input image ...");
 			#endif
-			residualImg= inputImg->GetCloned("",true,true);
+			residualImg= inputImg->GetCloned("",true,false);//do not reset stats because stat moments are not recomputed in ComputeStatsAnBkg() method
 		}
 
 		if(storeData) m_ResidualImg= residualImg;
