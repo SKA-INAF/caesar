@@ -56,7 +56,7 @@ void Usage(char* exeName){
 	cout<<"-r, --resZThr=[NSIGMAS] - Significance threshold (in sigmas) above which sources are removed (if selected for removal) (default=5)"<<endl;
 	cout<<"-R, --resZHighThr=[NSIGMAS] - Significance threshold (in sigmas) above which sources are always removed (even if they have nested or different type) (default=10)"<<endl;
 	cout<<"-l, --removedSourceType=[TYPE] - Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"<<endl;
-	cout<<"-a, --removeNestedSources - Remove nested sources from the image (default=no)"<<endl;
+	cout<<"-a, --removeNestedSources - If a source has nested sources, remove nested rather than mother source (default=no)"<<endl;
 	cout<<"-k, --dilateKernelSize=[SIZE] - Kernel size in pixel used to dilate image around sources (default=9)"<<endl;
 	cout<<"-T, --seedthr=[NSIGMAS] - Seed threshold in flood-fill algorithm in nsigmas significance (default=5)"<<endl;
 	cout<<"-t, --mergethr=[NSIGMAS] - Merge threshold in flood-fill algorithm in nsigmas significance (default=2.6)"<<endl;
@@ -1254,7 +1254,7 @@ int SelectSources()
 	}//end loop sources
 
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Adding #"<<nSelSources<<" bright sources to the selected source list...");
+		INFO_LOG("Selected and tagged #"<<nSelSources<<" sources ...");
 	#endif
 
 	//Clear initial vector (DO NOT CLEAR MEMORY!) and fill with selection (then reset selection)
