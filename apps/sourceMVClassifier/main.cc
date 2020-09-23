@@ -1638,7 +1638,7 @@ int FillSourcePars(std::vector<SourceComponentData*>& pars,Source* aSource,int s
 			}
 
 			//Check eccentricity ratio
-			if(eccentricityRatio<gEccentricityRatioMin || eccentricityRatio>gEccentricityRatioMax || TMath::IsNaN(eccentricityRatio) || !std::isfinite(eccentricityRatio) ){
+			if(eccentricityRatio<=0 || eccentricityRatio<gEccentricityRatioMin || eccentricityRatio>gEccentricityRatioMax || TMath::IsNaN(eccentricityRatio) || !std::isfinite(eccentricityRatio) ){
 				#ifdef LOGGING_ENABLED
 					WARN_LOG("Skip source component eccentricity ratio (E_ratio="<<eccentricityRatio<<") as NaN or outside selected range ("<<gEccentricityRatioMin<<","<<gEccentricityRatioMax<<")");
 				#endif
@@ -1646,7 +1646,7 @@ int FillSourcePars(std::vector<SourceComponentData*>& pars,Source* aSource,int s
 			}
 
 			//Check source to beam area ratio
-			if(areaRatio<gSourceToBeamRatioMin || areaRatio>gSourceToBeamRatioMax || TMath::IsNaN(areaRatio) || !std::isfinite(areaRatio) ){
+			if(areaRatio<=0 || areaRatio<gSourceToBeamRatioMin || areaRatio>gSourceToBeamRatioMax || TMath::IsNaN(areaRatio) || !std::isfinite(areaRatio) ){
 				#ifdef LOGGING_ENABLED
 					WARN_LOG("Skip source component beam area ratio (A_ratio="<<areaRatio<<") as NaN or outside selected range ("<<gSourceToBeamRatioMin<<","<<gSourceToBeamRatioMax<<")");
 				#endif
