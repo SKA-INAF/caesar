@@ -398,6 +398,10 @@ bool SourceSelector::NComponentsCut(Source* source,Cut* cut)
 		nComponents= source->GetNSelFitComponents();	
 	}
 	bool passed= cut->isPassed(nComponents);
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Source "<<source->GetName()<<", hasFitInfo? "<<hasFitInfo<<", nComponents="<<nComponents<<", passed="<<passed);
+	#endif
+	
 	return passed;
 
 }//close NComponentsCut()
