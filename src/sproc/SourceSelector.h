@@ -127,6 +127,10 @@ class SourceSelector : public TObject
 		*/
 		static bool ExtendedSourceCut(Source* aSource,Cut* cut);
 		/**
+		* \brief Select candidate compact sources
+		*/
+		static bool CompactSourceCut(Source* aSource,Cut* cut);
+		/**
 		* \brief Select source fitted components by flux
 		*/
 		static bool SourceComponentFluxCut(Source* aSource,Cut* cut);

@@ -74,6 +74,7 @@ SourceSelector::CutFcnRegistry SourceSelector::m_cutFcnRegistry =
 	{"sourceFlag",SourceFlagCut},
 	{"sourceSimType",SourceSimTypeCut},
 	{"isExtended",ExtendedSourceCut},
+	{"isCompact",CompactSourceCut},
 	{"hasPixelsAtEdge",HasPixelsAtEdgeCut},
 	{"hasFit",HasFitCut},	
 	{"fitStatus",SourceFitStatusCut},
@@ -440,6 +441,60 @@ bool SourceSelector::ExtendedSourceCut(Source* source,Cut* cut)
 	return isExtended;
 	
 }//close ExtendedSourceCut()
+
+
+//===========================================
+//==         COMPACT SOURCE CUT
+//===========================================
+bool SourceSelector::CompactSourceCut(Source* source,Cut* cut)
+{
+	if(cut && !cut->isEnabled()) return true;
+
+	bool hasFitInfo= source->HasFitInfo();
+	int fitQuality= source->GetFitQuality();
+	int fitStatus= source->GetFitStatus();
+	int nComponents= 0;
+	double redChi2= 0;
+	if(hasFitInfo) {
+		SourceFitPars fitPars= source->GetFitPars();
+		nComponents= source->GetNSelFitComponents();
+		double chi2= fitPars.GetChi2();
+		double ndf= fitPars.GetNDF();
+		redChi2= chi2/ndf;
+	}
+
+	double nPixels= static_cast<double>(source->NPix);
+	double beamArea= source->GetBeamFluxIntegral();
+	if(beamArea<=0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No beam area info stored for source "<<source->GetName()<<", cannot perform check, returning passed!");
+		#endif
+		return true;
+	}
+	double nBeams= nPixels/beamArea;
+
+	int nComponentsThr= 3;
+	double nBeamsThr= 10;
+	double nBeamsHighThr= 20;
+	double redChi2Thr= 10;
+	bool fewComponents= (nComponents<=nComponentsThr); 
+	bool smallerThanBeam= (nBeams<=nBeamsThr);
+	bool largerThanBeam= (nBeams>nBeamsThr);
+	bool goodFit= (
+		hasFitInfo && 
+		(fitQuality==eMQFit || fitQuality==eHQFit) ||
+		(fitStatus==eFitConverged || fitStatus==eFitConvergedWithWarns) ||
+		redChi2<=redChi2Thr
+	);
+
+	bool isCompact= (
+		fewComponents &&
+		(smallerThanBeam || (largerThanBeam && goodFit)
+	);
+	
+	return isCompact;
+	
+}//close CompactSourceCut()
 
 //===========================================
 //==         HAS FIT INFO CUT
