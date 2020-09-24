@@ -81,7 +81,7 @@ class SourceSelector : public TObject
 		/**
 		* \brief Select sources by applying quality cuts provided in cut file
 		*/
-		static int SelectSources(std::vector<Source*>& sources_sel,const std::vector<Source*>& sources,std::string cutFile);
+		static int SelectSources(std::vector<Source*>& sources_sel,const std::vector<Source*>& sources,std::string cutFile,bool requireAllCutsPassed=true);
 
 	protected:
 

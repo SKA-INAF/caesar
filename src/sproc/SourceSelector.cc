@@ -100,7 +100,7 @@ SourceSelector::~SourceSelector()
 
 }
 
-int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::vector<Source*>& sources,std::string cutFile)
+int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::vector<Source*>& sources,std::string cutFile,bool requireAllCutsPassed)
 {
 	//Check args
 	sources_sel.clear();
@@ -192,6 +192,7 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 			}
 			else{
 				nSourceComponentsRejectedPerCut[cutName]+= nComponents_rejected; 
+				if(!requireAllCutsPassed) break;
 			}
 
 		}//end loop cuts
@@ -236,6 +237,7 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 				}
 				else{
 					nSourceComponentsRejectedPerCut[cutName]+= nComponents_nested_rejected; 
+					if(!requireAllCutsPassed) break;
 				}
 
 			}//end loop cuts
