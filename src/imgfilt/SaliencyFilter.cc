@@ -413,6 +413,12 @@ Image* SaliencyFilter::ComputeMultiResoSaliencyMap(Image* img,int resoMin,int re
 			INFO_LOG("Computing saliency map @ reso "<<reso<<" (step="<<resoStep<<"/"<<nReso<<")");
 		#endif
 		Image* salMap= ComputeSaliencyMap(img,reso,beta,minRegionSize,knnFactor,useRobustPars,expFalloffPar,distanceRegPar);
+		if(!salMap){
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Failed to compute saliency map @ reso "<<reso<<" (step="<<resoStep<<"/"<<nReso<<"), skip to next...");
+			#endif
+			continue;
+		}
 
 		//Normalize saliency map
 		#ifdef LOGGING_ENABLED
