@@ -186,15 +186,15 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 			
 			if(!passed) {
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Source "<<aSource->GetName()<<": cut="<<cutName<<" (nComponents(BEFORE)="<<nComponents_before<<", nComponents(AFTER)="<<nComponents_after<<"), passed? "<<passed);
+					DEBUG_LOG("Source "<<aSource->GetName()<<": cut="<<cutName<<" (nComponents(BEFORE)="<<nComponents_before<<", nComponents(AFTER)="<<nComponents_after<<"), passed? "<<passed);
 				#endif
 				nSourcesRejectedPerCut[cutName]++;
 				nSourceComponentsRejectedPerCut[cutName]+= nComponents_before;
-				break;
+				if(requireAllCutsPassed) break;
 			}
 			else{
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Source "<<aSource->GetName()<<": cut="<<cutName<<" (nComponents(BEFORE)="<<nComponents_before<<", nComponents(AFTER)="<<nComponents_after<<"), passed? "<<passed);
+					DEBUG_LOG("Source "<<aSource->GetName()<<": cut="<<cutName<<" (nComponents(BEFORE)="<<nComponents_before<<", nComponents(AFTER)="<<nComponents_after<<"), passed? "<<passed);
 				#endif
 				nSourceComponentsRejectedPerCut[cutName]+= nComponents_rejected; 
 				if(!requireAllCutsPassed && cut->isEnabled()) break;
@@ -234,11 +234,11 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 				
 				if(!passed_nested) {
 					#ifdef LOGGING_ENABLED
-						INFO_LOG("Source "<<aNestedSource->GetName()<<": cut="<<cutName<<" (nComponents(BEFORE)="<<nComponents_nested_before<<", nComponents(AFTER)="<<nComponents_nested_after<<"), passed? "<<passed_nested);
+						DEBUG_LOG("Source "<<aNestedSource->GetName()<<": cut="<<cutName<<" (nComponents(BEFORE)="<<nComponents_nested_before<<", nComponents(AFTER)="<<nComponents_nested_after<<"), passed? "<<passed_nested);
 					#endif
 					nSourcesRejectedPerCut[cutName]++;
 					nSourceComponentsRejectedPerCut[cutName]+= nComponents_nested_before; 
-					break;
+					if(requireAllCutsPassed) break;
 				}
 				else{
 					nSourceComponentsRejectedPerCut[cutName]+= nComponents_nested_rejected; 
@@ -688,7 +688,7 @@ bool SourceSelector::SourceComponentCentroidDistanceCut(Source* source,Cut* cut)
 	int nSelComponents= source->GetNSelFitComponents();
 
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("BEFORE CUT: Source "<<source->GetName()<<": nComponents="<<nComponents<<", nSelComponents="<<nSelComponents);
+		DEBUG_LOG("BEFORE CUT: Source "<<source->GetName()<<": nComponents="<<nComponents<<", nSelComponents="<<nSelComponents);
 	#endif
 	
 	//Check number of components
@@ -731,7 +731,7 @@ bool SourceSelector::SourceComponentCentroidDistanceCut(Source* source,Cut* cut)
 			if(!passed){//remove fainter component is (i,j) are too close
 				fitPars.SetSelectedComponent(componentId_j,false);
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Source "<<source->GetName()<<": deselect component "<<componentId_j<<" as too close to component "<<componentId_i<<" (dx="<<dx<<", dy="<<dy<<")");
+					DEBUG_LOG("Source "<<source->GetName()<<": deselect component "<<componentId_j<<" as too close to component "<<componentId_i<<" (dx="<<dx<<", dy="<<dy<<")");
 				#endif
 			}
 		}//end loop components
