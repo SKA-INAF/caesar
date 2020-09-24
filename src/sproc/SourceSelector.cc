@@ -193,6 +193,9 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 				break;
 			}
 			else{
+				#ifdef LOGGING_ENABLED
+					INFO_LOG("Source "<<aSource->GetName()<<": cut="<<cutName<<" (nComponents(BEFORE)="<<nComponents_before<<", nComponents(AFTER)="<<nComponents_after<<"), passed? "<<passed);
+				#endif
 				nSourceComponentsRejectedPerCut[cutName]+= nComponents_rejected; 
 				if(!requireAllCutsPassed && cut->isEnabled()) break;
 			}
@@ -399,8 +402,13 @@ bool SourceSelector::NComponentsCut(Source* source,Cut* cut)
 	}
 	bool passed= cut->isPassed(nComponents);
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Source "<<source->GetName()<<", hasFitInfo? "<<hasFitInfo<<", nComponents="<<nComponents<<", passed="<<passed);
+		DEBUG_LOG("Source "<<source->GetName()<<", hasFitInfo? "<<hasFitInfo<<", nComponents="<<nComponents<<", passed="<<passed);
 	#endif
+
+	//If cut is not passed, set fit info to false (to force nselcomponents to 0)
+	if(!passed){
+		source->SetHasFitInfo(false);
+	}	
 	
 	return passed;
 
@@ -735,7 +743,7 @@ bool SourceSelector::SourceComponentCentroidDistanceCut(Source* source,Cut* cut)
 	//If no components are left, return false (do this after setting updating source fit pars
 	int nComponents_sel= source->GetNSelFitComponents();
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("AFTER CUT: Source "<<source->GetName()<<": nComponents="<<nComponents<<", nSelComponents="<<nComponents_sel);
+		DEBUG_LOG("AFTER CUT: Source "<<source->GetName()<<": nComponents="<<nComponents<<", nSelComponents="<<nComponents_sel);
 	#endif
 	if(nComponents_sel<=0){
 		source->SetHasFitInfo(false);
