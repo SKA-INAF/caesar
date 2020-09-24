@@ -73,6 +73,7 @@ SourceSelector::CutFcnRegistry SourceSelector::m_cutFcnRegistry =
 	{"sourceType",SourceTypeCut},
 	{"sourceFlag",SourceFlagCut},
 	{"sourceSimType",SourceSimTypeCut},
+	{"hasPixelsAtEdge",HasPixelsAtEdgeCut},
 	{"hasFit",HasFitCut},	
 	{"fitStatus",SourceFitStatusCut},
 	{"hasGoodFitChi2",HasGoodFitChi2Cut},
@@ -372,6 +373,18 @@ bool SourceSelector::ApplyCut(std::string cutName,Source* source,Cut* cut)
 	return passed;
 
 }//close ApplyCut()
+
+//===========================================
+//==         HAS PIXEL AT EDGE CUT
+//===========================================
+bool SourceSelector::HasPixelsAtEdgeCut(Source* aSource,Cut* cut)
+{
+	if(cut && !cut->isEnabled()) return true;
+	bool hasPixelsAtEdge= source->IsAtEdge();
+	bool passed= cut->isPassed(hasPixelsAtEdge);
+	return passed;
+
+}//close HasPixelsAtEdgeCut()
 
 //===========================================
 //==         HAS FIT INFO CUT

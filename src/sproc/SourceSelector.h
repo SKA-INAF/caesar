@@ -94,6 +94,11 @@ class SourceSelector : public TObject
 		//==   SOURCE CUT DEFINITIONS
 		//=====================================
 		/**
+		* \brief Select source by pixel at edge
+		*/
+		static bool HasPixelsAtEdgeCut(Source* aSource,Cut* cut);
+
+		/**
 		* \brief Select source by fit quality
 		*/
 		static bool HasFitCut(Source* aSource,Cut* cut);
