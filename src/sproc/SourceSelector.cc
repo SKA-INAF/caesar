@@ -170,6 +170,7 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 
 		//- Apply cuts
 		bool passed= true;
+		bool onePassed= false;
 
 		for (CutMap::const_iterator it = cuts.begin(); it!=cuts.end(); it++){
 			std::string cutName= it->first;
@@ -196,11 +197,17 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 				#ifdef LOGGING_ENABLED
 					DEBUG_LOG("Source "<<aSource->GetName()<<": cut="<<cutName<<" (nComponents(BEFORE)="<<nComponents_before<<", nComponents(AFTER)="<<nComponents_after<<"), passed? "<<passed);
 				#endif
+				if(cut->isEnabled()) onePassed= true;
 				nSourceComponentsRejectedPerCut[cutName]+= nComponents_rejected; 
 				if(!requireAllCutsPassed && cut->isEnabled()) break;
 			}
 
 		}//end loop cuts
+
+		if(!requireAllCutsPassed){
+			passed= onePassed;
+		}
+
 		
 		//## Process nested sources
 		std::vector<Source*> nestedSources= aSource->GetNestedSources();
@@ -218,6 +225,7 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 	
 			//- Apply cuts
 			bool passed_nested= true;
+			bool onePassed_nested= false;
 
 			for (CutMap::const_iterator it = cuts.begin(); it!=cuts.end(); it++){
 				std::string cutName= it->first;
@@ -241,15 +249,19 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 					if(requireAllCutsPassed) break;
 				}
 				else{
+					if(cut->isEnabled()) onePassed_nested= true;
 					nSourceComponentsRejectedPerCut[cutName]+= nComponents_nested_rejected; 
 					if(!requireAllCutsPassed && cut->isEnabled()) break;
 				}
 
 			}//end loop cuts
 
-			if(passed_nested){
-				nestedSources_sel.push_back(aNestedSource);
+			if(!requireAllCutsPassed){
+				passed_nested= onePassed_nested;
 			}
+
+			//Add nested sources to selected
+			if(passed_nested) nestedSources_sel.push_back(aNestedSource);
 
 		}//end loop nested sources
 
