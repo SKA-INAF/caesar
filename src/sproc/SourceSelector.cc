@@ -489,7 +489,7 @@ bool SourceSelector::CompactSourceCut(Source* source,Cut* cut)
 
 	bool isCompact= (
 		fewComponents &&
-		(smallerThanBeam || (largerThanBeam && goodFit)
+		(smallerThanBeam || (largerThanBeam && goodFit))
 	);
 	
 	return isCompact;
