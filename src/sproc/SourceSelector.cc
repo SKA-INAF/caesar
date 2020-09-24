@@ -194,7 +194,7 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 			}
 			else{
 				nSourceComponentsRejectedPerCut[cutName]+= nComponents_rejected; 
-				if(!requireAllCutsPassed) break;
+				if(!requireAllCutsPassed && cut->isEnabled()) break;
 			}
 
 		}//end loop cuts
@@ -239,7 +239,7 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 				}
 				else{
 					nSourceComponentsRejectedPerCut[cutName]+= nComponents_nested_rejected; 
-					if(!requireAllCutsPassed) break;
+					if(!requireAllCutsPassed && cut->isEnabled()) break;
 				}
 
 			}//end loop cuts
