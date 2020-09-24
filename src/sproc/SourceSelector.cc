@@ -395,15 +395,15 @@ bool SourceSelector::ExtendedSourceCut(Source* source,Cut* cut)
 	if(cut && !cut->isEnabled()) return true;
 
 	bool hasFitInfo= source->HasFitInfo();
-	int nComponents= 0;
-	float redChi2= 0;
 	int fitQuality= source->GetFitQuality();
 	int fitStatus= source->GetFitStatus();
+	int nComponents= 0;
+	double redChi2= 0;
 	if(hasFitInfo) {
 		SourceFitPars fitPars= source->GetFitPars();
 		nComponents= source->GetNSelFitComponents();
-		chi2= fitPars.GetChi2();
-		ndf= fitPars.GetNDF();
+		double chi2= fitPars.GetChi2();
+		double ndf= fitPars.GetNDF();
 		redChi2= chi2/ndf;
 	}
 
