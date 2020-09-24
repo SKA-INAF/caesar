@@ -73,7 +73,7 @@ SourceSelector::CutFcnRegistry SourceSelector::m_cutFcnRegistry =
 	{"sourceType",SourceTypeCut},
 	{"sourceFlag",SourceFlagCut},
 	{"sourceSimType",SourceSimTypeCut},
-	{"isExtended"},ExtendedSourceCut},
+	{"isExtended",ExtendedSourceCut},
 	{"hasPixelsAtEdge",HasPixelsAtEdgeCut},
 	{"hasFit",HasFitCut},	
 	{"fitStatus",SourceFitStatusCut},
