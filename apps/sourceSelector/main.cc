@@ -57,6 +57,7 @@ void Usage(char* exeName)
   cout<<"-h, --help \t Show help message and exit"<<endl;
 	cout<<"-i, --input=[INPUT_FILE] \t Input ROOT file produced by CAESAR containing the source collection to be selected"<<endl;
 	cout<<"-c, --cutfile=[CUT_FILE] \t Input ascii file containing the list of cuts to be applied to source collection"<<endl;
+	cout<<"-a, --cutor \t Require OR of all cuts listed in cut file (e.g. at lease one passed) (default=require AND)"<<endl;
 	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (ROOT format) where to store selected sources (default=sources.root)"<<endl;
 	cout<<"-R, --region-output=[REGION_OUTPUT_FILE] \t Output DS9 region file name where to store selected sources (default=sources.reg)"<<endl;
 	cout<<"-C, --catalog-output=[CATALOG_OUTPUT_FILE] \t Output catalog file name where to store selected sources (default=catalog.dat)"<<endl;
@@ -70,6 +71,7 @@ static const struct option options_tab[] = {
   { "help", no_argument, 0, 'h' },
 	{ "input", required_argument, 0, 'i' },
 	{ "cutfile", required_argument, 0, 'c' },
+	{ "cutor", no_argument, 0, 'a' },
 	{ "region-output", required_argument, 0, 'R' },
 	{ "catalog-output", required_argument, 0, 'C' },
 	{ "verbosity", required_argument, 0, 'v'},
@@ -81,6 +83,7 @@ static const struct option options_tab[] = {
 //Options
 std::string fileName= "";
 std::string cutFileName= "";
+bool requireAllCutsPassed= true;
 std::string outputFileName= "sources.root";
 std::string regionOutputFileName= "sources.reg";
 std::string regionComponentsOutputFileName= "sources_fitcomp.reg";
@@ -201,7 +204,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:c:o:R:C:v:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:c:ao:R:C:v:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -222,6 +225,11 @@ int ParseOptions(int argc, char *argv[])
 			{
 				cutFileName= std::string(optarg);	
 				break;	
+			}	
+			case 'a':
+			{
+				requireAllCutsPassed= false;
+				break;
 			}
 			case 'o':	
 			{
@@ -350,10 +358,10 @@ void ClearData()
 int SelectSources()
 {
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Applying cut selection to #"<<m_sources.size()<<" sources...");
+		INFO_LOG("Applying cut selection to #"<<m_sources.size()<<" sources (requireAllCutsPassed? "<<requireAllCutsPassed<<") ...");
 	#endif
 	
-	int status= SourceSelector::SelectSources(m_sources_sel,m_sources,cutFileName);	
+	int status= SourceSelector::SelectSources(m_sources_sel,m_sources,cutFileName,requireAllCutsPassed);	
 	if(status<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to apply selection to sources through selector!");
