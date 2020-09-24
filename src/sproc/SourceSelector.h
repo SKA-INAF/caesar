@@ -122,7 +122,10 @@ class SourceSelector : public TObject
 		* \brief Select source by flux over island flux ratio
 		*/
 		static bool SourceFluxToIslandRatioCut(Source* aSource,Cut* cut);
-
+		/**
+		* \brief Select candidate extended sources
+		*/
+		static bool ExtendedSourceCut(Source* aSource,Cut* cut);
 		/**
 		* \brief Select source fitted components by flux
 		*/

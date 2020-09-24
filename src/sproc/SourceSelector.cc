@@ -73,6 +73,7 @@ SourceSelector::CutFcnRegistry SourceSelector::m_cutFcnRegistry =
 	{"sourceType",SourceTypeCut},
 	{"sourceFlag",SourceFlagCut},
 	{"sourceSimType",SourceSimTypeCut},
+	{"isExtended"},ExtendedSourceCut},
 	{"hasPixelsAtEdge",HasPixelsAtEdgeCut},
 	{"hasFit",HasFitCut},	
 	{"fitStatus",SourceFitStatusCut},
@@ -385,6 +386,56 @@ bool SourceSelector::HasPixelsAtEdgeCut(Source* aSource,Cut* cut)
 	return passed;
 
 }//close HasPixelsAtEdgeCut()
+
+//===========================================
+//==         EXTENDED SOURCE CUT
+//===========================================
+bool SourceSelector::ExtendedSourceCut(Source* aSource,Cut* cut)
+{
+	if(cut && !cut->isEnabled()) return true;
+
+	bool hasFitInfo= aSource->HasFitInfo();
+	int nComponents= 0;
+	float redChi2= 0;
+	int fitQuality= aSource->GetFitQuality();
+	int fitStatus= aSource->GetFitStatus();
+	if(hasFitInfo) {
+		nComponents= aSource->GetNSelFitComponents();
+		chi2= fitPars.GetChi2();
+		ndf= fitPars.GetNDF();
+		redChi2= chi2/ndf;
+	}
+
+	double nPixels= static_cast<double>(aSource->NPix);
+	double beamArea= aSource->GetBeamFluxIntegral();
+	if(beamArea<=0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No beam area info stored for source "<<aSource->GetName()<<", cannot perform check, returning passed!");
+		#endif
+		return true;
+	}
+	double nBeams= nPixels/beamArea;
+
+	int nComponentsThr= 3;
+	double nBeamsThr= 10;
+	double redChi2Thr= 10;
+	bool isMultiComponent= (nComponents>nComponentsThr); 
+	bool largerThanBeam= (nBeams>nBeamsThr);
+	bool poorFit= (redChi2>redChi2Thr);
+	bool noFit= (
+		!hasFitInfo || 
+		(fitQuality==eUnknownFitQuality || fitQuality==eBadFit) ||
+		(fitStatus==eFitUnknownStatus || fitStatus==eFitAborted || fitStatus==eFitNotConverged) 
+	);
+
+	bool isExtended= (
+		isMultiComponent ||
+		(largerThanBeam && (noFit || poorFit))
+	);
+	
+	return isExtended;
+	
+}//close ExtendedSourceCut()
 
 //===========================================
 //==         HAS FIT INFO CUT

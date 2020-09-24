@@ -166,6 +166,10 @@ int CutParser::Parse(std::string filename)
 			cutType= eSINGLE_BOUND_CUT;
 			cutReversed= true;
 		}
+		else if(cutTypeStr=="-"){//no par cut
+			cutType= eUNKNOWN_CUT;
+			cutReversed= false;
+		}
 		else{
 			#ifdef LOGGING_ENABLED
 				ERROR_LOG("Unknown cut type found ("<<cutTypeStr<<")!");
@@ -178,97 +182,100 @@ int CutParser::Parse(std::string filename)
 		#endif
 
 		//Get cut AND/OR
-		std::string cutCombineFlag= "";
-		line >> cutCombineFlag;
-		bool cutCombineInOR= false;
-		if(cutCombineFlag=="OR") cutCombineInOR= true;
-		else if(cutCombineFlag=="AND") cutCombineInOR= false;
-		else{
-			#ifdef LOGGING_ENABLED
-				ERROR_LOG("Unknown/invalid cut combine flag found ("<<cutCombineFlag<<")!");
-			#endif
-			return -1;
-		}
-
-		#ifdef LOGGING_ENABLED
-			INFO_LOG("cutCombineFlag: "<<cutCombineFlag<<", cutCombineInOR? "<<cutCombineInOR);
-		#endif
-
-		//Register cut parameters
-		if(cutType==eEQUALITY_CUT)
+		if(cutType!=eUNKNOWN_CUT)
 		{
-			std::string cutParamsField= "";
-			line >> cutParamsField;
-			if(cutParamsField=="\n" || cutParamsField=="") {
+			std::string cutCombineFlag= "";
+			line >> cutCombineFlag;
+			bool cutCombineInOR= false;
+			if(cutCombineFlag=="OR") cutCombineInOR= true;
+			else if(cutCombineFlag=="AND") cutCombineInOR= false;
+			else{
 				#ifdef LOGGING_ENABLED
-					ERROR_LOG("Missing cut parameters in equality cut parsed!");
+					ERROR_LOG("Unknown/invalid cut combine flag found ("<<cutCombineFlag<<")!");
 				#endif
 				return -1;
 			}
-			CodeUtils::RemovePatternInString(cutParamsField,"{");
-			CodeUtils::RemovePatternInString(cutParamsField,"}");
-			std::vector<std::string> cutParams_str= CodeUtils::SplitStringOnPattern(cutParamsField,',');
-			std::vector<double> cutParams= CodeUtils::StringVecToTypedVec<double>(cutParams_str);	
-			CutFactory::Instance().RegisterEqualityCut(cutName,cutParams,cutEnabled,cutReversed,cutCombineInOR);
-		}
-		else if(cutType==eBOUND_CUT)
-		{
-			std::string cutParamsField_min= "";
-			std::string cutParamsField_max= "";
-			line >> cutParamsField_min;
-			line >> cutParamsField_max;
-			if(cutParamsField_min=="\n" || cutParamsField_min=="") {
-				#ifdef LOGGING_ENABLED
-					ERROR_LOG("Missing min cut parameters in bound cut parsed!");
-				#endif
-				return -1;
-			}	
-			if(cutParamsField_max=="\n" || cutParamsField_max=="") {
-				#ifdef LOGGING_ENABLED
-					ERROR_LOG("Missing max cut parameters in bound cut parsed!");
-				#endif
-				return -1;
-			}
-			CodeUtils::RemovePatternInString(cutParamsField_min,"{");
-			CodeUtils::RemovePatternInString(cutParamsField_min,"}");
-			CodeUtils::RemovePatternInString(cutParamsField_max,"{");
-			CodeUtils::RemovePatternInString(cutParamsField_max,"}");
-			std::vector<std::string> cutMinParams_str= CodeUtils::SplitStringOnPattern(cutParamsField_min,',');
-			std::vector<std::string> cutMaxParams_str= CodeUtils::SplitStringOnPattern(cutParamsField_max,',');
-			std::vector<double> cutMinParams= CodeUtils::StringVecToTypedVec<double>(cutMinParams_str);	
-			std::vector<double> cutMaxParams= CodeUtils::StringVecToTypedVec<double>(cutMaxParams_str);
-			if(cutMaxParams.size()!=cutMinParams.size()){
-				#ifdef LOGGING_ENABLED
-					ERROR_LOG("Parsed min/max bound parameter vectors have different size!");
-				#endif
-				return -1;
-			}
-			std::vector<std::pair<double,double>>	cutParams;
-			for(size_t i=0;i<cutMaxParams.size();i++) cutParams.push_back( std::make_pair(cutMinParams[i],cutMaxParams[i]) );
-			CutFactory::Instance().RegisterBoundCut(cutName,cutParams,cutEnabled,cutReversed,cutCombineInOR);			
-		}
-		else if(cutType==eSINGLE_BOUND_CUT){
-			std::string cutParamsField= "";
-			line >> cutParamsField;
-			if(cutParamsField=="\n" || cutParamsField=="") {
-				#ifdef LOGGING_ENABLED
-					ERROR_LOG("Missing cut parameters in bound cut parsed!");
-				#endif
-				return -1;
-			}	
-			CodeUtils::RemovePatternInString(cutParamsField,"{");
-			CodeUtils::RemovePatternInString(cutParamsField,"}");
-			std::vector<std::string> cutParams_str= CodeUtils::SplitStringOnPattern(cutParamsField,',');
-			std::vector<double> cutParams= CodeUtils::StringVecToTypedVec<double>(cutParams_str);	
-			CutFactory::Instance().RegisterSingleBoundCut(cutName,cutParams,cutEnabled,cutReversed,cutCombineInOR);			
-		}
-		else{
+
 			#ifdef LOGGING_ENABLED
-				ERROR_LOG("Unknown/invalid cut type found ("<<cutType<<")!");
+				INFO_LOG("cutCombineFlag: "<<cutCombineFlag<<", cutCombineInOR? "<<cutCombineInOR);
 			#endif
-			return -1;
-		}
-		
+
+			//Register cut parameters
+			if(cutType==eEQUALITY_CUT)
+			{
+				std::string cutParamsField= "";
+				line >> cutParamsField;
+				if(cutParamsField=="\n" || cutParamsField=="") {
+					#ifdef LOGGING_ENABLED
+						ERROR_LOG("Missing cut parameters in equality cut parsed!");
+					#endif
+					return -1;
+				}
+				CodeUtils::RemovePatternInString(cutParamsField,"{");
+				CodeUtils::RemovePatternInString(cutParamsField,"}");
+				std::vector<std::string> cutParams_str= CodeUtils::SplitStringOnPattern(cutParamsField,',');
+				std::vector<double> cutParams= CodeUtils::StringVecToTypedVec<double>(cutParams_str);	
+				CutFactory::Instance().RegisterEqualityCut(cutName,cutParams,cutEnabled,cutReversed,cutCombineInOR);
+			}
+			else if(cutType==eBOUND_CUT)
+			{
+				std::string cutParamsField_min= "";
+				std::string cutParamsField_max= "";
+				line >> cutParamsField_min;
+				line >> cutParamsField_max;
+				if(cutParamsField_min=="\n" || cutParamsField_min=="") {
+					#ifdef LOGGING_ENABLED
+						ERROR_LOG("Missing min cut parameters in bound cut parsed!");
+					#endif
+					return -1;
+				}	
+				if(cutParamsField_max=="\n" || cutParamsField_max=="") {
+					#ifdef LOGGING_ENABLED
+						ERROR_LOG("Missing max cut parameters in bound cut parsed!");
+					#endif
+					return -1;
+				}
+				CodeUtils::RemovePatternInString(cutParamsField_min,"{");
+				CodeUtils::RemovePatternInString(cutParamsField_min,"}");
+				CodeUtils::RemovePatternInString(cutParamsField_max,"{");
+				CodeUtils::RemovePatternInString(cutParamsField_max,"}");
+				std::vector<std::string> cutMinParams_str= CodeUtils::SplitStringOnPattern(cutParamsField_min,',');
+				std::vector<std::string> cutMaxParams_str= CodeUtils::SplitStringOnPattern(cutParamsField_max,',');
+				std::vector<double> cutMinParams= CodeUtils::StringVecToTypedVec<double>(cutMinParams_str);	
+				std::vector<double> cutMaxParams= CodeUtils::StringVecToTypedVec<double>(cutMaxParams_str);
+				if(cutMaxParams.size()!=cutMinParams.size()){
+					#ifdef LOGGING_ENABLED
+						ERROR_LOG("Parsed min/max bound parameter vectors have different size!");
+					#endif
+					return -1;
+				}
+				std::vector<std::pair<double,double>>	cutParams;
+				for(size_t i=0;i<cutMaxParams.size();i++) cutParams.push_back( std::make_pair(cutMinParams[i],cutMaxParams[i]) );
+				CutFactory::Instance().RegisterBoundCut(cutName,cutParams,cutEnabled,cutReversed,cutCombineInOR);			
+			}
+			else if(cutType==eSINGLE_BOUND_CUT){
+				std::string cutParamsField= "";
+				line >> cutParamsField;
+				if(cutParamsField=="\n" || cutParamsField=="") {
+					#ifdef LOGGING_ENABLED
+						ERROR_LOG("Missing cut parameters in bound cut parsed!");
+					#endif
+					return -1;
+				}	
+				CodeUtils::RemovePatternInString(cutParamsField,"{");
+				CodeUtils::RemovePatternInString(cutParamsField,"}");
+				std::vector<std::string> cutParams_str= CodeUtils::SplitStringOnPattern(cutParamsField,',');
+				std::vector<double> cutParams= CodeUtils::StringVecToTypedVec<double>(cutParams_str);	
+				CutFactory::Instance().RegisterSingleBoundCut(cutName,cutParams,cutEnabled,cutReversed,cutCombineInOR);			
+			}
+			else{
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Unknown/invalid cut type found ("<<cutType<<")!");
+				#endif
+				return -1;
+			}
+		}//close if cut!=UNKNOWN TYPE
+
 		if (!in.good()) break;
 		
 	}//close while
