@@ -273,7 +273,8 @@ class BoundCut : public Cut
 				K cutMinValue_casted= static_cast<K>(cutValue.first);
 				K cutMaxValue_casted= static_cast<K>(cutValue.second);
 				bool passed= (val>=cutMinValue_casted && val<=cutMaxValue_casted);	
-				if(m_reverse) passed= (val<=cutMinValue_casted && val>=cutMaxValue_casted);
+				//if(m_reverse) passed= (val<=cutMinValue_casted && val>=cutMaxValue_casted);
+				if(m_reverse) passed= (val<=cutMinValue_casted || val>=cutMaxValue_casted);
 				cutResults.push_back(passed);
 			}
 			
