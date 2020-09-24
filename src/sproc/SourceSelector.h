@@ -201,7 +201,11 @@ class SourceSelector : public TObject
 		*/
 		static bool SourceSimTypeCut(Source* source,Cut* cut);
 
-		
+		/**
+		* \brief Select source by number of fit components
+		*/
+		static bool NComponentsCut(Source* source,Cut* cut);
+
 	
 	private:
 		/**

@@ -63,6 +63,7 @@ namespace Caesar {
 SourceSelector::CutFcnRegistry SourceSelector::m_cutFcnRegistry = 
 { 
 	{"nPixels",NPixelsCut},
+	{"nComponents",NComponentsCut},
 	{"minBoundingBox",MinBoundingBoxCut},
 	{"goodSourceFlag",GoodSourceFlagCut},
 	{"circRatio",CircularityRatioCut},
@@ -382,6 +383,23 @@ bool SourceSelector::SourceFitStatusCut(Source* source,Cut* cut)
 	return passed;
 
 }//close SourceFitStatusCut()
+
+//===========================================
+//==         NCOMPONENTS CUT
+//===========================================
+bool SourceSelector::NComponentsCut(Source* source,Cut* cut)
+{
+	if(cut && !cut->isEnabled()) return true;
+	bool hasFitInfo= source->HasFitInfo();
+	int nComponents= 0;
+	if(hasFitInfo) {
+		//nComponents= source->GetNFitComponents();
+		nComponents= source->GetNSelFitComponents();	
+	}
+	bool passed= cut->isPassed(nComponents);
+	return passed;
+
+}//close NComponentsCut()
 
 //===========================================
 //==         FIT CHI2 CUT
