@@ -83,6 +83,7 @@ SourceSelector::CutFcnRegistry SourceSelector::m_cutFcnRegistry =
 	{"fitComponentCentroidInsideIsland",SourceComponentCentroidInsideIslandCut},
 	{"fitComponentIsolatedCentroid",SourceComponentCentroidDistanceCut},
 	{"fitComponentPeakFluxToMaxRatio",SourceComponentPeakFluxCut},
+	{"fitComponentIntToPeakFluxRatio",SourceComponentIntToPeakFluxCut},
 	{"fitComponentPeakSignificance",SourceComponentPeakSignificanceCut},
 	{"fitComponentPeakSNR",SourceComponentPeakSNRCut},
 	{"fitComponentEccentricityRatio",SourceComponentEccentricityRatioCut},
@@ -905,6 +906,78 @@ bool SourceSelector::SourceComponentPeakSNRCut(Source* source,Cut* cut)
 	return true;
 
 }//close SourceComponentPeakSNRCut()
+
+//==================================================
+//==   SOURCE COMPONENT INTEGRATED/PEAK FLUX CUT
+//==================================================
+
+bool SourceSelector::SourceComponentIntToPeakFluxCut(Source* source,Cut* cut)
+{
+	if(cut && !cut->isEnabled()) return true;
+	
+	//Check if has fit 
+	bool hasFitInfo= source->HasFitInfo();
+	//if(!hasFitInfo) return false;
+	if(!hasFitInfo) return true;
+
+	double nPixels= static_cast<double>(source->NPix);
+	double bkgRMSSum= source->GetBkgRMSSum();
+	double rmsMean= bkgRMSSum/nPixels;
+	if(rmsMean==0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No bkg info stored, returning passed!");
+		#endif
+		return true;
+	}
+
+	SourceFitPars fitPars= source->GetFitPars();
+	int nComponents= source->GetNFitComponents();
+	int nComponents_sel= 0;
+	double beamArea= source->GetBeamFluxIntegral();
+	if(beamArea<=0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No beam area info stored, returning passed!");
+		#endif
+		return true;
+	}
+	
+	//Check if component integrated/peak is passing the cut
+	//NB: Sint/Speak-b/SN
+	double b= 2.03;//XXL survey criterion
+	
+	for(int k=0;k<nComponents;k++)
+	{
+		bool isSelected= fitPars.IsSelectedComponent(k);
+		if(!isSelected) continue;
+
+		double Speak= fitPars.GetParValue(k,"A");	
+		double SNR= Speak/rmsMean;
+		double fluxDensity= fitPars.GetComponentFluxDensity(k);
+		double Sint= fluxDensity/beamArea;
+		double x= Sint/Speak - b/SNR;
+		bool passed= cut->isPassed(x);
+		if(passed){
+			nComponents_sel++;
+		}
+		else{
+			fitPars.SetSelectedComponent(k,false);
+		}
+	}//end loop components
+
+	//Update fit pars
+	source->SetFitPars(fitPars);
+
+	//If no components are left, return false (not resetting fitPars here)
+	if(nComponents_sel<=0){
+		source->SetHasFitInfo(false);
+		return false;
+	}	
+
+	return true;
+
+
+}//close SourceComponentIntToPeakFluxCut()
+
 
 //==============================================
 //==   SOURCE COMPONENT TYPE CUT

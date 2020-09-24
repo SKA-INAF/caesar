@@ -131,6 +131,11 @@ class SourceSelector : public TObject
 		*/
 		static bool SourceComponentPeakFluxCut(Source* aSource,Cut* cut);
 		/**
+		* \brief Select source fitted components by integrated/peak flux ratio
+		*/
+		static bool SourceComponentIntToPeakFluxCut(Source* aSource,Cut* cut);
+
+		/**
 		* \brief Select source fitted components by peak flux significance (Z=(S-bkg)/rms) 
 		*/
 		static bool SourceComponentPeakSignificanceCut(Source* aSource,Cut* cut);
