@@ -378,10 +378,10 @@ bool SourceSelector::ApplyCut(std::string cutName,Source* source,Cut* cut)
 //===========================================
 //==         HAS PIXEL AT EDGE CUT
 //===========================================
-bool SourceSelector::HasPixelsAtEdgeCut(Source* aSource,Cut* cut)
+bool SourceSelector::HasPixelsAtEdgeCut(Source* source,Cut* cut)
 {
 	if(cut && !cut->isEnabled()) return true;
-	bool hasPixelsAtEdge= aSource->IsAtEdge();
+	bool hasPixelsAtEdge= source->IsAtEdge();
 	bool passed= cut->isPassed(hasPixelsAtEdge);
 	return passed;
 
@@ -390,27 +390,28 @@ bool SourceSelector::HasPixelsAtEdgeCut(Source* aSource,Cut* cut)
 //===========================================
 //==         EXTENDED SOURCE CUT
 //===========================================
-bool SourceSelector::ExtendedSourceCut(Source* aSource,Cut* cut)
+bool SourceSelector::ExtendedSourceCut(Source* source,Cut* cut)
 {
 	if(cut && !cut->isEnabled()) return true;
 
-	bool hasFitInfo= aSource->HasFitInfo();
+	bool hasFitInfo= source->HasFitInfo();
 	int nComponents= 0;
 	float redChi2= 0;
-	int fitQuality= aSource->GetFitQuality();
-	int fitStatus= aSource->GetFitStatus();
+	int fitQuality= source->GetFitQuality();
+	int fitStatus= source->GetFitStatus();
 	if(hasFitInfo) {
-		nComponents= aSource->GetNSelFitComponents();
+		SourceFitPars fitPars= source->GetFitPars();
+		nComponents= source->GetNSelFitComponents();
 		chi2= fitPars.GetChi2();
 		ndf= fitPars.GetNDF();
 		redChi2= chi2/ndf;
 	}
 
-	double nPixels= static_cast<double>(aSource->NPix);
-	double beamArea= aSource->GetBeamFluxIntegral();
+	double nPixels= static_cast<double>(source->NPix);
+	double beamArea= source->GetBeamFluxIntegral();
 	if(beamArea<=0){
 		#ifdef LOGGING_ENABLED
-			WARN_LOG("No beam area info stored for source "<<aSource->GetName()<<", cannot perform check, returning passed!");
+			WARN_LOG("No beam area info stored for source "<<source->GetName()<<", cannot perform check, returning passed!");
 		#endif
 		return true;
 	}
