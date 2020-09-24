@@ -548,7 +548,6 @@ class CutFactory : public TObject
 		/** 
 		\brief Register cut
  		*/
-		template <typename T>
   	int RegisterCut(std::string name,bool enabled=false) 
 		{				
 			//Check args
