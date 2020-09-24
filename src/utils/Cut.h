@@ -538,6 +538,42 @@ class CutFactory : public TObject
 	public:
 
 		/** 
+		\brief Create a standard cut
+ 		*/
+		static CutPtr CreateCut(std::string name,bool enabled=false) 
+		{	
+			return CutPtr(new Cut(name,enabled));
+		}
+
+		/** 
+		\brief Register cut
+ 		*/
+		template <typename T>
+  	int RegisterCut(std::string name,bool enabled=false) 
+		{				
+			//Check args
+			if(name=="") {
+				cerr<<"CutFactory()::RegisterCut(): WARN: Invalid cut name given!"<<endl;					
+				return -1;
+			}
+			
+			//Check if option with given name already exists
+			CutPtr cut= GetCut(name);
+			if(cut){
+				cerr<<"CutFactory()::RegisterCut(): WARN: Cut "<<name<<" already registered, skip it!"<<endl;
+				return 0;
+			}
+	
+			//Cut does not exist, create one and add to the map
+			cut= CreateCut(name,enabled);
+			m_registeredCuts.insert( std::pair<std::string,CutPtr>(name,cut) );
+		
+			return 0;
+
+  	}//close RegisterCut()
+
+
+		/** 
 		\brief Create an equality cut
  		*/
 		template<typename T>
