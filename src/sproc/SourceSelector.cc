@@ -419,9 +419,11 @@ bool SourceSelector::ExtendedSourceCut(Source* source,Cut* cut)
 
 	int nComponentsThr= 3;
 	double nBeamsThr= 10;
+	double nBeamsHighThr= 20;
 	double redChi2Thr= 10;
 	bool isMultiComponent= (nComponents>nComponentsThr); 
 	bool largerThanBeam= (nBeams>nBeamsThr);
+	bool muchLargerThanBeam= (nBeams>nBeamsHighThr);
 	bool poorFit= (redChi2>redChi2Thr);
 	bool noFit= (
 		!hasFitInfo || 
@@ -431,6 +433,7 @@ bool SourceSelector::ExtendedSourceCut(Source* source,Cut* cut)
 
 	bool isExtended= (
 		isMultiComponent ||
+		muchLargerThanBeam || 
 		(largerThanBeam && (noFit || poorFit))
 	);
 	
