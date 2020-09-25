@@ -1079,7 +1079,7 @@ int MorphFilter::FindDilatedSourcePixels(std::vector<long int>& pixelsToBeDilate
 }//close FindDilatedSourcePixels()
 
 
-int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int dilateModel,ImgBkgData* bkgData,bool useLocalBkg,bool randomize)
+int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int dilateModel,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,Image* mask,int bkgBoxThickness)
 {
 	//## Check input source
 	if(!source) {
@@ -1099,6 +1099,29 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 	}
 	double sourceMedian= source->Median;
 	double sourceMedianRMS= source->MedianRMS;
+
+	//## Compute background around source (used if no bkgdata are given)
+	BkgSampleData bkgBoxData;
+	int bkgEstimator= eMedianBkg;
+	bool useParallelVersion= false;
+	std::vector<float> maskedValues= {};
+	int status= img->GetBkgInfoAroundSource(
+		bkgBoxData,
+		source,
+		bkgBoxThickness,
+		bkgEstimator,
+		mask,
+		useParallelVersion,
+		maskedValues
+	);
+	if(status<0 && !bkgData){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute bkg around source (needed since no bkgdata were given in input)!");
+		#endif
+		return -1;
+	}
+	double boxBkg= bkgBoxData.bkgLevel;
+	double boxBkgRMS= bkgBoxData.bkgRMS;
 	
 	//## Initialize GSL random init
 	#ifdef LOGGING_ENABLED	
@@ -1141,58 +1164,90 @@ int MorphFilter::DilateAroundSource(Image* img,Source* source,int KernSize,int d
 			}//end loop pixels 
 		}
 	}//close if
-  else if(dilateModel==eDilateWithBkg){
-		if(useLocalBkg){
-			if(randomize){
+  else if(dilateModel==eDilateWithBkg)
+	{
+		if(bkgData)
+		{
+
+			if(useLocalBkg){
+				if(randomize){
+					#ifdef OPENMP_ENABLED
+					#pragma omp parallel for
+					#endif
+					for(size_t l=0;l<pixelsToBeDilated.size();l++){
+						long int id= pixelsToBeDilated[l];	
+						double BkgRealization= (bkgData->BkgMap)->GetPixelValue(id);
+						double BkgRMS= (bkgData->NoiseMap)->GetPixelValue(id);
+						double r= 0;
+						RtNorm_ns::RtNorm::get_random(r,rand_generator,-sigmaTrunc,sigmaTrunc,0.,1.);
+						double bkg= BkgRealization + r*BkgRMS;
+						img->SetPixelValue(id,bkg);
+					}//end loop pixels
+				}
+				else{
+					#ifdef OPENMP_ENABLED
+					#pragma omp parallel for
+					#endif
+					for(size_t l=0;l<pixelsToBeDilated.size();l++){
+						long int id= pixelsToBeDilated[l];	
+						double BkgRealization= (bkgData->BkgMap)->GetPixelValue(id);
+						img->SetPixelValue(id,BkgRealization);
+					}//end loop pixels
+				}
+			}//close if
+			else{
+				double BkgRealization= bkgData->gBkg;
+				double BkgRMS= bkgData->gNoise;	
+				if(randomize){
+					#ifdef OPENMP_ENABLED
+					#pragma omp parallel for
+					#endif
+					for(size_t l=0;l<pixelsToBeDilated.size();l++){
+						long int id= pixelsToBeDilated[l];	
+						double r= 0;
+						RtNorm_ns::RtNorm::get_random(r,rand_generator,-sigmaTrunc,sigmaTrunc,0.,1.);
+						double bkg= BkgRealization + r*BkgRMS;
+						img->SetPixelValue(id,bkg);
+					}//end loop pixels
+				}
+				else{
+					#ifdef OPENMP_ENABLED
+					#pragma omp parallel for
+					#endif
+					for(size_t l=0;l<pixelsToBeDilated.size();l++){
+						long int id= pixelsToBeDilated[l];	
+						img->SetPixelValue(id,BkgRealization);
+					}//end loop pixels
+				}
+			}//close else
+		}//close else if has bkgData
+		else{//use box bkg
+			double BkgRealization= boxBkg;
+			double BkgRMS= boxBkgRMS;	
+				
+			if(randomize){				
 				#ifdef OPENMP_ENABLED
 				#pragma omp parallel for
 				#endif
 				for(size_t l=0;l<pixelsToBeDilated.size();l++){
 					long int id= pixelsToBeDilated[l];	
-					double BkgRealization= (bkgData->BkgMap)->GetPixelValue(id);
-					double BkgRMS= (bkgData->NoiseMap)->GetPixelValue(id);
 					double r= 0;
 					RtNorm_ns::RtNorm::get_random(r,rand_generator,-sigmaTrunc,sigmaTrunc,0.,1.);
 					double bkg= BkgRealization + r*BkgRMS;
 					img->SetPixelValue(id,bkg);
 				}//end loop pixels
-			}
+			}//close if randomize
 			else{
 				#ifdef OPENMP_ENABLED
 				#pragma omp parallel for
 				#endif
 				for(size_t l=0;l<pixelsToBeDilated.size();l++){
 					long int id= pixelsToBeDilated[l];	
-					double BkgRealization= (bkgData->BkgMap)->GetPixelValue(id);
 					img->SetPixelValue(id,BkgRealization);
 				}//end loop pixels
-			}
-		}//close if
-		else{
-			double BkgRealization= bkgData->gBkg;
-			double BkgRMS= bkgData->gNoise;	
-			if(randomize){
-				#ifdef OPENMP_ENABLED
-				#pragma omp parallel for
-				#endif
-				for(size_t l=0;l<pixelsToBeDilated.size();l++){
-					long int id= pixelsToBeDilated[l];	
-					double r= 0;
-					RtNorm_ns::RtNorm::get_random(r,rand_generator,-sigmaTrunc,sigmaTrunc,0.,1.);
-					double bkg= BkgRealization + r*BkgRMS;
-					img->SetPixelValue(id,bkg);
-				}//end loop pixels
-			}
-			else{
-				#ifdef OPENMP_ENABLED
-				#pragma omp parallel for
-				#endif
-				for(size_t l=0;l<pixelsToBeDilated.size();l++){
-					long int id= pixelsToBeDilated[l];	
-					img->SetPixelValue(id,BkgRealization);
-				}//end loop pixels
-			}
+			}//close else !randomize
 		}//close else
+
 	}//close else if
 
 	// GSL rand generator deallocation

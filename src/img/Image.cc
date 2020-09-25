@@ -2373,7 +2373,7 @@ int Image::MaskSources(std::vector<Source*>const& sources,float maskValue)
 }//close MaskSources()
 
 
-int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,int boxThickness,int bkgEstimator,Image* mask,bool useParallelVersion)
+int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,int boxThickness,int bkgEstimator,Image* mask,bool useParallelVersion,std::vector<float> maskedValues)
 {
 	//Check source
 	if(!source){
@@ -2428,8 +2428,17 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 		for(long int j=iy_min-boxThickness;j<=iy_max+boxThickness;j++){
 			long int id= this->GetBin(i,j);
 			if( id<0 || !use_pixels[id] || (mask && mask->GetPixelValue(id)<=0) ) continue;
-			double S= this->GetPixelValue(id);
-			pixels.push_back(S);
+			double S= this->GetPixelValue(id);	
+			bool isFiniteValue= std::isfinite(S);
+			bool isMaskedValue= false;
+			for(size_t k=0;k<maskedValues.size();k++){
+				if(S==maskedValues[k]){
+					isMaskedValue= true;
+					break;
+				}
+			}
+			bool isGoodValue= (isFiniteValue && !isMaskedValue);
+			if(isGoodValue) pixels.push_back(S);
 		}//end loop y
 	}//end loop x
 
@@ -2440,7 +2449,8 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 	//Compute bkg info
 	double bkgLevel= 0;
 	double bkgRMS= 0;
-	if(bkgEstimator==eMedianBkg){
+	if(bkgEstimator==eMedianBkg)
+	{
 		//Compute median
 		double median= Caesar::StatsUtils::GetMedianFast<double>(pixels,useParallelVersion);
 		
@@ -2451,7 +2461,8 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 		bkgLevel= median;
 		bkgRMS= medianRMS;
 	}
-	else if(bkgEstimator==eMedianClippedBkg){
+	else if(bkgEstimator==eMedianClippedBkg)
+	{
 		//Compute mean & rms
 		double mean= 0;
 		double rms= 0;
@@ -2470,7 +2481,8 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 		bkgLevel= clipped_stats.median;
 		bkgRMS= clipped_stats.stddev;
 	}
-	else if(bkgEstimator==eMeanBkg){
+	else if(bkgEstimator==eMeanBkg)
+	{
 		//Compute mean & rms
 		double mean= 0;
 		double rms= 0;
@@ -2648,7 +2660,7 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 }//close GetSourceMask()
 
 
-Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr,int psSubtractionMethod)
+Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr,int psSubtractionMethod,Image* mask,int bkgBoxThickness)
 {
 	//Check bkg data
 	if(dilateModel==eDilateWithBkg){
@@ -2808,7 +2820,8 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 			residualImg,dilatedSources[i],
 			kernSize,dilateModel,
 			bkgData,useLocalBkg,
-			randomize
+			randomize,
+			mask,bkgBoxThickness
 		);
 
 		if(status<0){

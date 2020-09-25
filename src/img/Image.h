@@ -1027,7 +1027,7 @@ class Image : public TNamed {
 		/**
 		* \brief Measure bkg in a box around given source bounding box. Box thickness= bkgbox_max-sourcebox_max
 		*/
-		int GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,int boxThickness=20,int bkgEstimator=eMedianBkg,Image* mask=0,bool useParallelVersion=false);
+		int GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,int boxThickness=20,int bkgEstimator=eMedianBkg,Image* mask=0,bool useParallelVersion=false,std::vector<float> maskedValues={});
 
 		/**
 		* \brief Create image with bin contents equal to fitted sources
@@ -1065,7 +1065,7 @@ class Image : public TNamed {
 		/**
 		* \brief Returns a residual image obtained by dilating given sources with a random background
 		*/
-		Image* GetSourceResidual(std::vector<Source*>const& sources,int KernSize=5,int dilateModel=eDilateWithBkg,int dilateSourceType=-1,bool skipToNested=false,ImgBkgData* bkgData=0,bool useLocalBkg=false,bool randomize=false,double zThr=5,double zBrightThr=20,int psSubtractionMethod=ePS_DILATION);
+		Image* GetSourceResidual(std::vector<Source*>const& sources,int KernSize=5,int dilateModel=eDilateWithBkg,int dilateSourceType=-1,bool skipToNested=false,ImgBkgData* bkgData=0,bool useLocalBkg=false,bool randomize=false,double zThr=5,double zBrightThr=20,int psSubtractionMethod=ePS_DILATION,Image* mask=0,int bkgBoxThickness=20);
 
 		
 
