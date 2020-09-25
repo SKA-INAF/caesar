@@ -60,6 +60,7 @@ void Usage(char* exeName){
 	cout<<"-k, --dilateKernelSize=[SIZE] - Kernel size in pixel used to dilate image around sources (default=9)"<<endl;
 	cout<<"-z, --bkgAroundSource - Use bkg computed in a box around source and not from the bkg map (default=use bkg map)"<<endl;
 	cout<<"-Z, --bkgBoxThickness=[THICKNESS] - Bkg box thickness in pixels (default=20)"<<endl;
+	cout<<"-j, --randomizeBkg - Randomize bkg in dilated pixels (default=no)"<<endl;
 	cout<<"-T, --seedthr=[NSIGMAS] - Seed threshold in flood-fill algorithm in nsigmas significance (default=5)"<<endl;
 	cout<<"-t, --mergethr=[NSIGMAS] - Merge threshold in flood-fill algorithm in nsigmas significance (default=2.6)"<<endl;
 	cout<<"-m, --minnpixels=[NPIX] - Minimum number of pixels in a blob (default=5)"<<endl;
@@ -98,6 +99,7 @@ static const struct option options_tab[] = {
 	{ "dilateKernelSize", required_argument, 0, 'k' },
 	{ "bkgAroundSource", no_argument, 0, 'z' },
 	{ "bkgBoxThickness", required_argument, 0, 'Z' },
+	{ "randomizeBkg", no_argument, 0, 'j' },
 	{ "seedthr", required_argument, 0, 'T'},
 	{ "mergethr", required_argument, 0, 't'},
 	{ "minnpixels", required_argument, 0, 'm'},
@@ -483,7 +485,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hc:i:s:o:O:p:r:R:l:ak:T:t:m:n:Nb:Bg:e:PSAdD:fGquU:zZ:v:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hc:i:s:o:O:p:r:R:l:ak:T:t:m:n:Nb:Bg:e:PSAdD:fGquU:zZ:jv:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -669,6 +671,11 @@ int ParseOptions(int argc, char *argv[])
 			case 'Z':
 			{
 				bkgBoxThickness= atoi(optarg);
+				break;
+			}
+			case 'j':
+			{
+				residualModelRandomize= true;
 				break;
 			}
 			case 'n':	
