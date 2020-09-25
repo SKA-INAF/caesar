@@ -2664,13 +2664,15 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 {
 	//Check bkg data
 	if(dilateModel==eDilateWithBkg){
+		/*
 	 	if(!bkgData){
 			#ifdef LOGGING_ENABLED
 				ERROR_LOG("Selected to use bkg dilation but null ptr to bkg data!");	
 			#endif
 			return nullptr;
 		}
-		if(useLocalBkg && !bkgData->HasLocalBkg()){		
+		*/
+		if(useLocalBkg && bkgData && !bkgData->HasLocalBkg()){		
 			#ifdef LOGGING_ENABLED
 				ERROR_LOG("Selected to use local bkg but no local bkg data are available!");
 			#endif
