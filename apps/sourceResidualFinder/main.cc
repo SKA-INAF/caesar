@@ -58,6 +58,8 @@ void Usage(char* exeName){
 	cout<<"-l, --removedSourceType=[TYPE] - Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"<<endl;
 	cout<<"-a, --removeNestedSources - If a source has nested sources, remove nested rather than mother source (default=no)"<<endl;
 	cout<<"-k, --dilateKernelSize=[SIZE] - Kernel size in pixel used to dilate image around sources (default=9)"<<endl;
+	cout<<"-z, --bkgAroundSource - Use bkg computed in a box around source and not from the bkg map (default=use bkg map)"<<endl;
+	cout<<"-Z, --bkgBoxThickness=[THICKNESS] - Bkg box thickness in pixels (default=20)"<<endl;
 	cout<<"-T, --seedthr=[NSIGMAS] - Seed threshold in flood-fill algorithm in nsigmas significance (default=5)"<<endl;
 	cout<<"-t, --mergethr=[NSIGMAS] - Merge threshold in flood-fill algorithm in nsigmas significance (default=2.6)"<<endl;
 	cout<<"-m, --minnpixels=[NPIX] - Minimum number of pixels in a blob (default=5)"<<endl;
@@ -94,6 +96,8 @@ static const struct option options_tab[] = {
 	{ "removedSourceType", required_argument, 0, 'l' },
 	{ "removeNestedSources", no_argument, 0, 'a' },
 	{ "dilateKernelSize", required_argument, 0, 'k' },
+	{ "bkgAroundSource", no_argument, 0, 'z' },
+	{ "bkgBoxThickness", required_argument, 0, 'Z' },
 	{ "seedthr", required_argument, 0, 'T'},
 	{ "mergethr", required_argument, 0, 't'},
 	{ "minnpixels", required_argument, 0, 'm'},
@@ -133,6 +137,8 @@ double seedThr= 5;
 double mergeThr= 2.6;
 int minNPix= 5;
 bool searchNestedSources= true;
+bool bkgAroundSource= false;
+int bkgBoxThickness= 20;
 
 TFile* outputFile= 0;	
 std::string outputFileName= "resmap.fits";
@@ -140,6 +146,7 @@ Image* residualImg= 0;
 std::string outputFileName_mask= "smask.fits";
 std::string outputFileName_bkg= "bkg.fits";
 Image* smaskImg= 0;
+Image* smaskImg_binary= 0;
 std::vector<Source*> sources;	
 
 
@@ -352,16 +359,18 @@ int main(int argc, char *argv[]){
 		return -1;
 	}
 
-	/*
-	smaskImg= inputImg->GetSourceMask(sources);
-	if(!smaskImg){
+
+	bool isBinary= true;
+	bool invertMask= true;
+	smaskImg_binary= inputImg->GetSourceMask(sources,isBinary,invertMask);
+	if(!smaskImg_binary){
 		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to compute source mask!");	
+			ERROR_LOG("Failed to compute source binary mask!");	
 		#endif
 		Clear();
 		return -1;
 	}
-	*/
+
 
 	//Compute stats for source mask
 	#ifdef LOGGING_ENABLED
@@ -474,7 +483,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hc:i:s:o:O:p:r:R:l:ak:T:t:m:n:Nb:Bg:e:PSAdD:fGquU:v:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hc:i:s:o:O:p:r:R:l:ak:T:t:m:n:Nb:Bg:e:PSAdD:fGquU:zZ:v:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -650,6 +659,16 @@ int ParseOptions(int argc, char *argv[])
 			case 'U':
 			{
 				psNBeamsThr= atof(optarg);
+				break;
+			}
+			case 'z':
+			{
+				bkgAroundSource= true;
+				break;
+			}
+			case 'Z':
+			{
+				bkgBoxThickness= atoi(optarg);
 				break;
 			}
 			case 'n':	
@@ -1100,16 +1119,20 @@ int ComputeSourceResidual()
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Computing source residual map ...");
 	#endif
+	ImgBkgData* bkgData_curr= nullptr;
+	if(!bkgAroundSource) bkgData_curr= bkgData;
+
 	residualImg= inputImg->GetSourceResidual(
 		sources,
 		dilateKernelSize,
 		residualModel,
 		removedSourceType,
 		removeNestedSources,
-		bkgData,useLocalBkg,
+		bkgData_curr,useLocalBkg,
 		residualModelRandomize,
 		residualZThr,residualZHighThr,
-		psSubtractionMethod
+		psSubtractionMethod,
+		smaskImg_binary,bkgBoxThickness
 	);
 	if(!residualImg){
 		#ifdef LOGGING_ENABLED
