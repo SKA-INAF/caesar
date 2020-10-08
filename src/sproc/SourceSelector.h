@@ -81,7 +81,7 @@ class SourceSelector : public TObject
 		/**
 		* \brief Select sources by applying quality cuts provided in cut file
 		*/
-		static int SelectSources(std::vector<Source*>& sources_sel,const std::vector<Source*>& sources,std::string cutFile);
+		static int SelectSources(std::vector<Source*>& sources_sel,const std::vector<Source*>& sources,std::string cutFile,bool requireAllCutsPassed=true);
 
 	protected:
 
@@ -93,6 +93,11 @@ class SourceSelector : public TObject
 		//=====================================
 		//==   SOURCE CUT DEFINITIONS
 		//=====================================
+		/**
+		* \brief Select source by pixel at edge
+		*/
+		static bool HasPixelsAtEdgeCut(Source* aSource,Cut* cut);
+
 		/**
 		* \brief Select source by fit quality
 		*/
@@ -117,7 +122,14 @@ class SourceSelector : public TObject
 		* \brief Select source by flux over island flux ratio
 		*/
 		static bool SourceFluxToIslandRatioCut(Source* aSource,Cut* cut);
-
+		/**
+		* \brief Select candidate extended sources
+		*/
+		static bool ExtendedSourceCut(Source* aSource,Cut* cut);
+		/**
+		* \brief Select candidate compact sources
+		*/
+		static bool CompactSourceCut(Source* aSource,Cut* cut);
 		/**
 		* \brief Select source fitted components by flux
 		*/
@@ -130,6 +142,11 @@ class SourceSelector : public TObject
 		* \brief Select source fitted components by peak amplitude flux 
 		*/
 		static bool SourceComponentPeakFluxCut(Source* aSource,Cut* cut);
+		/**
+		* \brief Select source fitted components by integrated/peak flux ratio
+		*/
+		static bool SourceComponentIntToPeakFluxCut(Source* aSource,Cut* cut);
+
 		/**
 		* \brief Select source fitted components by peak flux significance (Z=(S-bkg)/rms) 
 		*/
@@ -201,7 +218,11 @@ class SourceSelector : public TObject
 		*/
 		static bool SourceSimTypeCut(Source* source,Cut* cut);
 
-		
+		/**
+		* \brief Select source by number of fit components
+		*/
+		static bool NComponentsCut(Source* source,Cut* cut);
+
 	
 	private:
 		/**

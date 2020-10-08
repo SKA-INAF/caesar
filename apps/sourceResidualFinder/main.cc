@@ -47,13 +47,79 @@ void Usage(char* exeName){
 	cout<<endl;
 	cout<<"Options:"<<endl;
   cout<<"-h, --help \t Show help message and exit"<<endl;
-	cout<<"-c, --config \t Config file containing option settings"<<endl;
+	cout<<"-c, --config=[FILENAME] \t Config file containing option settings"<<endl;	
+	cout<<"-i, --inputfile=[FILENAME] \t Filename (fits/root) with input image."<<endl;
+	cout<<"-s, --sourcefile=[FILENAME] \t Caesar ROOT file with source list. If provided no sources will be searched."<<endl;
+	cout<<"-o, --outputfile=[FILENAME] \t Filename where to store output residual image (default=resmap.fits)"<<endl;
+	cout<<"-O, --outputfile_mask=[FILENAME] \t Filename where to store output source mask image (default=smask.fits)"<<endl;
+	cout<<"-p, --psSubtractionMethod=[METHOD] - Method used to remove point sources (1=DILATION,2=MODEL SUBTRACTION) (default=1)"<<endl;
+	cout<<"-r, --resZThr=[NSIGMAS] - Significance threshold (in sigmas) above which sources are removed (if selected for removal) (default=5)"<<endl;
+	cout<<"-R, --resZHighThr=[NSIGMAS] - Significance threshold (in sigmas) above which sources are always removed (even if they have nested or different type) (default=10)"<<endl;
+	cout<<"-l, --removedSourceType=[TYPE] - Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"<<endl;
+	cout<<"-a, --removeNestedSources - If a source has nested sources, remove nested rather than mother source (default=no)"<<endl;
+	cout<<"-k, --dilateKernelSize=[SIZE] - Kernel size in pixel used to dilate image around sources (default=9)"<<endl;
+	cout<<"-z, --bkgAroundSource - Use bkg computed in a box around source and not from the bkg map (default=use bkg map)"<<endl;
+	cout<<"-Z, --bkgBoxThickness=[THICKNESS] - Bkg box thickness in pixels (default=20)"<<endl;
+	cout<<"-j, --randomizeBkg - Randomize bkg in dilated pixels (default=no)"<<endl;
+	cout<<"-T, --seedthr=[NSIGMAS] - Seed threshold in flood-fill algorithm in nsigmas significance (default=5)"<<endl;
+	cout<<"-t, --mergethr=[NSIGMAS] - Merge threshold in flood-fill algorithm in nsigmas significance (default=2.6)"<<endl;
+	cout<<"-m, --minnpixels=[NPIX] - Minimum number of pixels in a blob (default=5)"<<endl;
+	cout<<"-N, --no-nested - Do not search nested sources (default=search)"<<endl;
+	cout<<"-b, --boxsize=[SIZE] - Size of sampling box in pixels or expressed as a multiple of the image beam size (if --sizeinbeam option is given) (default=100 pixels)"<<endl;
+	cout<<"-B, --sizeinbeam - Consider box size option expressed in multiple of beam size (beam info read from image) (default=no)"<<endl;
+	cout<<"-g, --gridsize=[SIZE] - Size of the interpolation grid expressed as fraction of the sampling box (default=0.25)"<<endl;
+	cout<<"-e, --estimator=[ESTIMATOR] - Bkg estimator used in the sampling box (1=mean, 2=median, 3=biweight, 4=clipped median) (default=2)"<<endl;
+	cout<<"-P, --2ndpass - If given, perform a 2nd pass in bkg calculation (default=no)"<<endl;
+	cout<<"-S, --skipblobs - If given, skip blobs using a flood-fill algorithm (default=no)"<<endl;
+	cout<<"-A, --no-selection - Do not select and retag input sources (default=apply selection)"<<endl;
+	cout<<"-d, --no-maxnpixcut - Do not apply max n pixel cut (default=apply)"<<endl;
+	cout<<"-D, --maxnpix=[MAX_NPIX] - max number of pixel to consider a source as point-like (default=1000)"<<endl;
+	cout<<"-f, --no-elongcut - Do not apply elongation cut (default=apply)"<<endl;
+	cout<<"-G, --no-circratiocut - Do not apply circular ratio cut (default=apply)"<<endl;
+	cout<<"-q, --no-ellipsearearatiocut - Do not apply ellipse area ratio cut (default=apply)"<<endl;
+	cout<<"-u, --no-nbeamscut - Do not apply nbeams cut (default=apply)"<<endl;
+	cout<<"-U, --maxnbeams=[MAX_NBEAMS] - Max number of beams in source to consider it as point-like (default=10)"<<endl;
+	cout<<"-n, --nthreads \t Number of threads to be used (default=1)"<<endl;
+	cout<<"-v [LEVEL], --verbosity=[LEVEL] - Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	cout<<"=============================="<<endl;
 }//close Usage()
 
 static const struct option options_tab[] = {
   { "help", no_argument, 0, 'h' },
 	{ "config", required_argument, 0, 'c' },
+	{ "inputfile", required_argument, 0, 'i' },
+	{ "outputfile", required_argument, 0, 'o' },
+	{ "outputfile_mask", required_argument, 0, 'O' },
+	{ "sourcefile", required_argument, 0, 's' },
+	{ "psSubtractionMethod", required_argument, 0, 'p' },
+	{ "resZThr", required_argument, 0, 'r' },
+	{ "resZHighThr", required_argument, 0, 'R' },
+	{ "removedSourceType", required_argument, 0, 'l' },
+	{ "removeNestedSources", no_argument, 0, 'a' },
+	{ "dilateKernelSize", required_argument, 0, 'k' },
+	{ "bkgAroundSource", no_argument, 0, 'z' },
+	{ "bkgBoxThickness", required_argument, 0, 'Z' },
+	{ "randomizeBkg", no_argument, 0, 'j' },
+	{ "seedthr", required_argument, 0, 'T'},
+	{ "mergethr", required_argument, 0, 't'},
+	{ "minnpixels", required_argument, 0, 'm'},
+	{ "no-nested", no_argument, 0, 'N'},
+	{ "gridsize", required_argument, 0, 'g' },
+	{ "boxsize", required_argument, 0, 'b' },	
+	{ "sizeinbeam", no_argument, 0, 'B' },
+	{ "estimator", required_argument, 0, 'e' },
+	{ "2ndpass", no_argument, 0, 'P'},
+	{ "skipblobs", no_argument, 0, 'S'},
+	{ "no-selection", no_argument, 0, 'A'},
+	{ "no-maxnpixcut", no_argument, 0, 'd'},
+	{ "maxnpix", required_argument, 0, 'D'},
+	{ "no-elongcut", no_argument, 0, 'f'},
+	{ "no-circratiocut", no_argument, 0, 'G'},
+	{ "no-ellipsearearatiocut", no_argument, 0, 'q'},
+	{ "no-nbeamscut", no_argument, 0, 'u'},
+	{ "maxnbeams", required_argument, 0, 'U'},
+	{ "nthreads", required_argument, 0, 'n' },
+	{ "verbosity", required_argument, 0, 'v'},
   {(char*)0, (int)0, (int*)0, (int)0}
 };
 
@@ -61,58 +127,84 @@ static const struct option options_tab[] = {
 
 //Options
 //--> Main options
-//Img* inputImg= 0;
+int verbosity= 4;//INFO level
+int nThreads= 1;
 Image* inputImg= 0;
 TFile* inputFile= 0;
 std::string inputFileName= "";
 std::string imageName= "";
+std::string sourceFileName= "";
+bool findSources= true;
+double seedThr= 5;
+double mergeThr= 2.6;
+int minNPix= 5;
+bool searchNestedSources= true;
+bool bkgAroundSource= false;
+int bkgBoxThickness= 20;
+
 TFile* outputFile= 0;	
-std::string outputFileName;
-//Img* residualImg= 0;
+std::string outputFileName= "resmap.fits";
 Image* residualImg= 0;
+std::string outputFileName_mask= "smask.fits";
+std::string outputFileName_bkg= "bkg.fits";
+Image* smaskImg= 0;
+Image* smaskImg_binary= 0;
 std::vector<Source*> sources;	
-bool saveToFile;
-bool saveConfig;
-bool saveResidualMap;
-bool saveBkgMap;
-bool saveNoiseMap;
-bool saveSignificanceMap;
-bool saveInputMap;
-bool saveSaliencyMap;
-bool saveSources;
-bool saveToFITSFile;
-std::string residualMapFITSFile;
-std::string inputMapFITSFile;
-std::string saliencyMapFITSFile;
-std::string bkgMapFITSFile;
-std::string noiseMapFITSFile;
-std::string significanceMapFITSFile;
+
+
+//--> Source residual options
+bool removeNestedSources= false;
+int dilateKernelSize= 9;
+int removedSourceType= 2;
+int residualModel= 1;
+double residualZHighThr= 10;
+double residualZThr= 5;
+bool residualModelRandomize= false;
+int psSubtractionMethod= 1;
 
 //--> Source selection
-bool applySourceSelection;
-double sourceMinBoundingBox;
-double psCircRatioThr, psElongThr, psEllipseAreaRatioMinThr, psEllipseAreaRatioMaxThr, psMaxNPix;
+bool applySourceSelection= true;
+double sourceMinBoundingBox= 2;
+bool useCircRatioCut= true;
+double psCircRatioThr= 0.4;
+bool useElongCut= true;
+double psElongThr= 0.7;
+bool useEllipseAreaRatioCut= true;
+double psEllipseAreaRatioMinThr= 0.6;
+double psEllipseAreaRatioMaxThr= 1.4;
+bool useMaxNPixCut= true;
+int psMaxNPix= 1000;
+bool useNBeamsCut= true;
+double psNBeamsThr= 10;
 
-//--> bkg options
-//BkgData* bkgData= 0;
+//--> Bkg options
 ImgBkgData* bkgData= 0;
-//Img* significanceMap= 0;
 Image* significanceMap= 0;
-double boxSizeX, boxSizeY;
-double gridSizeX, gridSizeY;
-int bkgEstimator;
-bool useLocalBkg;
-bool use2ndPassInLocalBkg;
-bool skipOutliersInLocalBkg;
+bool useLocalBkg= true;
+bool boxSizeInBeam= false;
+double boxSize= 100;
+double boxSizeX= boxSize;
+double boxSizeY= boxSize;
+double gridSize= 0.25;
+double gridSizeX= gridSize;
+double gridSizeY= gridSize;
+int bkgEstimator= 2;
+Caesar::BkgEstimator estimator;
+bool use2ndPass= false;
+bool skipOutliers= false;
 
 //Functions
 int ParseOptions(int argc, char *argv[]);
+std::string GetStringLogLevel(int verb);
+int SetOptionsFromConfig();
+int CheckOptions();
 int ReadImage();
-int ComputeStats();
-int ComputeBkg();
-int OpenOutputFile();
+int ComputeStats(Image*);
+int ComputeBkg(Image*);
+//int OpenOutputFile();
 int FindSources();
 int SelectSources();
+int ReadSources();
 bool IsGoodSource(Source* aSource);
 bool IsPointLikeSource(Source* aSource);
 int ComputeSourceResidual();
@@ -124,7 +216,7 @@ int main(int argc, char *argv[]){
 	auto t0 = chrono::steady_clock::now();
 	
 	//================================
-	//== Parse command line options
+	//== PARSE OPTIONS
 	//================================
 	auto t0_parse = chrono::steady_clock::now();
 	if(ParseOptions(argc,argv)<0){
@@ -138,22 +230,7 @@ int main(int argc, char *argv[]){
 	double dt_parse= chrono::duration <double, milli> (t1_parse-t0_parse).count();
 
 	//=======================
-	//== Open out file
-	//=======================
-	auto t0_outfile = chrono::steady_clock::now();
-	if(OpenOutputFile()<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to open output file!");
-		#endif
-		Clear();
-		return -1;	
-	}
-	auto t1_outfile = chrono::steady_clock::now();
-	double dt_outfile= chrono::duration <double, milli> (t1_outfile-t0_outfile).count();
-
-	
-	//=======================
-	//== Read image
+	//== READ INPUT IMAGE
 	//=======================
 	auto t0_read = chrono::steady_clock::now();
 	if(ReadImage()<0){
@@ -166,66 +243,168 @@ int main(int argc, char *argv[]){
 	auto t1_read = chrono::steady_clock::now();
 	double dt_read= chrono::duration <double, milli> (t1_read-t0_read).count();
 	
-	//=======================
-	//== Compute stats
-	//=======================
-	auto t0_stats = chrono::steady_clock::now();
-	if(ComputeStats()<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to read image from file!");		
-		#endif
-		Clear();
-		return -1;
-	}
-	auto t1_stats = chrono::steady_clock::now();
-	double dt_stats= chrono::duration <double, milli> (t1_stats-t0_stats).count();
 
 	//=======================
-	//== Background finder
+	//== EXTRACT SOURCES
 	//=======================
-	auto t0_bkg = chrono::steady_clock::now();	
-	if(ComputeBkg()<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to compute stats & bkg!");
-		#endif
-		Clear();
-		return -1;
-	}
-	auto t1_bkg = chrono::steady_clock::now();
-	double dt_bkg= chrono::duration <double, milli> (t1_bkg-t0_bkg).count();
+	double dt_stats= 0;
+	double dt_bkg= 0;
+	double dt_sfinder= 0;
+	double dt_ssel= 0;
+
+	if(findSources)
+	{
+		//=======================
+		//== COMPUTE STATS
+		//=======================
+		auto t0_stats = chrono::steady_clock::now();
+		if(ComputeStats(inputImg)<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute stats!");		
+			#endif
+			Clear();
+			return -1;
+		}
+		auto t1_stats = chrono::steady_clock::now();
+		dt_stats= chrono::duration <double, milli> (t1_stats-t0_stats).count();
+
+		//=======================
+		//== FIND BACKGROUND
+		//=======================
+		auto t0_bkg = chrono::steady_clock::now();	
+		if(ComputeBkg(inputImg)<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute bkg!");
+			#endif
+			Clear();
+			return -1;
+		}
+		auto t1_bkg = chrono::steady_clock::now();
+		dt_bkg= chrono::duration <double, milli> (t1_bkg-t0_bkg).count();
 
 	
-	//=======================
-	//== Source finding
-	//=======================
-	auto t0_sfinder = chrono::steady_clock::now();	
-	if(FindSources()<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to find sources!");
-		#endif
-		Clear();
-		return -1;
-	}		
-	auto t1_sfinder = chrono::steady_clock::now();
-	double dt_sfinder= chrono::duration <double, milli> (t1_sfinder-t0_sfinder).count();
+		//=======================
+		//== FIND SOURCES
+		//=======================
+		auto t0_sfinder = chrono::steady_clock::now();	
+		if(FindSources()<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to find sources!");
+			#endif
+			Clear();
+			return -1;
+		}		
+		auto t1_sfinder = chrono::steady_clock::now();
+		dt_sfinder= chrono::duration <double, milli> (t1_sfinder-t0_sfinder).count();
+
+		
+	}//close if findSources 
+	else
+	{
+		//===========================
+		//== READ SOURCES FROM FILE
+		//===========================	
+		auto t0_sfinder = chrono::steady_clock::now();	
+		if(ReadSources()<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to read sources from file "<<inputFileName<<"!");	
+			#endif
+			Clear();
+			return -1;
+		}
+		auto t1_sfinder = chrono::steady_clock::now();
+		dt_sfinder= chrono::duration <double, milli> (t1_sfinder-t0_sfinder).count();
+
+	}//close else
+
 
 	//=======================
-	//== Source selection
+	//== SELECT SOURCES
 	//=======================
 	auto t0_ssel = chrono::steady_clock::now();	
-	if(SelectSources()<0){
+	if(applySourceSelection){
 		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to select sources!");	
+			INFO_LOG("Selecting sources ...");
+		#endif
+		if(SelectSources()<0){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to select sources ...");
+			#endif
+			Clear();
+			return -1;
+		}
+	}
+	auto t1_ssel = chrono::steady_clock::now();
+	dt_ssel= chrono::duration <double, milli> (t1_ssel-t0_ssel).count();
+
+	
+	//====================================
+	//== RECOMPUTE BKG EXCLUDING SOURCES
+	//====================================
+	//- Compute source masks
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Mask source pixels in original image ...");	
+	#endif
+	smaskImg= (Image*)inputImg->GetCloned("smaskImg");
+	if(!smaskImg){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to clone input map!");	
 		#endif
 		Clear();
 		return -1;
 	}
-	auto t1_ssel = chrono::steady_clock::now();
-	double dt_ssel= chrono::duration <double, milli> (t1_ssel-t0_ssel).count();
+	if(smaskImg->MaskSources(sources)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to mask sources in input map!");	
+		#endif
+		Clear();
+		return -1;
+	}
 
-	//=======================
-	//== Source residuals
-	//=======================		
+
+	bool isBinary= true;
+	bool invertMask= true;
+	smaskImg_binary= inputImg->GetSourceMask(sources,isBinary,invertMask);
+	if(!smaskImg_binary){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute source binary mask!");	
+		#endif
+		Clear();
+		return -1;
+	}
+
+
+	//Compute stats for source mask
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing source mask stats ...");	
+	#endif
+	if(ComputeStats(smaskImg)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute stats for masked image!");		
+		#endif
+		Clear();
+		return -1;
+	}	
+
+	//- Compute bkg for source mask, first clear existing bkg data
+	if(bkgData){ 
+		delete bkgData;
+		bkgData= 0;
+	}
+	if(significanceMap) significanceMap->Delete();
+
+	if(ComputeBkg(smaskImg)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute bkg for masked image!");
+		#endif
+		Clear();
+		return -1;
+	}
+
+
+	//==========================
+	//== COMPUTE RESIDUAL MAP
+	//==========================
 	auto t0_res = chrono::steady_clock::now();
 	if(ComputeSourceResidual()<0){
 		#ifdef LOGGING_ENABLED
@@ -238,7 +417,7 @@ int main(int argc, char *argv[]){
 	double dt_res= chrono::duration <double, milli> (t1_res-t0_res).count();
 
 	//=======================
-	//== Save to file
+	//== SAVE TO FILE
 	//=======================
 	auto t0_save = chrono::steady_clock::now();	
 	Save();
@@ -246,12 +425,12 @@ int main(int argc, char *argv[]){
 	double dt_save= chrono::duration <double, milli> (t1_save-t0_save).count();
 
 	//=======================
-	//== Clear data
+	//== CLEAR DATA
 	//=======================
 	Clear();
 
 	//=======================
-	//== Print perf stats
+	//== PRINT STATS
 	//=======================
 	auto t1 = chrono::steady_clock::now();
 	double dt= chrono::duration <double, milli> (t1-t0).count();
@@ -294,20 +473,19 @@ int main(int argc, char *argv[]){
 
 int ParseOptions(int argc, char *argv[])
 {
-	
-	//## Check args
+	//- Check args
 	if(argc<2){
 		cerr<<"ERROR: Invalid number of arguments...see macro usage!"<<endl;
 		Usage(argv[0]);
 		exit(1);
 	}
 
-	//## Parse options
+	//- Parse options
 	std::string configFileName= "";
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hc:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hc:i:s:o:O:p:r:R:l:ak:T:t:m:n:Nb:Bg:e:PSAdD:fGquU:zZ:jv:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -321,7 +499,193 @@ int ParseOptions(int argc, char *argv[])
 			}
     	case 'c':	
 			{
+				if(!optarg){
+					cerr<<"ERROR: Null string to config file argument given!"<<endl;
+					exit(1);
+				}
 				configFileName= std::string(optarg);	
+				break;	
+			}
+			case 'i':	
+			{
+				if(!optarg){
+					cerr<<"ERROR: Null string to input file argument given!"<<endl;
+					exit(1);
+				}
+				inputFileName= std::string(optarg);	
+				break;	
+			}
+			case 's':	
+			{
+				if(!optarg){
+					cerr<<"ERROR: Null string to source file argument given!"<<endl;
+					exit(1);
+				}
+				sourceFileName= std::string(optarg);	
+				if(sourceFileName!="") findSources= false;
+				break;	
+			}
+			case 'o':	
+			{
+				if(!optarg){
+					cerr<<"ERROR: Null string to output file argument given!"<<endl;
+					exit(1);
+				}
+				outputFileName= std::string(optarg);	
+				break;	
+			}		
+			case 'O':	
+			{
+				if(!optarg){
+					cerr<<"ERROR: Null string to output file mask argument given!"<<endl;
+					exit(1);
+				}
+				outputFileName_mask= std::string(optarg);	
+				break;	
+			}
+			case 'p':	
+			{
+				psSubtractionMethod= atoi(optarg);
+				break;	
+			}	
+			case 'r':	
+			{
+				residualZThr= atof(optarg);
+				break;	
+			}
+			case 'R':	
+			{
+				residualZHighThr= atof(optarg);
+				break;	
+			}
+			case 'l':	
+			{
+				removedSourceType= atoi(optarg);
+				break;	
+			}
+			case 'a':
+			{
+				removeNestedSources= true;		
+				break;
+			}
+			case 'k':
+			{
+				dilateKernelSize= atoi(optarg);		
+				break;
+			}
+			case 'T':	
+			{
+				seedThr= atof(optarg);
+				break;	
+			}
+			case 't':	
+			{
+				mergeThr= atof(optarg);
+				break;	
+			}	
+			case 'm':	
+			{
+				minNPix= atoi(optarg);
+				break;	
+			}
+			case 'N':	
+			{
+				searchNestedSources= false;
+				break;	
+			}
+			case 'b':
+			{
+				boxSize= atof(optarg);
+				break;
+			}
+			case 'B':
+			{
+				boxSizeInBeam= true;
+				break;
+			}
+			case 'g':
+			{
+				gridSize= atof(optarg);
+				break;
+			}
+			case 'e':
+			{
+				bkgEstimator= atoi(optarg);
+				break;
+			}
+			case 'P':	
+			{
+				use2ndPass= true;
+				break;	
+			}
+			case 'S':	
+			{
+				skipOutliers= true;
+				break;	
+			}
+			case 'A':	
+			{
+				applySourceSelection= false;
+				break;	
+			}
+			case 'd':
+			{
+				useMaxNPixCut= false;
+				break;
+			}
+			case 'D':
+			{
+				psMaxNPix= atoi(optarg);
+				break;
+			}
+			case 'f':
+			{
+				useElongCut= false;
+				break;
+			}
+			case 'G':
+			{
+				useCircRatioCut= false;
+				break;
+			}
+			case 'q':
+			{
+				useEllipseAreaRatioCut= false;
+				break;
+			}
+			case 'u':
+			{
+				useNBeamsCut= false;
+				break;
+			}
+			case 'U':
+			{
+				psNBeamsThr= atof(optarg);
+				break;
+			}
+			case 'z':
+			{
+				bkgAroundSource= true;
+				break;
+			}
+			case 'Z':
+			{
+				bkgBoxThickness= atoi(optarg);
+				break;
+			}
+			case 'j':
+			{
+				residualModelRandomize= true;
+				break;
+			}
+			case 'n':	
+			{
+				nThreads= atoi(optarg);	
+				break;	
+			}
+			case 'v':	
+			{
+				verbosity= atoi(optarg);	
 				break;	
 			}
 			default:
@@ -332,16 +696,129 @@ int ParseOptions(int argc, char *argv[])
     }//close switch
 	}//close while
  
-	//## Read config options 
-	if(ConfigParser::Instance().Parse(configFileName)<0){
-		cerr<<"ERROR: Failed to parse config options!"<<endl;
+	//- Set logging level
+	std::string sloglevel= GetStringLogLevel(verbosity);
+	#ifdef LOGGING_ENABLED
+		LoggerManager::Instance().CreateConsoleLogger(sloglevel,"logger","System.out");
+	#endif
+
+	//- Read config options (if provided) and set options
+	if(configFileName!=""){
+		if(ConfigParser::Instance().Parse(configFileName)<0){
+			cerr<<"ERROR: Failed to parse config options!"<<endl;
+			return -1;
+		}
+		PRINT_OPTIONS();
+
+		SetOptionsFromConfig();
+	}
+
+	//- Check options
+	if(CheckOptions()<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid program options given, see logs!");
+		#endif
 		return -1;
 	}
-	PRINT_OPTIONS();
 
-	
+	return 0;
+
+}//close ParseOptions()
+
+
+
+int CheckOptions()
+{
+	//Check mandatory options
+	if(inputFileName==""){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Missing or empty input file argument!");
+		#endif
+		return -1;
+	}
+
+	//- Detection options
+	if(seedThr<=0 || mergeThr<=0 || minNPix<=0){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid blob detection options given (hint: they must be positive)!");
+		#endif
+		return -1;
+	}
+
+	//- Sampling box options
+	if(boxSize<=0 ){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid sampling box size option given (hint: must be positive)!");
+		#endif
+		return -1;
+	}
+	if(gridSize<=0 || gridSize>1){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid sampling grid size option given (hint: must be positive and smaller than 1)!");
+		#endif
+		return -1;
+	}
+
+	//- Set bkg estimator
+	estimator= Caesar::eMedianBkg;
+	if(bkgEstimator==Caesar::eMedianBkg){
+		estimator= Caesar::eMedianBkg;
+	}
+	else if(bkgEstimator==Caesar::eMeanBkg){
+		estimator= Caesar::eMeanBkg;
+	}
+	else if(bkgEstimator==Caesar::eBiWeightBkg){
+		estimator= Caesar::eBiWeightBkg;
+	}	
+	else if(bkgEstimator==Caesar::eMedianClippedBkg){
+		estimator= Caesar::eMedianClippedBkg;
+	}
+	else{
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid/unknown bkg estimator specified!");
+		#endif
+		return -1;
+	}
+
+	//- Number of threads
+	if(nThreads<=0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid number of threads given (hint: must be positive)!");
+		#endif
+		return -1;
+	}
+	if(nThreads>SysUtils::GetOMPMaxThreads()){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("A number of threads exceeding detected machine core capacity ("<<SysUtils::GetOMPMaxThreads()<<") was given...");
+		#endif
+	}
+	SysUtils::SetOMPThreads(nThreads);
+
+	//- Check given input file and get info
+	Caesar::FileInfo info;
+	if(!Caesar::SysUtils::CheckFile(inputFileName,info,false)){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid input file ("<<inputFileName<<") specified!");
+		#endif
+		return -1;
+	}
+	std::string file_extension= info.extension;
+	if(file_extension!= ".fits" && file_extension!=".root") {
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid file extension ("<<file_extension<<")...nothing to be done!");
+		#endif
+		return -1;
+	}
+
+	return 0;
+
+}//close CheckOptions()
+
+
+int SetOptionsFromConfig()
+{
 	//=======================
-	//== Init Logger 
+	//== INIT LOGGER
 	//=======================
 	//Get main logger options
 	int loggerTarget= 0;
@@ -390,7 +867,7 @@ int ParseOptions(int argc, char *argv[])
 	#endif
 
 	//=======================
-	//== Init thread numbers 
+	//== INIT THREAD NO.
 	//=======================
 	int nThreads;
 	if(GET_OPTION_VALUE(nThreads,nThreads)<0){
@@ -401,23 +878,26 @@ int ParseOptions(int argc, char *argv[])
 	}
 	if(nThreads>0) SysUtils::SetOMPThreads(nThreads);
 
-	return 0;
 
-}//close ParseOptions()
+	//============================
+	//== INPUT FILE OPTIONS
+	//============================
+	if(GET_OPTION_VALUE(inputFile,inputFileName)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get inputFile option!");
+		#endif
+		return -1;
+	}	
+	if(GET_OPTION_VALUE(inputImage,imageName)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get inputImage option!");
+		#endif
+		return -1;
+	}
 
-
-int ComputeSourceResidual()
-{
-	//Get options
-	bool removeNestedSources;
-	int dilateKernelSize;
-	int removedSourceType;
-	int residualModel;
-	double residualZHighThr;
-	double residualZThr;
-	bool residualModelRandomize;	
-	int psSubtractionMethod;
-
+	//============================
+	//== SOURCE RESIDUAL OPTIONS
+	//============================
 	if(GET_OPTION_VALUE(removeNestedSources,removeNestedSources)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to get removeNestedSources option!");
@@ -470,30 +950,9 @@ int ComputeSourceResidual()
 		return -1;
 	}	
 
-	//Compute residual
-	residualImg= inputImg->GetSourceResidual(sources,dilateKernelSize,residualModel,removedSourceType,removeNestedSources,bkgData,useLocalBkg,residualModelRandomize,residualZThr,residualZHighThr,psSubtractionMethod);
-	if(!residualImg){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to compute residual map!");
-		#endif
-		return -1;
-	}
-
-	return 0;
-
-}//close ComputeSourceResidual()
-
-int FindSources(){
-	
-	//## Get options
-	//double seedBrightThr;
-	double seedThr, mergeThr;
-	int minNPix;
-	bool searchNegativeExcess;
-	bool mergeBelowSeed;
-	bool searchNestedSources;
-	double nestedBlobThrFactor;
-
+	//============================
+	//== SOURCE FIND OPTIONS
+	//============================
 	if(GET_OPTION_VALUE(seedThr,seedThr)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to get seedThr option!");
@@ -512,77 +971,33 @@ int FindSources(){
 		#endif
 		return -1;
 	}	
-	if(GET_OPTION_VALUE(searchNegativeExcess,searchNegativeExcess)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to get searchNegativeExcess option!");
-		#endif
-		return -1;
-	}
-	if(GET_OPTION_VALUE(mergeBelowSeed,mergeBelowSeed)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to get mergeBelowSeed option!");
-		#endif
-		return -1;
-	}
 	if(GET_OPTION_VALUE(searchNestedSources,searchNestedSources)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to get searchNestedSources option!");
 		#endif
 		return -1;
 	}
-	if(GET_OPTION_VALUE(nestedBlobThrFactor,nestedBlobThrFactor)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to get nestedBlobThrFactor option!");
-		#endif
-		return -1;
-	}
 
-	//## Extract bright source
-	sources.clear();
-	/*
-	int status= inputImg->FindCompactSource(
-		sources,
-		significanceMap,bkgData,
-		seedThr,mergeThr,minNPix,searchNegativeExcess,mergeBelowSeed,
-		searchNestedSources,nestedBlobThrFactor
-	);
-	*/
-	int status= inputImg->FindCompactSource(
-		sources,
-		significanceMap,bkgData,
-		seedThr,mergeThr,minNPix,
-		searchNestedSources
-	);
-	if(status<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Source search failed!");
-		#endif
-		return -1;
-	}
-
-	return 0;
-
-}//close FindSources()
-
-int SelectSources(){
-
-	//## Get options	
+	//============================
+	//== SOURCE SELECTION OPTIONS
+	//============================
 	if(GET_OPTION_VALUE(applySourceSelection,applySourceSelection)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to get applySourceSelection option!");
 		#endif
 		return -1;
 	}
-	if(!applySourceSelection){
-		#ifdef LOGGING_ENABLED
-			INFO_LOG("No source selection requested!");
-		#endif
-		return 0;
-	}
 	
 	if(GET_OPTION_VALUE(sourceMinBoundingBox,sourceMinBoundingBox)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to get sourceMinBoundingBox option!");
+		#endif
+		return -1;
+	}
+
+	if(GET_OPTION_VALUE(useCircRatioCut,useCircRatioCut)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get useCircRatioCut option!");
 		#endif
 		return -1;
 	}
@@ -592,9 +1007,23 @@ int SelectSources(){
 		#endif
 		return -1;
 	}
+
+	if(GET_OPTION_VALUE(useElongCut,useElongCut)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get useElongCut option!");
+		#endif
+		return -1;
+	}
 	if(GET_OPTION_VALUE(psElongThr,psElongThr)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to get psElongThr option!");
+		#endif
+		return -1;
+	}
+
+	if(GET_OPTION_VALUE(useEllipseAreaRatioCut,useEllipseAreaRatioCut)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get useEllipseAreaRatioCut option!");
 		#endif
 		return -1;
 	}
@@ -610,22 +1039,199 @@ int SelectSources(){
 		#endif
 		return -1;
 	}
+
+	if(GET_OPTION_VALUE(useMaxNPixCut,useMaxNPixCut)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get psMaxNPix option!");
+		#endif
+		return -1;
+	}
 	if(GET_OPTION_VALUE(psMaxNPix,psMaxNPix)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to get psMaxNPix option!");
 		#endif
 		return -1;
 	}
+
+	if(GET_OPTION_VALUE(useNBeamsCut,useNBeamsCut)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get useNBeamsCut option!");
+		#endif
+		return -1;
+	}
+	if(GET_OPTION_VALUE(psNBeamsThr,psNBeamsThr)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get psNBeamsThr option!");
+		#endif
+		return -1;
+	}
+
+	//============================
+	//== BACKGROUND OPTIONS
+	//============================
+	
+	//Box size
+	if(GET_OPTION_VALUE(boxSizeX,boxSizeX)<0 || GET_OPTION_VALUE(boxSizeY,boxSizeY)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get boxSize option!");
+		#endif
+		return -1;
+	}
+
+	//Grid size
+	if(GET_OPTION_VALUE(gridSizeX,gridSizeX)<0 || GET_OPTION_VALUE(gridSizeY,gridSizeY)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get gridSize option!");
+		#endif
+		return -1;
+	}
+	
+	//Bkg estimator
+	if(GET_OPTION_VALUE(bkgEstimator,bkgEstimator)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get bkgEstimator option!");
+		#endif
+		return -1;
+	}
+
+	if(GET_OPTION_VALUE(useLocalBkg,useLocalBkg)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get useLocalBkg option!");
+		#endif
+		return -1;
+	}
+
+	if(GET_OPTION_VALUE(use2ndPassInLocalBkg,use2ndPass)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get use2ndPassInLocalBkg option!");
+		#endif
+		return -1;
+	}
+	
+	if(GET_OPTION_VALUE(skipOutliersInLocalBkg,skipOutliers)<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get skipOutliersInLocalBkg option!");
+		#endif
+		return -1;
+	}
+
+	return 0;
+
+}//close SetOptionsFromConfig()
+
+
+int ComputeSourceResidual()
+{
+	//- Compute residual
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Computing source residual map ...");
+	#endif
+	ImgBkgData* bkgData_curr= nullptr;
+	if(!bkgAroundSource) bkgData_curr= bkgData;
+
+	residualImg= inputImg->GetSourceResidual(
+		sources,
+		dilateKernelSize,
+		residualModel,
+		removedSourceType,
+		removeNestedSources,
+		bkgData_curr,useLocalBkg,
+		residualModelRandomize,
+		residualZThr,residualZHighThr,
+		psSubtractionMethod,
+		smaskImg_binary,bkgBoxThickness
+	);
+	if(!residualImg){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute residual map!");
+		#endif
+		return -1;
+	}
+
+	return 0;
+
+}//close ComputeSourceResidual()
+
+
+int ReadSources()
+{
+	//- Read source file
+	TFile* sourceFile= new TFile(sourceFileName.c_str(),"READ");
+	if(!sourceFile || sourceFile->IsZombie()) {
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Cannot open file "<<sourceFileName<<"!");
+		#endif
+		return -1;
+	}
+	
+	//- Get source tree
+	TTree* SourceInfo= (TTree*)sourceFile->Get("SourceInfo");	
+	if(!SourceInfo){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Cannot get sources from file "<<sourceFileName<<"!");
+		#endif
+		return -1;
+	}
+
+	Source* aSource= 0;
+	SourceInfo->SetBranchAddress("Source",&aSource);
+
+	cout<<"# "<<SourceInfo->GetEntries()<<" sources to be drawn..."<<endl;
+	
+	//- Store source list 
+	sources.clear();
+	
+	for(int i=0;i<SourceInfo->GetEntries();i++){
+		SourceInfo->GetEntry(i);
+
+		Source* source= new Source;
+		*source= *aSource;
+		sources.push_back(source);
+
+	}//end loop sources
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<sources.size()<<" sources read ...");
+	#endif
+
+	return 0;
+
+}//close ReadSources()
+
+int FindSources()
+{	
+	//- Extract sources
+	sources.clear();
+	int status= inputImg->FindCompactSource(
+		sources,
+		significanceMap,bkgData,
+		seedThr,mergeThr,minNPix,
+		searchNestedSources
+	);
+	if(status<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Source search failed!");
+		#endif
+		return -1;
+	}
+
 	
 
-	//## Apply source selection?
+	return 0;
+
+}//close FindSources()
+
+int SelectSources()
+{
+	//- Apply source selection
 	int nSources= (int)sources.size();
 	if(nSources<=0) return 0;
 	
 	int nSelSources= 0;
 
 	std::vector<Source*> sources_sel;
-	for(int i=0;i<nSources;i++){	
+	for(int i=0;i<nSources;i++)
+	{	
 		std::string sourceName= sources[i]->GetName();
 		int sourceId= sources[i]->Id;
 		long int NPix= sources[i]->NPix;
@@ -678,7 +1284,7 @@ int SelectSources(){
 	}//end loop sources
 
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Adding #"<<nSelSources<<" bright sources to the selected source list...");
+		INFO_LOG("Selected and tagged #"<<nSelSources<<" sources ...");
 	#endif
 
 	//Clear initial vector (DO NOT CLEAR MEMORY!) and fill with selection (then reset selection)
@@ -690,8 +1296,8 @@ int SelectSources(){
 
 }//SelectSources()
 
-bool IsGoodSource(Source* aSource){
-	
+bool IsGoodSource(Source* aSource)
+{	
 	if(!aSource) return false;
 
 	//## Check for pixels 	
@@ -746,17 +1352,15 @@ bool IsPointLikeSource(Source* aSource)
 	for(unsigned int i=0;i<contours.size();i++){
 		Contour* thisContour= contours[i];
 
-		/*
 		//Test circularity ratio: 1= circle
-		if(thisContour->CircularityRatio<psCircRatioThr) {
+		if(useCircRatioCut && thisContour->CircularityRatio<psCircRatioThr) {
 			cout<<"SourceFinder::IsCompactSource(): INFO: Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass CircularityRatio cut (CR="<<thisContour->CircularityRatio<<"<"<<psCircRatioThr<<")"<<endl;
 			isPointLike= false;
 			break;
 		}
-		*/
 
 		//Test elongation (how symmetrical is the shape): 0=circle,square
-		if(thisContour->Elongation>psElongThr) {
+		if(useElongCut && thisContour->Elongation>psElongThr) {
 			#ifdef LOGGING_ENABLED
 				DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass Elongation cut (ELONG="<<thisContour->CircularityRatio<<">"<<psElongThr<<")");
 			#endif
@@ -765,7 +1369,7 @@ bool IsPointLikeSource(Source* aSource)
 		}
 
 		//Test ellipse fit
-		if(thisContour->EllipseAreaRatio<psEllipseAreaRatioMinThr || thisContour->EllipseAreaRatio>psEllipseAreaRatioMaxThr) {
+		if(useEllipseAreaRatioCut && (thisContour->EllipseAreaRatio<psEllipseAreaRatioMinThr || thisContour->EllipseAreaRatio>psEllipseAreaRatioMaxThr) ) {
 			#ifdef LOGGING_ENABLED
 				DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass EllipseAreaRatio cut (EAR="<<thisContour->EllipseAreaRatio<<" outside range ["<<psEllipseAreaRatioMinThr<<","<<psEllipseAreaRatioMaxThr<<"])");
 			#endif
@@ -775,11 +1379,24 @@ bool IsPointLikeSource(Source* aSource)
 
 	}//end contour loop
 	
+
+	//Check number of beams contained in source
+	double beamArea= aSource->GetBeamFluxIntegral();
+	if(useNBeamsCut && beamArea>0){	
+		double nBeams= (double)(aSource->NPix)/beamArea;
+		if(nBeams>psNBeamsThr){
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass nBeams cut (beamArea="<<beamArea<<", NPix="<<aSource->NPix<<", nBeams="<<nBeams<<">"<<psNBeamsThr<<")");
+			#endif
+			isPointLike= false;
+		}
+	}
+
 	//Check number of pixels
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") (NPix="<<aSource->NPix<<">"<<psMaxNPix<<")");
 	#endif
-	if(aSource->NPix>psMaxNPix){
+	if(useMaxNPixCut && aSource->NPix>psMaxNPix){
 		#ifdef LOGGING_ENABLED
 			DEBUG_LOG("Source (name="<<sourceName<<","<<"id="<<sourceId<<") does not pass nMaxPix cut (NPix="<<aSource->NPix<<">"<<psMaxNPix<<")");
 		#endif
@@ -792,7 +1409,7 @@ bool IsPointLikeSource(Source* aSource)
 
 }//close IsPointLikeSource()
 
-int ComputeStats(){
+int ComputeStats(Image* img){
 
 	//## Compute stats
 	#ifdef LOGGING_ENABLED
@@ -800,22 +1417,84 @@ int ComputeStats(){
 	#endif
 	bool computeRobustStats= true;
 	bool useRange= false;
-	bool forceRecomputing= false;	
-	if(inputImg->ComputeStats(computeRobustStats,forceRecomputing,useRange)<0){
+	bool forceRecomputing= false;
+	double minThr= -std::numeric_limits<double>::infinity();
+	double maxThr= std::numeric_limits<double>::infinity();
+	bool useParallelVersion= false;
+	std::vector<float> maskedValues= {0};	
+	if(img->ComputeStats(computeRobustStats,forceRecomputing,useRange,minThr,maxThr,useParallelVersion,maskedValues)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Stats computing failed!");
 		#endif
 		return -1;
 	}
-	inputImg->PrintStats();	
+	img->PrintStats();	
 
 	return 0;
 
 }//close ComputeStats()
 
-int ComputeBkg(){
+int ComputeBkg(Image* img)
+{
+	//Get map size
+	long int Nx= img->GetNx();
+	long int Ny= img->GetNy();
+	
+	//Compute sampling box size in pixels 
+	//If box size is given as a beam multiple find first the beam size from image
+	double boxSizeX_pix= boxSize;
+	double boxSizeY_pix= boxSize;
+	
+	if(boxSizeInBeam)
+	{
+		//Check if image has metadata with beam info
+		if(!img->HasMetaData()){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Requested to use sampling box size as multiple of image beam but input image has no metadata with beam information stored!");
+			#endif
+			return -1;
+		}
+	
+		//Compute box size in pixels
+		int pixelWidthInBeam= img->GetMetaData()->GetBeamWidthInPixel();
+		
+		#ifdef LOGGING_ENABLED	
+			INFO_LOG("Read a beam size of "<<pixelWidthInBeam<<" pixels from input image ...");
+		#endif
+		if(pixelWidthInBeam>0) {
+			boxSizeX_pix= pixelWidthInBeam*boxSizeX;
+			boxSizeY_pix= pixelWidthInBeam*boxSizeY;
+		}
+		else {
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Beam information is not available, consider options in pixels ...");
+			#endif
+		}
 
-	//## Get bkg options
+	}//close if
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Setting bkg boxe sizes to ("<<boxSizeX_pix<<","<<boxSizeY_pix<<") pixels ...");
+	#endif
+	
+	//Compute grid size in pixels
+	double gridSizeX_pix= gridSizeX*boxSizeX_pix;
+	double gridSizeY_pix= gridSizeY*boxSizeY_pix;
+	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Setting grid size to ("<<gridSizeX_pix<<","<<gridSizeY_pix<<") pixels ...");
+	#endif
+	
+	//Check grid & box size
+	if(boxSizeX_pix>=Nx || boxSizeY_pix>=Ny || gridSizeX_pix>=Nx || gridSizeY_pix>=Ny){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Box/grid size are too large compared to image size ("<<Nx<<","<<Ny<<")");
+		#endif
+		return -1;
+	}
+
+	
+	/*
 	//Beam info
 	bool useBeamInfoInBkg;
 	if(GET_OPTION_VALUE(useBeamInfoInBkg,useBeamInfoInBkg)<0){
@@ -825,89 +1504,13 @@ int ComputeBkg(){
 		return -1;
 	}
 	int nPixelsInBeam= 0;
-	if(useBeamInfoInBkg && inputImg->HasMetaData()){
-		nPixelsInBeam= inputImg->GetMetaData()->GetBeamWidthInPixel();	
+	if(useBeamInfoInBkg && img->HasMetaData()){
+		nPixelsInBeam= img->GetMetaData()->GetBeamWidthInPixel();	
 	}
 		
-	//Box size
-	if(GET_OPTION_VALUE(boxSizeX,boxSizeX)<0 || GET_OPTION_VALUE(boxSizeY,boxSizeY)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to get boxSize option!");
-		#endif
-		return -1;
-	}
-
-	//Grid size
-	if(GET_OPTION_VALUE(gridSizeX,gridSizeX)<0 || GET_OPTION_VALUE(gridSizeY,gridSizeY)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to get gridSize option!");
-		#endif
-		return -1;
-	}
-	
-	//Bkg estimator
-	if(GET_OPTION_VALUE(bkgEstimator,bkgEstimator)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to get bkgEstimator option!");
-		#endif
-		return -1;
-	}
-
-	//Local bkg flag
-	bool use2ndPassInLocalBkg;
-	bool skipOutliersInLocalBkg;
-	int minNPix;
-	//double seedBrightThr;
-	double seedThr;
-	double mergeThr;
-
-	if(GET_OPTION_VALUE(useLocalBkg,useLocalBkg)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to get useLocalBkg option!");
-		#endif
-		return -1;
-	}
-
-	if(GET_OPTION_VALUE(use2ndPassInLocalBkg,use2ndPassInLocalBkg)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to get use2ndPassInLocalBkg option!");
-		#endif
-		return -1;
-	}
-	
-	if(GET_OPTION_VALUE(skipOutliersInLocalBkg,skipOutliersInLocalBkg)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to get skipOutliersInLocalBkg option!");
-		#endif
-		return -1;
-	}
-	
-	if(GET_OPTION_VALUE(minNPix,minNPix)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to get minNPix option!");
-		#endif
-		return -1;
-	}
-	
-	if(GET_OPTION_VALUE(seedThr,seedThr)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to get seedThr option!");
-		#endif
-		return -1;
-	}
-	if(GET_OPTION_VALUE(mergeThr,mergeThr)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to get mergeThr option!");
-		#endif
-		return -1;
-	}
-
-
 	//Compute box size
-	//double Nx= static_cast<double>(inputImg->GetNbinsX());
-	//double Ny= static_cast<double>(inputImg->GetNbinsY());
-	double Nx= static_cast<double>(inputImg->GetNx());
-	double Ny= static_cast<double>(inputImg->GetNy());
+	double Nx= static_cast<double>(img->GetNx());
+	double Ny= static_cast<double>(img->GetNy());
 	if(useBeamInfoInBkg && nPixelsInBeam>0){
 		#ifdef LOGGING_ENABLED
 			INFO_LOG("Setting bkg boxes as ("<<boxSizeX<<","<<boxSizeY<<") x beam (beam="<<nPixelsInBeam<<" pixels) ...");
@@ -939,14 +1542,18 @@ int ComputeBkg(){
 		#endif
 		return -1;
 	}
+	*/
 
 	//Compute bkg & noise maps
-	bkgData= inputImg->ComputeBkg(
+	bkgData= img->ComputeBkg(
 		bkgEstimator,
-		useLocalBkg,boxSizeX,boxSizeY,gridSizeX,gridSizeY,
-		use2ndPassInLocalBkg,
-		skipOutliersInLocalBkg,seedThr,mergeThr,minNPix
+		useLocalBkg,
+		boxSizeX_pix,boxSizeY_pix,gridSizeX_pix,gridSizeY_pix,
+		use2ndPass,
+		skipOutliers,
+		seedThr,mergeThr,minNPix
 	);
+
 	if(!bkgData){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to compute bkg data!");
@@ -955,7 +1562,10 @@ int ComputeBkg(){
 	}
 
 	//Compute significance
-	significanceMap= inputImg->GetSignificanceMap(bkgData,useLocalBkg);
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Compute significance map ...");
+	#endif
+	significanceMap= img->GetSignificanceMap(bkgData,useLocalBkg);
 	if(!significanceMap){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to compute significance map!");
@@ -970,20 +1580,6 @@ int ComputeBkg(){
 
 int ReadImage()
 {
-	//## Get options
-	if(GET_OPTION_VALUE(inputFile,inputFileName)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to get inputFile option!");
-		#endif
-		return -1;
-	}	
-	if(GET_OPTION_VALUE(inputImage,imageName)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to get inputImage option!");
-		#endif
-		return -1;
-	}
-	
 	//## Check given input file and get info
 	Caesar::FileInfo info;
 	if(!Caesar::SysUtils::CheckFile(inputFileName,info,false)){
@@ -1048,6 +1644,7 @@ int ReadImage()
 
 }//close ReadImage()
 
+/*
 int OpenOutputFile()
 {
 	//Get options
@@ -1168,10 +1765,10 @@ int OpenOutputFile()
 	return 0;
 
 }//close OpenOutputFile()
+*/
 
-
-int Clear(){
-
+int Clear()
+{
 	//Clear input image
 	if(inputImg) inputImg->Delete();
 
@@ -1184,8 +1781,11 @@ int Clear(){
 	//Delete significance map
 	if(significanceMap) significanceMap->Delete();
 
+	//Delete source mask
+	if(smaskImg) smaskImg->Delete();
+
 	//Delete sources
-	for(unsigned int i=0;i<sources.size();i++){
+	for(size_t i=0;i<sources.size();i++){
 		if(sources[i]){
 			delete sources[i];
 			sources[i]= 0;
@@ -1200,8 +1800,9 @@ int Clear(){
 
 }//close Clear()
 
-int Save(){
-
+int Save()
+{
+	/*
 	//## Save to ROOT?
 	if(saveToFile && outputFile){
 		outputFile->cd();
@@ -1246,7 +1847,48 @@ int Save(){
 		}
 		if(saveResidualMap && residualImg) residualImg->WriteFITS(residualMapFITSFile);
 	}
+	*/
+
+	//Save bkg map
+	if(bkgData->BkgMap){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving bkg map to file "<<outputFileName_bkg);
+		#endif	
+		(bkgData->BkgMap)->WriteFITS(outputFileName_bkg);
+	}
+
+	//Save mask map
+	if(smaskImg){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving source mask map to file "<<outputFileName_mask);
+		#endif	
+		smaskImg->WriteFITS(outputFileName_mask);
+	}
+
+	//Save residual map
+	if(residualImg){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving residual map to file "<<outputFileName);
+		#endif	
+		residualImg->WriteFITS(outputFileName);
+	}
 
 	return 0;
+
 }//close Save()
+
+std::string GetStringLogLevel(int verb)
+{
+	std::string slevel= "";
+	if(verbosity<=0) slevel= "FATAL";
+	else if(verbosity==1) slevel= "FATAL";
+	else if(verbosity==2) slevel= "ERROR";
+	else if(verbosity==3) slevel= "WARN";
+	else if(verbosity==4) slevel= "INFO";
+	else if(verbosity>=5) slevel= "DEBUG";
+	else slevel= "OFF";
+
+	return slevel;
+
+}//close GetStringLogLevel()
 

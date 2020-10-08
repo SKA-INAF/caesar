@@ -783,7 +783,7 @@ class Source : public Blob {
 		/**
 		* \brief Compute object class id from astro object data (if available)
 		*/
-		int ComputeObjClassId(int& id,int& subid,bool& confirmed,std::vector<AstroObject>& data);
+		int ComputeObjClassId(int& id,int& subid,std::string& id_str,bool& confirmed,std::vector<AstroObject>& data);
 		
 
 	private:
@@ -803,12 +803,14 @@ class Source : public Blob {
 
 		//Object type
 		int ObjLocationId;
+		std::string ObjClassStrId;
 		int ObjClassId;
 		int ObjClassSubId;
 		bool ObjConfirmed;
 
 		//Component object type
 		std::vector<int> componentObjLocationIds;
+		std::vector<std::string> componentObjClassStrIds;
 		std::vector<int> componentObjClassIds;
 		std::vector<int> componentObjClassSubIds;
 		std::vector<bool> componentObjConfirmed;
@@ -848,7 +850,7 @@ class Source : public Blob {
 		bool m_hasComponentAstroObjectData;
 		std::vector<std::vector<AstroObject>> m_componentAstroObjects;
 		
-		ClassDef(Source,8)
+		ClassDef(Source,9)
 
 	public:
 		

@@ -150,6 +150,7 @@ void Source::Copy(TObject &obj) const
 	((Source&)obj).m_componentAstroObjects= m_componentAstroObjects;
 
 	//Set object class ids
+	((Source&)obj).ObjClassStrId= ObjClassStrId;
 	((Source&)obj).ObjClassId= ObjClassId;
 	((Source&)obj).ObjClassSubId= ObjClassSubId;
 	((Source&)obj).ObjLocationId= ObjLocationId;
@@ -157,6 +158,7 @@ void Source::Copy(TObject &obj) const
 	
 	//Set object component class ids
 	((Source&)obj).componentObjLocationIds= componentObjLocationIds;
+	((Source&)obj).componentObjClassStrIds= componentObjClassStrIds;
 	((Source&)obj).componentObjClassIds= componentObjClassIds;
 	((Source&)obj).componentObjClassSubIds= componentObjClassSubIds;
 	((Source&)obj).componentObjConfirmed= componentObjConfirmed;
@@ -237,12 +239,14 @@ void Source::Init(){
 
 	//Init object class ids
 	ObjLocationId= eUNKNOWN_OBJECT_LOCATION;
+	ObjClassStrId= "0000";
 	ObjClassId= eUNKNOWN_OBJECT;
 	ObjClassSubId= eUNKNOWN_OBJECT;
 	ObjConfirmed= false;
 
 	//Init component object class ids
 	componentObjLocationIds.clear();
+	componentObjClassStrIds.clear();
 	componentObjClassIds.clear();
 	componentObjClassSubIds.clear();
 	componentObjConfirmed.clear();
@@ -1775,8 +1779,11 @@ int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WCS* wcs,in
 		return -1;
 	}
 
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Source "<<this->GetName()<<std::setprecision(12)<<": pos("<<x<<","<<y<<"), pos_wcs("<<xwcs<<","<<ywcs<<")");
+	#endif
+
 	//Delete WCS
-	//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	return 0;
@@ -1810,7 +1817,7 @@ int Source::GetSpectralAxisInfo(double& val,double& dval,std::string& units)
 
 int Source::ComputeObjClassId()
 {
-	return ComputeObjClassId(ObjClassId,ObjClassSubId,ObjConfirmed,m_astroObjects);
+	return ComputeObjClassId(ObjClassId,ObjClassSubId,ObjClassStrId,ObjConfirmed,m_astroObjects);
 }
 
 
@@ -1833,16 +1840,20 @@ int Source::ComputeComponentObjClassId()
 
 	//Loop over components and compute 
 	componentObjClassIds.clear();
+	componentObjClassStrIds.clear();
 	componentObjClassSubIds.clear();
 	componentObjConfirmed.clear();
+	
 
 	for(size_t i=0;i<m_componentAstroObjects.size();i++)
 	{
 		int classId= eUNKNOWN_OBJECT;
 		int classSubId= eUNKNOWN_OBJECT; 
 		bool confirmed= false;
-		ComputeObjClassId(classId,classSubId,confirmed,m_componentAstroObjects[i]);
+		std::string classId_str= "0000";
+		ComputeObjClassId(classId,classSubId,classId_str,confirmed,m_componentAstroObjects[i]);
 		componentObjClassIds.push_back(classId);
+		componentObjClassStrIds.push_back(classId_str);
 		componentObjClassSubIds.push_back(classSubId);
 		componentObjConfirmed.push_back(confirmed);
 	}
@@ -1853,46 +1864,100 @@ int Source::ComputeComponentObjClassId()
 }//close ComputeComponentObjClassId()
 
 
-int Source::ComputeObjClassId(int& classId,int& classSubId,bool& confirmed,std::vector<AstroObject>& astroObjects)
+int Source::ComputeObjClassId(int& classId,int& classSubId,std::string& classId_str,bool& confirmed,std::vector<AstroObject>& astroObjects)
 {
 	//Set to unknown if no astro object data present
 	if(astroObjects.empty()){
 		classId= eUNKNOWN_OBJECT; 
 		classSubId= eUNKNOWN_OBJECT; 
+		classId_str= "0000";
 		confirmed= false;
 		return 0;
 	}
 
 	//Set to obj type if only one object data present
-	//otherwise set to the major type.
 	int nObjs= static_cast<int>(astroObjects.size());
+	int ndigits= 4;
 	if(nObjs==1){
 		classId= astroObjects[0].id;
 		classSubId= astroObjects[0].subid;
+		classId_str= CodeUtils::GetStringCodeFromIntegers({classId},ndigits);
 		confirmed= astroObjects[0].confirmed;
 	}
 	else{
+		//Set confirmed=true if there is at least one object confirmed
+		std::set<int> objIds;
+		std::set<int> objSubIds;
+		confirmed= false;		
+		for(int i=0;i<nObjs;i++){
+			objIds.insert(astroObjects[i].id);
+			objSubIds.insert(astroObjects[i].subid);	
+			if(astroObjects[i].confirmed) confirmed= true;
+		}
+
+		if(objIds.size()>1){
+			classId= eMULTI_CLASS_OBJECT;
+			std::vector<int> ids(objIds.begin(),objIds.end());
+			classId_str= CodeUtils::GetStringCodeFromIntegers(ids,ndigits);	
+			if(objSubIds.size()>1){
+				classSubId= eMULTI_CLASS_OBJECT;
+			}
+			else{
+				classSubId= *std::next(objSubIds.begin(), 0);
+			}
+		}
+		else{
+			classId= *std::next(objIds.begin(), 0);
+			classId_str= CodeUtils::GetStringCodeFromIntegers({classId},ndigits);
+			if(objSubIds.size()>1){
+				classSubId= eMULTI_CLASS_OBJECT;
+			}
+			else{
+				classSubId= *std::next(objSubIds.begin(), 0);
+			}
+		}
+
+		/*
+		//Set id to the most common type (mode) (DEPRECATED)
 		std::vector<int> objIds;
 		std::vector<int> objSubIds;
-		std::vector<bool> objConfirmeds;		
+		std::vector<bool> objConfirmeds;
+		bool confirmedValue= false;		
 		for(int i=0;i<nObjs;i++){
 			objIds.push_back(astroObjects[i].id);
 			objSubIds.push_back(astroObjects[i].subid);	
 			objConfirmeds.push_back(astroObjects[i].confirmed);
+			if(astroObjects[i].confirmed) confirmedValue= true;
 		}
+
 		int nmodes_id= 0;
 		int mode_id= CodeUtils::FindVectorMode(objIds.begin(),objIds.end(),nmodes_id);
 		int nmodes_subid= 0;
 		int mode_subid= CodeUtils::FindVectorMode(objSubIds.begin(),objSubIds.end(),nmodes_subid);
-		if(nmodes_id==1) classId= mode_id;
-		else classId= eMULTI_CLASS_OBJECT;
-		if(nmodes_subid==1) classSubId= mode_subid;
-		else classSubId= eMULTI_CLASS_OBJECT;
+		if(nmodes_id==1) {
+			classId= mode_id;
+		}
+		else {
+			classId= eMULTI_CLASS_OBJECT;
+		}
+		if(nmodes_subid==1) {
+			classSubId= mode_subid;
+		}
+		else {
+			classSubId= eMULTI_CLASS_OBJECT;
+		}
 		int nmodes_confirmed= 0;
 		bool mode_confirmed= CodeUtils::FindVectorMode(objConfirmeds.begin(),objConfirmeds.end(),nmodes_confirmed);
-		if(nmodes_confirmed==1) confirmed= mode_confirmed;
-		else confirmed= false;
-	}
+		if(nmodes_confirmed==1) {
+			confirmed= mode_confirmed;
+		}
+		else {
+			//confirmed= false;
+			confirmedValue= confirmedValue;
+		}
+		*/
+
+	}//close else
 
 	return 0;
 

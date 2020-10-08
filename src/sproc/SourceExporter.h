@@ -226,22 +226,22 @@ class SourceExporter : public TObject
 		/**
 		* \brief Write source collection to ascii file
 		*/
-		static int WriteToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool writeAdditionalSourceInfo=false,char delimiter='\t');
+		static int WriteToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool writeAdditionalSourceInfo=false,bool convertBrightnessToFlux=true,char delimiter='\t');
 		
 		/**
 		* \brief Get source ascii string
 		*/
-		static const std::vector<std::string> SourceToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool writeAdditionalSourceInfo=false,char delimiter='\t');
+		static const std::vector<std::string> SourceToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool writeAdditionalSourceInfo=false,bool convertBrightnessToFlux=true,char delimiter='\t');
 
 		/**
 		* \brief Write ascii file from source component collection
 		*/
-		static int WriteComponentsToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool writeAdditionalSourceInfo=false,char delimiter='\t');
+		static int WriteComponentsToAscii(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool writeAdditionalSourceInfo=false,bool convertBrightnessToFlux=true,char delimiter='\t');
 		
 		/**
 		* \brief Get source component ascii string
 		*/
-		static const std::vector<std::string> SourceComponentsToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool writeAdditionalSourceInfo=false,char delimiter='\t');
+		static const std::vector<std::string> SourceComponentsToAscii(Source* source,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool writeAdditionalSourceInfo=false,bool convertBrightnessToFlux=true,char delimiter='\t');
 	
 		//=======================================
 		//==      JSON EXPORT

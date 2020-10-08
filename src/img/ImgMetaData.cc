@@ -164,6 +164,10 @@ WCS* ImgMetaData::GetWCS(int coordSystem)
 	std::string wcsType= WCSUtils::GetWCSTypeStr(wcs);
 	m_wcsType= wcsType;
 
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("coordSystem="<<coordSystem<<", wcsType="<<wcsType);
+	#endif
+
 	return wcs;
 		
 }//close GetWCS()

@@ -973,8 +973,8 @@ class StatsUtils : public TObject {
 
 
 		template<typename T,typename K> 
-		//static int ComputeStatsMoments(StatMoments<T>& moments,std::vector<K>& data,bool skipNegativeValues=false,bool maskNanInfValues=true)
-		static int ComputeStatsMoments(StatMoments<T>& moments,std::vector<K>& data,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),bool maskNanInfValues=true)
+		//static int ComputeStatsMoments(StatMoments<T>& moments,std::vector<K>& data,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),bool maskNanInfValues=true,std::vector<float> maskedValues={})
+		static int ComputeStatsMoments(StatMoments<T>& moments,std::vector<K>& data,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),std::vector<float> maskedValues={})
 		{
 			if(data.empty()) return 0;
 		
@@ -990,7 +990,6 @@ class StatsUtils : public TObject {
 
 				#pragma omp parallel private(N_t,M1_t,M2_t,M3_t,M4_t,minVal_t,maxVal_t)
 				{
-
 					int thread_id= omp_get_thread_num();
 					int nthreads= SysUtils::GetOMPThreads();
 					#ifdef LOGGING_ENABLED
@@ -1012,37 +1011,24 @@ class StatsUtils : public TObject {
    				}
 
 					//Compute moments
-					//if(skipNegativeValues){
 					if(useRange){
 						#pragma omp for
 						for(size_t i=0;i<data.size();i++){			
 							T w= static_cast<T>(data[i]);
-							if( isnormal(w) && w>minThr && w<maxThr ){
-							//if( isnormal(w) ){
-								//if(w>0) { 
-									if(w<minVal_t) minVal_t= w;
-									if(w>maxVal_t) maxVal_t= w;
-									N_t++;
-  								T delta = w - M1_t;
-  								T delta_n = delta/N_t;
-  								T delta_n2 = delta_n * delta_n;
-  								T f = delta * delta_n * (N_t-1);
-  								M1_t+= delta_n;
-  								M4_t+= f * delta_n2 * (N_t*N_t - 3*N_t + 3) + 6 * delta_n2 * M2_t - 4 * delta_n * M3_t;
-  								M3_t+= f * delta_n * (N_t - 2) - 3 * delta_n * M2_t;
-  								M2_t+= f;
-								//}//close w>0
-							}//close if normal
-							else{//modify unnormal value
-								data[i]= 0;
+							bool isInRange= (w>minThr && w<maxThr);
+							bool isFinite= std::isfinite(w);
+							bool notMasked= true;
+							for(size_t l=0;l<maskedValues.size();l++){
+								if(w==maskedValues[l]){
+									notMasked= false;
+									break;
+								}
 							}
-						}//end loop vector
-					}//close if
-					else{
-						#pragma omp for
-						for(size_t i=0;i<data.size();i++){			
-							T w= static_cast<T>(data[i]);
-							if( isnormal(w) ){
+							bool selected= (isFinite && isInRange && notMasked);
+
+							//if( isnormal(w) && w>minThr && w<maxThr )
+							if( selected )
+							{
 								if(w<minVal_t) minVal_t= w;
 								if(w>maxVal_t) maxVal_t= w;
 								N_t++;
@@ -1054,9 +1040,43 @@ class StatsUtils : public TObject {
   							M4_t+= f * delta_n2 * (N_t*N_t - 3*N_t + 3) + 6 * delta_n2 * M2_t - 4 * delta_n * M3_t;
   							M3_t+= f * delta_n * (N_t - 2) - 3 * delta_n * M2_t;
   							M2_t+= f;
-							}//close is normal
+								
+							}//close if selected
 							else{//modify unnormal value
-								data[i]= 0;
+								if(!isFinite) data[i]= 0;
+							}
+						}//end loop vector
+					}//close if
+					else{
+						#pragma omp for
+						for(size_t i=0;i<data.size();i++){			
+							T w= static_cast<T>(data[i]);
+							bool isFinite= std::isfinite(w);
+							bool notMasked= true;
+							for(size_t l=0;l<maskedValues.size();l++){
+								if(w==maskedValues[l]){
+									notMasked= false;
+									break;
+								}
+							}
+							bool selected= (isFinite && notMasked);
+
+							//if( isnormal(w) ){
+							if(selected){
+								if(w<minVal_t) minVal_t= w;
+								if(w>maxVal_t) maxVal_t= w;
+								N_t++;
+  							T delta = w - M1_t;
+  							T delta_n = delta/N_t;
+  							T delta_n2 = delta_n * delta_n;
+  							T f = delta * delta_n * (N_t-1);
+  							M1_t+= delta_n;
+  							M4_t+= f * delta_n2 * (N_t*N_t - 3*N_t + 3) + 6 * delta_n2 * M2_t - 4 * delta_n * M3_t;
+  							M3_t+= f * delta_n * (N_t - 2) - 3 * delta_n * M2_t;
+  							M2_t+= f;
+							}//close if is selected
+							else{//modify unnormal value
+								if(!isFinite) data[i]= 0;
 							}
 						}//end loop vector
 					}//close else 
@@ -1094,35 +1114,56 @@ class StatsUtils : public TObject {
 				T maxVal= -std::numeric_limits<T>::max();
 
 				//Compute moments
-				//if(skipNegativeValues){
 				if(useRange){
 					for(size_t i=0;i<data.size();i++){			
 						T w= static_cast<T>(data[i]);
-						if( isnormal(w) && w>minThr && w<maxThr ){
-						//if( isnormal(w) ){
-							//if(w>0){
-								if(w<minVal) minVal= w;
-								if(w>maxVal) maxVal= w;
-								N++;
-  							T delta = w - M1;
-  							T delta_n = delta/N;
-  							T delta_n2 = delta_n * delta_n;
-  							T f = delta * delta_n * (N-1);
-  							M1+= delta_n;
-  							M4+= f * delta_n2 * (N*N - 3*N + 3) + 6 * delta_n2 * M2 - 4 * delta_n * M3;
-  							M3+= f * delta_n * (N - 2) - 3 * delta_n * M2;
-  							M2+= f;
-							//}//close if w>0
-						}//close if isnormal
+						bool isInRange= (w>minThr && w<maxThr);
+						bool isFinite= std::isfinite(w);
+						bool notMasked= true;
+						for(size_t l=0;l<maskedValues.size();l++){
+							if(w==maskedValues[l]){
+								notMasked= false;
+								break;
+							}
+						}
+						bool selected= (isFinite && isInRange && notMasked);
+
+						//if( isnormal(w) && w>minThr && w<maxThr )
+						if(selected)
+						{						
+							if(w<minVal) minVal= w;
+							if(w>maxVal) maxVal= w;
+							N++;
+  						T delta = w - M1;
+  						T delta_n = delta/N;
+  						T delta_n2 = delta_n * delta_n;
+  						T f = delta * delta_n * (N-1);
+  						M1+= delta_n;
+  						M4+= f * delta_n2 * (N*N - 3*N + 3) + 6 * delta_n2 * M2 - 4 * delta_n * M3;
+  						M3+= f * delta_n * (N - 2) - 3 * delta_n * M2;
+  						M2+= f;
+							
+						}//close if selected
 						else{//modify unnormal value
-							data[i]= 0;
+							if(!isFinite) data[i]= 0;
 						}
 					}//end loop pixels
-				}//close if skip negative pixels
+				}//close if use range
 				else{
 					for(size_t i=0;i<data.size();i++){			
 						T w= static_cast<T>(data[i]);
-						if( isnormal(w) ){
+						bool isFinite= std::isfinite(w);
+						bool notMasked= true;
+						for(size_t l=0;l<maskedValues.size();l++){
+							if(w==maskedValues[l]){
+								notMasked= false;
+								break;
+							}
+						}
+						bool selected= (isFinite && notMasked);
+
+						//if( isnormal(w) ){
+						if(selected){
 							if(w<minVal) minVal= w;
 							if(w>maxVal) maxVal= w;
 							N++;
@@ -1136,7 +1177,7 @@ class StatsUtils : public TObject {
   						M2+= f;
 						}//close if isnormal
 						else{//modify unnormal value
-							data[i]= 0;
+							if(!isFinite) data[i]= 0;
 						}
 					}//end loop pixels
 				}//close else

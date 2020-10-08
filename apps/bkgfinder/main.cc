@@ -136,7 +136,7 @@ Caesar::FileInfo info;
 //Functions
 int ParseOptions(int argc, char *argv[]);
 int CheckOptions();
-std::string GetStringLogLevel(int verbosity);
+std::string GetStringLogLevel(int verb);
 int OpenOutputFile();
 int ReadImage();
 int ComputeStats();
@@ -641,7 +641,7 @@ int CheckOptions()
 
 }//close CheckOptions()
 
-std::string GetStringLogLevel(int verbosity)
+std::string GetStringLogLevel(int verb)
 {
 	std::string slevel= "";
 	if(verbosity<=0) slevel= "FATAL";

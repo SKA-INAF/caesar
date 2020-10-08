@@ -84,6 +84,7 @@ void Usage(char* exeName)
 	cout<<"-c, --classifier=[CLASSIFIER] \t Classifier method {Cuts,MLP} (default=MLP)"<<endl;
 	cout<<"-n, --sigcut=[CLASSIFIER_SIGNAL_OUTPUT_CUT] \t Classifier signal/bkg cut value (default=0.5)"<<endl;
 	cout<<"-e, --cuteff=[CUT_EFFICIENCY] \t Cut classifier signal efficiency (default=0.9)"<<endl;
+	cout<<"-E, --eccentricity-diff \t Use eccentricity diff and not ratio (for circular beam cases) (default=no)"<<endl;
 	cout<<"-T, --trainsize=[TRAIN_SAMPLE_FRACTION] \t Percentage of input data used for training the classifier (1-fract for testing) (default=0.5)"<<endl;
 	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (ROOT format) where to store selected sources (default=sources.root)"<<endl;
 	cout<<"-R, --region-output=[REGION_OUTPUT_FILE] \t Output DS9 region file name where to store selected sources (default=sources.reg)"<<endl;
@@ -106,6 +107,7 @@ static const struct option options_tab[] = {
 	{ "classifier", required_argument, 0, 'c' },
 	{ "sigcut", required_argument, 0, 'n' },
 	{ "cuteff", required_argument, 0, 'e' },
+	{ "eccentricity-diff", no_argument, 0, 'E' },
 	{ "trainsize", required_argument, 0, 'T' },
 	{ "region-output", required_argument, 0, 'R' },
 	{ "catalog-output", required_argument, 0, 'C' },
@@ -125,7 +127,8 @@ struct SourceComponentData
 	std::string sname;
 	double peakSNR;
 	double areaRatio;
-	double eccentricityRatio;
+	double eccentricityRatio;	
+	double eccentricityDiff;
 	int flag;
 	int classOutput;
 	bool isSelected;
@@ -138,6 +141,7 @@ struct SourceComponentData
 		peakSNR= -999;
 		areaRatio= -999;
 		eccentricityRatio= -999;
+		eccentricityDiff= -999;
 		flag= 0;
 		classOutput= 0;	
 		isSelected= true;
@@ -149,6 +153,7 @@ struct SourceComponentData
 		peakSNR= -999;
 		areaRatio= -999;
 		eccentricityRatio= -999;
+		eccentricityDiff= -999;
 		flag= 0;
 		classOutput= 0;
 		isSelected= true;
@@ -162,6 +167,7 @@ bool gRunInteractively= false;
 bool gTrainClassifier= false;
 bool gIsFileList= false;
 bool gApplyLogTransformToVariables= true;
+bool gUseEccentricityDiff= false;
 std::string fileName= "";
 std::string weightFileName= "";
 std::string outputFileName_trainData= "output_train.root";
@@ -192,9 +198,18 @@ float gPeakSNRMin= 0;
 float gPeakSNRMax= 10000;
 float gEccentricityRatioMin= 0;
 float gEccentricityRatioMax= 10;
+float gEccentricityDiffMin= -1;
+float gEccentricityDiffMax= 1;
 float gSourceToBeamRatioMin= 0;
 float gSourceToBeamRatioMax= 100;
-
+float gLogPeakSNRMin= -0.5;
+float gLogPeakSNRMax= 4;
+float gLogEccentricityRatioMin= -2;
+float gLogEccentricityRatioMax= 1;
+float gLogEccentricityDiffMin= 0;
+float gLogEccentricityDiffMax= 0.5;
+float gLogSourceToBeamRatioMin= -4;
+float gLogSourceToBeamRatioMax= 2;
 
 //Globar vars
 TFile* outputFile= 0;
@@ -210,7 +225,9 @@ TTree* gBkgDataTree_train= 0;
 TTree* gSignalDataTree_test= 0;
 TTree* gBkgDataTree_test= 0;
 float gPeakSNR;
+float gEccentricityPar;
 float gEccentricityRatio;
+float gEccentricityDiff;
 float gAreaRatio;
 int gClassOutput;
 int gSourceIndex;
@@ -435,7 +452,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hti:Fw:o:R:C:v:fs:IO:c:n:e:T:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hti:Fw:o:R:C:v:fs:IO:c:n:e:ET:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -523,6 +540,11 @@ int ParseOptions(int argc, char *argv[])
 				stypes.push_back(stype);	
 				break;	
 			}	
+			case 'E':
+			{
+				gUseEccentricityDiff= true;
+				break;
+			}
 			case 'v':	
 			{
 				verbosity= atoi(optarg);	
@@ -656,7 +678,9 @@ int Init()
 	//Init classifier data TTree
 	if(!gDataTree) gDataTree= new TTree("data","data");
 	gDataTree->Branch("peakSNR",&gPeakSNR);
-	gDataTree->Branch("eccentricityRatio",&gEccentricityRatio);
+	gDataTree->Branch("eccentricityPar",&gEccentricityPar);
+	//if(gUseEccentricityDiff) gDataTree->Branch("eccentricityPar",&gEccentricityDiff);
+	//else gDataTree->Branch("eccentricityPar",&gEccentricityRatio);
 	gDataTree->Branch("areaRatio",&gAreaRatio);	
 	gDataTree->Branch("classOutput",&gClassOutput);
 	gDataTree->Branch("sourceIndex",&gSourceIndex);
@@ -664,7 +688,9 @@ int Init()
 	gDataTree->Branch("fitComponentIndex",&gFitComponentIndex);
 
 	gDataTree->SetBranchAddress("peakSNR",&gPeakSNR);
-	gDataTree->SetBranchAddress("eccentricityRatio",&gEccentricityRatio);
+	gDataTree->SetBranchAddress("eccentricityPar",&gEccentricityPar);
+	//if(gUseEccentricityDiff) gDataTree->SetBranchAddress("eccentricityPar",&gEccentricityDiff);
+	//else gDataTree->SetBranchAddress("eccentricityPar",&gEccentricityRatio);
 	gDataTree->SetBranchAddress("areaRatio",&gAreaRatio);
 	gDataTree->SetBranchAddress("classOutput",&gClassOutput);
 	gDataTree->SetBranchAddress("sourceIndex",&gSourceIndex);
@@ -674,29 +700,36 @@ int Init()
 	
 	if(!gSignalDataTree_train) gSignalDataTree_train= new TTree("signalData_train","signalData_train");
 	gSignalDataTree_train->Branch("peakSNR",&gPeakSNR);
-	gSignalDataTree_train->Branch("eccentricityRatio",&gEccentricityRatio);
+	gSignalDataTree_train->Branch("eccentricityPar",&gEccentricityPar);
+	//if(gUseEccentricityDiff) gSignalDataTree_train->Branch("eccentricityPar",&gEccentricityDiff);
+	//else gSignalDataTree_train->Branch("eccentricityPar",&gEccentricityRatio);
 	gSignalDataTree_train->Branch("areaRatio",&gAreaRatio);	
 	gSignalDataTree_train->Branch("classOutput",&gClassOutput);
 	
 
 	if(!gBkgDataTree_train) gBkgDataTree_train= new TTree("bkgData_train","bkgData_train");
 	gBkgDataTree_train->Branch("peakSNR",&gPeakSNR);
-	gBkgDataTree_train->Branch("eccentricityRatio",&gEccentricityRatio);
+	gBkgDataTree_train->Branch("eccentricityPar",&gEccentricityPar);
+	//if(gUseEccentricityDiff) gBkgDataTree_train->Branch("eccentricityPar",&gEccentricityDiff);
+	//else gBkgDataTree_train->Branch("eccentricityPar",&gEccentricityRatio);
 	gBkgDataTree_train->Branch("areaRatio",&gAreaRatio);	
 	gBkgDataTree_train->Branch("classOutput",&gClassOutput);
 
 	if(!gSignalDataTree_test) gSignalDataTree_test= new TTree("signalData_test","signalData_test");
 	gSignalDataTree_test->Branch("peakSNR",&gPeakSNR);
-	gSignalDataTree_test->Branch("eccentricityRatio",&gEccentricityRatio);
+	gSignalDataTree_test->Branch("eccentricityPar",&gEccentricityPar);
+	//if(gUseEccentricityDiff) gSignalDataTree_test->Branch("eccentricityPar",&gEccentricityDiff);
+	//else gSignalDataTree_test->Branch("eccentricityPar",&gEccentricityRatio);
 	gSignalDataTree_test->Branch("areaRatio",&gAreaRatio);	
 	gSignalDataTree_test->Branch("classOutput",&gClassOutput);
 
 	if(!gBkgDataTree_test) gBkgDataTree_test= new TTree("bkgData_test","bkgData_test");
 	gBkgDataTree_test->Branch("peakSNR",&gPeakSNR);
-	gBkgDataTree_test->Branch("eccentricityRatio",&gEccentricityRatio);
+	gBkgDataTree_test->Branch("eccentricityPar",&gEccentricityPar);
+	//if(gUseEccentricityDiff) gBkgDataTree_test->Branch("eccentricityPar",&gEccentricityDiff);
+	//else gBkgDataTree_test->Branch("eccentricityPar",&gEccentricityRatio);
 	gBkgDataTree_test->Branch("areaRatio",&gAreaRatio);	
 	gBkgDataTree_test->Branch("classOutput",&gClassOutput);
-	
 	
 	if(!ClassOutHisto_signal) ClassOutHisto_signal= new TH1D("ClassOutHisto_signal","ClassOutHisto_signal",100,-2,2);
 	ClassOutHisto_signal->SetFillColor(kRed);
@@ -815,7 +848,29 @@ int MakeClassifierData()
 	int nVars= 3;
 	std::vector<std::vector<double>> dataVarList;
 	std::vector<std::vector<double>> classifierData;
-	
+	std::vector<double> dataVars_fixed_min;
+	std::vector<double> dataVars_fixed_max;
+	if(gUseEccentricityDiff){
+		dataVars_fixed_min= {gPeakSNRMin,gEccentricityDiffMin,gSourceToBeamRatioMin};
+		dataVars_fixed_max= {gPeakSNRMax,gEccentricityDiffMax,gSourceToBeamRatioMax};
+	}
+	else{
+		dataVars_fixed_min= {gPeakSNRMin,gEccentricityRatioMin,gSourceToBeamRatioMin};
+		dataVars_fixed_max= {gPeakSNRMax,gEccentricityRatioMax,gSourceToBeamRatioMax};
+	}
+
+	if(gApplyLogTransformToVariables){
+		dataVars_fixed_min.clear();
+		dataVars_fixed_max.clear();
+		if(gUseEccentricityDiff){	
+			dataVars_fixed_min= {gLogPeakSNRMin,gLogEccentricityDiffMin,gLogSourceToBeamRatioMin};
+			dataVars_fixed_max= {gLogPeakSNRMax,gLogEccentricityDiffMax,gLogSourceToBeamRatioMax};
+		}
+		else{
+			dataVars_fixed_min= {gLogPeakSNRMin,gLogEccentricityRatioMin,gLogSourceToBeamRatioMin};
+			dataVars_fixed_max= {gLogPeakSNRMax,gLogEccentricityRatioMax,gLogSourceToBeamRatioMax};
+		}
+	}
 
 	for(int j=0;j<nVars;j++){
 		dataVarList.push_back( std::vector<double>() );
@@ -826,6 +881,7 @@ int MakeClassifierData()
 	{
 		double peakSNR= m_sourceComponentData[i]->peakSNR;
 		double eccentricityRatio= m_sourceComponentData[i]->eccentricityRatio;
+		double eccentricityDiff= m_sourceComponentData[i]->eccentricityDiff;
 		double sourceToBeamRatio= m_sourceComponentData[i]->areaRatio;
 		int classOutput= m_sourceComponentData[i]->classOutput;
 		int componentIndex= m_sourceComponentData[i]->fitComponentIndex;
@@ -835,16 +891,19 @@ int MakeClassifierData()
 		if(gApplyLogTransformToVariables){
 			peakSNR= log10(peakSNR);
 			eccentricityRatio= log10(eccentricityRatio);
+			eccentricityDiff= log10(eccentricityDiff+2);//add +2 to avoid log of negative values (range would be 0,3)
 			sourceToBeamRatio= log10(sourceToBeamRatio);
 		}
 		
 		dataVarList[0].push_back(peakSNR);
-		dataVarList[1].push_back(eccentricityRatio);
+		if(gUseEccentricityDiff) dataVarList[1].push_back(eccentricityDiff);
+		else dataVarList[1].push_back(eccentricityRatio);
 		dataVarList[2].push_back(sourceToBeamRatio);
 		
 		classifierData.push_back( std::vector<double>() );
 		classifierData[i].push_back(peakSNR);
-		classifierData[i].push_back(eccentricityRatio);
+		if(gUseEccentricityDiff) classifierData[i].push_back(eccentricityDiff);
+		else classifierData[i].push_back(eccentricityRatio);
 		classifierData[i].push_back(sourceToBeamRatio);
 		classifierData[i].push_back(classOutput);
 		classifierData[i].push_back(sindex);
@@ -862,11 +921,13 @@ int MakeClassifierData()
 		BoxStats<double> stats= StatsUtils::ComputeBoxStats(dataVarList[j],false);
 		double wmin= stats.minVal;
 		double wmax= stats.maxVal;
+		double wmin_fixed= dataVars_fixed_min[j];
+		double wmax_fixed= dataVars_fixed_max[j];
 		dataVars_min.push_back(wmin);
 		dataVars_max.push_back(wmax);
 
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("Data var "<<j+1<<": original range ("<<wmin<<","<<wmax<<"), norm range ("<<gDataNormMin<<","<<gDataNormMax<<")");
+			INFO_LOG("Data var "<<j+1<<": range ("<<wmin<<","<<wmax<<"), norm values ("<<wmin_fixed<<","<<wmax_fixed<<"), norm range ("<<gDataNormMin<<","<<gDataNormMax<<")");
 		#endif
 
 		dataVars_stats.push_back(stats);
@@ -879,8 +940,11 @@ int MakeClassifierData()
 
 	for(size_t i=0;i<classifierData.size();i++){//loop on events
 		for(size_t j=0;j<classifierData[i].size()-4;j++){//loop on data vars
-			double wmin= dataVars_min[j];
-			double wmax= dataVars_max[j];
+			//double wmin= dataVars_min[j];
+			//double wmax= dataVars_max[j];
+			double wmin= dataVars_fixed_min[j];
+			double wmax= dataVars_fixed_max[j];
+
 			double w= classifierData[i][j];
 			double w_norm= gDataNormMin + (gDataNormMax-gDataNormMin)*(w-wmin)/(wmax-wmin);
 			classifierData[i][j]= w_norm;
@@ -897,7 +961,7 @@ int MakeClassifierData()
 		for(size_t i=0;i<classifierData.size();i++)
 		{	
 			gPeakSNR= classifierData[i][0];
-			gEccentricityRatio= classifierData[i][1];
+			gEccentricityPar= classifierData[i][1];
 			gAreaRatio= classifierData[i][2];
 			gClassOutput= static_cast<int>(classifierData[i][3]);
 			gSourceIndex= static_cast<int>(classifierData[i][4]);
@@ -935,7 +999,7 @@ int MakeClassifierData()
 		for(size_t i=0;i<classifierData.size();i++)
 		{	
 			gPeakSNR= classifierData[i][0];
-			gEccentricityRatio= classifierData[i][1];
+			gEccentricityPar= classifierData[i][1];
 			gAreaRatio= classifierData[i][2];
 			gClassOutput= static_cast<int>(classifierData[i][3]);
 			gSourceIndex= static_cast<int>(classifierData[i][4]);
@@ -986,7 +1050,8 @@ int TrainClassifier()
 	
 	gDataLoader= new TMVA::DataLoader("classifierData");
 	gDataLoader->AddVariable("peakSNR", 'F');
-	gDataLoader->AddVariable("eccentricityRatio", 'F');
+	//gDataLoader->AddVariable("eccentricityRatio", 'F');
+	gDataLoader->AddVariable("eccentricityPar", 'F');
 	gDataLoader->AddVariable("areaRatio", 'F');	
 	gDataLoader->AddSpectator("classOutput", 'I');	
 	
@@ -1094,7 +1159,8 @@ int EvaluateMLPClassifier(std::string weightFileName)
 		gMVAReader= new TMVA::Reader("!Color:!Silent");
 	}
 	gMVAReader->AddVariable("peakSNR",&gPeakSNR);
-	gMVAReader->AddVariable("eccentricityRatio",&gEccentricityRatio);
+	//gMVAReader->AddVariable("eccentricityRatio",&gEccentricityRatio);
+	gMVAReader->AddVariable("eccentricityPar",&gEccentricityPar);
 	gMVAReader->AddVariable("areaRatio",&gAreaRatio);
 	gMVAReader->AddSpectator("classOutput",&gClassOutput);	
 
@@ -1236,7 +1302,8 @@ int EvaluateCutClassifier(std::string weightFileName)
 		gMVAReader= new TMVA::Reader("!Color:!Silent");
 	}
 	gMVAReader->AddVariable("peakSNR",&gPeakSNR);
-	gMVAReader->AddVariable("eccentricityRatio",&gEccentricityRatio);
+	//gMVAReader->AddVariable("eccentricityRatio",&gEccentricityRatio);
+	gMVAReader->AddVariable("eccentricityPar",&gEccentricityPar);
 	gMVAReader->AddVariable("areaRatio",&gAreaRatio);
 	gMVAReader->AddSpectator("classOutput",&gClassOutput);	
 
@@ -1332,7 +1399,8 @@ int ApplyClassifier(std::string weightFileName)
 		gMVAReader= new TMVA::Reader("!Color:!Silent");
 	}
 	gMVAReader->AddVariable("peakSNR",&gPeakSNR);
-	gMVAReader->AddVariable("eccentricityRatio",&gEccentricityRatio);
+	//gMVAReader->AddVariable("eccentricityRatio",&gEccentricityRatio);	
+	gMVAReader->AddVariable("eccentricityPar",&gEccentricityPar);
 	gMVAReader->AddVariable("areaRatio",&gAreaRatio);
 	gMVAReader->AddSpectator("classOutput",&gClassOutput);	
 
@@ -1347,6 +1415,9 @@ int ApplyClassifier(std::string weightFileName)
 	//#########################################
 	//##   APPLY CLASSIFICATION TO SOURCES
 	//#########################################
+	long int nBkgSources= 0;
+	long int nSignalSources= 0;
+
 	for (int i=0;i<gDataTree->GetEntries();i++) 
 	{
 		gDataTree->GetEntry(i);
@@ -1377,8 +1448,14 @@ int ApplyClassifier(std::string weightFileName)
 			
 		//Set source component flag
 		int componentFlag= 0;
-		if(isClassifiedAsSignal) componentFlag= eReal;
-		else componentFlag= eFake;
+		if(isClassifiedAsSignal) {
+			componentFlag= eReal;
+			nSignalSources++;
+		}
+		else {
+			componentFlag= eFake;
+			nBkgSources++;
+		}
 
 		if(source->SetFitComponentFlag(gFitComponentIndex,componentFlag)<0){
 			#ifdef LOGGING_ENABLED
@@ -1387,6 +1464,10 @@ int ApplyClassifier(std::string weightFileName)
 			continue;
 		}
 	}//end loop source data
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<gDataTree->GetEntries()<<" sources processed: #"<<nBkgSources<<" false, #"<<nSignalSources<<" real");
+	#endif
 
 	//double mvaErr = reader->GetMVAError();
 
@@ -1590,6 +1671,7 @@ int FillSourcePars(std::vector<SourceComponentData*>& pars,Source* aSource,int s
 			double E_beam= fitPars.GetComponentBeamEllipseEccentricity(k);
 			double eccentricityRatio= 0;
 			if(E_beam>0) eccentricityRatio= E/E_beam; 
+			double eccentricityDiff= E-E_beam;
 
 			//Compute area ratio
 			double Area= fitPars.GetComponentFitEllipseArea(k);			
@@ -1606,16 +1688,30 @@ int FillSourcePars(std::vector<SourceComponentData*>& pars,Source* aSource,int s
 				continue;
 			}
 
-			//Check eccentricity ratio
-			if(eccentricityRatio<gEccentricityRatioMin || eccentricityRatio>gEccentricityRatioMax || TMath::IsNaN(eccentricityRatio) || !std::isfinite(eccentricityRatio) ){
-				#ifdef LOGGING_ENABLED
-					WARN_LOG("Skip source component eccentricity ratio (E_ratio="<<eccentricityRatio<<") as NaN or outside selected range ("<<gEccentricityRatioMin<<","<<gEccentricityRatioMax<<")");
-				#endif
-				continue;
-			}
+			//Check eccentricity par
+			if(gUseEccentricityDiff)
+			{
+				//Check eccentricity diff
+				if(eccentricityDiff<gEccentricityDiffMin || eccentricityDiff>gEccentricityDiffMax || TMath::IsNaN(eccentricityDiff) || !std::isfinite(eccentricityDiff) ) {
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Skip source component eccentricity diff for source "<<sname<<" (E_diff="<<eccentricityDiff<<") as NaN or outside selected range ("<<gEccentricityDiffMin<<","<<gEccentricityDiffMax<<")");
+					#endif
+					continue;
+				}	
+			}//close if
+			else
+			{
+				if(eccentricityRatio<=0 || eccentricityRatio<gEccentricityRatioMin || eccentricityRatio>gEccentricityRatioMax || TMath::IsNaN(eccentricityRatio) || !std::isfinite(eccentricityRatio) ){
+					#ifdef LOGGING_ENABLED
+						WARN_LOG("Skip source component eccentricity ratio for source "<<sname<<" (E_ratio="<<eccentricityRatio<<") as NaN or outside selected range ("<<gEccentricityRatioMin<<","<<gEccentricityRatioMax<<")");
+					#endif
+					continue;
+				}
+			}//close else
 
+			
 			//Check source to beam area ratio
-			if(areaRatio<gSourceToBeamRatioMin || areaRatio>gSourceToBeamRatioMax || TMath::IsNaN(areaRatio) || !std::isfinite(areaRatio) ){
+			if(areaRatio<=0 || areaRatio<gSourceToBeamRatioMin || areaRatio>gSourceToBeamRatioMax || TMath::IsNaN(areaRatio) || !std::isfinite(areaRatio) ){
 				#ifdef LOGGING_ENABLED
 					WARN_LOG("Skip source component beam area ratio (A_ratio="<<areaRatio<<") as NaN or outside selected range ("<<gSourceToBeamRatioMin<<","<<gSourceToBeamRatioMax<<")");
 				#endif
@@ -1630,6 +1726,7 @@ int FillSourcePars(std::vector<SourceComponentData*>& pars,Source* aSource,int s
 			cData->classOutput= classFlag;
 			cData->peakSNR= peakSNR;
 			cData->eccentricityRatio= eccentricityRatio;
+			cData->eccentricityDiff= eccentricityDiff;
 			cData->areaRatio= areaRatio;
 			cData->isSelected= isSelected;
 

@@ -410,19 +410,21 @@ message Source {
 	//Object class ids
 	optional int32 ObjLocationId= 22;
 	optional int32 ObjClassId= 23;
-	optional int32 ObjClassSubId= 24;
-	optional bool ObjConfirmed= 25;
-	repeated int32 componentObjLocationId= 26;
-	repeated int32 componentObjClassId= 27;
-	repeated int32 componentObjClassSubId= 28;
-	repeated bool componentObjConfirmed= 29;
+	optional string ObjClassStrId= 24;
+	optional int32 ObjClassSubId= 25;
+	optional bool ObjConfirmed= 26;
+	repeated int32 componentObjLocationId= 27;
+	repeated int32 componentObjClassId= 28;
+	repeated string componentObjClassStrId= 29;
+	repeated int32 componentObjClassSubId= 30;
+	repeated bool componentObjConfirmed= 31;
 
 
 	//Astro objects
-	optional bool m_hasAstroObjectData= 30;
-	optional AstroObjectCollection m_astroObjects= 31;
-	optional bool m_hasComponentAstroObjectData= 32;
-	repeated AstroObjectCollection m_componentAstroObjects= 33;
+	optional bool m_hasAstroObjectData= 32;
+	optional AstroObjectCollection m_astroObjects= 33;
+	optional bool m_hasComponentAstroObjectData= 34;
+	repeated AstroObjectCollection m_componentAstroObjects= 35;
 
 }//close Source schema
 

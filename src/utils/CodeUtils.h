@@ -187,6 +187,89 @@ class CodeUtils : public TObject {
 		*/
 
 		/**
+		* \brief Concatenate integers and create string code given digits
+		*/
+		static std::string GetStringCodeFromIntegers(std::vector<int> ids,size_t ndigits)
+		{
+			std::string code= "";
+			if(ndigits<=0){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("ndigits must be >0");
+				#endif
+				return code;
+			}
+
+			for(size_t i=0;i<ids.size();i++)
+			{
+				std::stringstream ss;
+				ss<<std::setfill('0')<<std::setw(ndigits)<<ids[i];
+				code+= ss.str();
+			}
+
+			return code;
+		}
+
+		/**
+		* \brief Concatenate integers and create int code given digits
+		*/
+		static long int GetCodeFromIntegers(std::vector<int> ids,size_t ndigits)
+		{
+			std::string code_str= GetStringCodeFromIntegers(ids,ndigits);
+			long int code= stol(code_str.c_str());
+			return code;
+		}
+
+		/**
+		* \brief Split a string in equal parts
+		*/
+		static std::vector<std::string> SplitStringInEqualParts(const std::string& str, int splitLength)
+		{
+   		int NumSubstrings = str.length()/splitLength;
+   		std::vector<std::string> ret;
+
+   		for (auto i = 0; i < NumSubstrings; i++)
+   		{
+      	ret.push_back(str.substr(i * splitLength, splitLength));
+   		}
+
+   		// If there are leftover characters, create a shorter item at the end.
+   		if (str.length() % splitLength != 0)
+   		{
+      	ret.push_back(str.substr(splitLength * NumSubstrings));
+   		}
+
+   		return ret;
+		}
+
+		/**
+		* \brief Get integer codes from string codes
+		*/
+		static int DecodeIntCodes(std::vector<int>& ids,long int code,size_t ndigits)
+		{
+			ids.clear();
+			if(ndigits<=0){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("ndigits must be >0");
+				#endif
+				return -1;
+			}
+			std::string code_str= to_string(code);
+			int n= code_str.size();
+			int ntrailing_zeros= ndigits - n%ndigits;
+			std::stringstream ss;
+			if(n>0) code_str= std::string(ntrailing_zeros,'0').append(code_str);
+			
+			std::vector<std::string> codes_str= SplitStringInEqualParts(code_str,ndigits);
+			
+			for(size_t i=0;i<codes_str.size();i++){
+				int thisCode= stoi(codes_str[i].c_str());	
+				ids.push_back(thisCode);
+			}
+	
+			return 0;
+		}
+
+		/**
 		* \brief Convert json to string (NEW JSONCPP API)
 		*/
 		static int JsonToString(std::string& jsonString,Json::Value& jsonObj,bool isMinified=true)

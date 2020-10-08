@@ -138,7 +138,7 @@ class MorphFilter : public TObject {
 		/**
 		* \brief Dilate image around a given source
 		*/
-		static int DilateAroundSource(Image* img,Source* source,int KernSize=21,int dilateModel=eDilateWithBkg,ImgBkgData* bkgData=0,bool useLocalBkg=true,bool randomize=false);
+		static int DilateAroundSource(Image* img,Source* source,int KernSize=21,int dilateModel=eDilateWithBkg,ImgBkgData* bkgData=0,bool useLocalBkg=true,bool randomize=false,Image* mask=0,int bkgBoxThickness=20);
 		
 	private:
 

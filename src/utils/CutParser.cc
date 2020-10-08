@@ -166,6 +166,10 @@ int CutParser::Parse(std::string filename)
 			cutType= eSINGLE_BOUND_CUT;
 			cutReversed= true;
 		}
+		else if(cutTypeStr=="-"){//no par cut
+			cutType= eUNKNOWN_CUT;
+			cutReversed= false;
+		}
 		else{
 			#ifdef LOGGING_ENABLED
 				ERROR_LOG("Unknown cut type found ("<<cutTypeStr<<")!");
@@ -178,21 +182,25 @@ int CutParser::Parse(std::string filename)
 		#endif
 
 		//Get cut AND/OR
-		std::string cutCombineFlag= "";
-		line >> cutCombineFlag;
 		bool cutCombineInOR= false;
-		if(cutCombineFlag=="OR") cutCombineInOR= true;
-		else if(cutCombineFlag=="AND") cutCombineInOR= false;
-		else{
-			#ifdef LOGGING_ENABLED
-				ERROR_LOG("Unknown/invalid cut combine flag found ("<<cutCombineFlag<<")!");
-			#endif
-			return -1;
-		}
+		if(cutType!=eUNKNOWN_CUT)
+		{
+			std::string cutCombineFlag= "";
+			line >> cutCombineFlag;
+			
+			if(cutCombineFlag=="OR") cutCombineInOR= true;
+			else if(cutCombineFlag=="AND") cutCombineInOR= false;
+			else{
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Unknown/invalid cut combine flag found ("<<cutCombineFlag<<")!");
+				#endif
+				return -1;
+			}
 
-		#ifdef LOGGING_ENABLED
-			INFO_LOG("cutCombineFlag: "<<cutCombineFlag<<", cutCombineInOR? "<<cutCombineInOR);
-		#endif
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("cutCombineFlag: "<<cutCombineFlag<<", cutCombineInOR? "<<cutCombineInOR);
+			#endif
+		}//close if cutType
 
 		//Register cut parameters
 		if(cutType==eEQUALITY_CUT)
@@ -262,13 +270,16 @@ int CutParser::Parse(std::string filename)
 			std::vector<double> cutParams= CodeUtils::StringVecToTypedVec<double>(cutParams_str);	
 			CutFactory::Instance().RegisterSingleBoundCut(cutName,cutParams,cutEnabled,cutReversed,cutCombineInOR);			
 		}
+		else if(cutType==eUNKNOWN_CUT){
+			CutFactory::Instance().RegisterCut(cutName,cutEnabled);			
+		}
 		else{
 			#ifdef LOGGING_ENABLED
 				ERROR_LOG("Unknown/invalid cut type found ("<<cutType<<")!");
 			#endif
 			return -1;
 		}
-		
+	
 		if (!in.good()) break;
 		
 	}//close while

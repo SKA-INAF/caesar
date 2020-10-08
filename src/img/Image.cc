@@ -83,13 +83,9 @@
 #include <TGaxis.h>
 #include <TExec.h>
 #include <TF1.h>
-
+#include <TRandom3.h>
 
 //OpenCV headers
-/*
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
-*/
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -604,11 +600,18 @@ int Image::ReadFile(std::string filename,bool invert){
 
 }//close ReadFile()
 
-Image* Image::GetTile(long int ix_min,long int ix_max,long int iy_min,long int iy_max,std::string imgname){
-
+Image* Image::GetTile(long int ix_min,long int ix_max,long int iy_min,long int iy_max,std::string imgname)
+{
 	//Extract pixel rectangular selection
+	//NB: Include all pixels otherwise the image size would be not the one expected from ix_min/ix_max/iy_min/iy_max
 	std::vector<float> tile_pixels;
-	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max)<0){
+	bool useRange= false;
+	double minThr= -std::numeric_limits<double>::infinity();
+	double maxThr= std::numeric_limits<double>::infinity();
+	std::vector<float> maskedValues= {};//include also 0!
+	bool requireFiniteValues= false;//include also inf/nan
+
+	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr,maskedValues,requireFiniteValues)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to extract pixel rectangular data, returning nullptr!");
 		#endif
@@ -1130,7 +1133,7 @@ void Image::ResetImgStats(bool resetMoments,bool clearStats){
 
 }//close ResetImgStats()
 
-int Image::ComputeMoments(bool useRange,double minThr,double maxThr)
+int Image::ComputeMoments(bool useRange,double minThr,double maxThr,std::vector<float> maskedValues)
 {
 	#ifdef LOGGING_ENABLED	
 		DEBUG_LOG("m_StatMoments min/max (before): "<<m_StatMoments.minVal<<"/"<<m_StatMoments.maxVal);
@@ -1138,9 +1141,8 @@ int Image::ComputeMoments(bool useRange,double minThr,double maxThr)
 	
 	//## Recompute stat moments
 	//## NB: If OMP is enabled this is done in parallel and moments are aggregated to return the correct cumulative estimate 
-	bool maskNanInfValues= true;
-	//int status= Caesar::StatsUtils::ComputeStatsMoments(m_StatMoments,m_pixels,skipNegativePixels,maskNanInfValues);
-	int status= Caesar::StatsUtils::ComputeStatsMoments(m_StatMoments,m_pixels,useRange,minThr,maxThr,maskNanInfValues);
+	//bool maskNanInfValues= true;
+	int status= Caesar::StatsUtils::ComputeStatsMoments(m_StatMoments,m_pixels,useRange,minThr,maxThr,maskedValues);
 	if(status<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to compute stat moments!");
@@ -1157,7 +1159,7 @@ int Image::ComputeMoments(bool useRange,double minThr,double maxThr)
 
 
 
-void Image::ComputeStatsParams(bool computeRobustStats,bool useRange,double minThr,double maxThr,bool useParallelVersion)
+void Image::ComputeStatsParams(bool computeRobustStats,bool useRange,double minThr,double maxThr,bool useParallelVersion,std::vector<float> maskedValues)
 {
 	//## Reset previous stats params (Reset only Stats not moments!)
 	ResetImgStats(false);
@@ -1217,8 +1219,18 @@ void Image::ComputeStatsParams(bool computeRobustStats,bool useRange,double minT
 	std::vector<float> pixels;
 	for(size_t i=0;i<m_pixels.size();i++){
 		float w= m_pixels[i];
-		//if( w==0 || (skipNegativePixels && w<0) ) continue;
-		if( w==0 || (useRange && (w<=minThr || w>=maxThr)) ) continue;
+		//bool isNormalValue= std::isnormal(w);//exclude 0 and inf/nan
+		bool isFiniteValue= std::isfinite(w);
+		bool isMaskedValue= false;
+		for(size_t l=0;l<maskedValues.size();l++){
+			if(w==maskedValues[l]){
+				isMaskedValue= true;
+				break;
+			}
+		}
+		
+		//if( w==0 || (useRange && (w<=minThr || w>=maxThr)) ) continue;
+		if( !isFiniteValue || isMaskedValue || (useRange && (w<=minThr || w>=maxThr)) ) continue;
 		pixels.push_back(w);
 	}
 	
@@ -1285,7 +1297,7 @@ void Image::ComputeStatsParams(bool computeRobustStats,bool useRange,double minT
 
 
 
-int Image::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool useRange,double minThr,double maxThr,bool useParallelVersion)
+int Image::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool useRange,double minThr,double maxThr,bool useParallelVersion,std::vector<float> maskedValues)
 {
 	//## Start timer
 	auto start = chrono::steady_clock::now();
@@ -1302,7 +1314,7 @@ int Image::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool useRa
 
 	//## If recomputing is not requested (i.e. some pixels has been reset by the user, just set the stats params!
 	if(!forceRecomputing){
-		ComputeStatsParams(computeRobustStats,useRange,minThr,maxThr,useParallelVersion);
+		ComputeStatsParams(computeRobustStats,useRange,minThr,maxThr,useParallelVersion,maskedValues);
 		m_HasStats= true;
 		
 		auto stop = chrono::steady_clock::now();
@@ -1323,10 +1335,10 @@ int Image::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool useRa
 	ResetImgStats(true);
 
 	//--> Recompute moments
-	ComputeMoments(useRange,minThr,maxThr);
+	ComputeMoments(useRange,minThr,maxThr,maskedValues);
 
 	//--> Recompute stats params
-	ComputeStatsParams(computeRobustStats,useRange,minThr,maxThr,useParallelVersion);
+	ComputeStatsParams(computeRobustStats,useRange,minThr,maxThr,useParallelVersion,maskedValues);
 
 	m_HasStats= true;
 
@@ -1342,7 +1354,7 @@ int Image::ComputeStats(bool computeRobustStats,bool forceRecomputing,bool useRa
 }//close ComputeStats()
 
 
-int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr)
+int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr,std::vector<float> maskedValues,bool requireFinitePixValues)
 {
 	//Check range given
 	if(ix_min<0 || ix_max<0 || ix_max>=m_Nx || ix_min>=ix_max){
@@ -1369,10 +1381,10 @@ int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_
 	//Extract pixel sub vector
 	pixels.clear();
 
-	/*
-	if(skipNegativePixels){
-
-		for(long int j=iy_min;j<=iy_max;j++){
+	if(useRange)
+	{
+		for(long int j=iy_min;j<=iy_max;j++)
+		{
 			//Get row start/end iterators
 			long int gBin_min= GetBin(ix_min,j);		
 			long int gBin_max= GetBin(ix_max,j);
@@ -1381,39 +1393,53 @@ int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_
 				m_pixels.begin() + gBin_min, 
 				m_pixels.begin() + gBin_max + 1, 
 				std::back_inserter(pixels), 
-				[](float w){
-					return (w>=0);
+				[&maskedValues,&minThr,&maxThr,&requireFinitePixValues](float w){
+					bool goodValue= true;
+					if(requireFinitePixValues) goodValue= std::isfinite(w);
+					bool inRange= (w>minThr && w<maxThr);
+					bool notMasked= true;
+					for(size_t l=0;l<maskedValues.size();l++){
+						if(w==maskedValues[l]){
+							notMasked= false;
+							break;
+						}
+					}
+					bool selected= goodValue && inRange && notMasked;
+					
+					return selected;
 				}
 			);
 		}//end loop rows
 	}//close if
-	*/
-	if(useRange){
-
-		for(long int j=iy_min;j<=iy_max;j++){
-			//Get row start/end iterators
-			long int gBin_min= GetBin(ix_min,j);		
-			long int gBin_max= GetBin(ix_max,j);
-
-			std::copy_if (
-				m_pixels.begin() + gBin_min, 
-				m_pixels.begin() + gBin_max + 1, 
-				std::back_inserter(pixels), 
-				[minThr,maxThr](float w){
-					return (w>minThr && w<maxThr);
-				}
-			);
-		}//end loop rows
-	}//close if
-	else{
-
-		for(long int j=iy_min;j<=iy_max;j++){
+	else
+	{
+		for(long int j=iy_min;j<=iy_max;j++)
+		{
 			//Get row start/end iterators
 			long int gBin_min= GetBin(ix_min,j);		
 			long int gBin_max= GetBin(ix_max,j);		
 
 			//Extract row and append to vector
-			pixels.insert(pixels.end(), m_pixels.begin() + gBin_min, m_pixels.begin() + gBin_max + 1);
+			//pixels.insert(pixels.end(), m_pixels.begin() + gBin_min, m_pixels.begin() + gBin_max + 1);
+
+			std::copy_if (
+				m_pixels.begin() + gBin_min, 
+				m_pixels.begin() + gBin_max + 1, 
+				std::back_inserter(pixels), 
+				[&maskedValues,&minThr,&maxThr,&requireFinitePixValues](float w){
+					bool goodValue= true;
+					if(requireFinitePixValues) goodValue= std::isfinite(w);
+					bool notMasked= true;
+					for(size_t l=0;l<maskedValues.size();l++){
+						if(w==maskedValues[l]){
+							notMasked= false;
+							break;
+						}
+					}
+					bool selected= goodValue && notMasked;
+					return selected;
+				}
+			);
 
 		}//end loop row
 	}//close else
@@ -1423,7 +1449,7 @@ int Image::GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_
 }//close GetTilePixels()
 
 
-int Image::GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr)
+int Image::GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr,std::vector<float> maskedValues)
 {
 	//Init
 	mean= 0;
@@ -1432,7 +1458,8 @@ int Image::GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix
 
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
-	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr)<0){
+	bool requireFiniteValues= true;
+	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr,maskedValues,requireFiniteValues)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to extract pixel rectangular data!");
 		#endif
@@ -1448,7 +1475,7 @@ int Image::GetTileMeanStats(float& mean,float& stddev,long int& npix,long int ix
 }//close GetTileMeanStats()
 		
 
-int Image::GetTileMedianStats(float& median,float& mad_rms,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr)
+int Image::GetTileMedianStats(float& median,float& mad_rms,long int& npix,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr,std::vector<float> maskedValues)
 {
 	//Init
 	median= 0;
@@ -1457,7 +1484,8 @@ int Image::GetTileMedianStats(float& median,float& mad_rms,long int& npix,long i
 
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
-	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr)<0){
+	bool requireFiniteValues= true;
+	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr,maskedValues,requireFiniteValues)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to extract pixel rectangular data!");
 		#endif
@@ -1475,14 +1503,15 @@ int Image::GetTileMedianStats(float& median,float& mad_rms,long int& npix,long i
 }//close GetTileMedianStats()
 
 
-int Image::GetTileClippedStats(ClippedStats<float>& clipped_stats,long int& npix,double clipSigma,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr)
+int Image::GetTileClippedStats(ClippedStats<float>& clipped_stats,long int& npix,double clipSigma,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr,std::vector<float> maskedValues)
 {
 	//Init
 	npix= 0;
 	
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
-	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr)<0){
+	bool requireFiniteValues= true;
+	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr,maskedValues,requireFiniteValues)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to extract pixel rectangular data!");
 		#endif
@@ -1507,7 +1536,7 @@ int Image::GetTileClippedStats(ClippedStats<float>& clipped_stats,long int& npix
 }//close GetTileClippedStats()
 		
 
-int Image::GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,double C,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr)
+int Image::GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,double C,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange,double minThr,double maxThr,std::vector<float> maskedValues)
 {
 	//Init
 	bwLocation= 0;
@@ -1516,7 +1545,8 @@ int Image::GetTileBiWeightStats(float& bwLocation,float& bwScale,long int& npix,
 
 	//Extract pixel rectangular selection
 	std::vector<float> tile_pixels;
-	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr)<0){
+	bool requireFiniteValues= true;
+	if(GetTilePixels(tile_pixels,ix_min,ix_max,iy_min,iy_max,useRange,minThr,maxThr,maskedValues,requireFiniteValues)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to extract pixel rectangular data!");
 		#endif
@@ -2330,18 +2360,20 @@ int Image::MaskSources(std::vector<Source*>const& sources,float maskValue)
 		
 	//Force re-computation of stats after masks
 	bool computeRobustStats= true;
-	//bool skipNegativePixels= false;
 	bool useRange= false;
+	double minThr= -std::numeric_limits<double>::infinity();
+	double maxThr= std::numeric_limits<double>::infinity();
+	std::vector<float> maskedValues {0,maskValue};
 	bool forceRecomputing= true;
-	//this->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
-	this->ComputeStats(computeRobustStats,forceRecomputing,useRange);
+	bool useParallelVersion= false;
+	this->ComputeStats(computeRobustStats,forceRecomputing,useRange,minThr,maxThr,useParallelVersion,maskedValues);
 
 	return 0;
 
 }//close MaskSources()
 
 
-int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,int boxThickness,int bkgEstimator,Image* mask,bool useParallelVersion)
+int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,int boxThickness,int bkgEstimator,Image* mask,bool useParallelVersion,std::vector<float> maskedValues)
 {
 	//Check source
 	if(!source){
@@ -2396,8 +2428,17 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 		for(long int j=iy_min-boxThickness;j<=iy_max+boxThickness;j++){
 			long int id= this->GetBin(i,j);
 			if( id<0 || !use_pixels[id] || (mask && mask->GetPixelValue(id)<=0) ) continue;
-			double S= this->GetPixelValue(id);
-			pixels.push_back(S);
+			double S= this->GetPixelValue(id);	
+			bool isFiniteValue= std::isfinite(S);
+			bool isMaskedValue= false;
+			for(size_t k=0;k<maskedValues.size();k++){
+				if(S==maskedValues[k]){
+					isMaskedValue= true;
+					break;
+				}
+			}
+			bool isGoodValue= (isFiniteValue && !isMaskedValue);
+			if(isGoodValue) pixels.push_back(S);
 		}//end loop y
 	}//end loop x
 
@@ -2408,7 +2449,8 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 	//Compute bkg info
 	double bkgLevel= 0;
 	double bkgRMS= 0;
-	if(bkgEstimator==eMedianBkg){
+	if(bkgEstimator==eMedianBkg)
+	{
 		//Compute median
 		double median= Caesar::StatsUtils::GetMedianFast<double>(pixels,useParallelVersion);
 		
@@ -2419,7 +2461,8 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 		bkgLevel= median;
 		bkgRMS= medianRMS;
 	}
-	else if(bkgEstimator==eMedianClippedBkg){
+	else if(bkgEstimator==eMedianClippedBkg)
+	{
 		//Compute mean & rms
 		double mean= 0;
 		double rms= 0;
@@ -2438,7 +2481,8 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 		bkgLevel= clipped_stats.median;
 		bkgRMS= clipped_stats.stddev;
 	}
-	else if(bkgEstimator==eMeanBkg){
+	else if(bkgEstimator==eMeanBkg)
+	{
 		//Compute mean & rms
 		double mean= 0;
 		double rms= 0;
@@ -2522,11 +2566,12 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 		}
 	}//close else
 
-	//cout<<"Image::GetSourceMask(): pto 2"<<endl;
-
-
-	if(invert){
-		if(isBinary){
+	
+	//## Create mask
+	if(invert)
+	{
+		if(isBinary)
+		{
 			#ifdef OPENMP_ENABLED
 			#pragma omp parallel for
 			#endif
@@ -2534,16 +2579,7 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 				long int id= masked_pix_ids[i];
 				maskedImage->SetPixelValue(id,0);
 			}
-			/*
-			for(int k=0;k<nSources;k++){
-				for(int l=0;l<sources[k]->GetNPixels();l++){
-					long int id= (sources[k]->GetPixel(l))->id;
-					//cout<<"Source "<<sources[k]->GetName()<<": pix id="<<id<<", ix="<<this->GetBinX(id)<<", iy="<<this->GetBinY(id)<<endl;//DEBUG!!!
-					maskedImage->SetPixelValue(id,0);
-				}//end loop pixels
-			}//end loop sources	
-			*/
-
+			
 			#ifdef OPENMP_ENABLED
 			#pragma omp parallel for
 			#endif
@@ -2563,33 +2599,19 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 				long int id= masked_pix_ids[i];
 				maskedImage->SetPixelValue(id,0);
 			}
-			/*
-			for(int k=0;k<nSources;k++){
-				for(int l=0;l<sources[k]->GetNPixels();l++){
-					long int id= (sources[k]->GetPixel(l))->id;
-					maskedImage->SetPixelValue(id,0);
-				}//end loop pixels
-			}//end loop sources		
-			*/
-
 		}//close else
 
 		//Force re-computation of stats
-		maskedImage->ComputeStats(true,false,true);
+		//maskedImage->ComputeStats(true,false,true);
 
 	}//close if invert
-	else{
-
-		//cout<<"Image::GetSourceMask(): pto 3"<<endl;
-
-
+	else	
+	{
 		//Reset map and loop over sources
 		maskedImage->Reset();
 
-		//cout<<"Image::GetSourceMask(): pto 4"<<endl;
-
-
-		if(isBinary){	
+		if(isBinary)
+		{	
 			#ifdef OPENMP_ENABLED
 			#pragma omp parallel for
 			#endif	
@@ -2597,21 +2619,10 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 				long int id= masked_pix_ids[i];
 				maskedImage->SetPixelValue(id,1);
 			}	
-			/*
-			for(int k=0;k<nSources;k++){
-				for(int l=0;l<sources[k]->GetNPixels();l++){
-					long int id= (sources[k]->GetPixel(l))->id;
-					//maskedImage->FillPixel(id,1);
-					maskedImage->SetPixelValue(id,1);
-				}//end loop pixels
-			}//end loop sources		
-			*/
-
-			//cout<<"Image::GetSourceMask(): pto 5"<<endl;
-
-
+	
 		}//close if
-		else{
+		else
+		{
 			#ifdef OPENMP_ENABLED
 			#pragma omp parallel for
 			#endif
@@ -2620,56 +2631,48 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 				double w= this->GetPixelValue(id);
 				maskedImage->SetPixelValue(id,w);
 			}
-			/*
-			for(int k=0;k<nSources;k++){
-				for(int l=0;l<sources[k]->GetNPixels();l++){
-					long int id= (sources[k]->GetPixel(l))->id;
-					double w= this->GetPixelValue(id);
-					//maskedImage->FillPixel(id,w);
-					maskedImage->SetPixelValue(id,w);
-				}//end loop pixels
-			}//end loop sources	
-			*/	
-
-			//cout<<"Image::GetSourceMask(): pto 5"<<endl;
-
-
 		}//close else
 
 		//Force re-computation of stats
-		maskedImage->ComputeStats(true,false,true);
-
-		//cout<<"Image::GetSourceMask(): pto 6"<<endl;
-
+		//maskedImage->ComputeStats(true,false,true);
 
 	}//close else
 
-	//cout<<"Image::GetSourceMask(): pto 7"<<endl;
+	//# Force re-computation of stats
+	double minThr=-std::numeric_limits<double>::infinity();
+	double maxThr= std::numeric_limits<double>::infinity();
+	bool useRange= true;
+	std::vector<float> maskedValues {};
+	if(!isBinary) maskedValues= {0};
+	bool computeRobustStats= true;
+	//bool forceRecomputing= false;
+	bool forceRecomputing= true;
+	bool useParallelVersion= false;
 
+	maskedImage->ComputeStats(computeRobustStats,forceRecomputing,useRange,minThr,maxThr,useParallelVersion,maskedValues);
 
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("(after) pixel size="<<maskedImage->GetPixelDataSize()<<" (original size="<<this->GetPixelDataSize()<<")");
 	#endif
-
-	//cout<<"Image::GetSourceMask(): pto 8"<<endl;
-
 
 	return maskedImage;
 
 }//close GetSourceMask()
 
 
-Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr,int psSubtractionMethod)
+Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr,int psSubtractionMethod,Image* mask,int bkgBoxThickness)
 {
 	//Check bkg data
 	if(dilateModel==eDilateWithBkg){
+		/*
 	 	if(!bkgData){
 			#ifdef LOGGING_ENABLED
 				ERROR_LOG("Selected to use bkg dilation but null ptr to bkg data!");	
 			#endif
 			return nullptr;
 		}
-		if(useLocalBkg && !bkgData->HasLocalBkg()){		
+		*/
+		if(useLocalBkg && bkgData && !bkgData->HasLocalBkg()){		
 			#ifdef LOGGING_ENABLED
 				ERROR_LOG("Selected to use local bkg but no local bkg data are available!");
 			#endif
@@ -2819,7 +2822,8 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 			residualImg,dilatedSources[i],
 			kernSize,dilateModel,
 			bkgData,useLocalBkg,
-			randomize
+			randomize,
+			mask,bkgBoxThickness
 		);
 
 		if(status<0){
@@ -2908,15 +2912,15 @@ Image* Image::GetNormalizedImage(std::string normScale,int normmin,int normmax,b
 	}
 
 	//Force recomputation of stats if present, otherwise recompute only moments
-	//bool skipNegativePixels= false;
 	bool useRange= false;
 	bool computeRobustStats= true;	
 	bool forceRecomputing= true;
 	int status= 0;
-	//if(this->HasStats()) status= norm_img->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
-	//else status= norm_img->ComputeMoments(skipNegativePixels);
+	double minThr= -std::numeric_limits<double>::infinity();
+	double maxThr= std::numeric_limits<double>::infinity();
+	std::vector<float> maskedValues= {0};
 	if(this->HasStats()) status= norm_img->ComputeStats(computeRobustStats,forceRecomputing,useRange);
-	else status= norm_img->ComputeMoments(useRange);
+	else status= norm_img->ComputeMoments(useRange,minThr,maxThr,maskedValues);
 	if(status<0){
 		#ifdef LOGGING_ENABLED
 			WARN_LOG("Failed to re-compute moments/stats for normalized image!");
@@ -3279,15 +3283,15 @@ int Image::Scale(double c)
 	}
 
 	//Force recomputation of stats if present, otherwise recompute only moments
-	//bool skipNegativePixels= false;
 	bool useRange= false;
+	double minThr= -std::numeric_limits<double>::infinity();
+	double maxThr= std::numeric_limits<double>::infinity();
+	std::vector<float> maskedValues= {0};
 	bool computeRobustStats= true;	
 	bool forceRecomputing= true;
 	int status= 0;
-	//if(this->HasStats()) status= this->ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing);
-	//else status= this->ComputeMoments(skipNegativePixels);
 	if(this->HasStats()) status= this->ComputeStats(computeRobustStats,forceRecomputing,useRange);
-	else status= this->ComputeMoments(useRange);
+	else status= this->ComputeMoments(useRange,minThr,maxThr,maskedValues);
 		
 	return status;
 
@@ -3605,9 +3609,11 @@ Image* Image::GetBinarizedImage(double threshold,double fgValue,bool isLowerThre
 	}//end loop pixels
 	
 	//Force recomputation of stats if present, otherwise recompute only moments
-	//bool skipNegativePixels= false;
 	bool useRange= false;
-	if(BinarizedImg->ComputeMoments(useRange)<0){
+	double minThr= -std::numeric_limits<double>::infinity();
+	double maxThr= std::numeric_limits<double>::infinity();
+	std::vector<float> maskedValues= {0};//CHECK
+	if(BinarizedImg->ComputeMoments(useRange,minThr,maxThr,maskedValues)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to re-compute moments of binarized image!");
 		#endif
@@ -3633,12 +3639,13 @@ int Image::ApplyThreshold(double thr_min,double thr_max,double maskedValue)
 	}//end loop pixels
 	
 	//Force recomputation of stats if present, otherwise recompute only moments
-	//bool skipNegativePixels= false;
 	bool useRange= false;
+	double minThr= -std::numeric_limits<double>::infinity();
+	double maxThr= std::numeric_limits<double>::infinity();
+	std::vector<float> maskedValues= {0};
 	bool computeRobustStats= true;
 	bool forceRecomputing= true;
 	if(this->HasStats()){
-		//if(ComputeStats(computeRobustStats,skipNegativePixels,forceRecomputing)<0){
 		if(ComputeStats(computeRobustStats,forceRecomputing,useRange)<0){
 			#ifdef LOGGING_ENABLED
 				ERROR_LOG("Failed to re-compute stats of thresholded image!");
@@ -3647,8 +3654,7 @@ int Image::ApplyThreshold(double thr_min,double thr_max,double maskedValue)
 		}
 	}
 	else{
-		//if(this->ComputeMoments(skipNegativePixels)<0){
-		if(this->ComputeMoments(useRange)<0){
+		if(this->ComputeMoments(useRange,minThr,maxThr,maskedValues)<0){
 			#ifdef LOGGING_ENABLED
 				ERROR_LOG("Failed to re-compute moments of thresholded image!");
 			#endif
@@ -4217,21 +4223,250 @@ int Image::Plot(std::vector<Source*>const& sources,bool useCurrentCanvas,bool dr
 
 }//close Plot()
 
-/*
-void Image::SetDrawRange(double zmin,double zmax){
 
-	if(zmin>=zmax) return;
+int Image::AddSimPointSources(long int nGenSources,float Smin,float Smax,float Sslope,int marginX,int marginY,std::string genFileName)
+{
+	//Check args
+	if(nGenSources<=0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("nGenSources must be >0!");
+		#endif
+		return -1;
+	}
+	if(Smax<Smin){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Smax must be >= Smin!");
+		#endif
+		return -1;
+	}
+	if(Smax<0 || Smin<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Smax & Smin must be >0!");
+		#endif
+		return -1;
+	}
+	
+	if (marginX<0 || marginX>=m_Nx/2.){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid marginX specified (<0 or larger than image half size)!");
+		#endif
+		return -1;
+	}
+	if (marginY<0 || marginY>=m_Ny/2.){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid marginY specified (<0 or larger than image half size)!");
+		#endif
+		return -1;
+	}
 
-	for(long int i=0;i<this->GetNbinsX();i++){
-		for(int j=0;j<this->GetNbinsY();j++){
-			double w= this->GetBinContent(i+1,j+1);
-			if(w<zmin) this->SetBinContent(i+1,j+1,zmin);
-			if(w>zmax) this->SetBinContent(i+1,j+1,zmax);
-		}//end loop bins y
-	}//end loop bins x
+	//Check metadata
+	if(!m_HasMetaData){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No metadata available in this image, cannot retrieve beam information needed for source generation!");
+		#endif
+		return -1;
+	}
 
-}//close Img::SetDrawRange()
-*/
+	//Check WCS
+	WCS* wcs= m_MetaData->GetWCS(eJ2000);
+	if(!wcs){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get WCS from metadata!");
+		#endif
+		return -1;
+	}
+
+	//Set generation pars
+	bool randomizeFlux= (Smin!=Smax);
+	double bmaj= m_MetaData->Bmaj*3600;//in arcsec
+	double bmin= m_MetaData->Bmin*3600;//in arcsec
+	double pa= m_MetaData->Bpa;//defined from north
+	double pixSizeX= m_MetaData->dX*3600;//in arcsec 
+	double pixSizeY= m_MetaData->dY*3600;//in arcsec 
+	double pixSize= std::min(fabs(pixSizeX),fabs(pixSizeY));
+	double bmaj_pix= bmaj/pixSize;//in pix
+	double bmin_pix= bmin/pixSize;//in pix
+	double sigmaX= bmaj_pix/GausSigma2FWHM;//in pix
+	double sigmaY= bmin_pix/GausSigma2FWHM;//in pix
+	double theta= pa + 90.;//# NB: BPA is the positional angle of the major axis measuring from North (up) counter clockwise, while theta is measured wrt to x axis
+	double theta_rad= theta*TMath::DegToRad();//rad
+	double lgS_min= log10(Smin);
+	double lgS_max= log10(Smax);
+	
+	//Generate source positions
+	
+	long int index= 0;
+	delete gRandom;
+	gRandom= new TRandom3(0);
+	std::vector<long int> takenBinIds;
+
+	struct GenSourceInfo
+	{
+		std::string sname;
+		double S;
+		double x;
+		double y;
+		long int ix;
+		long int iy;
+		double ra;
+		double dec;
+		GenSourceInfo(std::string name,double _S,double _x,double _y,long int _ix,long int _iy,double _ra,double _dec)
+			: sname(name),S(_S),x(_x),y(_y),ix(_ix),iy(_iy),ra(_ra),dec(_dec)
+		{}
+		
+	};
+	std::vector<GenSourceInfo> genSourceList;
+	
+	while(index < nGenSources)
+	{				
+		// Generate random coordinates
+		double x0= m_Xmin + gRandom->Uniform(marginX,m_Nx-marginX-1);
+		double y0= m_Ymin + gRandom->Uniform(marginY,m_Ny-marginY-1);
+		long int gBin= this->FindBin(x0,y0);
+
+		// Find if pixel was already taken by a previous source
+		auto it= std::find(takenBinIds.begin(),takenBinIds.end(),gBin);
+		if(!takenBinIds.empty() && it!=takenBinIds.end()){
+			continue;
+		}
+
+		//Skip if flux in generation bin is =0 or NAN
+		double w= this->GetPixelValue(gBin);
+		if(w==0 || TMath::IsNaN(w) || fabs(w)==TMath::Infinity()){
+			continue;
+		}
+
+		//Get bin WCS coords
+		long int ix= this->GetBinX(gBin);
+		long int iy= this->GetBinY(gBin);
+		double ra= 0;
+		double dec= 0;
+		AstroUtils::PixelToWCSCoords(ra,dec,wcs,x0,y0);
+
+		// Generate source Speak expo in log
+		double S= Smin;
+		if(randomizeFlux){
+			double lgS_rand= gRandom->Exp(1./Sslope);
+			double lgS= lgS_min + lgS_rand;
+			if(lgS>lgS_max) continue;
+			S= pow(10,lgS);
+		}
+			
+
+		// Add source to list
+		index++;
+		std::string sname= Form("S%ld",index);
+		genSourceList.push_back(GenSourceInfo(sname,S,x0,y0,ix,iy,ra,dec));
+
+	}//end while loop
+
+	//Add sources to map
+	long int sourceGenBoxHalfSize= static_cast<long int>(std::round(10*max(sigmaX,sigmaY)));
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Generating sources: sigma("<<sigmaX<<","<<sigmaY<<"), theta="<<theta<<", genBoxSize="<<2*sourceGenBoxHalfSize<<" ...");
+	#endif
+
+	for(size_t k=0;k<genSourceList.size();k++)
+	{
+		double xs= genSourceList[k].x;
+		double ys= genSourceList[k].y;
+		long int ix= genSourceList[k].ix;
+		long int iy= genSourceList[k].iy;
+		double xs_bin= this->GetX(ix);
+		double ys_bin= this->GetY(iy);
+		double x0= xs-xs_bin;
+		double y0= ys-ys_bin;
+
+		double Speak= genSourceList[k].S;
+
+		for(long int i=ix-sourceGenBoxHalfSize;i<=ix+sourceGenBoxHalfSize;i++)
+		{
+			double x_bin= this->GetX(i);
+			double x= x_bin - xs_bin;
+
+			for(long int j=iy-sourceGenBoxHalfSize;j<=iy+sourceGenBoxHalfSize;j++){
+				long int id= this->GetBin(i,j);
+				double y_bin= this->GetY(j);
+				double y= y_bin - ys_bin;
+				if(id<0) continue;
+				double S_old= this->GetPixelValue(id);
+				double w= MathUtils::EvalGaus2D(x,y,Speak,x0,y0,sigmaX,sigmaY,theta_rad);
+				if(TMath::IsNaN(w) || fabs(w)==TMath::Infinity()) {
+					#ifdef LOGGING_ENABLED
+						DEBUG_LOG("Given source gen flux value (w="<<w<<") for bin "<<id<<" is NaN or inf, skipping!");
+					#endif
+					continue;
+				}
+				double S_new= S_old + w;
+				this->SetPixelValue(id,S_new);
+
+			}//end loop y
+		}//end loop x
+
+	}//end loop sources
+
+
+	//Write true source info to ascii file
+	FILE* fout= fopen(genFileName.c_str(),"w");
+	for(size_t i=0;i<genSourceList.size();i++)
+	{
+		std::string sname= genSourceList[i].sname;
+		double x= genSourceList[i].x;
+		double y= genSourceList[i].y;
+		double ra= genSourceList[i].ra;
+		double dec= genSourceList[i].dec;
+		double S= genSourceList[i].S;
+		fprintf(fout,"%s %f %f %f %f %f\n",sname.c_str(),x,y,ra,dec,S);
+	}
+	fclose(fout);
+
+	return 0;
+
+}//close AddSimPointSources()
+
+int Image::AddSimPointSourceDensity(double sourceDensity,float Smin,float Smax,float Sslope,int marginX,int marginY,std::string genFileName)
+{
+	//Check margin
+	if (marginX<0 || marginX>=m_Nx/2.){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid marginX specified (<0 or larger than image half size)!");
+		#endif
+		return -1;
+	}
+	if (marginY<0 || marginY>=m_Ny/2.){	
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Invalid marginY specified (<0 or larger than image half size)!");
+		#endif
+		return -1;
+	}
+
+	//Check metadata
+	if(!m_HasMetaData){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No metadata available in this image, cannot retrieve beam information needed for source generation!");
+		#endif
+		return -1;
+	}
+	double pixSizeX= fabs(m_MetaData->dX);//in deg
+	double pixSizeY= fabs(m_MetaData->dY);//in deg 
+	
+	//Compute number of sources to be generated given map area in pixels
+	long int nx_gen= m_Nx - 2*marginX;
+	double nx_gen_deg= nx_gen*pixSizeX;
+	long int ny_gen= m_Ny - 2*marginY;
+	double ny_gen_deg= ny_gen*pixSizeY;
+	  
+	double genArea= (nx_gen_deg*ny_gen_deg);
+	long int nSources= static_cast<long int>(std::round(sourceDensity*genArea));
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Generating #"<<nSources<<" (density="<<sourceDensity<<") ...");
+	#endif
+
+	return AddSimPointSources(nSources,Smin,Smax,Sslope,marginX,marginY,genFileName);
+
+}//close AddSimPointSourceDensity()
+	
+
 
 
 }//close namespace

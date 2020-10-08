@@ -2078,24 +2078,34 @@ Image* SFinder::FindExtendedSources(Image* inputImg,ImgBkgData* bkgData,TaskData
 	//** Find residual map
 	//****************************
 	//NB: Compute residual map if not already computed
-	Image* residualImg= m_ResidualImg;
-	if(!residualImg){
-		#ifdef LOGGING_ENABLED
-			DEBUG_LOG("Computing residual image (was not computed before) ...");
-		#endif
-		residualImg= FindResidualMap(inputImg,bkgData,taskData->sources);
-		if(!residualImg){
+	Image* residualImg= m_ResidualImg;	
+	
+	if(!residualImg)
+	{
+		if(m_computeResidualMap){
 			#ifdef LOGGING_ENABLED
-				ERROR_LOG("Residual map computation failed!");
+				INFO_LOG("Computing residual image (was not computed before) ...");
 			#endif
-			return nullptr;
+			residualImg= FindResidualMap(inputImg,bkgData,taskData->sources);
+			if(!residualImg){
+				#ifdef LOGGING_ENABLED
+					ERROR_LOG("Residual map computation failed!");
+				#endif
+				return nullptr;
+			}
+		}//close if compute res map
+		else{
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("No residual image available and requested to be computed, setting residual image to input image ...");
+			#endif
+			residualImg= inputImg->GetCloned("",true,false);//do not reset stats because stat moments are not recomputed in ComputeStatsAnBkg() method
 		}
+
 		if(storeData) m_ResidualImg= residualImg;
 		searchImg= residualImg;
 	}
 	
 
-	
 	//Compute bkg & noise map for residual img
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Computing residual image stats & bkg...");
@@ -2119,6 +2129,9 @@ Image* SFinder::FindExtendedSources(Image* inputImg,ImgBkgData* bkgData,TaskData
 	//****************************
 	Image* smoothedImg= 0;
 	if(m_UsePreSmoothing){
+		#ifdef LOGGING_ENABLED	
+			INFO_LOG("Computing smoothed map using filter "<<m_SmoothFilter<<" ...");
+		#endif
 		smoothedImg= ComputeSmoothedImage(residualImg,m_SmoothFilter);
 		if(!smoothedImg){
 			#ifdef LOGGING_ENABLED
@@ -2217,6 +2230,10 @@ Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,T
 	//==    PRELIMINARY STAGES
 	//==========================================
 	//## Compute saliency
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Compute multiscale saliency map using these parameters: reso="<<m_SaliencyResoMin<<"/"<<m_SaliencyResoMax<<"/"<<m_SaliencyResoStep<<", beta="<<m_spBeta<<", minArea="<<m_spMinArea<<", nnFactor="<<m_SaliencyNNFactor<<", useRobustPars ?"<<m_SaliencyUseRobustPars<<", expFalloff="<<m_SaliencyDissExpFalloffPar<<", spatialDistRegPar="<<m_SaliencySpatialDistRegPar<<", multiResoCombFactor="<<m_SaliencyMultiResoCombThrFactor<<", useBkgMap?"<<m_SaliencyUseBkgMap<<", useNoiseMap?"<<m_SaliencyUseNoiseMap<<", thrFactor="<<m_SaliencyThrFactor<<", imgThrFactor="<<m_SaliencyImgThrFactor<<", useOptThr? "<<m_SaliencyUseOptimalThr);
+	#endif
+
 	Image* saliencyImg= img->GetMultiResoSaliencyMap(
 		m_SaliencyResoMin,m_SaliencyResoMax,m_SaliencyResoStep,
 		m_spBeta,m_spMinArea,m_SaliencyNNFactor,m_SaliencyUseRobustPars,m_SaliencyDissExpFalloffPar,m_SaliencySpatialDistRegPar,

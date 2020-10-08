@@ -63,6 +63,7 @@ namespace Caesar {
 SourceSelector::CutFcnRegistry SourceSelector::m_cutFcnRegistry = 
 { 
 	{"nPixels",NPixelsCut},
+	{"nComponents",NComponentsCut},
 	{"minBoundingBox",MinBoundingBoxCut},
 	{"goodSourceFlag",GoodSourceFlagCut},
 	{"circRatio",CircularityRatioCut},
@@ -72,6 +73,9 @@ SourceSelector::CutFcnRegistry SourceSelector::m_cutFcnRegistry =
 	{"sourceType",SourceTypeCut},
 	{"sourceFlag",SourceFlagCut},
 	{"sourceSimType",SourceSimTypeCut},
+	{"isExtended",ExtendedSourceCut},
+	{"isCompact",CompactSourceCut},
+	{"hasPixelsAtEdge",HasPixelsAtEdgeCut},
 	{"hasFit",HasFitCut},	
 	{"fitStatus",SourceFitStatusCut},
 	{"hasGoodFitChi2",HasGoodFitChi2Cut},
@@ -82,6 +86,7 @@ SourceSelector::CutFcnRegistry SourceSelector::m_cutFcnRegistry =
 	{"fitComponentCentroidInsideIsland",SourceComponentCentroidInsideIslandCut},
 	{"fitComponentIsolatedCentroid",SourceComponentCentroidDistanceCut},
 	{"fitComponentPeakFluxToMaxRatio",SourceComponentPeakFluxCut},
+	{"fitComponentIntToPeakFluxRatio",SourceComponentIntToPeakFluxCut},
 	{"fitComponentPeakSignificance",SourceComponentPeakSignificanceCut},
 	{"fitComponentPeakSNR",SourceComponentPeakSNRCut},
 	{"fitComponentEccentricityRatio",SourceComponentEccentricityRatioCut},
@@ -100,7 +105,7 @@ SourceSelector::~SourceSelector()
 
 }
 
-int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::vector<Source*>& sources,std::string cutFile)
+int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::vector<Source*>& sources,std::string cutFile,bool requireAllCutsPassed)
 {
 	//Check args
 	sources_sel.clear();
@@ -168,6 +173,7 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 
 		//- Apply cuts
 		bool passed= true;
+		bool onePassed= false;
 
 		for (CutMap::const_iterator it = cuts.begin(); it!=cuts.end(); it++){
 			std::string cutName= it->first;
@@ -184,17 +190,27 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 			
 			if(!passed) {
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Source "<<aSource->GetName()<<": cut="<<cutName<<" (nComponents(BEFORE)="<<nComponents_before<<", nComponents(AFTER)="<<nComponents_after<<"), passed? "<<passed);
+					DEBUG_LOG("Source "<<aSource->GetName()<<": cut="<<cutName<<" (nComponents(BEFORE)="<<nComponents_before<<", nComponents(AFTER)="<<nComponents_after<<"), passed? "<<passed);
 				#endif
 				nSourcesRejectedPerCut[cutName]++;
 				nSourceComponentsRejectedPerCut[cutName]+= nComponents_before;
-				break;
+				if(requireAllCutsPassed) break;
 			}
 			else{
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Source "<<aSource->GetName()<<": cut="<<cutName<<" (nComponents(BEFORE)="<<nComponents_before<<", nComponents(AFTER)="<<nComponents_after<<"), passed? "<<passed);
+				#endif
+				if(cut->isEnabled()) onePassed= true;
 				nSourceComponentsRejectedPerCut[cutName]+= nComponents_rejected; 
+				if(!requireAllCutsPassed && cut->isEnabled()) break;
 			}
 
 		}//end loop cuts
+
+		if(!requireAllCutsPassed){
+			passed= onePassed;
+		}
+
 		
 		//## Process nested sources
 		std::vector<Source*> nestedSources= aSource->GetNestedSources();
@@ -212,6 +228,7 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 	
 			//- Apply cuts
 			bool passed_nested= true;
+			bool onePassed_nested= false;
 
 			for (CutMap::const_iterator it = cuts.begin(); it!=cuts.end(); it++){
 				std::string cutName= it->first;
@@ -228,21 +245,26 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 				
 				if(!passed_nested) {
 					#ifdef LOGGING_ENABLED
-						INFO_LOG("Source "<<aNestedSource->GetName()<<": cut="<<cutName<<" (nComponents(BEFORE)="<<nComponents_nested_before<<", nComponents(AFTER)="<<nComponents_nested_after<<"), passed? "<<passed_nested);
+						DEBUG_LOG("Source "<<aNestedSource->GetName()<<": cut="<<cutName<<" (nComponents(BEFORE)="<<nComponents_nested_before<<", nComponents(AFTER)="<<nComponents_nested_after<<"), passed? "<<passed_nested);
 					#endif
 					nSourcesRejectedPerCut[cutName]++;
 					nSourceComponentsRejectedPerCut[cutName]+= nComponents_nested_before; 
-					break;
+					if(requireAllCutsPassed) break;
 				}
 				else{
+					if(cut->isEnabled()) onePassed_nested= true;
 					nSourceComponentsRejectedPerCut[cutName]+= nComponents_nested_rejected; 
+					if(!requireAllCutsPassed && cut->isEnabled()) break;
 				}
 
 			}//end loop cuts
 
-			if(passed_nested){
-				nestedSources_sel.push_back(aNestedSource);
+			if(!requireAllCutsPassed){
+				passed_nested= onePassed_nested;
 			}
+
+			//Add nested sources to selected
+			if(passed_nested) nestedSources_sel.push_back(aNestedSource);
 
 		}//end loop nested sources
 
@@ -355,6 +377,126 @@ bool SourceSelector::ApplyCut(std::string cutName,Source* source,Cut* cut)
 }//close ApplyCut()
 
 //===========================================
+//==         HAS PIXEL AT EDGE CUT
+//===========================================
+bool SourceSelector::HasPixelsAtEdgeCut(Source* source,Cut* cut)
+{
+	if(cut && !cut->isEnabled()) return true;
+	bool hasPixelsAtEdge= source->IsAtEdge();
+	bool passed= cut->isPassed(hasPixelsAtEdge);
+	return passed;
+
+}//close HasPixelsAtEdgeCut()
+
+//===========================================
+//==         EXTENDED SOURCE CUT
+//===========================================
+bool SourceSelector::ExtendedSourceCut(Source* source,Cut* cut)
+{
+	if(cut && !cut->isEnabled()) return true;
+
+	bool hasFitInfo= source->HasFitInfo();
+	int fitQuality= source->GetFitQuality();
+	int fitStatus= source->GetFitStatus();
+	int nComponents= 0;
+	double redChi2= 0;
+	if(hasFitInfo) {
+		SourceFitPars fitPars= source->GetFitPars();
+		nComponents= source->GetNSelFitComponents();
+		double chi2= fitPars.GetChi2();
+		double ndf= fitPars.GetNDF();
+		redChi2= chi2/ndf;
+	}
+
+	double nPixels= static_cast<double>(source->NPix);
+	double beamArea= source->GetBeamFluxIntegral();
+	if(beamArea<=0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No beam area info stored for source "<<source->GetName()<<", cannot perform check, returning passed!");
+		#endif
+		return true;
+	}
+	double nBeams= nPixels/beamArea;
+
+	int nComponentsThr= 3;
+	double nBeamsThr= 10;
+	double nBeamsHighThr= 20;
+	double redChi2Thr= 10;
+	bool isMultiComponent= (nComponents>nComponentsThr); 
+	bool largerThanBeam= (nBeams>nBeamsThr);
+	bool muchLargerThanBeam= (nBeams>nBeamsHighThr);
+	bool poorFit= (redChi2>redChi2Thr);
+	bool noFit= (
+		!hasFitInfo || 
+		(fitQuality==eUnknownFitQuality || fitQuality==eBadFit) ||
+		(fitStatus==eFitUnknownStatus || fitStatus==eFitAborted || fitStatus==eFitNotConverged) 
+	);
+
+	bool isExtended= (
+		isMultiComponent ||
+		muchLargerThanBeam || 
+		(largerThanBeam && (noFit || poorFit))
+	);
+	
+	return isExtended;
+	
+}//close ExtendedSourceCut()
+
+
+//===========================================
+//==         COMPACT SOURCE CUT
+//===========================================
+bool SourceSelector::CompactSourceCut(Source* source,Cut* cut)
+{
+	if(cut && !cut->isEnabled()) return true;
+
+	bool hasFitInfo= source->HasFitInfo();
+	int fitQuality= source->GetFitQuality();
+	int fitStatus= source->GetFitStatus();
+	int nComponents= 0;
+	double redChi2= 0;
+	if(hasFitInfo) {
+		SourceFitPars fitPars= source->GetFitPars();
+		nComponents= source->GetNSelFitComponents();
+		double chi2= fitPars.GetChi2();
+		double ndf= fitPars.GetNDF();
+		redChi2= chi2/ndf;
+	}
+
+	double nPixels= static_cast<double>(source->NPix);
+	double beamArea= source->GetBeamFluxIntegral();
+	if(beamArea<=0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No beam area info stored for source "<<source->GetName()<<", cannot perform check, returning passed!");
+		#endif
+		return true;
+	}
+	double nBeams= nPixels/beamArea;
+
+	int nComponentsThr= 3;
+	double nBeamsThr= 10;
+	double nBeamsHighThr= 20;
+	double redChi2Thr= 10;
+	bool fewComponents= (nComponents<=nComponentsThr); 
+	bool smallerThanBeam= (nBeams<=nBeamsThr);
+	bool largerThanBeam= (nBeams>nBeamsThr);
+	bool goodFit= (
+		hasFitInfo && 
+		(fitQuality==eMQFit || fitQuality==eHQFit) ||
+		(fitStatus==eFitConverged || fitStatus==eFitConvergedWithWarns) ||
+		redChi2<=redChi2Thr
+	);
+
+	bool isCompact= (
+		fewComponents &&
+		(smallerThanBeam || (largerThanBeam && goodFit))
+	);
+	
+	return isCompact;
+	
+}//close CompactSourceCut()
+
+//===========================================
 //==         HAS FIT INFO CUT
 //===========================================
 bool SourceSelector::HasFitCut(Source* source,Cut* cut)
@@ -380,6 +522,32 @@ bool SourceSelector::SourceFitStatusCut(Source* source,Cut* cut)
 	return passed;
 
 }//close SourceFitStatusCut()
+
+//===========================================
+//==         NCOMPONENTS CUT
+//===========================================
+bool SourceSelector::NComponentsCut(Source* source,Cut* cut)
+{
+	if(cut && !cut->isEnabled()) return true;
+	bool hasFitInfo= source->HasFitInfo();
+	int nComponents= 0;
+	if(hasFitInfo) {
+		//nComponents= source->GetNFitComponents();
+		nComponents= source->GetNSelFitComponents();	
+	}
+	bool passed= cut->isPassed(nComponents);
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Source "<<source->GetName()<<", hasFitInfo? "<<hasFitInfo<<", nComponents="<<nComponents<<", passed="<<passed);
+	#endif
+
+	//If cut is not passed, set fit info to false (to force nselcomponents to 0)
+	if(!passed){
+		source->SetHasFitInfo(false);
+	}	
+	
+	return passed;
+
+}//close NComponentsCut()
 
 //===========================================
 //==         FIT CHI2 CUT
@@ -655,7 +823,7 @@ bool SourceSelector::SourceComponentCentroidDistanceCut(Source* source,Cut* cut)
 	int nSelComponents= source->GetNSelFitComponents();
 
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("BEFORE CUT: Source "<<source->GetName()<<": nComponents="<<nComponents<<", nSelComponents="<<nSelComponents);
+		DEBUG_LOG("BEFORE CUT: Source "<<source->GetName()<<": nComponents="<<nComponents<<", nSelComponents="<<nSelComponents);
 	#endif
 	
 	//Check number of components
@@ -698,7 +866,7 @@ bool SourceSelector::SourceComponentCentroidDistanceCut(Source* source,Cut* cut)
 			if(!passed){//remove fainter component is (i,j) are too close
 				fitPars.SetSelectedComponent(componentId_j,false);
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Source "<<source->GetName()<<": deselect component "<<componentId_j<<" as too close to component "<<componentId_i<<" (dx="<<dx<<", dy="<<dy<<")");
+					DEBUG_LOG("Source "<<source->GetName()<<": deselect component "<<componentId_j<<" as too close to component "<<componentId_i<<" (dx="<<dx<<", dy="<<dy<<")");
 				#endif
 			}
 		}//end loop components
@@ -710,7 +878,7 @@ bool SourceSelector::SourceComponentCentroidDistanceCut(Source* source,Cut* cut)
 	//If no components are left, return false (do this after setting updating source fit pars
 	int nComponents_sel= source->GetNSelFitComponents();
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("AFTER CUT: Source "<<source->GetName()<<": nComponents="<<nComponents<<", nSelComponents="<<nComponents_sel);
+		DEBUG_LOG("AFTER CUT: Source "<<source->GetName()<<": nComponents="<<nComponents<<", nSelComponents="<<nComponents_sel);
 	#endif
 	if(nComponents_sel<=0){
 		source->SetHasFitInfo(false);
@@ -885,6 +1053,78 @@ bool SourceSelector::SourceComponentPeakSNRCut(Source* source,Cut* cut)
 	return true;
 
 }//close SourceComponentPeakSNRCut()
+
+//==================================================
+//==   SOURCE COMPONENT INTEGRATED/PEAK FLUX CUT
+//==================================================
+
+bool SourceSelector::SourceComponentIntToPeakFluxCut(Source* source,Cut* cut)
+{
+	if(cut && !cut->isEnabled()) return true;
+	
+	//Check if has fit 
+	bool hasFitInfo= source->HasFitInfo();
+	//if(!hasFitInfo) return false;
+	if(!hasFitInfo) return true;
+
+	double nPixels= static_cast<double>(source->NPix);
+	double bkgRMSSum= source->GetBkgRMSSum();
+	double rmsMean= bkgRMSSum/nPixels;
+	if(rmsMean==0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No bkg info stored, returning passed!");
+		#endif
+		return true;
+	}
+
+	SourceFitPars fitPars= source->GetFitPars();
+	int nComponents= source->GetNFitComponents();
+	int nComponents_sel= 0;
+	double beamArea= source->GetBeamFluxIntegral();
+	if(beamArea<=0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("No beam area info stored, returning passed!");
+		#endif
+		return true;
+	}
+	
+	//Check if component integrated/peak is passing the cut
+	//NB: Sint/Speak-b/SN
+	double b= 2.03;//XXL survey criterion
+	
+	for(int k=0;k<nComponents;k++)
+	{
+		bool isSelected= fitPars.IsSelectedComponent(k);
+		if(!isSelected) continue;
+
+		double Speak= fitPars.GetParValue(k,"A");	
+		double SNR= Speak/rmsMean;
+		double fluxDensity= fitPars.GetComponentFluxDensity(k);
+		double Sint= fluxDensity/beamArea;
+		double x= Sint/Speak - b/SNR;
+		bool passed= cut->isPassed(x);
+		if(passed){
+			nComponents_sel++;
+		}
+		else{
+			fitPars.SetSelectedComponent(k,false);
+		}
+	}//end loop components
+
+	//Update fit pars
+	source->SetFitPars(fitPars);
+
+	//If no components are left, return false (not resetting fitPars here)
+	if(nComponents_sel<=0){
+		source->SetHasFitInfo(false);
+		return false;
+	}	
+
+	return true;
+
+
+}//close SourceComponentIntToPeakFluxCut()
+
 
 //==============================================
 //==   SOURCE COMPONENT TYPE CUT

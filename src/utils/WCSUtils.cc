@@ -145,6 +145,7 @@ WCS* WCSUtils::ComputeWCSFromImgMetaData(ImgMetaData* metadata,int coordSystem)
 	//std::string wcsType= std::string(getwcsout(wcs));
 	std::string wcsType= GetWCSTypeStr(wcs);
 	std::string wcsType_default= metadata->GetWCSType();
+
 	
 	//Convert wcs to desired type
 	char* flag = (char*)("");
@@ -163,9 +164,14 @@ WCS* WCSUtils::ComputeWCSFromImgMetaData(ImgMetaData* metadata,int coordSystem)
 		return nullptr;
 	}
 
+	
 	if(strcmp(flag,"")!=0) {
 		wcsoutinit (wcs,flag);
 	}
+	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("CoordTypes("<<metadata->CoordTypeX<<","<<metadata->CoordTypeY<<"), getwcsin(wcs)="<<getwcsin(wcs)<<", getwcsout(wcs)="<<getwcsout(wcs)<<", wcsType="<<wcsType<<", wcsType_default="<<wcsType_default<<" (coordSystem="<<coordSystem<<"), flag="<<flag<<" ...");
+	#endif
 			
 	return wcs;
 
@@ -234,6 +240,15 @@ char* WCSUtils::getwcsout(WCS* wcs)
 		return(wcs->radecout);
 
 }//close getwcsout()
+
+
+char* WCSUtils::getwcsin(WCS* wcs)
+{
+	if (nowcs (wcs))
+		return (NULL);
+	else
+		return (wcs->radecin);
+}
 
 
 std::string WCSUtils::GetWCSTypeStr(WCS* wcs)
@@ -969,11 +984,34 @@ WCS* WCSUtils::wcskinit (
     
 	wcs->wcson = 1;
 
+	//## Dirty bug fix
+	//## NB: if FITS native coord system is galactic, this is not recognized but always threated as FK5/FK4.
+	std::string ctype1_str= std::string(ctype1);
+	std::string ctype2_str= std::string(ctype2);
+	size_t found1_gal = ctype1_str.find("GLON");
+	size_t found2_gal = ctype2_str.find("GLAT");
+	bool isGalacticNativeSys= (found1_gal!=string::npos && found1_gal!=string::npos);
+ 	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("isGalacticNativeSys: "<<isGalacticNativeSys<<", ctype1_str="<<ctype1_str<<", ctype2_str="<<ctype2_str);
+	#endif
+
+	//Set input/output coord sys
   strcpy (wcs->radecout, wcs->radecsys);
-  wcs->syswcs = wcscsys (wcs->radecsys);
-    
+
+	//=== DIRTY FIX ==
+	std::string galSysStrCode= "GALACTIC";
+  //wcs->syswcs = wcscsys (wcs->radecsys);//ORIGINAL wcstools code
+	if(isGalacticNativeSys) wcs->syswcs = wcscsys(const_cast<char*>(galSysStrCode.c_str()));
+	else wcs->syswcs = wcscsys (wcs->radecsys);
+	//======================    
+
 	wcsoutinit (wcs, wcs->radecsys);
-  wcsininit (wcs, wcs->radecsys);
+
+	//=== DIRTY FIX ==
+  //wcsininit (wcs, wcs->radecsys);//ORIGINAL wcstools code
+	if(isGalacticNativeSys) wcsininit (wcs, const_cast<char*>(galSysStrCode.c_str()));
+	else wcsininit (wcs, wcs->radecsys);
+	//======================    
     
 	wcs->eqout = 0.0;
   wcs->printsys = 1;
@@ -992,6 +1030,10 @@ void WCSUtils::wcsoutinit(WCS* wcs,char* coorsys)
 {
 	int sysout, i;
 
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("wcsoutinit: "<<coorsys);
+	#endif
+
   if (nowcs (wcs))
 		return;
 
@@ -1001,6 +1043,11 @@ void WCSUtils::wcsoutinit(WCS* wcs,char* coorsys)
 	sysout = wcs->syswcs;
 	strcpy (wcs->radecout, wcs->radecsys);
 	wcs->eqout = wcs->equinox;
+
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("sysout="<<sysout);
+	#endif
+
 	if (sysout == eWCS_B1950) {
 	    if (wcs->eqout != 1950.0) {
 		wcs->radecout[0] = 'B';
