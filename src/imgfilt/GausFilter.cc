@@ -136,8 +136,10 @@ cv::Mat GausFilter::BuildKernel(int kernSize,double sigmaX,double sigmaY,double 
 	int halfSize= (kernSize-1)/2;
 	double ampl= scale;
 	double maxValue= -1.e+99;
+	double sum= 0;
+	double gaus2DIntegral= 2*TMath::Pi()*sigmaX*sigmaY;
 
-	//Find kernel maximum
+	//Find kernel maximum & sum
 	for (int i=0;i<nrows;i++){
   	for (int j=0;j<ncols;j++){
   		double x = j - halfSize;
@@ -145,16 +147,23 @@ cv::Mat GausFilter::BuildKernel(int kernSize,double sigmaX,double sigmaY,double 
 			double kernValue= Gaus2DFcn(ampl,x,y,sigmaX,sigmaY,theta);
 			if(kernValue>maxValue) maxValue= kernValue;
 			kernel.at<double>(i,j)= kernValue;
+			sum+= kernValue;
 		}//end loop j
 	}//end loop i
 
 	//Normalize kernel by maximum value
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("kernSize="<<kernSize<<" ampl="<<ampl<<", sigmaX="<<sigmaX<<", sigmaY="<<sigmaY<<", kernelSum="<<sum<<", gaus2DIntegral="<<gaus2DIntegral);
+	#endif
+
 	for (int i=0;i<nrows;i++){
   	for (int j=0;j<ncols;j++){
   		double x = j - halfSize;
   	  double y = i - halfSize;
 			double kernValue= Gaus2DFcn(ampl,x,y,sigmaX,sigmaY,theta);
-			kernel.at<double>(i,j)= kernValue/maxValue;
+			//kernel.at<double>(i,j)= kernValue/maxValue;//DECOMMENT
+			//kernel.at<double>(i,j)= kernValue/sum;//PROVA
+			kernel.at<double>(i,j)= kernValue/gaus2DIntegral;//PROVA2
 		}//end loop j
 	}//end loop i
 	

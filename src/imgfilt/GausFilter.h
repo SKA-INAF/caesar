@@ -60,7 +60,12 @@ class GausFilter : public TObject {
 	
 
 		/**
-		* \brief Return gaussian-filtered image
+		* \brief Return gaussian-filtered image. 
+		*        NB: If image is in Jy/beam the flux are not normalized properly. 
+		*        Normalization factor (see CASA https://open-bitbucket.nrao.edu/projects/CASA/repos/casa/browse/code/imageanalysis/ImageAnalysis/Image2DConvolver.tcc) 
+		*        should be f/A, where f=beamArea_final/beamArea_orig and A=2 pi sigma_x sigma_y.
+		*        Here, the normalization factor is 1/A.
+		*        TO BE DONE: Add method to compute the final beam area. 
 		*/
 		static Image* GetGausFilter(Image* image,double bmaj,double bmin,double bpa,int nSigmas=5,double scale=1);
 		
