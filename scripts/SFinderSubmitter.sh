@@ -68,8 +68,8 @@ if [ "$NARGS" -lt 1 ]; then
 	echo "=== SFINDER SOURCE FINDING OPTIONS ==="
 	echo "--mergeedgesources - Merge sources at tile edges. NB: Used for multitile processing. (default=no)"
 	echo "--no-mergesources - Disable source merging in each tile (default=enabled)."
-	echo "--no-mergecompactsources - Disable compact-compact source merging in each tile (default=enabled)."
-	echo "--no-mergeextsources - Disable extended-extended and extended-compact source merging in each tile (default=enabled)."
+	#echo "--no-mergecompactsources - Disable compact-compact source merging in each tile (default=enabled)."
+	#echo "--no-mergeextsources - Disable extended-extended and extended-compact source merging in each tile (default=enabled)."
 	echo ""
 
 	echo "=== SFINDER COMPACT SOURCE OPTIONS ==="
@@ -628,12 +628,12 @@ do
 		--no-mergesources*)
     	MERGE_SOURCES="false"
     ;;
-		--no-mergecompactsources*)
-    	MERGE_COMPACT_SOURCES="false"
-    ;;
-		--no-mergeextsources*)
-    	MERGE_EXTENDED_SOURCES="false"
-    ;;
+		## --no-mergecompactsources*)
+    ##	MERGE_COMPACT_SOURCES="false"
+    ##;;
+		## --no-mergeextsources*)
+    ##	MERGE_EXTENDED_SOURCES="false"
+    ##;;
 
 		## COMPACT SOURCE OPTIONS
 		--no-compactsearch*)
