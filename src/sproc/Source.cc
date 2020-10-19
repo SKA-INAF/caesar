@@ -1780,7 +1780,10 @@ int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WCS* wcs,in
 	}
 
 	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("Source "<<this->GetName()<<std::setprecision(12)<<": pos("<<x<<","<<y<<"), pos_wcs("<<xwcs<<","<<ywcs<<")");
+		double x_wcs_2= 0;
+		double y_wcs_2= 0;
+		WCSUtils::pix2wcs (wcs,x,y,&x_wcs_2, &y_wcs_2);
+		INFO_LOG("Source "<<this->GetName()<<std::setprecision(12)<<": pos("<<x<<","<<y<<"), pos_wcs("<<xwcs<<","<<ywcs<<"), pos_wcs2("<<x_wcs_2<<","<<y_wcs_2<<")");
 	#endif
 
 	//Delete WCS
