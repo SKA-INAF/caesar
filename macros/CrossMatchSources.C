@@ -121,7 +121,7 @@ struct MacroOptions
 		beamBmaj= 24.007906;//in arcsec
 		beamBmin= 20.992698;//in arcsec	
 		catalogType= 1;
-		catalogVersion= 2;
+		catalogVersion= 3;
 		matchPosThr= 8;//arcsec
 		saveToFile= true;
 		applySelection= true;
@@ -187,6 +187,7 @@ std::vector<std::string> gSkipLinePatterns {};
 //- REC CATALOG
 const int gNDataCols_caesar= 42;
 const int gNDataCols_caesar_v2= 47;
+const int gNDataCols_caesar_v3= 47;
 const int gNDataCols_selavy= 37;
 const int gNDataCols_aegean= 27;
 std::vector<std::string> gSkipLinePatterns_caesar {};
@@ -222,7 +223,8 @@ double gLgFluxMax_draw= 1;
 //std::vector<double> gLgRecFluxBins {-4,-3.5,-3,-2.75,-2.5,-2.25,-2,-1.5,-1,-0.5,0,0.5,1};
 std::vector<double> gLgFluxBins {-5,-4.5,-4,-3.5,-3,-2.75,-2.5,-2.25,-2,-1.5,-1,-0.5,0,0.5,1};
 std::vector<double> gLgRecFluxBins {-5,-4.5,-4,-3.5,-3,-2.75,-2.5,-2.25,-2,-1.5,-1,-0.5,0,0.5,1};
-std::vector<double> gSNRBins {0,1,2,3,4,5,6,7,8,9,10,15,20,25,30,40,50,100,1000,10000};
+//std::vector<double> gSNRBins {0,1,2,3,4,5,6,7,8,9,10,15,20,25,30,40,50,100,1000,10000};
+std::vector<double> gSNRBins {0,2,4,5,7,10,15,20,25,50,100,1000,10000};
 std::vector<double> gGalLatBins {-5,-4,-3,-2,-1,0,1,2,3,4,5};
 TProfile* gPosXDiffHisto= 0;
 TProfile* gPosYDiffHisto= 0;
@@ -369,6 +371,16 @@ int CrossMatchSources(std::string fileName_rec,std::string fileName,bool isFileL
 		return -1;
 	}
 
+	//================================
+	//==      INIT
+	//================================
+	cout<<"INFO: Init macro data ..."<<endl;
+	Init();
+
+
+	//================================
+	//==      READ FILE LISTS
+	//================================
 	gFileNames_rec.clear();
 	gFileNames.clear();
 
@@ -480,11 +492,7 @@ int CrossMatchSources(std::string fileName_rec,std::string fileName,bool isFileL
 		}
 	}
 
-	//================================
-	//==      INIT
-	//================================
-	cout<<"INFO: Init macro data ..."<<endl;
-	Init();
+	
 
 	//================================
 	//==      READ CATALOG DATA
@@ -527,7 +535,7 @@ int CrossMatchSources(std::string fileName_rec,std::string fileName,bool isFileL
 	//================================
 	//==      DRAW PLOTS
 	//================================
-	Draw();
+	//Draw();
 
 	//================================
 	//==      SAVE
@@ -619,8 +627,8 @@ void Save()
 		if(gPosXBiasGraph_sel) gPosXBiasGraph_sel->Write();
 		if(gPosYBiasGraph_sel) gPosYBiasGraph_sel->Write();
 		if(gPosXResoGraph_sel) gPosXResoGraph_sel->Write();
-		if(gPosYResoGraph_sel) gPosYResoGraph_sel->Write();
-		
+		if(gPosYResoGraph_sel) gPosYResoGraph_sel->Write();		
+
 		gOutputFile->Close();
 	}
 
@@ -633,7 +641,7 @@ void Init()
 	gOutputFile->cd();
 
 	gMatchDataTree= new TTree("MatchInfo","MatchInfo");
-	gMatchDataTree->Branch("name",&gSourceName_true);
+	//gMatchDataTree->Branch("name",&gSourceName_true);
 	gMatchDataTree->Branch("x",&gSourcePosX_true);
 	gMatchDataTree->Branch("y",&gSourcePosY_true);
 	gMatchDataTree->Branch("l",&gSourceGalPosX_true);
@@ -642,7 +650,7 @@ void Init()
 	gMatchDataTree->Branch("dec",&gSourceJ2000PosY_true);
 	gMatchDataTree->Branch("flux",&gSourceFlux_true);
 	gMatchDataTree->Branch("isFound",&gIsFound);
-	gMatchDataTree->Branch("name_rec",&gSourceName_rec);
+	//gMatchDataTree->Branch("name_rec",&gSourceName_rec);
 	gMatchDataTree->Branch("x_rec",&gSourcePosX_rec);
 	gMatchDataTree->Branch("y_rec",&gSourcePosY_rec);
 	gMatchDataTree->Branch("l_rec",&gSourceGalPosX_rec);
@@ -673,6 +681,7 @@ void Init()
 
 	gFluxHisto= new TH1D("fluxHisto","",nBins,gLgFluxBins.data());
 	gFluxHisto->Sumw2();
+
 
 	gFluxHisto_reliability= new TH1D("fluxHisto_reliability","",nBins,gLgFluxBins.data());
 	gFluxHisto_reliability->Sumw2();
@@ -837,6 +846,7 @@ void Init()
 
 void Draw()
 {
+	/*
 	//Compute completeness
 	cout<<"INFO: Compute Completeness ..."<<endl;
 	gCompleteness= new TEfficiency(*gFluxHisto_rec,*gFluxHisto); 
@@ -917,6 +927,7 @@ void Draw()
 
 	gFalseDetectionRateGraph_sel= gFalseDetectionRate_sel->CreateGraph(); 
 	gFalseDetectionRateGraph_sel->SetNameTitle("FalseDetectionRateGraph_sel","FalseDetectionRateGraph_sel");
+	*/
 
 	//Draw source number plots
 	TCanvas* SourceNumberPlot= new TCanvas("SourceNumberPlot","SourceNumberPlot");
@@ -1454,11 +1465,11 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 	double y_min= (*(yrange_it.first)).y;
 	double y_max= (*(yrange_it.second)).y;
 	
-	cout<<"=== DEBUG ===="<<endl;
-	for(size_t i=0;i<sources.size();i++){
-		cout<<"(l,b)=("<<sources[i].l<<","<<sources[i].b<<")"<<endl;
-	}	
-	cout<<"=============="<<endl;
+	//cout<<"=== DEBUG ===="<<endl;
+	//for(size_t i=0;i<sources.size();i++){
+	//	cout<<"(l,b)=("<<sources[i].l<<","<<sources[i].b<<")"<<endl;
+	//}	
+	//cout<<"=============="<<endl;
 
 	auto l_range_it = std::minmax_element( sources.begin(), sources.end(),
                              []( const SourceInfo& l, const SourceInfo& r)
@@ -1476,7 +1487,7 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 	double b_min= (*(b_range_it.first)).b;
 	double b_max= (*(b_range_it.second)).b;
 
-	cout<<"INFO: Source ref catalog spatial range: x("<<x_min<<","<<x_max<<"), y("<<y_min<<","<<y_max<<"), l("<<l_min<<","<<l_max<<"), b("<<b_min<<","<<b_max<<")"<<endl;
+	//cout<<"INFO: Source ref catalog spatial range: x("<<x_min<<","<<x_max<<"), y("<<y_min<<","<<y_max<<"), l("<<l_min<<","<<l_max<<"), b("<<b_min<<","<<b_max<<")"<<endl;
 
 	
 	//## Creating map histos
@@ -1548,7 +1559,7 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 
 	for(size_t i=0;i<sources.size();i++)
 	{
-		if(i%100==0) cout<<"--> "<<i+1<<"/"<<sources.size()<<" sources in reference catalog processed..."<<endl;
+		if(i%1000==0) cout<<"--> "<<i+1<<"/"<<sources.size()<<" sources in reference catalog processed..."<<endl;
 
 		std::string name= sources[i].name;
 		double x= sources[i].x;
@@ -2413,6 +2424,88 @@ int AnalyzeData()
 
 	}//end loop 
 
+
+	//Compute completeness
+	cout<<"INFO: Compute Completeness ..."<<endl;
+	gCompleteness= new TEfficiency(*gFluxHisto_rec,*gFluxHisto); 
+	gCompleteness->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	gCompleteness->SetConfidenceLevel(0.68);
+
+	gCompletenessGraph= gCompleteness->CreateGraph(); 
+	gCompletenessGraph->SetNameTitle("CompletenessGraph","CompletenessGraph");
+
+	gCompleteness_sel= new TEfficiency(*gFluxHisto_sel,*gFluxHisto); 
+	gCompleteness_sel->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	gCompleteness_sel->SetConfidenceLevel(0.68);
+
+	gCompletenessGraph_sel= gCompleteness_sel->CreateGraph(); 
+	gCompletenessGraph_sel->SetNameTitle("CompletenessGraph_sel","CompletenessGraph_sel");
+
+	//Compute completeness
+	cout<<"INFO: Compute Completeness 2D map ..."<<endl;
+	gCompleteness2D= (TH2D*)gFluxHisto2D_rec->Clone("Completeness2D");
+	gCompleteness2D->Divide(gFluxHisto2D);
+
+	cout<<"INFO: Compute Completeness 2D map in gal coord ..."<<endl;
+	gCompleteness2D_galcoord= (TH2D*)gSourceCountsHisto2D_galcoord_rec->Clone("Completeness2D_galcoord");
+	gCompleteness2D_galcoord->Divide(gSourceCountsHisto2D_galcoord);
+
+	//Compute completeness vs flux vs gal lat
+	gCompletenessVSFluxVSGalLat= (TH2D*)gFluxGalLatHisto2D_rec->Clone("CompletenessVSFluxVSGalLat");
+	gCompletenessVSFluxVSGalLat->Divide(gFluxGalLatHisto2D);
+
+	TH2D* hh= 0;
+	for(size_t k=0;k<gSourceCountsHistos2D_galcoord.size();k++)
+	{
+		TString histoName= Form("Completeness2D_galcoord_fluxBin%d",(int)(k+1));
+		hh= (TH2D*)gSourceCountsHistos2D_galcoord_rec[k]->Clone(histoName);
+		hh->Divide(gSourceCountsHistos2D_galcoord[k]);
+		gCompletenessList2D_galcoord.push_back(hh);
+	}
+
+	//Compute reliability
+	cout<<"INFO: Compute Reliability ..."<<endl;
+	gReliability= new TEfficiency(*gFluxHisto_rec_reliability,*gFluxHisto_reliability); 
+	gReliability->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	gReliability->SetConfidenceLevel(0.68);
+
+	gReliabilityGraph= gReliability->CreateGraph(); 
+	gReliabilityGraph->SetNameTitle("ReliabilityGraph","ReliabilityGraph");
+
+	gReliability_sel= new TEfficiency(*gFluxHisto_sel_reliability,*gFluxHisto_reliability); 
+	gReliability_sel->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	gReliability_sel->SetConfidenceLevel(0.68);
+
+	gReliabilityGraph_sel= gReliability_sel->CreateGraph(); 
+	gReliabilityGraph_sel->SetNameTitle("ReliabilityGraph_sel","ReliabilityGraph_sel");
+
+	gReliabilityVSFluxVSGalLat= (TH2D*)gFluxGalLatHisto2D_rec_reliability->Clone("ReliabilityVSFluxVSGalLat");
+	gReliabilityVSFluxVSGalLat->Divide(gFluxGalLatHisto2D_reliability);
+
+	for(size_t k=0;k<gSourceCountsHistos2D_galcoord_reliability.size();k++)
+	{
+		TString histoName= Form("Reliability2D_galcoord_fluxBin%d",(int)(k+1));
+		hh= (TH2D*)gSourceCountsHistos2D_galcoord_rec_reliability[k]->Clone(histoName);
+		hh->Divide(gSourceCountsHistos2D_galcoord_reliability[k]);
+		gReliabilityList2D_galcoord.push_back(hh);
+	}
+
+	//Compute false detection rate
+	cout<<"INFO: Compute False Detection Rate ..."<<endl;
+	gFalseDetectionRate= new TEfficiency(*gFluxHisto_rec_fdr,*gFluxHisto_fdr); 
+	gFalseDetectionRate->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	gFalseDetectionRate->SetConfidenceLevel(0.68);
+
+	gFalseDetectionRateGraph= gFalseDetectionRate->CreateGraph(); 
+	gFalseDetectionRateGraph->SetNameTitle("FalseDetectionRateGraph","FalseDetectionRateGraph");
+
+	gFalseDetectionRate_sel= new TEfficiency(*gFluxHisto_sel_fdr,*gFluxHisto_fdr); 
+	gFalseDetectionRate_sel->SetStatisticOption(TEfficiency::kFCP);  // to set option for errors (see ref doc)
+	gFalseDetectionRate_sel->SetConfidenceLevel(0.68);
+
+	gFalseDetectionRateGraph_sel= gFalseDetectionRate_sel->CreateGraph(); 
+	gFalseDetectionRateGraph_sel->SetNameTitle("FalseDetectionRateGraph_sel","FalseDetectionRateGraph_sel");
+
 	return 0;
 
 }//close AnalyzeData()
@@ -2440,10 +2533,14 @@ int ParseData_caesar(SourceInfo& info,const std::vector<std::string>& fields)
 	double x_wcs= atof(fields[8].c_str());//wcs x
 	double y_wcs= atof(fields[9].c_str());//wcs y
 	double A= atof(fields[13].c_str());//in Jy/beam
-	double fluxDensity= atof(fields[15].c_str());
 	double beamArea= atof(fields[19].c_str());
+	double fluxDensity= atof(fields[15].c_str());	
 	double flux= fluxDensity/beamArea;
-	
+	if(gCatalogVersion==3){
+		flux= atof(fields[15].c_str());
+		fluxDensity= flux*beamArea;		
+	}
+
 	double bmaj_pix= atof(fields[20].c_str());
 	double bmin_pix= atof(fields[21].c_str());
 	double pa_pix= atof(fields[22].c_str());
