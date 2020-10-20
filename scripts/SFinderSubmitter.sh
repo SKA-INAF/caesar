@@ -1714,7 +1714,7 @@ if [ "$FILELIST_GIVEN" = true ]; then
 	do
 
 		## Extract base filename from file given in list 
-		filename_base=$(basename "$filename")
+		filename_base=$(/usr/bin/basename "$filename")
 		file_extension="${filename_base##*.}"
 		filename_base_noext="${filename_base%.*}"
 
@@ -1798,7 +1798,7 @@ else
 	################################################
 
 	## Extract base filename from file given in list 
-	filename_base=$(basename "$INPUTFILE")
+	filename_base=$(/usr/bin/basename "$INPUTFILE")
 	file_extension="${filename_base##*.}"
 	filename_base_noext="${filename_base%.*}"
 
