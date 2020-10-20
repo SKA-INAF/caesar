@@ -462,36 +462,36 @@ do
 	case $item in 
 		## MANDATORY ##	
 		--filelist=*)
-    	FILELIST=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	FILELIST=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			if [ "$FILELIST" != "" ]; then
 				FILELIST_GIVEN=true
 			fi
     ;;
 		--inputfile=*)
-    	INPUTFILE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    	INPUTFILE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`		
 			if [ "$INPUTFILE" != "" ]; then
 				INPUTFILE_GIVEN=true
 			fi
     ;;	
 		--envfile=*)
-    	ENV_FILE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	ENV_FILE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 	
 		## OPTIONAL ##	
 		--containerimg=*)
-    	CONTAINER_IMG=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CONTAINER_IMG=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--containerrun*)
     	RUN_IN_CONTAINER=true
     ;;
 		--containeroptions=*)
-    	CONTAINER_OPTIONS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CONTAINER_OPTIONS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--loglevel=*)
-    	LOG_LEVEL=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	LOG_LEVEL=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--maxfiles=*)
-    	NMAX_PROCESSED_FILES=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	NMAX_PROCESSED_FILES=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--addrunindex*)
 			APPEND_RUN_INDEX=true
@@ -500,24 +500,24 @@ do
 			REDIRECT_LOGS=false
 		;;
 		--outdir=*)
-    	OUTPUT_DIR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	OUTPUT_DIR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
 		--no-mpi*)
     	MPI_ENABLED=false
     ;;
 		--nproc=*)
-      NPROC=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+      NPROC=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--mpioptions=*)
-      MPI_OPTIONS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+      MPI_OPTIONS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--hostfile=*)
-    	HOSTFILE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	HOSTFILE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			HOSTFILE_GIVEN=true
     ;;
 		--nthreads=*)
-    	NTHREADS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	NTHREADS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 			
 		--save-inputmap*)
@@ -550,44 +550,44 @@ do
 			CONVERT_DS9REGIONS_TO_WCS="true"
 		;;
 		--regionwcs=*)
-			DS9REGION_WCSTYPE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+			DS9REGION_WCSTYPE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`	
 		;;
 
 		--bmaj=*)
-    	BMAJ=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    	BMAJ=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
 		--bmin=*)
-    	BMIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    	BMIN=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
 		--bpa=*)
-    	BPA=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    	BPA=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
 		--mappixsize=*)
-    	MAP_PIXSIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    	MAP_PIXSIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
 
     --tilesize=*)
-    	TILE_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	TILE_SIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			SPLIT_IN_TILES="true"
     ;;
 		--tilestep=*)
-    	TILE_STEP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	TILE_STEP=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			TILE_OVERLAP="true"
     ;;
 		--xmin=*)
-    	XMIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	XMIN=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			READ_TILE="true"
     ;;
 		--xmax=*)
-    	XMAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	XMAX=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			READ_TILE="true"
     ;;
 		--ymin=*)
-    	YMIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	YMIN=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			READ_TILE="true"
     ;;
 		--ymax=*)
-    	YMAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	YMAX=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			READ_TILE="true"
     ;;
 		
@@ -601,15 +601,15 @@ do
     	USE_LOCAL_BKG="false"
     ;;
 		--bkgbox=*)
-    	BKG_BOXSIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	BKG_BOXSIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			USE_LOCAL_BKG="true"
     ;;
 		--bkggrid=*)
-    	BKG_GRIDSIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	BKG_GRIDSIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			USE_LOCAL_BKG="true"
     ;;
 		--bkgestimator=*)
-			BKG_ESTIMATOR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			BKG_ESTIMATOR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--no-bkg2ndpass*)
 			BKG_USE_2ND_PASS="false"
@@ -618,7 +618,7 @@ do
 			BKG_SKIP_OUTLIERS="true"
 		;;
 		--sourcebkgboxborder=*)
-			SOURCE_BKGBOX_BORDER=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			SOURCE_BKGBOX_BORDER=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 
 		## SOURCE MERGING
@@ -641,22 +641,22 @@ do
     ;;
 		
 		--compactsearchiters=*)
-			COMPACT_SOURCE_SEARCH_NITERS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			COMPACT_SOURCE_SEARCH_NITERS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--seedthrstep=*)		
-			SEED_THR_STEP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			SEED_THR_STEP=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 
 		--npixmin=*)
-    	NPIX_MIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	NPIX_MIN=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		
 		--seedthr=*)
-    	SEED_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SEED_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
 		--mergethr=*)
-    	MERGE_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	MERGE_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
 		## SOURCE SELECTION
@@ -683,25 +683,25 @@ do
     ;;
 		
 		--minboundingbox=*)
-    	MIN_BOUNDING_BOX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	MIN_BOUNDING_BOX=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--circratiothr=*)
-    	CIRC_RATIO_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CIRC_RATIO_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--elongationthr=*)
-    	ELONGATION_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	ELONGATION_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--ellipsearearatiominthr=*)
-    	ELLIPSE_AREA_RATIO_MIN_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	ELLIPSE_AREA_RATIO_MIN_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--ellipsearearatiomaxthr=*)
-    	ELLIPSE_AREA_RATIO_MAX_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	ELLIPSE_AREA_RATIO_MAX_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--maxnpix=*)
-    	MAX_NPIX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	MAX_NPIX=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;	
 		--nbeamsthr=*)
-    	NBEAMS_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	NBEAMS_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 	
 		## NESTED OPTIONS
@@ -709,37 +709,37 @@ do
     	SEARCH_NESTED_SOURCES="false"
     ;;
 		--blobmaskmethod=*)
-			BLOB_MASK_METHOD=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			BLOB_MASK_METHOD=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--nested-sourcetobeamthr=*)
-    	NESTED_SOURCE_TO_BEAM_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	NESTED_SOURCE_TO_BEAM_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--nested-blobthr=*)
-    	NESTED_BLOB_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	NESTED_BLOB_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--nested-minmotherdist=*)
-    	NESTED_MIN_MOTHER_DIST=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	NESTED_MIN_MOTHER_DIST=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--nested-maxmotherpixmatch=*)
-    	NESTED_MAX_MOTHER_PIX_MATCH=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	NESTED_MAX_MOTHER_PIX_MATCH=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--nested-blobpeakzthr=*)
-			NESTED_BLOB_PEAK_ZTHR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			NESTED_BLOB_PEAK_ZTHR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--nested-blobpeakzthrmerge=*)
-			NESTED_BLOB_PEAK_ZTHR_MERGE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			NESTED_BLOB_PEAK_ZTHR_MERGE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--nested-blobminscale=*)
-			NESTED_BLOB_MIN_SCALE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			NESTED_BLOB_MIN_SCALE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--nested-blobmaxscale=*)
-			NESTED_BLOB_MAX_SCALE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			NESTED_BLOB_MAX_SCALE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--nested-blobscalestep=*)
-			NESTED_BLOB_SCALE_STEP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			NESTED_BLOB_SCALE_STEP=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--nested-blobkernfactor=*)
-			NESTED_BLOB_KERN_FACTOR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			NESTED_BLOB_KERN_FACTOR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 
 		## RESIDUAL OPTIONS
@@ -747,22 +747,22 @@ do
     	COMPUTE_RESIDUAL_MAP="true"
     ;;
 		--res-zthr=*)
-    	RESIDUAL_ZTHR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	RESIDUAL_ZTHR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--res-zhighthr=*)
-    	RESIDUAL_ZHIGHTHR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	RESIDUAL_ZHIGHTHR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--res-removenested*)
 			RESIDUAL_REMOVE_NESTED="true"		
 		;;
 		--res-removedsourcetype=*)
-			RESIDUAL_REMOVED_SOURCE_TYPE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			RESIDUAL_REMOVED_SOURCE_TYPE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--dilatekernsize=*)
-			DILATE_KERNEL_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			DILATE_KERNEL_SIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--res-pssubtractionmethod=*)
-			PS_SUBTRACTION_METHOD=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			PS_SUBTRACTION_METHOD=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 
 		## SMOOTHING FILTER OPTIONS
@@ -770,13 +770,13 @@ do
     	USE_PRESMOOTHING="false"
     ;;
 		--smoothfilter=*)
-			SMOOTH_FILTER=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			SMOOTH_FILTER=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--guidedfilter-radius=*)
-			GUIDED_FILTER_RADIUS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			GUIDED_FILTER_RADIUS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--guidedfilter-eps=*)
-			GUIDED_FILTER_EPS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			GUIDED_FILTER_EPS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		
 
@@ -786,10 +786,10 @@ do
     ;;
 
 		--extsfinder=*)
-    	EXT_SFINDER_METHOD=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	EXT_SFINDER_METHOD=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--activecontour=*)
-    	AC_METHOD=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	AC_METHOD=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		
 
@@ -801,22 +801,22 @@ do
     	FIT_USETHREADS="true"
     ;;
 		--fit-minimizer=*)
-			FIT_MINIMIZER=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_MINIMIZER=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-minimizeralgo=*)
-			FIT_MINIMIZER_ALGO=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_MINIMIZER_ALGO=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-printlevel=*)
-			FIT_PRINTLEVEL=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_PRINTLEVEL=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-strategy=*)
-			FIT_STRATEGY=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_STRATEGY=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-maxnbeams=*)
-			FIT_MAX_NBEAMS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_MAX_NBEAMS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-maxcomponents=*)
-    	FIT_MAX_COMPONENTS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	FIT_MAX_COMPONENTS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--fit-usenestedascomponents*)
 			FIT_USE_NESTED_AS_COMPONENTS="true"
@@ -831,13 +831,13 @@ do
 			FIT_USE_BKGBOX_ESTIMATE="true"
 		;;
 		--fit-bkg=*)
-    	FIT_BKG=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	FIT_BKG=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--fit-nobkglimits*)
     	FIT_WITH_BKG_LIMITS="false"
     ;;
 		--fit-ampllimit=*)
-    	FIT_AMPL_LIMIT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	FIT_AMPL_LIMIT=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;	
 		--fit-noampllimits*)
     	FIT_WITH_AMPL_LIMITS="false"
@@ -846,7 +846,7 @@ do
     	PREFIT_FIX_AMPL="false"
     ;;	
 		--fit-sigmalimit=*)
-    	FIT_SIGMA_LIMIT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	FIT_SIGMA_LIMIT=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--prefit-fixsigma*)
     	PREFIT_FIX_SIGMA="true"
@@ -858,13 +858,13 @@ do
     	FIT_WITH_POS_LIMITS="false"
     ;;
 		--fit-poslimit=*)
-    	FIT_POS_LIMIT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	FIT_POS_LIMIT=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--prefit-freepos*)
 			PREFIT_FIX_POS="false"
 		;;
 		--fit-thetalimit=*)
-    	FIT_THETA_LIMIT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	FIT_THETA_LIMIT=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--prefit-fixtheta*)
     	PREFIT_FIX_THETA="true"
@@ -879,19 +879,19 @@ do
     	FIT_WITH_THETA_FIXED="true"
     ;;
 		--fit-peakminkern=*)
-    	PEAK_MIN_KERN_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	PEAK_MIN_KERN_SIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--fit-peakmaxkern=*)
-    	PEAK_MAX_KERN_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	PEAK_MAX_KERN_SIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--fit-peakmultiplicitythr=*)
-    	PEAK_KERNEL_MULTIPLICITY_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	PEAK_KERNEL_MULTIPLICITY_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--fit-peakshifttol=*)
-    	PEAK_SHIFT_TOLERANCE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	PEAK_SHIFT_TOLERANCE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--fit-peakzthrmin=*)
-    	PEAK_ZTHR_MIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	PEAK_ZTHR_MIN=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
 		--fit-noimproveconvergence*)
@@ -904,16 +904,16 @@ do
 			FIT_IMPROVE_ERRORS="true"
 		;;
 		--fit-parboundincreasestep=*)
-			FIT_PARBOUNDINCREASE_STEPSIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_PARBOUNDINCREASE_STEPSIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-maxniters=*)
-			FIT_MAXNITERS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_MAXNITERS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-nretries=*)
-			FIT_NRETRIES=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_NRETRIES=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-fcntol=*)
-			FIT_FCNTOL=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_FCNTOL=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-scaledatatomax*)
 			FIT_SCALE_DATA_TO_MAX="true"
@@ -922,7 +922,7 @@ do
 			FIT_USE_CHI2_CUT="false"
 		;;
 		--fit-chi2cut=*)
-			FIT_CHI2_CUT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_CHI2_CUT=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-useellipsecuts*)
 			FIT_USE_ELLIPSE_CUTS="true"
@@ -935,19 +935,19 @@ do
 		;;
 
 		--saliency-thr=*)
-    	SALIENCY_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SALIENCY_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--saliency-minreso=*)
-    	SALIENCY_MIN_RESO=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SALIENCY_MIN_RESO=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--saliency-maxreso=*)
-    	SALIENCY_MAX_RESO=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SALIENCY_MAX_RESO=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--saliency-resostep=*)
-    	SALIENCY_RESO_STEP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SALIENCY_RESO_STEP=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--saliency-nn=*)
-    	SALIENCY_NN_PAR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SALIENCY_NN_PAR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--saliency-usebkgmap*)
     	USE_BKG_MAP_IN_SALIENCY="true"
@@ -960,64 +960,64 @@ do
 		;;
 
 		--sp-size=*)
-    	SP_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SP_SIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--sp-beta=*)
-    	SP_BETA=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SP_BETA=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--sp-minarea=*)
-    	SP_MINAREA=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SP_MINAREA=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
 		## WAVELET TRANSFORM FILTER OPTIONS
 		--wtscalemin=*)
-    	WTSCALE_MIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	WTSCALE_MIN=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--wtscalemax=*)
-    	WTSCALE_MAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	WTSCALE_MAX=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
 		## ACTIVE CONTOURS OPTIONS
 		--ac-niters=*)
-    	AC_NITERS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	AC_NITERS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--ac-levelset=*)
-    	AC_LEVELSET_METHOD=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	AC_LEVELSET_METHOD=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--ac-levelsetsize=*)
-    	AC_LEVELSET_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	AC_LEVELSET_SIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--ac-tolerance=*)
-    	AC_TOLERANCE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	AC_TOLERANCE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
 		## CHAN-VESE OPTIONS
 		--cv-nitersinner=*)
-    	CV_NITERS_INNER=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_NITERS_INNER=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-nitersreinit=*)
-    	CV_NITERS_REINIT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_NITERS_REINIT=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-timestep=*)
-    	CV_TIMESTEP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_TIMESTEP=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-wsize=*)
-    	CV_WINDOWSIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_WINDOWSIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-lambda1=*)
-    	CV_LAMBDA1=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_LAMBDA1=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-lambda2=*)
-    	CV_LAMBDA2=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_LAMBDA2=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-mu=*)
-    	CV_MU=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_MU=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-nu=*)
-    	CV_NU=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_NU=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-p=*)
-    	CV_P=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_P=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;		
 
 
@@ -1029,25 +1029,25 @@ do
     	SUBMIT=true
     ;;
 		--batchsystem=*)
-    	BATCH_SYSTEM=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	BATCH_SYSTEM=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--queue=*)
-    	BATCH_QUEUE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	BATCH_QUEUE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--jobwalltime=*)
-			JOB_WALLTIME=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+			JOB_WALLTIME=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`	
 		;;	
 		--jobcpus=*)
-      JOB_NCPUS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+      JOB_NCPUS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--jobnodes=*)
-      JOB_NNODES=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+      JOB_NNODES=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--jobmemory=*)
-			JOB_MEMORY=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+			JOB_MEMORY=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`	
 		;;
 		--jobusergroup=*)
-			JOB_USER_GROUP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+			JOB_USER_GROUP=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`	
 			JOB_USER_GROUP_OPTION="#PBS -A $JOB_USER_GROUP"
 		;;
 
