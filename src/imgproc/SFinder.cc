@@ -3999,7 +3999,7 @@ int SFinder::SaveDS9RegionFile()
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("Saving DS9 region header...");
 	#endif
-
+	fprintf(fout,"# Region file format: DS9 version 4.1\n");
 	fprintf(fout,"global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
 	fprintf(fout,"%s\n",ds9WCSTypeHeader.c_str());
 
@@ -4064,6 +4064,7 @@ int SFinder::SaveDS9RegionFile()
 		#ifdef LOGGING_ENABLED
 			DEBUG_LOG("Saving DS9 region header for fitted source catalog...");
 		#endif
+		fprintf(fout_fit,"# Region file format: DS9 version 4.1\n");
 		fprintf(fout_fit,"global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
 		fprintf(fout_fit,"%s\n",ds9WCSTypeHeader.c_str());
 

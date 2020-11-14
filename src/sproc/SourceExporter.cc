@@ -2484,6 +2484,7 @@ int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& 
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("Saving DS9 region header...");
 	#endif
+	fprintf(fout,"# Region file format: DS9 version 4.1\n");
 	fprintf(fout,"global color=%s font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n",ds9RegionColor.c_str());
 	fprintf(fout,"%s\n",ds9WCSTypeHeader.c_str());
 
@@ -2550,6 +2551,7 @@ int SourceExporter::WriteComponentsToDS9(std::string filename,const std::vector<
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("Saving DS9 region header for fitted source catalog...");
 	#endif
+	fprintf(fout_fit,"# Region file format: DS9 version 4.1\n");
 	fprintf(fout_fit,"global color=%s font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n",ds9RegionColor.c_str());
 	fprintf(fout_fit,"%s\n",ds9WCSTypeHeader.c_str());
 
