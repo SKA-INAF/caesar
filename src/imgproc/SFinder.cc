@@ -729,6 +729,7 @@ int SFinder::Configure()
 	GET_OPTION_VALUE(residualModel,m_residualModel);
 	GET_OPTION_VALUE(residualModelRandomize,m_residualModelRandomize);
 	GET_OPTION_VALUE(psSubtractionMethod,m_psSubtractionMethod);
+	GET_OPTION_VALUE(residualBkgAroundSource,m_residualBkgAroundSource);
 	
 	//Get source fitting options
 	GET_OPTION_VALUE(fitSources,m_fitSources);
@@ -1980,6 +1981,27 @@ Image* SFinder::FindResidualMap(Image* inputImg,ImgBkgData* bkgData,std::vector<
 	//#endif
 	//########################
 
+	//Compute source binary mask
+	bool isBinary= true;
+	bool invertMask= true;
+	Image* smaskImg_binary= inputImg->GetSourceMask(sources,isBinary,invertMask);
+	if(!smaskImg_binary){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute source binary mask!");	
+		#endif
+		return nullptr;
+	}
+
+	//Set bkg to be used in residual map	
+	//NB: pass bkgData=0 if selected to use bkg around source
+	ImgBkgData* bkgData_res= bkgData;
+	if(m_residualBkgAroundSource) {
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Using bkg around source for residual (passing bkgData=0 to task) ...");
+		#endif
+		bkgData_res= 0;
+	}
+
 	//Compute residual map
 	Image* residualImg= 0;
 	if(m_UseResidualInExtendedSearch && sources.size()>0){
@@ -1990,7 +2012,8 @@ Image* SFinder::FindResidualMap(Image* inputImg,ImgBkgData* bkgData,std::vector<
 			sources,
 			m_dilateKernelSize,m_residualModel,m_removedSourceType,m_removeNestedSources,	
 			bkgData,m_UseLocalBkg,
-			m_residualModelRandomize,m_residualZThr,m_residualZHighThr,m_psSubtractionMethod
+			m_residualModelRandomize,m_residualZThr,m_residualZHighThr,m_psSubtractionMethod,
+			smaskImg_binary,m_sourceBkgBoxBorderSize
 		);
 
 	}//close if
@@ -1999,6 +2022,12 @@ Image* SFinder::FindResidualMap(Image* inputImg,ImgBkgData* bkgData,std::vector<
 			INFO_LOG("Setting residual image to input image...");
 		#endif
 		residualImg= inputImg->GetCloned("",true,true);
+	}
+
+	//Clear data
+	if(smaskImg_binary){
+		delete smaskImg_binary;
+		smaskImg_binary= 0;
 	}
 
 	if(!residualImg){
@@ -3965,6 +3994,12 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Setting grid size to ("<<gridSizeX<<","<<gridSizeY<<") pixels ...");
 	#endif
+
+	if(!m_UseLocalBkg){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Using global bkg (ignoring bkg box & grid) ...");
+		#endif
+	}
 
 	//## Compute Bkg
 	auto t0_bkg = chrono::steady_clock::now();	

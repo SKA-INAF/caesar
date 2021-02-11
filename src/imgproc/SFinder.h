@@ -483,6 +483,7 @@ class SFinder : public TObject {
 		//bool m_DilateRandomize;
 		bool m_residualModelRandomize;
 		int m_psSubtractionMethod;
+		bool m_residualBkgAroundSource;
 		bool m_UseResidualInExtendedSearch;
 
 		//Smoothing
