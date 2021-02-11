@@ -59,6 +59,7 @@ if [ "$NARGS" -lt 1 ]; then
 	echo "--mappixsize=[MAP_PIXSIZE] - Map pixel size in arcsec (NB: used only when info is not available in input map) (default=1 arcsec)"
 	echo "--globalbkg - Use global bkg (default=use local bkg)"
 	echo "--bkgestimator=[BKG_ESTIMATOR] - Stat estimator used for bkg (1=Mean,2=Median,3=BiWeight,4=ClippedMedian) (default=2)"
+	echo "--bkgboxpix - Consider box size option expressed in pixels and not as a multiple of beam size (default=no)"
 	echo "--bkgbox=[BKG_BOXSIZE] - Box size (muliple of beam size) used to compute local bkg (default=20 x beam)"
 	echo "--bkggrid=[BKG_GRIDSIZE] - Grid size (fraction of bkg box) used to compute local bkg (default=0.2 x box)"
 	echo "--no-bkg2ndpass - Do not perform a 2nd pass in bkg estimation (default=true)"
@@ -129,6 +130,7 @@ if [ "$NARGS" -lt 1 ]; then
 	echo "--dilatekernsize=[DILATE_KERNEL_SIZE] - Size of dilating kernel in pixels (default=9)"
 	echo "--res-removedsourcetype=[RESIDUAL_REMOVED_SOURCE_TYPE] - Type of source dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED) (default=2)"
 	echo "--res-pssubtractionmethod=[PS_SUBTRACTION_METHOD] - Method used to subtract point-sources in residual map (1=DILATION, 2=FIT MODEL REMOVAL)"
+	echo "--res-bkgaroundsource - Usebkg computed around source rather than the one computed using the global/local bkg map (default=false)"
 	echo ""
 
 	echo "=== SFINDER SOURCE FITTING OPTIONS ==="
@@ -299,6 +301,7 @@ YMIN=0
 YMAX=0
 USE_PARALLEL_MEDIAN_ALGO="true"
 USE_LOCAL_BKG="true"
+BKG_SIZE_IN_BEAM="true"
 BKG_ESTIMATOR="2"
 BKG_BOXSIZE="20"
 BKG_GRIDSIZE="0.2"
@@ -314,6 +317,7 @@ COMPACT_SOURCE_SEARCH_NITERS="5"
 SEED_THR_STEP="1"
 
 COMPUTE_RESIDUAL_MAP="false"
+RESIDUAL_BKG_AROUND_SOURCE="false"
 ##DILATE_NESTED="false"
 RESIDUAL_REMOVE_NESTED="false"
 ##DILATE_BRIGHT_THR="10"
@@ -605,13 +609,16 @@ do
 		--globalbkg*)
     	USE_LOCAL_BKG="false"
     ;;
+		--bkgboxpix*)
+			BKG_SIZE_IN_BEAM="false"
+		;;
 		--bkgbox=*)
     	BKG_BOXSIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
-			USE_LOCAL_BKG="true"
+			#USE_LOCAL_BKG="true"
     ;;
 		--bkggrid=*)
     	BKG_GRIDSIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
-			USE_LOCAL_BKG="true"
+			#USE_LOCAL_BKG="true"
     ;;
 		--bkgestimator=*)
 			BKG_ESTIMATOR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
@@ -769,6 +776,10 @@ do
 		--res-pssubtractionmethod=*)
 			PS_SUBTRACTION_METHOD=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
+		--res-bkgaroundsource*)
+			RESIDUAL_BKG_AROUND_SOURCE= "true"
+		;;
+
 
 		## SMOOTHING FILTER OPTIONS
 		--no-presmoothing*)
@@ -1342,7 +1353,7 @@ generate_config(){
     echo "use2ndPassInLocalBkg = $BKG_USE_2ND_PASS	        | Use 2nd pass to refine noise calculation in local bkg (T/F)"
 		echo "skipOutliersInLocalBkg = $BKG_SKIP_OUTLIERS				| Skip outliers (e.g. bright point sources) in local bkg computation (T/F)"
 		echo "bkgEstimator = $BKG_ESTIMATOR                     | Background estimator (1=Mean,2=Median,3=BiWeight,4=ClippedMedian)"
-    echo 'useBeamInfoInBkg = true                           | Use beam information in bkg box definition (if available) (T/F)'
+    echo "useBeamInfoInBkg = $BKG_SIZE_IN_BEAM              | Use beam information in bkg box definition (if available) (T/F)"
 		echo "boxSizeX = $BKG_BOXSIZE										        | X Size of local background box in #pixels"
 		echo "boxSizeY = $BKG_BOXSIZE										        | Y Size of local background box in #pixels"
 		echo "gridSizeX = $BKG_GRIDSIZE									        | X Size of local background grid used for bkg interpolation"
@@ -1471,15 +1482,16 @@ generate_config(){
 		echo '//================================'
 		echo '//==  SOURCE RESIDUAL OPTIONS   =='
 		echo '//================================'
-		echo "computeResidualMap = $COMPUTE_RESIDUAL_MAP          | Compute compact source residual map (after compact source search) (T/F)"
-		echo "removeNestedSources = $RESIDUAL_REMOVE_NESTED				| Dilate sources nested inside bright sources (T/F)"
-		echo "residualZThr = $RESIDUAL_ZTHR                       | Significance threshold (in sigmas) above which sources of selected type are dilated"
-		echo "residualZHighThr = $RESIDUAL_ZHIGHTHR               | Significance threshold (in sigmas) above which sources are always dilated (even if they have nested or different type)"
-		echo "dilateKernelSize = $DILATE_KERNEL_SIZE							| Size of kernel (odd) to be used in dilation operation"
-		echo "removedSourceType = $RESIDUAL_REMOVED_SOURCE_TYPE   | Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"
-		echo 'residualModel = 1																    | Model used to replace residual pixel values (1=bkg,2=source median)'
-		echo 'residualModelRandomize = false											| Randomize pixel values used to replace residual pixels (T/F)'
-		echo "psSubtractionMethod = $PS_SUBTRACTION_METHOD        | Point-source subtraction method (1=dilation, 2=model subtraction (default=1)"
+		echo "computeResidualMap = $COMPUTE_RESIDUAL_MAP            | Compute compact source residual map (after compact source search) (T/F)"
+		echo "removeNestedSources = $RESIDUAL_REMOVE_NESTED				  | Dilate sources nested inside bright sources (T/F)"
+		echo "residualZThr = $RESIDUAL_ZTHR                         | Significance threshold (in sigmas) above which sources of selected type are dilated"
+		echo "residualZHighThr = $RESIDUAL_ZHIGHTHR                 | Significance threshold (in sigmas) above which sources are always dilated (even if they have nested or different type)"
+		echo "dilateKernelSize = $DILATE_KERNEL_SIZE							  | Size of kernel (odd) to be used in dilation operation"
+		echo "removedSourceType = $RESIDUAL_REMOVED_SOURCE_TYPE     | Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"
+		echo 'residualModel = 1																      | Model used to replace residual pixel values (1=bkg,2=source median)'
+		echo 'residualModelRandomize = false											  | Randomize pixel values used to replace residual pixels (T/F)'
+		echo "psSubtractionMethod = $PS_SUBTRACTION_METHOD          | Point-source subtraction method (1=dilation, 2=model subtraction (default=1)"
+		echo "residualBkgAroundSource = $RESIDUAL_BKG_AROUND_SOURCE | Use bkg around source and not global/local bkg map (default=no)"
 		echo '###'
 		echo '###'
 		echo '//============================================='
