@@ -26,6 +26,7 @@ if [ "$NARGS" -lt 1 ]; then
 
 	echo "*** OPTIONAL ARGS ***"
 	echo "=== SFINDER OUTPUT OPTIONS ==="
+	echo "--save-fits - Save maps (if save enabled) in FITS format (default=ROOT format)"
 	echo "--save-inputmap - Save input map in output ROOT file (default=no)"
 	echo "--save-bkgmap - Save bkg map in output ROOT file (default=no)"
 	echo "--save-rmsmap - Save rms map in output ROOT file (default=no)"	
@@ -425,6 +426,7 @@ MERGE_EDGE_SOURCES="false"
 MERGE_SOURCES="true"
 #MERGE_COMPACT_SOURCES="true" # REMOVED FROM OPTION LIST
 #MERGE_EXTENDED_SOURCES="true" # REMOVED FROM OPTION LIST
+SAVE_FITS="false"
 SAVE_INPUT_MAP="false"
 SAVE_BKG_MAP="false"
 SAVE_RMS_MAP="false"
@@ -520,6 +522,9 @@ do
     	NTHREADS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 			
+		--save-fits*)
+    	SAVE_FITS="true"
+    ;;
 		--save-inputmap*)
     	SAVE_INPUT_MAP="true"
     ;;
@@ -1069,7 +1074,7 @@ echo "RUN_IN_CONTAINER? $RUN_IN_CONTAINER, CONTAINER_IMG=$CONTAINER_IMG, CONTAIN
 echo "ENV_FILE: $ENV_FILE"
 echo "INPUTFILE: $INPUTFILE"
 echo "FILELIST: $FILELIST, NMAX_PROCESSED_FILES: $NMAX_PROCESSED_FILES"
-echo "SAVE_INPUT_MAP? $SAVE_INPUT_MAP, SAVE_BKG_MAP: $SAVE_BKG_MAP, SAVE_RMS_MAP? $SAVE_RMS_MAP, SAVE_SIGNIFICANCE_MAP? $SAVE_SIGNIFICANCE_MAP, SAVE_RESIDUAL_MAP: $SAVE_RESIDUAL_MAP"
+echo "SAVE_FITS? $SAVE_FITS, SAVE_INPUT_MAP? $SAVE_INPUT_MAP, SAVE_BKG_MAP: $SAVE_BKG_MAP, SAVE_RMS_MAP? $SAVE_RMS_MAP, SAVE_SIGNIFICANCE_MAP? $SAVE_SIGNIFICANCE_MAP, SAVE_RESIDUAL_MAP: $SAVE_RESIDUAL_MAP"
 echo "SAVE_SALIENCY_MAP? $SAVE_SALIENCY_MAP, SAVE_SEGMENTED_MAP? $SAVE_SEGMENTED_MAP"
 echo "SPLIT_IN_TILES? $SPLIT_IN_TILES, TILE_SIZE: $TILE_SIZE, TILE_STEP: $TILE_STEP"
 echo "NPROC: $NPROC, NTHREADS: $NTHREADS, MPI_ENABLED? $MPI_ENABLED, MPI_OPTIONS: $MPI_OPTIONS"
@@ -1301,14 +1306,14 @@ generate_config(){
 		echo "convertDS9RegionsToWCS = $CONVERT_DS9REGIONS_TO_WCS | Convert DS9 regions (contours & ellipses) to WCS (default=false)"
 		echo "ds9WCSType = $DS9REGION_WCSTYPE                     | DS9 region WCS output format (0=J2000,1=B1950,2=GAL) (default=0)"
     echo 'inputMapFITSFile = 	input_map.fits				          | Output filename where to store input map in FITS format (.fits)'
-    echo 'residualMapFITSFile = residual_map.fits		          | Output filename where to store residual map in FITS format (.fits)'
+    echo "residualMapFITSFile = $outputfile_res		            | Output filename where to store residual map in FITS format (.fits)"
     echo 'saliencyMapFITSFile = saliency_map.fits		          | Output filename where to store saliency map in FITS format (.fits)'
-    echo 'bkgMapFITSFile = bkg_map.fits							          | Output filename where to store bkg map in FITS format (.fits)'
-		echo 'noiseMapFITSFile = noise_map.fits					          | Output filename where to store noise map in FITS format (.fits)'
-    echo 'significanceMapFITSFile = significance_map.fits	    | Output filename where to store significance map in FITS format (.fits)' 
+    echo "bkgMapFITSFile = $outputfile_bkg							      | Output filename where to store bkg map in FITS format (.fits)"
+		echo "noiseMapFITSFile = $outputfile_rms					        | Output filename where to store noise map in FITS format (.fits)"
+    echo "significanceMapFITSFile = $outputfile_zmap	        | Output filename where to store significance map in FITS format (.fits)"
     echo 'saveToFile = true																	  | Save results & maps to output ROOT file (T/F)'
-		echo 'saveToCatalogFile = true														! Save sources to catalog files (island, fitted components) (T/F)'
-    echo 'saveToFITSFile = false														  | Save results to output FITS file(s) (T/F)'
+		echo 'saveToCatalogFile = true														| Save sources to catalog files (island, fitted components) (T/F)'
+    echo "saveToFITSFile = $SAVE_FITS													| Save results to output FITS file(s) (T/F)"
 		echo "saveDS9Region = $SAVE_DS9REGIONS									  | Save DS9 region files (T/F) (default=T)"
     echo 'saveConfig = true																	  | Save config options to ROOT file (T/F)'
 		echo 'saveSources = true																  | Save sources to ROOT file (T/F)'
@@ -1728,6 +1733,13 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		catalog_file="catalog-$filename_base_noext"'.dat'
 		catalog_fitcomp_file="catalog_fitcomp-$filename_base_noext"'.dat'
 
+		## Define FITS map out filenames
+		outputfile_bkg="out-$filename_base_noext"'_bkg.fits'
+		outputfile_rms="out-$filename_base_noext"'_rms.fits'
+		outputfile_zmap="out-$filename_base_noext"'_significance.fits'
+		outputfile_res="out-$filename_base_noext"'_res.fits'
+
+
 		## Define output log filename
 		logfile="output_$filename_base_noext"'.log'
 
@@ -1812,6 +1824,11 @@ else
 	catalog_file="catalog-$filename_base_noext"'.dat'
 	catalog_fitcomp_file="catalog_fitcomp-$filename_base_noext"'.dat'
 
+	## Define FITS map out filenames
+	outputfile_bkg="out-$filename_base_noext"'_bkg.fits'
+	outputfile_rms="out-$filename_base_noext"'_rms.fits'
+	outputfile_zmap="out-$filename_base_noext"'_significance.fits'
+	outputfile_res="out-$filename_base_noext"'_res.fits'
 
 	## Define output log filename
 	logfile="output_$filename_base_noext"'.log'
