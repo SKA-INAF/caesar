@@ -315,6 +315,7 @@ int ConfigParser::RegisterPredefinedOptions()
 		REGISTER_OPTION(residualModel,int,1,0,3);
 		REGISTER_OPTION(residualModelRandomize,bool,false,false,true);
 		REGISTER_OPTION(psSubtractionMethod,int,1,0,3);
+		REGISTER_OPTION(residualBkgAroundSource,bool,true,false,true);
 
 		//REGISTER_OPTION(dilateZBrightThr,double,10,0,10000);
 		//REGISTER_OPTION(dilateZThr,double,5,0,10000);
