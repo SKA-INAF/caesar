@@ -2011,7 +2011,7 @@ Image* SFinder::FindResidualMap(Image* inputImg,ImgBkgData* bkgData,std::vector<
 		residualImg= inputImg->GetSourceResidual(
 			sources,
 			m_dilateKernelSize,m_residualModel,m_removedSourceType,m_removeNestedSources,	
-			bkgData,m_UseLocalBkg,
+			bkgData_res,m_UseLocalBkg,
 			m_residualModelRandomize,m_residualZThr,m_residualZHighThr,m_psSubtractionMethod,
 			smaskImg_binary,m_sourceBkgBoxBorderSize
 		);
