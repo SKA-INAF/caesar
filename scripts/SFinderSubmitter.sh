@@ -777,9 +777,8 @@ do
 			PS_SUBTRACTION_METHOD=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--res-bkgaroundsource*)
-			RESIDUAL_BKG_AROUND_SOURCE= "true"
+			RESIDUAL_BKG_AROUND_SOURCE="true"
 		;;
-
 
 		## SMOOTHING FILTER OPTIONS
 		--no-presmoothing*)
