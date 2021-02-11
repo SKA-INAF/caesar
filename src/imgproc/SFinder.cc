@@ -625,6 +625,7 @@ int SFinder::Configure()
 	GET_OPTION_VALUE(outputCatalogFile,m_catalogOutFileName);
 	GET_OPTION_VALUE(outputComponentCatalogFile,m_catalogComponentsOutFileName);
 	GET_OPTION_VALUE(saveToFile,m_saveToFile);
+	GET_OPTION_VALUE(saveToFITSFile,m_saveToFITSFile);
 	GET_OPTION_VALUE(saveToCatalogFile,m_saveToCatalogFile);
 	GET_OPTION_VALUE(saveConfig,m_saveConfig);
 	GET_OPTION_VALUE(saveDS9Region,m_saveDS9Region);
@@ -637,10 +638,14 @@ int SFinder::Configure()
 	GET_OPTION_VALUE(saveSources,m_saveSources);
 	GET_OPTION_VALUE(isInteractiveRun,m_IsInteractiveRun);
 	GET_OPTION_VALUE(saveResidualMap,m_saveResidualMap);
+	GET_OPTION_VALUE(residualMapFITSFile,m_residualMapFITSFile);
 	GET_OPTION_VALUE(saveInputMap,m_saveInputMap);
 	GET_OPTION_VALUE(saveSignificanceMap,m_saveSignificanceMap);
+	GET_OPTION_VALUE(significanceMapFITSFile,m_significanceMapFITSFile);
 	GET_OPTION_VALUE(saveBkgMap,m_saveBkgMap);
+	GET_OPTION_VALUE(bkgMapFITSFile,m_bkgMapFITSFile);
 	GET_OPTION_VALUE(saveNoiseMap,m_saveNoiseMap);
+	GET_OPTION_VALUE(noiseMapFITSFile,m_noiseMapFITSFile);
 	GET_OPTION_VALUE(saveSaliencyMap,m_saveSaliencyMap);
 	GET_OPTION_VALUE(saveEdgenessMap,m_saveEdgenessMap);
 	GET_OPTION_VALUE(saveCurvatureMap,m_saveCurvatureMap);
@@ -3941,6 +3946,7 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 
 	}//close if use beam info
 	else{
+		/*
 		#ifdef LOGGING_ENABLED
 			WARN_LOG("Using image fractions to set bkg box size (beam info option is turned off)...");
 		#endif
@@ -3948,6 +3954,7 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 		double Ny= static_cast<double>(img->GetNy());
 		boxSizeX= m_BoxSizeX*Nx;
 		boxSizeY= m_BoxSizeY*Ny;
+		*/
 		#ifdef LOGGING_ENABLED
 			INFO_LOG("Setting bkg boxes to ("<<boxSizeX<<","<<boxSizeY<<") pixels ...");	
 		#endif
@@ -4225,7 +4232,12 @@ int SFinder::Save()
 			INFO_LOG("Saving residual map to file...");
 		#endif
 		m_ResidualImg->SetNameTitle("img_residual","img_residual");
-		m_ResidualImg->Write();
+		if(m_saveToFITSFile){
+			m_ResidualImg->WriteFITS(m_residualMapFITSFile);
+		}
+		else{
+			m_ResidualImg->Write();
+		}
 	}
 	
 	//Save significance map?
@@ -4234,7 +4246,12 @@ int SFinder::Save()
 			INFO_LOG("Saving significance map to file...");
 		#endif
 		m_SignificanceMap->SetNameTitle("img_significance","img_significance");
-		m_SignificanceMap->Write();
+		if(m_saveToFITSFile){
+			m_SignificanceMap->WriteFITS(m_significanceMapFITSFile);
+		}
+		else{
+			m_SignificanceMap->Write();
+		}
 	}
 
 	//Save bkg & noise maps
@@ -4243,11 +4260,24 @@ int SFinder::Save()
 			INFO_LOG("Saving bkg map to file...");
 		#endif
 		(m_BkgData->BkgMap)->SetNameTitle("img_bkg","img_bkg");
-		(m_BkgData->BkgMap)->Write();
+		if(m_saveToFITSFile){
+			(m_BkgData->BkgMap)->WriteFITS(m_bkgMapFITSFile);
+		}
+		else{
+			(m_BkgData->BkgMap)->Write();
+		}
 	}
 	if(m_saveNoiseMap && m_BkgData && m_BkgData->NoiseMap){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving bkg rms map to file...");
+		#endif	
 		(m_BkgData->NoiseMap)->SetNameTitle("img_rms","img_rms");
-		(m_BkgData->NoiseMap)->Write();
+		if(m_saveToFITSFile){
+			(m_BkgData->NoiseMap)->WriteFITS(m_noiseMapFITSFile);
+		}
+		else{
+			(m_BkgData->NoiseMap)->Write();
+		}
 	}
 
 	//Save saliency map

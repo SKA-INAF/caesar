@@ -315,6 +315,7 @@ class SFinder : public TObject {
 		std::string m_catalogOutFileName;
 		std::string m_catalogComponentsOutFileName;
 		bool m_saveToFile;
+		bool m_saveToFITSFile;
 		bool m_saveToCatalogFile;
 		bool m_saveConfig;
 		bool m_saveDS9Region;
@@ -327,10 +328,14 @@ class SFinder : public TObject {
 		TTree* m_SourceTree;
 		bool m_saveSources;
 		bool m_saveResidualMap;
+		std::string m_residualMapFITSFile;
 		bool m_saveInputMap;
 		bool m_saveSignificanceMap;
+		std::string m_significanceMapFITSFile;
 		bool m_saveBkgMap;
+		std::string m_bkgMapFITSFile;
 		bool m_saveNoiseMap;
+		std::string m_noiseMapFITSFile;
 		bool m_saveSaliencyMap;
 		bool m_saveEdgenessMap;
 		bool m_saveCurvatureMap;
