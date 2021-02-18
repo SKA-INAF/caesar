@@ -3929,7 +3929,7 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 	//## If no info is available (or use of beam info is off) interpret grid & box options as fractions wrt image size
 	double boxSizeX= m_BoxSizeX;
 	double boxSizeY= m_BoxSizeY;
-
+	
 	int pixelWidthInBeam= 0;
 	if(m_UseBeamInfoInBkg){
 
@@ -3994,6 +3994,17 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Setting grid size to ("<<gridSizeX<<","<<gridSizeY<<") pixels ...");
 	#endif
+
+	//## Check box size vs image size	
+	long int Nx= img->GetNx();
+	long int Ny= img->GetNy();
+	if(boxSizeX>=Nx || boxSizeY>=Ny)
+	{
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Bkg box size ("<<boxSizeX<<","<<boxSizeY<<") >= image size ("<<Nx<<","<<Ny<<"), switching from local to global bkg calculation ...");
+		#endif
+		m_UseLocalBkg= false;
+	}
 
 	if(!m_UseLocalBkg){
 		#ifdef LOGGING_ENABLED
