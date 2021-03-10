@@ -112,7 +112,8 @@ enum SourceType {
 	eCompact=1,
 	ePointLike=2,
 	eExtended=3,
-	eCompactPlusExtended=4
+	eCompactPlusExtended=4,
+	eDiffuse=5
 };
 
 /**
@@ -432,6 +433,7 @@ enum AstroObjectType
 	eSTAR_PULSAR=1036,
 	eSTAR_SUPERNOVA=1037,
 	eSTAR_SUBSTELLAR=1038,
+	eSTAR_LBV=1039
 	
 };//close AstroObjectType enum codes
 

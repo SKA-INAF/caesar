@@ -36,6 +36,9 @@
 
 #include <Consts.h>
 
+//OpenCV headers
+#include <opencv2/core/core.hpp>
+
 //ROOT headers
 #include <TMath.h>
 #include <TEllipse.h>
@@ -74,6 +77,12 @@ DS9Region::DS9Region()
 	shapeType= eUNKNOWN_SHAPE;
 	csType= eUNKNOWN_CS;
 	hasMetaDataSet= false;
+	x0= 0;
+	y0= 0;
+	x1= 0;
+	x2= 0;
+	y1= 0;
+	y2= 0;
 
 }//close constructor
 
@@ -81,6 +90,12 @@ DS9Region::DS9Region(int shape,int cs)
 	: shapeType(shape), csType(cs)
 {
 	hasMetaDataSet= false;
+	x0= 0;
+	y0= 0;
+	x1= 0;
+	x2= 0;
+	y1= 0;
+	y2= 0;
 
 }//close constrcutor
 
@@ -204,6 +219,48 @@ Contour* DS9PolygonRegion::GetContour(bool computePars)
 
 }//close GetContour()
 
+int DS9PolygonRegion::ComputeBoundingBox()
+{
+	//Check if polygon has points
+	if(points.empty()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No points found in polygon!");
+		#endif
+		return -1;
+	}
+
+	//Create OpenCV point collection
+	std::vector<cv::Point2f> points_cv;
+	
+	for(size_t i=0;i<points.size();i++){
+		double x= points[i].X();
+		double y= points[i].Y();
+		points_cv.push_back( cv::Point2f(x,y) );
+		//cout<<"P="<<cv::Point2f(x,y)<<endl;	
+	}
+
+	//Compute moments
+	cv::Moments moments = cv::moments(points_cv);
+	double m00= moments.m00;
+	double m10= moments.m10;
+	double m01= moments.m01;
+	
+	//Compute centroid
+	x0= m10/m00;
+	y0= m01/m00;
+	
+	//Compute bounding box
+	cv::Rect bbox= cv::boundingRect(points_cv);
+	x1= bbox.x;
+	y1= bbox.y;
+	x2= x1 + bbox.width;
+	y2= y1 + bbox.height;
+
+	return 0;
+
+}//close ComputeBoundingBox()
+
+
 //================================
 //==    DS9 BOX REGION CLASS
 //================================
@@ -233,14 +290,15 @@ void DS9BoxRegion::Print()
 
 }//close Print()
 
-void DS9BoxRegion::ComputeBoxCoords()
+//void DS9BoxRegion::ComputeBoxCoords()
+int DS9BoxRegion::ComputeBoundingBox()
 {
+	//Set centroid & unrotated bbox
 	double xmin_unrot= std::min(cx - width/2.,cx + width/2.); 
 	double xmax_unrot= std::max(cx - width/2.,cx + width/2.); 
 	double ymin_unrot= std::min(cy - height/2.,cy + height/2.);
 	double ymax_unrot= std::max(cy - height/2.,cy + height/2.);
 
-	//VERTEX NOT ROTATED
 	std::vector<TVector2> vertex 
 	{
 		TVector2(xmin_unrot,ymin_unrot),//bottom left
@@ -248,6 +306,13 @@ void DS9BoxRegion::ComputeBoxCoords()
 		TVector2(xmax_unrot,ymax_unrot),//top right
 		TVector2(xmin_unrot,ymax_unrot)//top left
 	};
+
+	x0= cx;
+	y0= cy;
+	x1= xmin_unrot;
+	x2= xmax_unrot;
+	y1= ymin_unrot;
+	y2= ymax_unrot;
 	
 	//Compute vertex points rotated
 	points.clear();
@@ -275,22 +340,9 @@ void DS9BoxRegion::ComputeBoxCoords()
 		if(y>ymax) ymax= y;
 	}
 
-	/*	
-	MathUtils::ComputeRotatedCoords(xmin_rot,ymin_rot,xmin_unrot,ymin_unrot,cx,cy,theta);
-	MathUtils::ComputeRotatedCoords(xmax_rot,ymax_rot,xmax_unrot,ymax_unrot,cx,cy,theta);
-
-	xmin= std::min(xmin_rot,xmax_rot);
-	xmax= std::max(xmin_rot,xmax_rot);
-	ymin= std::min(ymin_rot,ymax_rot);
-	ymax= std::max(ymin_rot,ymax_rot);
-
-	points.push_back(TVector2(xmin,ymin));
-	points.push_back(TVector2(xmax,ymin));
-	points.push_back(TVector2(xmax,ymax));
-	points.push_back(TVector2(xmin,ymax));
-	*/
+	return 0;
 	
-}//close ComputeBoxCoords()
+}//close ComputeBoundingBox()
 
 bool DS9BoxRegion::IsPointInsideRegion(double x,double y)
 {
@@ -450,6 +502,18 @@ Contour* DS9CircleRegion::GetContour(bool computePars)
 
 }//close GetContour()
 
+int DS9CircleRegion::ComputeBoundingBox()
+{
+	x0= cx;
+	y0= cy;
+	x1= x0-r;
+	x2= x0+r;
+	y1= y0-r;
+	y2= y0+r;
+
+	return 0;
+
+}//close ComputeBoundingBox()
 
 //================================
 //==    DS9 ELLIPSE REGION CLASS
@@ -546,5 +610,54 @@ Contour* DS9EllipseRegion::GetContour(bool computePars)
 	return contour;
 
 }//close GetContour()
+
+int DS9EllipseRegion::ComputeBoundingBox()
+{
+	//Set center
+	x0= cx;
+	y0= cy;
+	double width= a;
+	double height= b;
+
+	//Comput bbox (see http://stackoverflow.com/a/88020)
+	double theta_rad= theta*TMath::DegToRad();
+	double cos_angle = cos(theta_rad);
+  double sin_angle = sin(theta_rad);
+  double tan_angle = tan(theta_rad);
+
+  double t1 = atan(-height * tan_angle / width);
+  double t2 = t1 + TMath::Pi();
+
+  double dx1 = 0.5 * width * cos_angle * cos(t1) - 0.5 * height * sin_angle * sin(t1);
+  double dx2 = 0.5 * width * cos_angle * cos(t2) - 0.5 * height * sin_angle * sin(t2);
+
+  if(dx1 > dx2){
+		double dx1_tmp= dx1;
+		double dx2_tmp= dx2;
+		dx1= dx2_tmp;
+		dx2= dx1_tmp;
+	}
+
+  t1 = atan(height / tan_angle / width);
+  t2 = t1 + TMath::Pi();
+
+  double dy1 = 0.5 * height * cos_angle * sin(t1) + 0.5 * width * sin_angle * cos(t1);
+  double dy2 = 0.5 * height * cos_angle * sin(t2) + 0.5 * width * sin_angle * cos(t2);
+
+  if(dy1 > dy2){
+		double dy1_tmp= dy1;
+		double dy2_tmp= dy2;
+		dy1= dy2_tmp;
+		dy2= dy1_tmp;
+	}
+
+  x1= x0 + dx1;
+  x2= x0 + dx2;
+  y1= y0 + dy1;
+  y2= y0 + dy2;
+
+	return 0;
+
+}//close ComputeBoundingBox()
 
 }//close namespace

@@ -60,7 +60,7 @@
 namespace Caesar {
 
 class Contour;
-
+class Image;
 
 //================================
 //==    DS9REGION METADATA CLASS
@@ -122,7 +122,6 @@ class DS9Region : public TObject
 		/**
 		* \brief Parametric constructor
 		*/
-		//DS9Region(int shape=eUNKNOWN_SHAPE,int cs=eUNKNOWN_CS);
 		DS9Region(int shape,int cs);
 		/**
 		* \brief Destructor
@@ -164,6 +163,10 @@ class DS9Region : public TObject
 		* \brief Compute contour from region
 		*/
 		virtual Contour* GetContour(bool computePars=true){return nullptr;}
+		/**
+		* \brief Compute mask from region
+		*/
+		virtual Image* GetMask(){return nullptr;}
 		
 		/**
 		* \brief Set region metadata
@@ -184,6 +187,12 @@ class DS9Region : public TObject
 		*/
 		bool HasMetaDataSet() {return hasMetaDataSet;}
 
+		/**
+		* \brief Compute centroid & bounding box
+		*/
+		virtual int ComputeBoundingBox(){return 0;}
+		
+
 	public:
 		int shapeType;
 		int csType;
@@ -192,8 +201,14 @@ class DS9Region : public TObject
 		DS9RegionMetaData metadata;
 		bool hasMetaDataSet;
 		
+		double x0;
+		double y0;	
+		double x1;
+		double x2;
+		double y1;
+		double y2;
 
-	ClassDef(DS9Region,1)
+	ClassDef(DS9Region,2)
 		
 };//close class DS9Region()
 
@@ -233,6 +248,10 @@ class DS9PolygonRegion : public DS9Region
 		* \brief Compute contour from region
 		*/
 		virtual Contour* GetContour(bool computePars=true);
+		/**
+		* \brief Compute centroid & bounding box
+		*/
+		virtual int ComputeBoundingBox();
 
 	public:
 
@@ -282,7 +301,8 @@ class DS9BoxRegion : public DS9Region
 		/**
 		* \brief Compute box coordinates
 		*/
-		void ComputeBoxCoords();
+		//void ComputeBoxCoords();
+		virtual int ComputeBoundingBox();
 		
 
 	public:
@@ -339,6 +359,11 @@ class DS9CircleRegion : public DS9Region
 		* \brief Compute contour from region
 		*/
 		virtual Contour* GetContour(bool computePars=true);
+		/**
+		* \brief Compute box coordinates
+		*/
+		virtual int ComputeBoundingBox();
+		
 
 	public:
 
@@ -387,6 +412,10 @@ class DS9EllipseRegion : public DS9Region
 		* \brief Compute contour from region
 		*/
 		virtual Contour* GetContour(bool computePars=true);
+		/**
+		* \brief Compute box coordinates
+		*/
+		virtual int ComputeBoundingBox();
 
 	public:
 

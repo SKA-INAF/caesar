@@ -353,6 +353,8 @@ DS9PolygonRegion* DS9RegionParser::ParsePolygonRegion(const std::string& data_st
 		(region->points).push_back(TVector2(x,y));
 	}	
 
+	region->ComputeBoundingBox();
+
 	return region;
 
 }//close ParsePolygonRegion()
@@ -434,7 +436,8 @@ DS9BoxRegion* DS9RegionParser::ParseBoxRegion(const std::string& data_str)
 	region->width= width;
 	region->height= height;
 	region->theta= theta;
-	region->ComputeBoxCoords();
+	//region->ComputeBoxCoords();
+	region->ComputeBoundingBox();
 
 	return region;
 
@@ -529,6 +532,8 @@ DS9CircleRegion* DS9RegionParser::ParseCircleRegion(const std::string& data_str)
 	region->cx= cx;
 	region->cy= cy;
 	region->r= r;
+
+	region->ComputeBoundingBox();
 	
 	return region;
 
@@ -630,6 +635,8 @@ DS9EllipseRegion* DS9RegionParser::ParseEllipseRegion(const std::string& data_st
 	region->a= r1;
 	region->b= r2;
 	region->theta= theta;
+
+	region->ComputeBoundingBox();
 	
 	return region;
 
