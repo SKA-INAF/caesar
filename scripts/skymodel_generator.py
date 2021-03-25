@@ -378,6 +378,7 @@ class SkyMapSimulator(object):
 		""" Set size of blob image used for compact source generation (must be odd) """
 		self.nx_gen= nx
 		self.ny_gen= ny
+		self.gridy_gen, self.gridx_gen = np.mgrid[0:self.ny_gen, 0:self.nx_gen]
 
 	def enable_compact_sources(self,choice):
 		""" Enable/disable compact source generation """
