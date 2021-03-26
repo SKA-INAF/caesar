@@ -944,13 +944,16 @@ class SkyMapSimulator(object):
 			theta = 90 + pa	# NB: BPA is the positional angle of the major axis measuring from North (up) counter clockwise, while theta is measured wrt to x axis		
 			source_max_scale= 2*max(bmaj,bmin)
 			
+			#print("bmaj=%f, bmin=%f, sigmax=%f, sigmay=%f" % (bmaj,bmin,sigmax,sigmay))
+
 			## Generate blob
 			t0 = time.time()
 			#blob_data= self.generate_blob(ampl=S,x0=x0,y0=y0,sigmax=sigmax/self.pixsize,sigmay=sigmay/self.pixsize,theta=theta,trunc_thr=self.trunc_thr)
 
 			x0_tile_gen= int(self.nx_gen/2.)
 			y0_tile_gen= int(self.ny_gen/2.)
-			blob_data= self.generate_blob_faster(ampl=S,x0=x0_tile_gen,y0=y0_tile_gen,sigmax=sigmax/self.pixsize,sigmay=sigmay/self.pixsize,theta=theta,trunc_thr=self.trunc_thr)
+			#blob_data= self.generate_blob_faster(ampl=S,x0=x0_tile_gen,y0=y0_tile_gen,sigmax=sigmax/self.pixsize,sigmay=sigmay/self.pixsize,theta=theta,trunc_thr=self.trunc_thr)
+			blob_data= self.generate_blob_faster(ampl=S,x0=x0_tile_gen,y0=y0_tile_gen,sigmax=sigmax,sigmay=sigmay,theta=theta,trunc_thr=self.trunc_thr)			
 			t1 = time.time()
 			elapsed_time = t1-t0
 
@@ -1265,6 +1268,11 @@ class SkyMapSimulator(object):
 		## Sum data in cumulative map
 		#data= bkg_data + compact_source_data + ext_source_data
 		#mask_data= compact_source_mask_data + ext_source_data
+
+		## Add noise in skymodel
+		if self.simulate_bkg:
+			print ('INFO: Add noise to skymodel map ...')
+			mask_data+= bkg_data
 
 		## Cast data from float64 to float32 
 		data_casted = data.astype(np.float32)
