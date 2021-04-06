@@ -794,6 +794,11 @@ class Image : public TNamed {
 		*/
 		int GetTilePixels(std::vector<float>& pixels,long int ix_min,long int ix_max,long int iy_min,long int iy_max,bool useRange=false,double minThr=-std::numeric_limits<double>::infinity(),double maxThr=std::numeric_limits<double>::infinity(),std::vector<float> maskedValues={},bool requireFinitePixValues=false);
 
+		/**
+		* \brief Get image cutout around a source
+		*/
+		Image* GetSourceCutout(Source* source,int boxThickness=1);
+
 		
 		/**
 		* \brief Read image from an image file
@@ -1030,6 +1035,12 @@ class Image : public TNamed {
 		int GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,int boxThickness=20,int bkgEstimator=eMedianBkg,Image* mask=0,bool useParallelVersion=false,std::vector<float> maskedValues={});
 
 		/**
+		* \brief Returns a morph trasnformed source (e.g. enlarged or shrinked, obtained by dilating/eroding given source with a square kernel, eventually accounting masked pixels)
+		*/
+		Source* GetMorphTransformedSource(Source* source, int morphTransform=eMORPH_DILATION, int kernSize=3, Image* mask=0);
+	
+		
+		/**
 		* \brief Create image with bin contents equal to fitted sources
 		*/
 		Image* GetSourceFitModelImage(const std::vector<Source*>& sources,bool useNested=true,double nsigmaTrunc=5);
@@ -1217,7 +1228,7 @@ class Image : public TNamed {
 		/**
 		* \brief Draw image
 		*/
-		int Plot(std::vector<Source*>const&,bool useCurrentCanvas=true,bool drawFull=false,int paletteStyle=Caesar::eRAINBOW,bool drawColorPalette=true,bool putWCAxis=false,int coordSystem=-1,std::string units="Jy/beam");
+		int Plot(std::vector<Source*>const&,bool useCurrentCanvas=true,bool drawFull=false,int paletteStyle=Caesar::eRAINBOW,bool drawColorPalette=true,bool putWCAxis=false,int coordSystem=-1,std::string units="",bool save=false,std::string outFileName="plot.png");
 		/**
 		* \brief Set draw range
 		*/

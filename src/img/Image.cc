@@ -1842,7 +1842,11 @@ int Image::FindNestedSource(std::vector<Source*>& sources,Image* blobMask,ImgBkg
 	}
 
 	//Find image mask of found sources
-	Image* sourceMask= this->GetSourceMask(sources,false);
+	bool isBinary= false;
+	bool invert= false;
+	bool searchSourceCoords= false;
+
+	Image* sourceMask= this->GetSourceMask(sources,isBinary,invert,searchSourceCoords);
 	if(!sourceMask){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Null ptr to computed source mask!");
@@ -2398,13 +2402,13 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 	long int iy_max= -1;
 	source->GetSourcePixelRange(ix_min,ix_max,iy_min,iy_max);
 
-	if(ix_min<0 || ix_min>=ix_max || ix_max>=m_Nx){
+	if(ix_min<0 || ix_min>ix_max || ix_max>=m_Nx){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Invalid source x range ("<<ix_min<<","<<ix_max<<")!");
 		#endif
 		return -1;
 	}
-	if(iy_min<0 || iy_min>=iy_max || iy_max>=m_Ny){
+	if(iy_min<0 || iy_min>iy_max || iy_max>=m_Ny){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Invalid source y range ("<<iy_min<<","<<iy_max<<")!");
 		#endif
@@ -2510,6 +2514,48 @@ int Image::GetBkgInfoAroundSource(BkgSampleData& bkgSampleData,Source* source,in
 	return 0;
 
 }//close GetBkgInfoAroundSource()
+
+
+Image* Image::GetSourceCutout(Source* source,int boxThickness)
+{
+	//Check input source
+	if(!source){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Input source is nullptr!");
+		#endif
+		return nullptr;
+	}
+
+	if(!source->HasStats()){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Input source has no stats, computing them ...");
+		#endif
+		source->ComputeStats();
+	}
+	
+	//Get source centroid & bbox
+	double x0_s= source->X0;
+	double y0_s= source->Y0;		
+	long int gbin= this->FindBin(x0_s,y0_s);
+	long int x0= this->GetBinX(gbin);
+	long int y0= this->GetBinY(gbin);
+	long int xmin= source->GetIxMin() - boxThickness;
+	long int xmax= source->GetIxMax() + boxThickness;
+	long int ymin= source->GetIyMin() - boxThickness;
+	long int ymax= source->GetIyMax() + boxThickness;
+
+	//Extract cutout image
+	Image* cutoutImg= this->GetTile(xmin,xmax,ymin,ymax);
+	if(!cutoutImg){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to extract cutout around source "<<source->GetName()<<" (x0="<<x0<<", y0="<<y0<<", xmin/xmax="<<xmin<<"/"<<xmax<<", ymin/ymax="<<ymin<<"/"<<ymax<<")!");
+		#endif
+		return nullptr;
+	}
+
+	return cutoutImg;
+
+}//close GetSourceCutout()
 
 
 Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,bool invert,bool searchSourceCoords)
@@ -2816,7 +2862,8 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("#"<<dilatedSources.size()<<" sources to be dilated from input map...");
 	#endif
-	for(size_t i=0;i<dilatedSources.size();i++){
+	for(size_t i=0;i<dilatedSources.size();i++)
+	{
 		//Dilate source from image
 		int status= MorphFilter::DilateAroundSource(
 			residualImg,dilatedSources[i],
@@ -2828,13 +2875,16 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 
 		if(status<0){
 			#ifdef LOGGING_ENABLED
-				ERROR_LOG("Failed to dilate source "<<dilatedSources[i]->GetName()<<"!");
+				WARN_LOG("Failed to dilate source "<<dilatedSources[i]->GetName()<<", skip to next source...");
 			#endif
+			/*
 			if(residualImg) {
 				delete residualImg;
 				residualImg= 0;
 			}
-			return nullptr;		
+			return nullptr;
+			*/
+			continue;
 		}//close if
 	}//end loop dilated sources
 
@@ -3170,9 +3220,194 @@ Image* Image::GetHDomeImage(double baseline,int kernSize)
 
 }//close GetHDomeImage()
 
+Source* Image::GetMorphTransformedSource(Source* source, int morphTransform, int kernSize, Image* mask)
+{
+	//Check inputs
+	if(!source){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to given source!");
+		#endif
+		return nullptr;
+	}
+
+	//Get cutouts around source
+	double cutoutThickness= 2*kernSize;
+	Image* cutoutImg= this->GetSourceCutout(source, cutoutThickness);
+	if(!cutoutImg){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute cutout around source!");
+		#endif
+		return nullptr;
+	}
+
+	Image* cutoutMask= 0;
+	if(mask){
+		cutoutMask= mask->GetSourceCutout(source, cutoutThickness);
+		if(!cutoutMask){
+			#ifdef LOGGING_ENABLED
+				ERROR_LOG("Failed to compute cutout around source mask!");
+			#endif
+			delete cutoutImg;
+			cutoutImg= 0; 
+			return nullptr;
+		}
+	}
+
+	//Compute source binary mask
+	std::vector<Source*> sources= {source};
+	bool isBinary= true;
+	bool invert= false;
+	bool searchSourceCoords= true;
+	Image* smask= cutoutImg->GetSourceMask(sources,isBinary,invert,searchSourceCoords);
+	if(!smask){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute source mask img!");
+		#endif
+		if(cutoutImg){
+			delete cutoutImg;
+			cutoutImg= 0;
+		}
+		if(cutoutMask){
+			delete cutoutMask;
+			cutoutMask= 0;
+		}	
+		return nullptr;
+	}
+
+	//Apply dilation/erosion to source image
+	int niters= 1;
+	bool skipZeroPixels= false;
+	Image* smask_dilated= 0;
+	if(morphTransform==eMORPH_DILATION){
+		smask->GetMorphDilatedImage(kernSize,niters,skipZeroPixels);
+	}
+	else if(morphTransform==eMORPH_EROSION){
+		smask->GetMorphErodedImage(kernSize,niters,skipZeroPixels);
+	}
+	else{
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Not supported transform ("<<morphTransform<<") given!");
+		#endif
+		if(cutoutImg){
+			delete cutoutImg;
+			cutoutImg= 0;
+		}
+		if(cutoutMask){
+			delete cutoutMask;
+			cutoutMask= 0;
+		}	
+		return nullptr;
+	}
+
+	if(!smask_dilated){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute dilated source mask img!");
+		#endif
+		if(cutoutImg){
+			delete cutoutImg;
+			cutoutImg= 0;
+		}
+		if(cutoutMask){
+			delete cutoutMask;
+			cutoutMask= 0;
+		}
+		if(smask){
+			delete smask;
+			smask= 0;
+		}
+		return nullptr;
+	}
+
+	//Extract source from dilated binary source mask
+	std::vector<Source*> sources_dilated;
+	ImgBkgData* bkgData= 0;
+	int minPixels= 5;
+	double seedThr_binary= 0.5;//dummy values (>0)
+	double mergeThr_binary= 0.4;//dummy values (>0)
+	int status= cutoutImg->FindCompactSource(sources_dilated,smask_dilated,bkgData,seedThr_binary,mergeThr_binary,minPixels);
+	if(status<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to extract dilated sources from mask!");
+		#endif
+		if(cutoutImg){
+			delete cutoutImg;
+			cutoutImg= 0;
+		}
+		if(cutoutMask){
+			delete cutoutMask;
+			cutoutMask= 0;
+		}
+		if(smask){
+			delete smask;
+			smask= 0;
+		}
+		if(smask_dilated){
+			delete smask_dilated;
+			smask_dilated= 0;
+		}
+		return nullptr;
+	}
+
+	//Check extracted sources (should be only 1)
+	if(sources_dilated.empty()){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No dilated sources found, something went wrong...");
+		#endif
+		if(cutoutImg){
+			delete cutoutImg;
+			cutoutImg= 0;
+		}
+		if(cutoutMask){
+			delete cutoutMask;
+			cutoutMask= 0;
+		}
+		if(smask){
+			delete smask;
+			smask= 0;
+		}
+		if(smask_dilated){
+			delete smask_dilated;
+			smask_dilated= 0;
+		}
+		return nullptr;
+	}
+	
+	if(sources_dilated.size()>1){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG(">1 dilated sources found ("<<sources_dilated.size()<<"), taking the first one (TO BE FIXED!) ...");
+		#endif
+	}
+	Source* source_dilated= sources_dilated[0];
+
+	
+	//Clean data
+	if(cutoutImg){
+		delete cutoutImg;
+		cutoutImg= 0;
+	}
+	if(cutoutMask){
+		delete cutoutMask;
+		cutoutMask= 0;
+	}
+	if(smask){
+		delete smask;
+		smask= 0;
+	}
+	if(smask_dilated){
+		delete smask_dilated;
+		smask_dilated= 0;
+	}
+	
+	return source_dilated;
+
+}//close GetMorphTransformedSource()
+
+
+
+
+
 int Image::Add(Image* img,double c,bool computeStats)
 {
-
 	//Check input image
 	if(!img){
 		#ifdef LOGGING_ENABLED
@@ -4109,8 +4344,8 @@ int Image::Draw(std::vector<Source*>const& sources,int palette,bool drawFull,boo
 }//close Draw()
 
 
-int Image::Plot(std::vector<Source*>const& sources,bool useCurrentCanvas,bool drawFull,int paletteStyle,bool drawColorPalette,bool putWCSAxis,int coordSystem,std::string units){
-
+int Image::Plot(std::vector<Source*>const& sources,bool useCurrentCanvas,bool drawFull,int paletteStyle,bool drawColorPalette,bool putWCSAxis,int coordSystem,std::string units,bool save,std::string outFileName)
+{
 	//Set palette
 	Caesar::GraphicsUtils::SetPalette(paletteStyle);
 
@@ -4123,6 +4358,12 @@ int Image::Plot(std::vector<Source*>const& sources,bool useCurrentCanvas,bool dr
 		return -1;
 	}
 	
+	//Retrieve units from metadata
+	std::string imgUnits= units;
+	if(units=="" && m_MetaData) {
+		imgUnits= m_MetaData->BUnit;
+	}
+
 	//Set canvas
 	TString canvasName= Form("%s_Plot",this->GetName().c_str());	
 	TCanvas* canvas= 0;
@@ -4218,6 +4459,14 @@ int Image::Plot(std::vector<Source*>const& sources,bool useCurrentCanvas,bool dr
 			lineColor= kGreen+1;	
 		sources[k]->Draw(false,false,true,lineColor);
 	}//end loop sources
+
+	//## Save to file?
+	if(save){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving plot to file "<<outFileName<<" ...");
+		#endif
+		canvas->SaveAs(outFileName.c_str());
+	}
 	
 	return 0;
 
