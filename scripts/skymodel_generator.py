@@ -1495,7 +1495,7 @@ def main():
 	try:
 		args= get_args()
 	except Exception as ex:
-		logger.error('Failed to get and parse options (err=%s)",str(ex))
+		logger.error("Failed to get and parse options (err=%s)",str(ex))
 		return 1
 
 	# - Image args
