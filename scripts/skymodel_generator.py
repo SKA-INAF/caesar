@@ -1265,11 +1265,11 @@ class SkyMapSimulator(object):
 			logger.info('Checking global mask data dimensions ...')
 			nx_g= self.gmask_data.shape[1]
 			ny_g= self.gmask_data.shape[0]
-			if nx_g!=nx:
-				logger.error("mask nx(%d)!=nx(%d)" % (nx_g,nx))
+			if nx_g!=self.nx:
+				logger.error("mask nx(%d)!=nx(%d)" % (nx_g,self.nx))
 				return -1
-			if ny_g!=ny:
-				logger.error("mask ny(%d)!=ny(%d)" % (ny_g,ny))
+			if ny_g!=self.ny:
+				logger.error("mask ny(%d)!=ny(%d)" % (ny_g,self.ny))
 				return -1
 	
 		## == GENERATE EMPTY IMAGE ==
