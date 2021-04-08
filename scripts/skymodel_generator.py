@@ -44,6 +44,15 @@ import collections
 ## Graphics modules
 import matplotlib.pyplot as plt
 import pylab
+
+## LOGGER
+import logging
+import logging.config
+logger = logging.getLogger(__name__)
+logging.basicConfig(format="%(asctime)-15s %(levelname)s - %(message)s",datefmt='%Y-%m-%d %H:%M:%S')
+logger= logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 ##################################################
 
 #### GET SCRIPT ARGS ####
@@ -77,6 +86,9 @@ def get_args():
 	#parser.add_argument('-ctype2', '--ctype2', dest='ctype2', required=False, type=str, default='DEC--NCP', action='store',help='CTYPE2 fits keyword (default=1)')
 	parser.add_argument('-ctype1', '--ctype1', dest='ctype1', required=False, type=str, default='RA---SIN', action='store',help='CTYPE1 fits keyword (default=1)')
 	parser.add_argument('-ctype2', '--ctype2', dest='ctype2', required=False, type=str, default='DEC--SIN', action='store',help='CTYPE2 fits keyword (default=1)')
+
+	parser.add_argument('-maskimg', '--maskimg', dest='maskimg', required=False, type=str, default='', action='store',help='FITS image used as mask (not generating sources if mask pixel!=0)')
+
 
 	# - BKG OPTIONS
 	parser.add_argument('--bkg', dest='enable_bkg', action='store_true')	
@@ -256,6 +268,8 @@ class SkyMapSimulator(object):
 		self.ctype1= 'RA---SIN'
 		self.ctype2= 'DEC--SIN'
 
+		self.gmask_data= None
+
 		## Source model
 		self.truncate_models= True
 		self.trunc_thr= 0.01 # 1% flux truncation at maximum
@@ -347,6 +361,7 @@ class SkyMapSimulator(object):
 		self.outtree= ROOT.TTree('SourceInfo','SourceInfo')
 		self.cs = Caesar.Source()
 		self.outtree.Branch('Source',self.cs)		
+
 
 	def set_mask_box_size(self,boxsize):
 		""" Set mask box size """
@@ -743,22 +758,21 @@ class SkyMapSimulator(object):
 		# Retun None if npixels is too small	
 		nPix= source.GetNPixels()
 		if nPix<self.npixels_min:
-			print ('INFO: Too few pixels (%s) for this source, return None!' % str(nPix))
+			logger.info('Too few pixels (%s) for this source, return None!' % str(nPix))
 			return None
 			
 		# If true info are not given compute them
 		#    - S= count integral
 		#    - baricenter of binary map
 		if x0 is None or y0 is None:
-			print ('INFO: No source true pos given, computing it from data...')
+			logger.info('No source true pos given, computing it from data...')
 			data_binary= np.where(source_data!=0,1,0)
-			#print 'INFO: data_binary sum=%d', sum(data_binary)
 			[y0,x0]= ndimage.measurements.center_of_mass(data_binary)
 			x0+= offsetx
 			y0+= offsety	
 
 		if ampl is None:
-			print ('INFO: No source true flux given, computing integral from data...')
+			logger.info('No source true flux given, computing integral from data...')
 			ampl= np.sum(source_data,axis=None)
 
 		# Set some flags
@@ -873,7 +887,7 @@ class SkyMapSimulator(object):
 			randomize_gaus= True
 
 
-		print('INFO: Generating #%d compact sources in map...' % nsources)
+		logger.info('Generating #%d compact sources in map...' % nsources)
 
 		# Compute blob sigma pars given beam info
 		sigmax= self.compute_beam_sigma(self.beam_bmaj)
@@ -887,7 +901,7 @@ class SkyMapSimulator(object):
 		
 		for index in range(0,nsources):	
 			if index%100==0 :
-				print ("INFO: Generating compact source no. %s/%s" % (index+1,nsources))
+				logger.info("Generating compact source no. %s/%s ..." % (index+1,nsources))
 			
 			## Generate random coordinates
 			#x0= np.random.uniform(0,self.nx)
@@ -958,10 +972,10 @@ class SkyMapSimulator(object):
 			elapsed_time = t1-t0
 
 			if blob_data is None:
-				print('Failed to generate blob (hint: too large trunc threshold), skip and regenerate...')
+				logger.warn('Failed to generate blob (hint: too large trunc threshold), skip and regenerate...')
 				continue
 			
-			print ('INFO: Generated blob no. %s in %s (s)' % (str(index),str(elapsed_time)) )				
+			logger.info('Generated blob no. %s in %s (s)' % (str(index),str(elapsed_time)) )				
 
 			
 			## - Add blob to source data
@@ -974,16 +988,16 @@ class SkyMapSimulator(object):
 			xmin, ymin = (ix - dx_t), (iy - dy_t)
 			xmax, ymax = (ix + dx_t + 1), (iy + dy_t +1)
 			if xmin<0 and xmax<0:
-				print('WARN: Tile outside mat along x, skip and regenerate!')
+				logger.warn('Tile outside mat along x, skip and regenerate!')
 				continue
 			if xmin>self.nx and xmax>self.nx:
-				print('WARN: Tile outside mat along x, skip and regenerate!')
+				logger.warn('Tile outside mat along x, skip and regenerate!')
 				continue
 			if ymin<0 and ymax<0:
-				print('WARN: Tile outside mat along y, skip and regenerate!')
+				logger.warn('Tile outside mat along y, skip and regenerate!')
 				continue
 			if ymin>self.ny and ymax>self.ny:
-				print('WARN: Tile outside mat along y, skip and regenerate!')
+				logger.warn('Tile outside mat along y, skip and regenerate!')
 				continue
 			if xmin<0:
 				xmin= 0
@@ -997,6 +1011,15 @@ class SkyMapSimulator(object):
 			if ymax>self.ny:
 				ymax= self.ny
 				ymax_t= self.ny - iy + dy_t
+
+
+			# - Check if any generated source pixel is masked in the global mask (if provided)
+			if self.gmask_data is not None:
+				has_taken_pixels= np.any(self.gmask_data[ymin:ymax,xmin:xmax]>0)
+				if has_taken_pixels:
+					logger.info('Source pixels have been already taken in provided global mask, regenerate...')
+					continue
+			
 
 			#sources_data[xmin:xmax,ymin:ymax] += blob_data[xmin_t:xmax_t,ymin_t:ymax_t]
 			sources_data[ymin:ymax,xmin:xmax] += blob_data[ymin_t:ymax_t,xmin_t:xmax_t]
@@ -1019,15 +1042,14 @@ class SkyMapSimulator(object):
 			elapsed_time = t1-t0
 
 			if caesar_source is None:
-				print('Generate source has too few pixels, skip and regenerate...')
+				logger.warn('Generate source has too few pixels, skip and regenerate...')
 				continue
 
-			print ('INFO: Make Caesar source %s from generated blob in %s (s)' % (source_name,str(elapsed_time)) )				
+			logger.info('Make Caesar source %s from generated blob in %s (s)' % (source_name,str(elapsed_time)) )				
 
-				
 			self.caesar_sources.append(caesar_source)
 
-			print ('INFO: Source %s: Pos(%s,%s), ix=%s, iy=%s, S=%s' % (source_name,str(x0),str(y0),str(ix),str(iy),str(S)))
+			logger.info('Source %s: Pos(%s,%s), ix=%s, iy=%s, S=%s' % (source_name,str(x0),str(y0),str(ix),str(iy),str(S)))
 
 
 		return [sources_data,mask_data]
@@ -1060,9 +1082,9 @@ class SkyMapSimulator(object):
 		if self.zmin_ext<self.zmax_ext:
 			randomize_flux= True
 
-		print('INFO: Generating #%d extended sources in map...' % nsources)
+		logger.info('Generating #%d extended sources in map...' % nsources)
 
-		print('INFO: zmin_ext=%s, zmax_ext=%s, Smin=%s, Smax=%s' % (str(self.zmin_ext),str(self.zmax_ext),str(S_min),str(S_max)) )
+		logger.debug('zmin_ext=%s, zmax_ext=%s, Smin=%s, Smax=%s' % (str(self.zmin_ext),str(self.zmax_ext),str(S_min),str(S_max)) )
 
 		
 		## Start generation loop
@@ -1076,7 +1098,7 @@ class SkyMapSimulator(object):
 		#for index in range(0,nsources):	
 		while (ngen_sources<nsources):
 			if ngen_sources%10==0 :
-				print ("INFO: Generating extended source no. %s/%s" % (ngen_sources+1,nsources))
+				logger.info("Generating extended source no. %s/%s" % (ngen_sources+1,nsources))
 			
 			## Generate random coordinates
 			#x0= random.uniform(0,self.nx)
@@ -1170,7 +1192,7 @@ class SkyMapSimulator(object):
 				#source_data= self.generate_blob(ampl=S,x0=x0,y0=y0,sigmax=blob_bmaj/self.pixsize,sigmay=blob_bmin/self.pixsize,theta=blob_theta,trunc_thr=self.zmin_ext)
 				source_data= self.generate_blob(ampl=S,x0=x0,y0=y0,sigmax=blob_bmaj/self.pixsize,sigmay=blob_bmin/self.pixsize,theta=blob_theta,trunc_thr=self.trunc_thr)
 				if source_data is None:
-					print('Failed to generate blob (hint: too large trunc threshold), skip and regenerate...')
+					logger.warn('Failed to generate blob (hint: too large trunc threshold), skip and regenerate...')
 					continue
 
 			elif source_sim_type==6: # disk model
@@ -1180,12 +1202,12 @@ class SkyMapSimulator(object):
 				source_data= self.generate_disk(S,x0,y0,disk_r)
 
 			else:
-				print('ERROR: Invalid source type given!')
+				logger.warn('Invalid source type given!')
 				continue			
 	
 			## Check if source data contains all zeros (e.g. truncation removed all data)
 			if np.count_nonzero(source_data)<=0:
-				print('WARN: Generated extended source data contains all zeros, regenerate...')
+				logger.warn('Generated extended source data contains all zeros, regenerate...')
 				continue
 
 			## Check if source pixels and its contour has been already taken before
@@ -1200,7 +1222,7 @@ class SkyMapSimulator(object):
 			taken_pixels= np.where(sources_data[source_mask_indexes]!=0) # get list of taken pixels in main mask corresponding to this source
 			has_taken_pixels= np.any(taken_pixels)
 			if has_taken_pixels:
-				print('INFO: Source pixels have been already taken by a previous generated source, regenerate...')
+				logger.info('Source pixels have been already taken by a previous generated source, regenerate...')
 				continue
 				
 			# Add to extended source data and mask
@@ -1217,12 +1239,12 @@ class SkyMapSimulator(object):
 			source_type= Caesar.eExtended
 			caesar_source= self.make_caesar_source(source_data,source_name,source_id,source_type,source_sim_type,None,None,None,source_max_scale)
 			if caesar_source is None:
-				print('Generate source has too few pixels, skip and regenerate...')
+				logger.warn('Generate source has too few pixels, skip and regenerate...')
 				continue
 
 			self.caesar_sources.append(caesar_source)
 
-			print ('INFO: Ext Source %s: Pos(%s,%s), ix=%s, iy=%s, S=%s' % (source_name,str(x0),str(y0),str(ix),str(iy),str(S)))
+			logger.info('Ext Source %s: Pos(%s,%s), ix=%s, iy=%s, S=%s' % (source_name,str(x0),str(y0),str(ix),str(iy),str(S)))
 
 
 		return sources_data
@@ -1235,35 +1257,47 @@ class SkyMapSimulator(object):
 		""" Generate sky map """
 		
 		## == INITIALIZE DATA ==
-		print ('INFO: Initializing simulator data...')
+		logger.info('Initializing simulator data...')
 		self.init()
 
+		# - Check global mask data if given
+		if self.gmask_data is not None:
+			logger.info('Checking global mask data dimensions ...')
+			nx_g= self.gmask_data.shape[1]
+			ny_g= self.gmask_data.shape[0]
+			if nx_g!=nx:
+				logger.error("mask nx(%d)!=nx(%d)" % (nx_g,nx))
+				return -1
+			if ny_g!=ny:
+				logger.error("mask ny(%d)!=ny(%d)" % (ny_g,ny))
+				return -1
+	
 		## == GENERATE EMPTY IMAGE ==
 		data = Box2D(amplitude=0,x_0=0,y_0=0,x_width=2*self.nx, y_width=2*self.ny)(self.gridx, self.gridy)
 		mask_data = Box2D(amplitude=0,x_0=0,y_0=0,x_width=2*self.nx, y_width=2*self.ny)(self.gridx, self.gridy)
 
 		## == GENERATE BKG ==
 		if self.simulate_bkg:
-			print ('INFO: Generating map bkg...')
+			logger.info('Renerating map bkg...')
 			bkg_data= self.generate_bkg()
 			data+= bkg_data
 	
 		## == GENERATE COMPACT SOURCES ==
 		if self.simulate_compact_sources:
-			print ('INFO: Generating compact sources...')
+			logger.info('Generating compact sources...')
 			[compact_source_data,compact_source_mask_data] = self.generate_compact_sources()
 			data+= compact_source_data
 			mask_data+= compact_source_mask_data
 	
 		## == GENERATE EXTENDED SOURCES ==
 		if self.simulate_extended_sources:
-			print ('INFO: Generating extended sources...')
+			logger.info('Generating extended sources...')
 			ext_source_data = self.generate_extended_sources()
 			data+= ext_source_data
 			mask_data+= ext_source_data
 
 		## == MAKE FINAL MAP ==
-		print ('INFO: Creating final map with bkg + sources added...')
+		logger.info('Creating final map with bkg + sources added...')
 
 		## Sum data in cumulative map
 		#data= bkg_data + compact_source_data + ext_source_data
@@ -1271,7 +1305,7 @@ class SkyMapSimulator(object):
 
 		## Add noise in skymodel
 		if self.simulate_bkg:
-			print ('INFO: Add noise to skymodel map ...')
+			logger.info('Add noise to skymodel map ...')
 			mask_data+= bkg_data
 
 		## Cast data from float64 to float32 
@@ -1284,24 +1318,25 @@ class SkyMapSimulator(object):
 		data_casted*= scaleFactor
 
 		## Create Caesar skymodel image from data (units= Jy/pixel)
-		print ('INFO: Creating Caesar image from data...')
+		logger.info('Creating Caesar image from data...')
 		##self.caesar_img= self.make_caesar_image(data_casted)    # set toy sim map data
 		self.caesar_img= self.make_caesar_image(mask_data_casted) # set skymodel map data
 
 		## == WRITE MAPS TO FITS FILES ==
-		print ('INFO: Writing images to FITS...')
+		logger.info('Writing images to FITS...')
 		self.write_map(data_casted,self.mapfilename)
 		self.write_source_map(mask_data_casted,self.modelfilename)
 
 		## == WRITE IMG & SOURCES TO ROOT FILE ==
-		print ('INFO: Writing image & source collection to ROOT file...')
+		logger.info('Writing image & source collection to ROOT file...')
 		self.save()
 
 		## == WRITE DS9 REGION FILE ==
-		print ('INFO: Writing DS9 regions...')
+		logger.info('Writing DS9 regions...')
 		self.write_ds9_regions()
 
 		#return [data_casted,mask_data_casted]
+		return 0
 
 
 	def write_ds9_regions(self):
@@ -1425,7 +1460,7 @@ class SkyMapSimulator(object):
 		""" Write img & source collection to ROOT file """
 	
 		# Loop over sources
-		print ('Filling #%s sources to ROOT tree...' % str(len(self.caesar_sources)) )
+		logger.info('Filling #%s sources to ROOT tree...' % str(len(self.caesar_sources)) )
 		for item in self.caesar_sources:
 			#self.cs= item
 			item.Copy(self.cs)
@@ -1456,11 +1491,11 @@ def main():
 	#===========================
 	#==   Get script args
 	#===========================
-	print('Get script args')
+	logger.info('Get script args')
 	try:
 		args= get_args()
 	except Exception as ex:
-		print("Failed to get and parse options (err=%s)",str(ex))
+		logger.error('Failed to get and parse options (err=%s)",str(ex))
 		return 1
 
 	# - Image args
@@ -1538,6 +1573,13 @@ def main():
 	outputfile_casaregion= args.outputfile_casaregion
 	mask_boxsize= args.mask_boxsize
 
+	# - Mask image
+	maskfile= args.maskimg
+	mask_data= None
+	if maskfile!='':
+		hdu= fits.open(maskfile)[0]
+		mask_data= hdu.data
+
 	print("*** ARGS ***")
 	print("Nx: %s" % Nx)
 	print("Ny: %s" % Ny)
@@ -1608,27 +1650,18 @@ def main():
 	simulator.set_disk_pars(ext_scale_min,ext_scale_max)
 	simulator.set_disk_shell_pars(disk_shell_ampl_ratio_min,disk_shell_ampl_ratio_max,disk_shell_radius_ratio_min,disk_shell_radius_ratio_max)
 	simulator.set_mask_box_size(mask_boxsize)
-	#[data, mask_data]= simulator.generate_map()
-	simulator.generate_map()
+	if mask_data is not None:
+		simulator.gmask_data= mask_data	
+	
+	if simulator.generate_map()<0:
+		print("ERROR: generate map failed!")
+		return 1
 
-	## Write fits
-	#print ('INFO: Writing images to FITS...')
-	#simulator.write_map(data,outputfile)
-	#simulator.write_source_map(mask_data,mask_outputfile)
-
-	## Write sources to ROOT
-	#print ('INFO: Writing source collection to ROOT TTree...')
-	#simulator.write_source_tree(outputfile_sources)
-
-	## Draw image
-	#print ('INFO: Draw image...')
-	#plt.imshow(data, origin='lower', cmap="hot")
-	#pylab.show()
+	return 0
 
 ###################
 ##   MAIN EXEC   ##
 ###################
 if __name__ == "__main__":
-	#main()
 	sys.exit(main())
 
