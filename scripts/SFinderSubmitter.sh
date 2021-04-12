@@ -1208,7 +1208,7 @@ elif [ "$BATCH_SYSTEM" = "SLURM" ]; then
 	BATCH_QUEUE_NAME_OPTION="-p"
 	###BATCH_JOB_NAME_DIRECTIVE="#SBATCH -J"
 	BATCH_JOB_NAME_DIRECTIVE="#SBATCH --job-name="
-	###BATCH_JOB_OUTFILE_DIRECTIVE="#SBATCH -o $BASEDIR"
+  ###BATCH_JOB_OUTFILE_DIRECTIVE="#SBATCH -o $BASEDIR"
 	###BATCH_JOB_ERRFILE_DIRECTIVE="#SBATCH -e $BASEDIR"
 	BATCH_JOB_JOINOUTERR_DIRECTIVE="" # There is no such option in SLURM
 	BATCH_JOB_WALLTIME_DIRECTIVE="#SBATCH --time=$JOB_WALLTIME"
@@ -1620,32 +1620,7 @@ generate_exec_script(){
 	echo "INFO: Creating sh file $shfile (jobindex=$jobindex, exe=$exe, exe_args=$exe_args)..."
 	( 
 			echo "#!/bin/bash -e"
-			#echo "#PBS -N SFinderJob$jobindex"
-			#echo "#PBS -j oe"
-  		#echo "#PBS -o $BASEDIR"
-			#echo "#PBS -l select=1:ncpus=1:mpiprocs=$NPROC:mem=$JOB_MEMORY"'GB'
-    	#echo "#PBS -l walltime=$JOB_WALLTIME"
-			#echo "#PBS -l place=scatter"
-    	#echo '#PBS -r n'
-      #echo '#PBS -S /bin/bash' 
-      #echo '#PBS -p 1'
-			#echo "$JOB_USER_GROUP_OPTION"
-
-			#echo "$BATCH_JOB_NAME_DIRECTIVE SFinderJob$jobindex"
-			#echo "$BATCH_JOB_OUTFILE_DIRECTIVE $BASEDIR"
-			#echo "$BATCH_JOB_ERRFILE_DIRECTIVE $BASEDIR"
-			#echo "$BATCH_JOB_JOINOUTERR_DIRECTIVE"
-			#echo "$BATCH_JOB_WALLTIME_DIRECTIVE$JOB_WALLTIME"
-			#echo "$BATCH_JOB_SHELL_DIRECTIVE"
-			#echo "$BATCH_JOB_USERGRP_DIRECTIVE $JOB_USER_GROUP"
-			#echo "$BATCH_JOB_PRIORITY"
-			#echo "$BATCH_JOB_NOREQUEUE_DIRECTIVE"
-			#echo "$BATCH_JOB_SCATTER_DIRECTIVE"
-			#echo "$BATCH_JOB_NNODES_DIRECTIVE$JOB_NNODES"
-			#echo "$BATCH_JOB_NPROC_DIRECTIVE$NPROC"
-			#echo "$BATCH_JOB_MEM_DIRECTIVE$JOB_MEMORY"'gb'
-			#echo "$BATCH_JOB_NCORE_DIRECTIVE$JOB_NCPUS"
-
+			
       if [ "$BATCH_SYSTEM" = "PBS" ]; then
 				echo "$BATCH_JOB_NAME_DIRECTIVE SFinderJob$jobindex"
 			elif [ "$BATCH_SYSTEM" = "SLURM" ]; then
@@ -1654,19 +1629,45 @@ generate_exec_script(){
 				echo "$BATCH_JOB_NAME_DIRECTIVE SFinderJob$jobindex"
 			fi
 
-			echo "$BATCH_JOB_OUTFILE_DIRECTIVE"
-			echo "$BATCH_JOB_ERRFILE_DIRECTIVE"
-			echo "$BATCH_JOB_JOINOUTERR_DIRECTIVE"
-			echo "$BATCH_JOB_WALLTIME_DIRECTIVE"
-			echo "$BATCH_JOB_SHELL_DIRECTIVE"
-			echo "$BATCH_JOB_USERGRP_DIRECTIVE"
-			echo "$BATCH_JOB_PRIORITY"
-			echo "$BATCH_JOB_NOREQUEUE_DIRECTIVE"
-			echo "$BATCH_JOB_SCATTER_DIRECTIVE"
-			echo "$BATCH_JOB_NNODES_DIRECTIVE"
-			echo "$BATCH_JOB_NPROC_DIRECTIVE"
-			echo "$BATCH_JOB_MEM_DIRECTIVE"
-			echo "$BATCH_JOB_NCORE_DIRECTIVE"
+			if [ "$BATCH_JOB_OUTFILE_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_OUTFILE_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_ERRFILE_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_ERRFILE_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_JOINOUTERR_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_JOINOUTERR_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_JOINOUTERR_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_JOINOUTERR_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_SHELL_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_SHELL_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_USERGRP_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_USERGRP_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_PRIORITY" != "" ]; then
+				echo "$BATCH_JOB_PRIORITY"
+			fi
+			if [ "$BATCH_JOB_NOREQUEUE_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_NOREQUEUE_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_SCATTER_DIRECTIVE" != "" ]; then			
+				echo "$BATCH_JOB_SCATTER_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_NNODES_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_NNODES_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_NPROC_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_NPROC_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_MEM_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_MEM_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_NCORE_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_NCORE_DIRECTIVE"
+			fi
 
       echo " "
       echo " "
