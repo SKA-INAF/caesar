@@ -1107,8 +1107,6 @@ class SkyMapSimulator(object):
 		
 		## Start generation loop
 		sources_data = Box2D(amplitude=0,x_0=0,y_0=0,x_width=2*self.nx, y_width=2*self.ny)(self.gridx, self.gridy)
-		if self.gmask_data is not None:
-			sources_data+= self.gmask_data
 
 		ngen_sources= 0
 		if self.ext_source_type==-1:	
@@ -1258,8 +1256,16 @@ class SkyMapSimulator(object):
 			taken_pixels= np.where(sources_data[source_mask_indexes]!=0) # get list of taken pixels in main mask corresponding to this source
 			has_taken_pixels= np.any(taken_pixels)
 			if has_taken_pixels:
-				logger.info('Source pixels have been already taken by a previous generated source, regenerate...')
+				logger.info('Source pixels have been already taken by a previously generated source, regenerate...')
 				continue
+
+			# - Check if pixels are taken in the global mask
+			if self.gmask_data is not None:
+				taken_pixels= np.where(self.gmask_data[source_mask_indexes]!=0) # get list of taken pixels in main mask corresponding to this source
+				has_taken_pixels= np.any(taken_pixels)
+				if has_taken_pixels:
+					logger.info('Source pixels have been already taken in the global mask, regenerate...')
+					continue
 				
 			# Add to extended source data and mask
 			sources_data+= source_data
