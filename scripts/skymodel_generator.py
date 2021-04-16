@@ -1367,7 +1367,7 @@ class SkyMapSimulator(object):
 			x= self.ps_list[i][1]
 			y= self.ps_list[i][2]
 			S= self.ps_list[i][3] # No need to convert peak flux
-			data= (("%s %s %s %s %s %s %s") % (name,x,y,S) )
+			data= (("%s %s %s %s") % (name,x,y,S) )
 
 			fout.write(data)
 			fout.write('\n')
