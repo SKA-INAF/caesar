@@ -290,7 +290,7 @@ class SkyMapSimulator(object):
 		self.nx_gen= 501
 		self.ny_gen= 501
 		self.gridy_gen, self.gridx_gen = np.mgrid[0:self.ny_gen, 0:self.nx_gen]
-
+		self.ps_list= []
 		self.nsources= 0 # default is density generator
 		self.source_density= 2000. # in sources/deg^2
 		self.beam_bmaj= 6.5 # in arcsec
@@ -340,6 +340,9 @@ class SkyMapSimulator(object):
 		self.mapfilename= 'simmap.fits'
 		self.modelfilename= 'skymodel.fits'
 		
+		## Ascii output file
+		self.source_par_outfile= 'point_sources.dat'
+
 		## DS9 output file
 		self.ds9filename= 'ds9region.reg'
 
@@ -1036,6 +1039,9 @@ class SkyMapSimulator(object):
 			source_name= 'S' + str(index+1)
 			source_id= index+1
 			source_type= Caesar.ePointLike
+
+			self.ps_list.append([source_name,x0,y0,S])
+
 			t0 = time.time()
 			caesar_source= self.make_caesar_source(blob_data,source_name,source_id,source_type,Caesar.eBlobLike,ampl=S,x0=x0,y0=y0,source_max_scale=source_max_scale,offsetx=offset_x,offsety=offset_y)
 			t1 = time.time()
@@ -1089,7 +1095,10 @@ class SkyMapSimulator(object):
 		
 		## Start generation loop
 		sources_data = Box2D(amplitude=0,x_0=0,y_0=0,x_width=2*self.nx, y_width=2*self.ny)(self.gridx, self.gridy)
-		ngen_sources= 0	
+		if self.gmask_data is not None:
+			sources_data+= self.gmask_data
+
+		ngen_sources= 0
 		if self.ext_source_type==-1:	
 			nsource_types= 6
 		else:
@@ -1335,9 +1344,34 @@ class SkyMapSimulator(object):
 		logger.info('Writing DS9 regions...')
 		self.write_ds9_regions()
 
-		#return [data_casted,mask_data_casted]
+		## == WRITE ASCII FILE ==
+		logger.info('Writing point source parameters to ascii ...')
+		self.write_compact_source_par_list()
+
 		return 0
 
+
+	def write_compact_source_par_list(self):
+		""" Write cmpact source parameters to ascii file """
+
+		# -  Open file	
+		fout = open(self.source_par_outfile, 'wb')
+	
+		#- Write header
+		header= ("# name x(pix) y(pix) S(Jy/pixel)")
+		fout.write(header)
+		fout.write('\n')
+
+		for i in range(len(self.ps_list)):
+			name= self.ps_list[i][0]
+			x= self.ps_list[i][1]
+			y= self.ps_list[i][2]
+			S= self.ps_list[i][3] # No need to convert peak flux
+			data= (("%s %s %s %s %s %s %s") % (name,x,y,S) )
+
+			fout.write(data)
+			fout.write('\n')
+			fout.flush()		
 
 	def write_ds9_regions(self):
 		""" Write DS9 regions with sim sources """
