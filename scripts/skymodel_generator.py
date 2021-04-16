@@ -126,6 +126,8 @@ def get_args():
 	parser.set_defaults(enable_extsources=True)
 	parser.add_argument('-ext_nsources', '--ext_nsources', dest='ext_nsources', required=False, type=int, default=0, action='store',help='Extended source number (if >0 overrides the density generation) (default=0)')
 	parser.add_argument('-ext_source_density', '--ext_source_density', dest='ext_source_density', required=False, type=float, default=100, action='store',help='Extended source density (default=1000)')
+	parser.add_argument('-Smin_ext', '--Smin_ext', dest='Smin_ext', required=False, type=float, default=1.e-6, action='store',help='Minimum extended source flux in Jy (default=1.e-6)')
+	parser.add_argument('-Smax_ext', '--Smax_ext', dest='Smax_ext', required=False, type=float, default=1, action='store',help='Maximum extended source flux in Jy (default=1)')	
 	parser.add_argument('-zmin_ext', '--zmin_ext', dest='zmin_ext', required=False, type=float, default=0.1, action='store',help='Minimum extended source significance level in sigmas above the bkg (default=0.1)')
 	parser.add_argument('-zmax_ext', '--zmax_ext', dest='zmax_ext', required=False, type=float, default=2, action='store',help='Maximum extended source significance level in sigmas above the bkg (default=2)')
 	parser.add_argument('-ext_scale_min', '--ext_scale_min', dest='ext_scale_min', required=False, type=float, default=10, action='store',help='Minimum extended source size in arcsec (default=10)')
@@ -317,6 +319,8 @@ class SkyMapSimulator(object):
 		self.ext_nsources= 0 # default is density generator
 		self.ext_source_type= -1 # all source models generated
 		self.ext_source_density= 10 # in sources/deg^2
+		self.Smin_ext= 1.e-6 # in Jy 
+		self.Smax_ext= 1 # in Jy
 		self.zmin_ext= 0.5 # in sigmas 
 		self.zmax_ext= 5	 # in sigmas 
 		self.ring_rmin= 2. # in arcsec
@@ -484,6 +488,11 @@ class SkyMapSimulator(object):
 		""" Set source flux range """
 		self.Smin= Smin
 		self.Smax= Smax
+
+	def set_ext_source_flux_range(self,Smin,Smax):
+		""" Set source flux range """
+		self.Smin_ext= Smin
+		self.Smax_ext= Smax
 
 	def set_beam_bmaj_range(self,bmaj_min,bmaj_max):
 		""" Set beam bmaj range """
@@ -1080,12 +1089,15 @@ class SkyMapSimulator(object):
 			nsources= self.ext_nsources
 		else:
 			nsources= int(round(self.ext_source_density*area))
-		S_min= (self.zmin_ext*self.bkg_rms) + self.bkg_level
-		S_max= (self.zmax_ext*self.bkg_rms) + self.bkg_level
+		#S_min= (self.zmin_ext*self.bkg_rms) + self.bkg_level
+		#S_max= (self.zmax_ext*self.bkg_rms) + self.bkg_level
+		S_min= self.Smin_ext
+		S_max= self.Smax_ext
 		lgS_min= np.log(S_min)
 		lgS_max= np.log(S_max)
 		randomize_flux= False
-		if self.zmin_ext<self.zmax_ext:
+		#if self.zmin_ext<self.zmax_ext:
+		if S_min<S_max:
 			randomize_flux= True
 
 		logger.info('Generating #%d extended sources in map...' % nsources)
@@ -1119,15 +1131,30 @@ class SkyMapSimulator(object):
 
 			## Compute amplitude given significance level and bkg
 			## Generate flux uniform in log
+			#if randomize_flux:
+			#	lgS= np.random.uniform(lgS_min,lgS_max)
+			#	S= np.exp(lgS)
+			#	z= (S-self.bkg_level)/self.bkg_rms
+			#else:
+			#	S= (self.zmin_ext*self.bkg_rms) + self.bkg_level
+			#	z= self.zmin_ext
+
 			if randomize_flux:
-				lgS= np.random.uniform(lgS_min,lgS_max)
-				S= np.exp(lgS)
-				z= (S-self.bkg_level)/self.bkg_rms
-				#z= random.uniform(self.zmin_ext,self.zmax_ext)
-				#S= (z*self.bkg_rms) + self.bkg_level
+				if self.Smodel=='uniform':
+					lgS= np.random.uniform(lgS_min,lgS_max)
+				elif self.Smodel=='exp':
+					x= np.random.exponential(scale=1./self.Sslope)
+					lgS= x + lgS_min
+					if lgS>lgS_max:
+						continue
+				else:
+					lgS= np.random.uniform(lgS_min,lgS_max)
+				S= np.power(10,lgS)
 			else:
-				S= (self.zmin_ext*self.bkg_rms) + self.bkg_level
-				z= self.zmin_ext 			
+				S= S_min
+	
+			z= (S-self.bkg_level)/self.bkg_rms
+		
 
 			## Generate random type (1=ring, 2=ellipse, ...)
 			if self.ext_source_type==-1:
@@ -1583,6 +1610,8 @@ def main():
 	enable_extsources= args.enable_extsources
 	ext_source_type= args.ext_source_type
 	ext_nsources= args.ext_nsources
+	Smin_ext= args.Smin_ext
+	Smax_ext= args.Smax_ext
 	Zmin_ext= args.zmin_ext
 	Zmax_ext= args.zmax_ext
 	ext_source_density= args.ext_source_density
@@ -1631,6 +1660,7 @@ def main():
 	print("Source density (deg^-2): %s" % source_density)	
 	print("Enable extended sources? %s" % str(enable_extsources) )
 	print("Extended source type %s" %str(ext_source_type) )
+	print("Extended source flux range: (%s,%s)" % (Smin_ext, Smax_ext))
 	print("Extended source significance range: (%s,%s)" % (Zmin_ext, Zmax_ext))
 	print("Extended source density (deg^-2): %s" % ext_source_density)
 	print("Extended source scale min/max: (%s,%s)" % (ext_scale_min, ext_scale_max))
@@ -1675,6 +1705,7 @@ def main():
 	simulator.enable_extended_sources(enable_extsources)
 	simulator.set_ext_nsources(ext_nsources)
 	simulator.set_ext_source_type(ext_source_type)
+	simulator.set_ext_source_flux_range(Smin_ext,Smax_ext)
 	simulator.set_ext_source_significance_range(Zmin_ext,Zmax_ext)
 	simulator.set_ext_source_density(ext_source_density)
 	#simulator.set_ring_pars(ring_rmin,ring_rmax,ring_wmin,ring_wmax)
