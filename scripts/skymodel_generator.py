@@ -1211,7 +1211,7 @@ class SkyMapSimulator(object):
 				source_sim_type= Caesar.eDiskLike
 				sersic_r= random.uniform(self.disk_rmin,self.disk_rmax)
 				sersic_theta= random.uniform(0,360)
-				sersic_ell= random.uniform(0,1)
+				sersic_ell= random.uniform(0.7,1)
 				source_max_scale= 2*sersic_r
 				##source_data= self.generate_sersic(S,x0,y0,sersic_r,sersic_ell,self.sersic_index,sersic_theta)
 				source_data= self.generate_sersic(S,x0,y0,sersic_r,sersic_ell,self.sersic_index,sersic_theta,trunc_thr=self.trunc_thr)
