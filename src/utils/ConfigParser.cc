@@ -329,7 +329,7 @@ int ConfigParser::RegisterPredefinedOptions()
 		//==  Source fitting options   ==
 		//==================================
 		REGISTER_OPTION(fitSources,bool,false,false,true);
-		REGISTER_OPTION(nBeamsMaxToFit,double,20,0,100000);
+		REGISTER_OPTION(nBeamsMaxToFit,double,100,0,100000);
 		REGISTER_OPTION(fitMaxNComponents,int,5,0,100);		
 		REGISTER_OPTION(fitWithCentroidLimits,bool,true,false,true);
 		REGISTER_OPTION(fixCentroidInPreFit,bool,false,false,true);
@@ -341,17 +341,17 @@ int ConfigParser::RegisterPredefinedOptions()
 		REGISTER_OPTION(fitWithAmplLimits,bool,true,false,true);
 		//REGISTER_OPTION(fixAmplInPreFit,bool,false,false,true);
 		REGISTER_OPTION(fixAmplInPreFit,bool,true,false,true);
-		REGISTER_OPTION(fitAmplLimit,double,0.3,0,2);
+		REGISTER_OPTION(fitAmplLimit,double,0.5,0,2);
 		REGISTER_OPTION(fitWithSigmaLimits,bool,true,false,true);
 		//REGISTER_OPTION(fixSigmaInPreFit,bool,true,false,true);
 		REGISTER_OPTION(fixSigmaInPreFit,bool,false,false,true);
-		REGISTER_OPTION(fitSigmaLimit,double,0.3,0,2);
+		REGISTER_OPTION(fitSigmaLimit,double,0.5,0,2);
 		REGISTER_OPTION(fitWithFixedSigma,bool,false,false,true);
 		REGISTER_OPTION(fitWithThetaLimits,bool,true,false,true);
 		//REGISTER_OPTION(fixThetaInPreFit,bool,true,false,true);
 		REGISTER_OPTION(fixThetaInPreFit,bool,false,false,true);
 		REGISTER_OPTION(fitWithFixedTheta,bool,false,false,true);
-		REGISTER_OPTION(fitThetaLimit,double,90,0,361);
+		REGISTER_OPTION(fitThetaLimit,double,360,0,361);
 		REGISTER_OPTION(useFluxZCutInFit,bool,false,false,true);
 		REGISTER_OPTION(fitZCutMin,double,2.5,0,1000);
 		REGISTER_OPTION(peakMinKernelSize,int,3,0,101);
