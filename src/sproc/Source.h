@@ -290,7 +290,7 @@ class Source : public Blob {
 			m_NestedSources.clear();
 
 			//Add new collection
-			if(sources.empty()){
+			if(!sources.empty()){
 				m_NestedSources.insert(m_NestedSources.end(),sources.begin(),sources.end());
 				m_HasNestedSources= true;
 			}
@@ -314,6 +314,13 @@ class Source : public Blob {
 			if(index<0 || index>=(int)m_NestedSources.size() || m_NestedSources.size()==0) return 0;
 			return m_NestedSources[index];
 		}
+
+		/**
+		* \brief Find nested sources
+		*/
+		int FindNestedSources(std::vector<Source*>& nestedSources,double nestedBlobMinScale=1,double nestedBlobMaxScale=3,double nestedBlobScaleStep=1,double nestedBlobPeakZThr=5,double nestedBlobPeakZMergeThr=2.5,int minPixels=5,double nestedBlobThrFactor=0,double nestedBlobKernFactor=6,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5);
+	
+
 		/**
 		* \brief Draw contours
 		*/

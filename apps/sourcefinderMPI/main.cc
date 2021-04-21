@@ -131,11 +131,11 @@ int main(int argc, char *argv[])
 	//Close MPI run if enabled
 	if(mpiRunEnabled){
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("Finalizing MPI run...");
+			DEBUG_LOG("Finalizing MPI run...");
 		#endif
 		MPI_Finalize();
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("MPI comm finalized with success");
+			DEBUG_LOG("MPI comm finalized with success");
 		#endif
 	}
 

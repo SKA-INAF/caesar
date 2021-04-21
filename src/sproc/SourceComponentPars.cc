@@ -909,7 +909,7 @@ int SourceComponentPars::ComputeWCSDeconvolvedEllipsePars()
 	double beta2= pow(diff2,2) + pow(diff2_beam,2) - 2*diff2*diff2_beam*cos(2*(pa_rad-pa_beam_rad));
 	if(beta2<0) {
 		#ifdef LOGGING_ENABLED
-			WARN_LOG("Numerical error (beta^2 is <0 in formula)!");
+			DEBUG_LOG("Numerical error (beta^2 is <0 in formula)!");
 		#endif
 		return -1;
 	}
@@ -919,7 +919,7 @@ int SourceComponentPars::ComputeWCSDeconvolvedEllipsePars()
 	//If so, do not attempt too deconvolve. Set deconv ellipse to fitted ellipse.
 	if(sum2<=sum2_beam){
 		#ifdef LOGGING_ENABLED
-			WARN_LOG("Fitted ellipse beam is smaller than beam, do not deconvolve (set deconvolved ellipse to fitted ellipse)!");
+			DEBUG_LOG("Fitted ellipse beam is smaller than beam, do not deconvolve (set deconvolved ellipse to fitted ellipse)!");
 		#endif
 		m_bmaj_deconv_wcs= m_bmaj_wcs;
 		m_bmin_deconv_wcs= m_bmin_wcs;
@@ -932,7 +932,7 @@ int SourceComponentPars::ComputeWCSDeconvolvedEllipsePars()
 	double bmin2_deconv= 0.5*(sum2 - sum2_beam - beta);
 	if(bmaj2_deconv<0 || bmin2_deconv) {
 		#ifdef LOGGING_ENABLED
-			WARN_LOG("Numerical error (bmaj^2/bmin^2 deconvolved are <0 in formula)!");	
+			DEBUG_LOG("Numerical error (bmaj^2/bmin^2 deconvolved are <0 in formula)!");	
 		#endif
 		return -1;
 	}

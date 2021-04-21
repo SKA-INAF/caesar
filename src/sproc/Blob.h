@@ -550,6 +550,11 @@ class Blob : public TNamed {
 		*/
 		TH2D* GetWCSHisto(ImgType mode,int pixMargin=1,int coordSyst=-1);
 
+		/**
+		* \brief Get blob mask
+		*/
+		Image* GetNestedBlobMask(Image* sourceImage=0,int pixMargin=1,double nestedBlobMinScale=1,double nestedBlobMaxScale=3,double nestedBlobScaleStep=1,double nestedBlobPeakZThr=5,double nestedBlobPeakZMergeThr=2.5,int NMinPix=5,double nestedBlobThrFactor=0,double nestedBlobKernFactor=6);
+
 		//================================================
 		//==         CONTOURS
 		//================================================

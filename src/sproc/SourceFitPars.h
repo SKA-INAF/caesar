@@ -995,7 +995,7 @@ class SourceFitPars : public TObject {
 			for(size_t i=0;i<pars.size();i++){
 				if(pars[i].ComputeWCSDeconvolvedEllipsePars()<0){
 					#ifdef LOGGING_ENABLED
-						WARN_LOG("Failed to compute WCS ellipse pars for fit component no. "<<i+1);
+						DEBUG_LOG("Failed to compute WCS ellipse pars for fit component no. "<<i+1);
 					#endif
 					status= -1;
 				}

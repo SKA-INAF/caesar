@@ -1787,13 +1787,13 @@ int BlobFinder::FindBlendedBlobs(std::vector<Source*>& blendedBlobs,std::vector<
 		//NB: Ideally only 1 blob around desired peak should be found
 		if(blobs.empty()){
 			#ifdef LOGGING_ENABLED
-				WARN_LOG("No blended blob found for peak no. "<<k+1<<" (hint: current method was not able to extract blended blob or blob was below npix thr="<<minBlobSize<<"), go to next peak...");
+				DEBUG_LOG("No blended blob found for peak no. "<<k+1<<" (hint: current method was not able to extract blended blob or blob was below npix thr="<<minBlobSize<<"), go to next peak...");
 			#endif
 			continue;
 		}	
 		else if(blobs.size()>1){
 			#ifdef LOGGING_ENABLED
-				WARN_LOG("More than one blended blob found for peak no. "<<k+1<<", this should not occur, so skip the peak...");
+				DEBUG_LOG("More than one blended blob found for peak no. "<<k+1<<", this should not occur, so skip the peak...");
 			#endif
 			continue;
 		}

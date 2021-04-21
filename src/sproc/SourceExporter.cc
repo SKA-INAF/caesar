@@ -219,6 +219,12 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 	//Loop sources
 	bool deleteWCS= false;
 
+	if(sources.empty()){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Given source list is empty so the produced catalog will be empty...");
+		#endif
+	}
+
 	for(size_t k=0;k<sources.size();k++){
 		//If wcs is not given, retrieve it from metadata
 		if(!wcs){

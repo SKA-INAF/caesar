@@ -40,6 +40,8 @@
 
 #include <SpectralIndexData.h>
 #include <AstroObject.h>
+#include <BkgData.h>
+#include <BlobFinder.h>
 
 #include <TObject.h>
 #include <TMatrixD.h>
@@ -1286,12 +1288,12 @@ int Source::Fit(SourceFitOptions& fitOptions)
 	
 	//Get fit results
 	SourceFitPars fitPars= fitter.GetFitPars();
-	fitPars.Print();
+	//fitPars.Print();
 
 	int fitStatus= fitter.GetFitStatus();
 	if(fitStatus==eFitConverged || fitStatus==eFitConvergedWithWarns){
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("Fit of source "<<this->GetName()<<" converged (status="<<fitStatus<<"), storing fit parameters...");	
+			DEBUG_LOG("Fit of source "<<this->GetName()<<" converged (status="<<fitStatus<<"), storing fit parameters...");	
 		#endif
 		m_fitPars= fitPars;
 		m_HasFitInfo= true;
@@ -1324,7 +1326,7 @@ int Source::Fit(SourceFitOptions& fitOptions,SourceFitPars& initfitPars)
 	
 	//Get fit results
 	SourceFitPars fitPars= fitter.GetFitPars();
-	fitPars.Print();
+	//fitPars.Print();
 
 	int fitStatus= fitter.GetFitStatus();
 	if(fitStatus==eFitConverged || fitStatus==eFitConvergedWithWarns){
@@ -1451,7 +1453,7 @@ int Source::FindComponentPeaks(std::vector<ImgPeak>& peaks,double peakZThr,int m
 
 	//Finding peaks
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Finding peaks in source (id="<<Id<<", name="<<this->GetName()<<")");	
+		DEBUG_LOG("Finding peaks in source (id="<<Id<<", name="<<this->GetName()<<")");	
 	#endif
 	//std::vector<TVector2> peakPoints;
 	std::vector<ImgPeak> peakPoints;
@@ -1466,7 +1468,7 @@ int Source::FindComponentPeaks(std::vector<ImgPeak>& peaks,double peakZThr,int m
 
 	//Select peaks (skip peaks at boundary or faint peaks)
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("#"<<peakPoints.size()<<" peaks found in source (id="<<Id<<", name="<<this->GetName()<<"), apply selection...");	
+		DEBUG_LOG("#"<<peakPoints.size()<<" peaks found in source (id="<<Id<<", name="<<this->GetName()<<"), apply selection...");	
 	#endif
 	//std::vector<TVector2> peakPoints_selected;
 	std::vector<ImgPeak> peakPoints_selected;
@@ -1495,7 +1497,7 @@ int Source::FindComponentPeaks(std::vector<ImgPeak>& peaks,double peakZThr,int m
 			if(Zpeak_imgbkg<peakZThr) {
 			//if(Zpeak_sourcebkg<peakZThr) {	
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak_imgbkg="<<Zpeak_imgbkg<<", Zpeak_sourcebkg="<<Zpeak_sourcebkg<<"<"<<peakZThr<<")");
+					DEBUG_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak_imgbkg="<<Zpeak_imgbkg<<", Zpeak_sourcebkg="<<Zpeak_sourcebkg<<"<"<<peakZThr<<")");
 				#endif
 				continue;
 			}
@@ -1504,7 +1506,7 @@ int Source::FindComponentPeaks(std::vector<ImgPeak>& peaks,double peakZThr,int m
 		//Remove peaks lying on the source contour
 		if(this->HasContours() && this->IsPointOnContour(x,y,0.5)) {
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as lying on source contour");
+				DEBUG_LOG("Removing peak ("<<x<<","<<y<<") from the list as lying on source contour");
 			#endif
 			continue;
 		}
@@ -1523,7 +1525,7 @@ int Source::FindComponentPeaks(std::vector<ImgPeak>& peaks,double peakZThr,int m
 	int nPeaks_selected= static_cast<int>(peakPoints_selected.size());
 	if(nPeaks_selected<=0){
 		#ifdef LOGGING_ENABLED
-			WARN_LOG("No components left in source (id="<<Id<<", name="<<this->GetName()<<") after selection!");	
+			DEBUG_LOG("No components left in source (id="<<Id<<", name="<<this->GetName()<<") after selection!");	
 		#endif
 		CodeUtils::DeletePtr<Image>(peakSearchMap);
 		return 0;
@@ -1532,7 +1534,7 @@ int Source::FindComponentPeaks(std::vector<ImgPeak>& peaks,double peakZThr,int m
 	int nComponents= nPeaks_selected;
 	if(maxPeaks>0) nComponents= std::min(nPeaks_selected,maxPeaks);
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("#"<<nComponents<<" components found in source (id="<<Id<<", name="<<this->GetName()<<"), max peaks="<<maxPeaks<<") ...");
+		DEBUG_LOG("#"<<nComponents<<" components found in source (id="<<Id<<", name="<<this->GetName()<<"), max peaks="<<maxPeaks<<") ...");
 	#endif
 
 	peaks.clear();
@@ -1590,7 +1592,7 @@ int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std:
 
 	if(peakPoints.empty()){
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("No components found in source (name="<<this->GetName()<<")");	
+			DEBUG_LOG("No components found in source (name="<<this->GetName()<<")");	
 		#endif
 		CodeUtils::DeletePtr<Image>(sourceImg);
 		CodeUtils::DeletePtrCollection<Source>(sources);
@@ -1599,7 +1601,7 @@ int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std:
 
 	//Select components by peak flux (skip peaks at boundary or faint peaks)
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("#"<<peakPoints.size()<<" peaks found in source (name="<<this->GetName()<<"), apply selection...");	
+		DEBUG_LOG("#"<<peakPoints.size()<<" peaks found in source (name="<<this->GetName()<<"), apply selection...");	
 	#endif
 	std::vector<ImgPeak> peakPoints_selected;
 	std::vector<double> peakFluxes_selected;
@@ -1618,7 +1620,7 @@ int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std:
 			if(Zpeak_imgbkg<peakZThr) {
 			//if(Zpeak_sourcebkg<peakZThr) {
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak_imgbkg="<<Zpeak_imgbkg<<", Zpeak_sourcebkg="<<Zpeak_sourcebkg<<"<"<<peakZThr<<")");
+					DEBUG_LOG("Removing peak ("<<x<<","<<y<<") from the list as below peak significance thr (Zpeak_imgbkg="<<Zpeak_imgbkg<<", Zpeak_sourcebkg="<<Zpeak_sourcebkg<<"<"<<peakZThr<<")");
 				#endif
 				continue;
 			}
@@ -1627,7 +1629,7 @@ int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std:
 		//Remove peaks lying on the source contour
 		if(this->HasContours() && this->IsPointOnContour(x,y,0.5)) {
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Removing peak ("<<x<<","<<y<<") from the list as lying on source contour...");
+				DEBUG_LOG("Removing peak ("<<x<<","<<y<<") from the list as lying on source contour...");
 			#endif
 			continue;
 		}
@@ -1647,7 +1649,7 @@ int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std:
 	int nPeaks_selected= static_cast<int>(peakPoints_selected.size());
 	if(nPeaks_selected<=0){
 		#ifdef LOGGING_ENABLED
-			WARN_LOG("No components left in source (id="<<Id<<", name="<<this->GetName()<<") after selection!");	
+			DEBUG_LOG("No components left in source (id="<<Id<<", name="<<this->GetName()<<") after selection!");	
 		#endif
 		CodeUtils::DeletePtr<Image>(sourceImg);
 		CodeUtils::DeletePtrCollection<Source>(sources);
@@ -1657,7 +1659,7 @@ int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std:
 	int nComponents= nPeaks_selected;
 	if(maxPeaks>0) nComponents= std::min(nPeaks_selected,maxPeaks);
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("#"<<nComponents<<" components found in source (id="<<Id<<", name="<<this->GetName()<<"), max peaks="<<maxPeaks<<") ...");
+		DEBUG_LOG("#"<<nComponents<<" components found in source (id="<<Id<<", name="<<this->GetName()<<"), max peaks="<<maxPeaks<<") ...");
 	#endif
 
 	deblendedPeaks.clear();
@@ -1682,7 +1684,154 @@ int Source::FindBlendedComponents(std::vector<Source*>& deblendedComponents,std:
 }//close FindBlendedComponents()
 
 
-//std::string Source::GetIAUName(bool useWeightedPos,WorldCoor* wcs,int coordSystem)
+int Source::FindNestedSources(std::vector<Source*>& nestedSources,double nestedBlobMinScale,double nestedBlobMaxScale,double nestedBlobScaleStep,double nestedBlobPeakZThr,double nestedBlobPeakZMergeThr,int minPixels,double nestedBlobThrFactor,double nestedBlobKernFactor,double minNestedMotherDist,double maxMatchingPixFraction)
+{
+	//Init
+	nestedSources.clear();
+
+	//Compute source image
+	int pixMargin= 0;
+	Image* sourceImg= this->GetImage(eFluxMap,pixMargin);
+	if(!sourceImg){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get source image!");	
+		#endif
+		return -1;
+	}
+
+	//Compute stats & bkg
+	sourceImg->ComputeStats(true);
+	
+	bool useLocalBkg= false;
+	int bkgEstimator= eMedianBkg;
+	ImgBkgData* bkgData= sourceImg->ComputeBkg(bkgEstimator,useLocalBkg);
+	if(!bkgData){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute source bkg data!");	
+		#endif
+		return -1;
+	}
+
+	//Compute blob mask
+	Image* blobMask= this->GetNestedBlobMask(
+		sourceImg, 
+		pixMargin,
+		nestedBlobMinScale, nestedBlobMaxScale, nestedBlobScaleStep,
+		nestedBlobPeakZThr, nestedBlobPeakZMergeThr, 
+		minPixels,
+		nestedBlobThrFactor,nestedBlobKernFactor
+	);
+
+	if(!blobMask){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute source blob mask!");	
+		#endif
+		delete sourceImg;
+		sourceImg= 0;
+		delete bkgData;
+		bkgData= 0;
+		return -1;
+	}
+
+	//Find blob+source mask
+	Image* sourcePlusBlobMask= sourceImg->GetMask(blobMask,true);
+	if(!sourcePlusBlobMask){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute (source+blob) mask!");
+		#endif
+		delete sourceImg;
+		sourceImg= 0;
+		delete bkgData;
+		bkgData= 0;
+		delete blobMask;
+		blobMask= 0;
+		return -1;
+	}
+
+	//Find nested blobs 
+	std::vector<Source*> nestedSources_all;
+	double fgValue= 1;
+	int status= BlobFinder::FindBlobs(sourceImg,nestedSources_all,sourcePlusBlobMask,bkgData,fgValue,fgValue,minPixels,false,false);
+
+	//Clean data
+	delete sourceImg;
+	sourceImg= 0;
+	delete bkgData;
+	bkgData= 0;
+	delete blobMask;
+	blobMask= 0;
+	delete sourcePlusBlobMask;
+	sourcePlusBlobMask= 0;
+	
+	if(status<0){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Nested blob finder failed!");
+		#endif	
+		CodeUtils::DeletePtrCollection<Source>(nestedSources_all);	
+		return -1;
+	}
+
+	//Select nested sources
+	int nNestedSources= static_cast<int>(nestedSources_all.size());
+
+	for(size_t j=0;j<nestedSources_all.size();j++)
+	{
+		//Compute nested source stats & pars
+		nestedSources_all[j]->SetBeamFluxIntegral(m_BeamFluxIntegral);
+		nestedSources_all[j]->ComputeStats();
+		nestedSources_all[j]->ComputeMorphologyParams();	
+
+		//If only one component is present select it if:
+		//  1) mother and nested distance is > thr (e.g. 
+		//  2) mother and nested pix superposition is <thr (e.g. 50%)
+		if(nNestedSources==1)
+		{
+			//Compute centroid distances
+			float centroidDistX= fabs(X0-nestedSources_all[j]->X0);
+			float centroidDistY= fabs(Y0-nestedSources_all[j]->Y0);
+
+			//Compute nmatching pixels
+			long int nMatchingPixels= this->GetNMatchingPixels(nestedSources_all[j]);
+			float matchingPixFraction= (float)(nMatchingPixels)/(float)(NPix);
+
+			//Select nested?
+			bool areOffset= (centroidDistX>minNestedMotherDist || centroidDistY>minNestedMotherDist);
+			bool isNestedSmaller= (matchingPixFraction<maxMatchingPixFraction);
+			bool select= (areOffset || isNestedSmaller);	
+			if(select){
+				Source* nestedSource= new Source;
+				*nestedSource= *(nestedSources_all[j]);
+				nestedSources.push_back(nestedSource);
+			}		
+		}
+		else{
+			Source* nestedSource= new Source;
+			*nestedSource= *(nestedSources_all[j]);
+			nestedSources.push_back(nestedSource);
+		}
+
+	}//end loop nested
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("#"<<nestedSources.size()<<" nested sources selected ...");
+	#endif
+
+	//Delete original nested source
+	for(size_t j=0;j<nestedSources_all.size();j++)
+	{
+		if(nestedSources_all[j]){
+			delete nestedSources_all[j];
+			nestedSources_all[j]= 0;
+		}
+	}
+	nestedSources_all.clear();
+
+	return 0;
+
+}//close FindNestedSources()
+	
+
+
 std::string Source::GetIAUName(bool useWeightedPos,WCS* wcs,int coordSystem)
 {
 	//Init name
@@ -1783,7 +1932,7 @@ int Source::GetWCSCoords(double& xwcs,double& ywcs,double x,double y,WCS* wcs,in
 		double x_wcs_2= 0;
 		double y_wcs_2= 0;
 		WCSUtils::pix2wcs (wcs,x,y,&x_wcs_2, &y_wcs_2);
-		INFO_LOG("Source "<<this->GetName()<<std::setprecision(12)<<": pos("<<x<<","<<y<<"), pos_wcs("<<xwcs<<","<<ywcs<<"), pos_wcs2("<<x_wcs_2<<","<<y_wcs_2<<")");
+		DEBUG_LOG("Source "<<this->GetName()<<std::setprecision(12)<<": pos("<<x<<","<<y<<"), pos_wcs("<<xwcs<<","<<ywcs<<"), pos_wcs2("<<x_wcs_2<<","<<y_wcs_2<<")");
 	#endif
 
 	//Delete WCS

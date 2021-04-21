@@ -99,11 +99,11 @@ SFinder::~SFinder(){
 	
 	//Clearup
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Clearup source finder allocated data...");
+		DEBUG_LOG("Clearup source finder allocated data...");
 	#endif
 	Clear();
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Clearup completed...");
+		DEBUG_LOG("Clearup completed...");
 	#endif
 
 }//close destructor
@@ -111,7 +111,6 @@ SFinder::~SFinder(){
 
 void SFinder::Clear()
 {
-
 	//## Close open ROOT file
 	//## NB: When objects are written to file their memory is released, so don't delete them!
 	if(m_procId==MASTER_ID){
@@ -3635,7 +3634,7 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 		fitInMultithread= false;
 	}
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Fitting sources in multithread? "<<fitInMultithread);
+		DEBUG_LOG("Fitting sources in multithread? "<<fitInMultithread);
 	#endif
 
 	//## NB: Convert scale pars in pixels assuming they represent multiple of beam width (Bmin)	
@@ -3673,10 +3672,9 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 		if(isFittable) {
 			//Fit mother source
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") fittable as a whole...");
+				DEBUG_LOG("Source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") fittable as a whole...");
 			#endif
 
-			
 			nFittedSources++;
 			fittedSourceNames.push_back(sources[i]->GetName());
 
@@ -3725,6 +3723,7 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	#endif
 
 	//== DEBUG ==
+	/*
 	std::stringstream ss;
 	ss<<"fitted sources {";
 	for(size_t i=0;i<fittedSourceNames.size();i++){
@@ -3734,6 +3733,7 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	#ifdef LOGGING_ENABLED
 		INFO_LOG(ss.str());
 	#endif
+	*/
 
 	return 0;
 

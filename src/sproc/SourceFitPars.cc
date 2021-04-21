@@ -277,7 +277,7 @@ double SourceFitPars::GetComponentFluxDensityErr(int componentId)
 	double Var= VarMatrix(0,0);
 	if(Var<0){
 		#ifdef LOGGING_ENABLED
-			WARN_LOG("Flux density variance for component "<<componentId<<" is negative (this should not occur, check for bugs or numerical roundoff errors!)");
+			DEBUG_LOG("Flux density variance for component "<<componentId<<" is negative (this should not occur, check for bugs or numerical roundoff errors!)");
 		#endif
 		return 0;
 	}

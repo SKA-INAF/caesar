@@ -240,14 +240,14 @@ int SourceFitter::InitData(Source* aSource,SourceFitOptions& fitOptions)
 		m_bkgMean/= normFactor;//scale to max pix flux
 		m_rmsMean/= normFactor;//scale to max pix flux
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("Source (name="<<aSource->GetName()<<", N="<<pixels.size()<<", Smax="<<Smax<<", pos("<<m_sourceX0<<","<<m_sourceY0<<")) bkg info: <bkg(norm)>="<<m_bkgMean<<", <rms(norm)>="<<m_rmsMean);	
+			DEBUG_LOG("Source (name="<<aSource->GetName()<<", N="<<pixels.size()<<", Smax="<<Smax<<", pos("<<m_sourceX0<<","<<m_sourceY0<<")) bkg info: <bkg(norm)>="<<m_bkgMean<<", <rms(norm)>="<<m_rmsMean);	
 		#endif
 	}
 	else{
 		m_bkgMean*= 1.e+3;//convert to mJy
 		m_rmsMean*= 1.e+3;//convert to mJy
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("Source (name="<<aSource->GetName()<<", N="<<pixels.size()<<", pos("<<m_sourceX0<<","<<m_sourceY0<<")) bkg info: <bkg(mJy)>="<<m_bkgMean<<", <rms(mJy)>="<<m_rmsMean);
+			DEBUG_LOG("Source (name="<<aSource->GetName()<<", N="<<pixels.size()<<", pos("<<m_sourceX0<<","<<m_sourceY0<<")) bkg info: <bkg(mJy)>="<<m_bkgMean<<", <rms(mJy)>="<<m_rmsMean);
 		#endif
 	}
 
@@ -294,7 +294,7 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 		double meanY= aSource->GetSy();
 		double Smax= aSource->GetSmax();
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("No nested components found in source (id="<<aSource->Id<<", name="<<aSource->GetName()<<", pos("<<meanX<<","<<meanY<<")), will search for peak components ...");	
+			DEBUG_LOG("No nested components found in source (id="<<aSource->Id<<", name="<<aSource->GetName()<<", pos("<<meanX<<","<<meanY<<")), will search for peak components ...");	
 		#endif
 		
 		//Compute standard deviations along axis
@@ -327,7 +327,7 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 		);
 		if(status==0){
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("#"<<deblendedBlobs.size()<<" blended component found in source "<<aSource->GetName()<<" ...");
+				DEBUG_LOG("#"<<deblendedBlobs.size()<<" blended component found in source "<<aSource->GetName()<<" ...");
 			#endif
 			useDeblendedBlobPars= true;
 		}//close if
@@ -354,7 +354,7 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 		//otherwise use peaks found as centroid start values and beam as gaussian sigma pars
 		if(peaks.empty()){
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("No peaks found in this source (hint: could be a diffuse source and peaks are below desired threshold), nothing to be fit");
+				DEBUG_LOG("No peaks found in source "<<aSource->GetName()<<" (hint: could be a diffuse source and peaks are below desired threshold), nothing to be fit");
 			#endif
 			return -1;
 		}
@@ -414,7 +414,7 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 	}//close if
 	else{
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("#"<<nComponents<<" nested components found in source (id="<<aSource->Id<<", name="<<aSource->GetName()<<"), sorting and selecting best ones...");	
+			DEBUG_LOG("#"<<nComponents<<" nested components found in source (id="<<aSource->Id<<", name="<<aSource->GetName()<<"), sorting and selecting best ones...");	
 		#endif
 
 		//Sort nested sources by peak flux and select brighter
@@ -451,7 +451,7 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 			//Check if number of maximum components has been reached
 			if(nSelComponents>=fitOptions.nMaxComponents){
 				#ifdef LOGGING_ENABLED	
-					INFO_LOG("Maximum number of fit components (N="<<fitOptions.nMaxComponents<<") reached, stop adding fit components...");
+					DEBUG_LOG("Maximum number of fit components (N="<<fitOptions.nMaxComponents<<") reached, stop adding fit components...");
 				#endif
 				break;
 			}	
@@ -510,7 +510,7 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 			//otherwise use peaks found as centroid start values and beam as gaussian sigma pars
 			if(peaks.empty()){
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("No peaks found in nested component no. "<<i<<" of source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") (hint: could be a diffuse source and peaks are below desired threshold), skip to next nested component...");
+					DEBUG_LOG("No peaks found in nested component no. "<<i<<" of source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") (hint: could be a diffuse source and peaks are below desired threshold), skip to next nested component...");
 				#endif
 				continue;
 			}			
@@ -553,7 +553,7 @@ int SourceFitter::EstimateFitComponents(std::vector<std::vector<double>>& fitPar
 	}//close else
 
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("#"<<fitPars_start.size()<<" fit components will be fitted...");
+		DEBUG_LOG("#"<<fitPars_start.size()<<" fit components will be fitted...");
 	#endif
 
 	//Sort components by peak flux case of multiple components
@@ -759,7 +759,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		parNameMap.insert( std::make_pair(std::string(parName),par_counter) );
 		if(fitOptions.fixAmplInPreFit){	
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Setting amplitude par fixed to "<<Speak);
+				DEBUG_LOG("Setting amplitude par fixed to "<<Speak);
 			#endif
 			fitter->SetFixedVariable(par_counter,parName,Speak);
 		}
@@ -770,13 +770,13 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 				parLimits_min[i][0]= Speak_min;
 				parLimits_max[i][0]= Speak_max;
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Limiting amplitude par "<<Speak<<" in range ["<<Speak_min<<","<<Speak_max<<"]");
+					DEBUG_LOG("Limiting amplitude par "<<Speak<<" in range ["<<Speak_min<<","<<Speak_max<<"]");
 				#endif
 				fitter->SetLimitedVariable(par_counter,parName,Speak,Speak_err,Speak_min,Speak_max);
 			}
 			else{
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Setting free amplitude par initialized to "<<Speak);
+					DEBUG_LOG("Setting free amplitude par initialized to "<<Speak);
 				#endif
 				fitter->SetVariable(par_counter,parName,Speak,Speak_err);
 			}
@@ -817,7 +817,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		
 		if(fitOptions.fixCentroidInPreFit){
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Setting centroid fixed to ("<<x0<<","<<y0<<")");
+				DEBUG_LOG("Setting centroid fixed to ("<<x0<<","<<y0<<")");
 			#endif
 			fitter->SetFixedVariable(par_counter+1,parName_x0,x0);		
 			fitter->SetFixedVariable(par_counter+2,parName_y0,y0);
@@ -833,14 +833,14 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 				parLimits_min[i][2]= y0_min;
 				parLimits_max[i][2]= y0_max;
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Limiting centroid pars (x,y)=("<<x0<<","<<y0<<")"<<" to bounds x0("<<x0_min<<","<<x0_max<<"), y0("<<y0_min<<","<<y0_max<<")");
+					DEBUG_LOG("Limiting centroid pars (x,y)=("<<x0<<","<<y0<<")"<<" to bounds x0("<<x0_min<<","<<x0_max<<"), y0("<<y0_min<<","<<y0_max<<")");
 				#endif
 				fitter->SetLimitedVariable(par_counter+1,parName_x0,x0,x0_err,x0_min,x0_max);
 				fitter->SetLimitedVariable(par_counter+2,parName_y0,y0,y0_err,y0_min,y0_max);
 			}
 			else{
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Setting free centroid pars initialized to (x,y)=("<<x0<<","<<y0<<")");
+					DEBUG_LOG("Setting free centroid pars initialized to (x,y)=("<<x0<<","<<y0<<")");
 				#endif
 				fitter->SetVariable(par_counter+1,parName_x0,x0,x0_err);
 				fitter->SetVariable(par_counter+2,parName_y0,y0,y0_err);
@@ -892,7 +892,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 
 		if(fitOptions.fixSigmaInPreFit){	
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Setting sigma pars fixed to (sigmaX,sigmaY)=("<<sigmaX<<","<<sigmaY<<")");
+				DEBUG_LOG("Setting sigma pars fixed to (sigmaX,sigmaY)=("<<sigmaX<<","<<sigmaY<<")");
 			#endif
 			fitter->SetFixedVariable(par_counter+3,parName_sx,sigmaX);
 			fitter->SetFixedVariable(par_counter+4,parName_sy,sigmaY);
@@ -908,14 +908,14 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 				parLimits_min[i][4]= sigmaY_min;
 				parLimits_max[i][4]= sigmaY_max;
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Limiting sigma pars (sigmaX,sigmaY)=("<<sigmaX<<","<<sigmaY<<")"<<" to bounds sigmaX("<<sigmaX_min<<","<<sigmaX_max<<"), sigmaY("<<sigmaY_min<<","<<sigmaY_max<<"), bmaj="<<fitOptions.bmaj<<", bmin="<<fitOptions.bmin);
+					DEBUG_LOG("Limiting sigma pars (sigmaX,sigmaY)=("<<sigmaX<<","<<sigmaY<<")"<<" to bounds sigmaX("<<sigmaX_min<<","<<sigmaX_max<<"), sigmaY("<<sigmaY_min<<","<<sigmaY_max<<"), bmaj="<<fitOptions.bmaj<<", bmin="<<fitOptions.bmin);
 				#endif
 				fitter->SetLimitedVariable(par_counter+3,parName_sx,sigmaX,sigmaX_err,sigmaX_min,sigmaX_max);
 				fitter->SetLimitedVariable(par_counter+4,parName_sy,sigmaY,sigmaY_err,sigmaY_min,sigmaY_max);	
 			}
 			else{	
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Setting free sigma pars initialized to (sigmaX,sigmaY)=("<<sigmaX<<","<<sigmaY<<")");
+					DEBUG_LOG("Setting free sigma pars initialized to (sigmaX,sigmaY)=("<<sigmaX<<","<<sigmaY<<")");
 				#endif
 				fitter->SetVariable(par_counter+3,parName_sx,sigmaX,sigmaX_err);
 				fitter->SetVariable(par_counter+4,parName_sy,sigmaY,sigmaY_err);	
@@ -961,7 +961,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 
 		if(fitOptions.fixThetaInPreFit){//Fix theta par in pre-fit?
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Setting theta par fixed to "<<theta);
+				DEBUG_LOG("Setting theta par fixed to "<<theta);
 			#endif
 			fitter->SetFixedVariable(par_counter+5,parName,theta);	
 		}
@@ -972,13 +972,13 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 				parLimits_min[i][5]= theta_min;
 				parLimits_max[i][5]= theta_max;
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Limiting theta par "<<theta<<" to bounds ("<<theta_min<<","<<theta_max<<")");
+					DEBUG_LOG("Limiting theta par "<<theta<<" to bounds ("<<theta_min<<","<<theta_max<<")");
 				#endif
 				fitter->SetLimitedVariable(par_counter+5,parName,theta,theta_err,theta_min,theta_max);
 			}
 			else{
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Setting free theta par initialized to "<<theta);
+					DEBUG_LOG("Setting free theta par initialized to "<<theta);
 				#endif
 				fitter->SetVariable(par_counter+5,parName,theta,theta_err);	
 			}
@@ -1010,7 +1010,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	//- Offset
 	if(fitOptions.fixBkg){
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("Setting offset par fixed to "<<offset);
+			DEBUG_LOG("Setting offset par fixed to "<<offset);
 		#endif
 		fitter->SetFixedVariable(nFitPars-1,offsetParName,offset);	
 	}
@@ -1019,13 +1019,13 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 			offset_min= std::min(Smin,offset-fabs(m_rmsMean));
 			offset_max= std::min(Smax,offset+fabs(m_rmsMean));
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Limiting offset par "<<offset<<" in range ["<<offset_min<<","<<offset_max<<"]");
+				DEBUG_LOG("Limiting offset par "<<offset<<" in range ["<<offset_min<<","<<offset_max<<"]");
 			#endif
 			fitter->SetLimitedVariable(nFitPars-1,offsetParName,offset,offset_err,offset_min,offset_max);
 		}	
 		else{
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Setting free offset par initialized to "<<offset);
+				DEBUG_LOG("Setting free offset par initialized to "<<offset);
 			#endif
 			fitter->SetVariable(nFitPars-1,offsetParName,offset,offset_err);
 		}
@@ -1041,7 +1041,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	//==             PRE-FIT
 	//==============================================
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Performing pre-fit (ndim="<<fitter->NDim()<<")");
+		DEBUG_LOG("Performing pre-fit (ndim="<<fitter->NDim()<<")");
 	#endif
 
 	//## Perform pre-fit
@@ -1060,7 +1060,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	unsigned int prefixNCalls= fitter->NCalls();
 	unsigned int prefixNIters= fitter->NIterations(); 
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Source pre-fit ended up after #"<<prefixNIters<<" iterations and #"<<prefixNCalls<<" calls with a minimizer status "<<prefitMinimizerStatusCode<<" (fcnMin="<<prefitFcnMin<<", Edm="<<prefitEdm<<") ...");
+		DEBUG_LOG("Source pre-fit ended up after #"<<prefixNIters<<" iterations and #"<<prefixNCalls<<" calls with a minimizer status "<<prefitMinimizerStatusCode<<" (fcnMin="<<prefitFcnMin<<", Edm="<<prefitEdm<<") ...");
 	#endif
 
 	//==============================================
@@ -1081,7 +1081,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		if(fitter->IsFixedVariable(parNumber)) fitter->ReleaseVariable(parNumber);	
 		if(fitOptions.limitAmplInFit){
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Limiting par "<<parName<<" (parNumber="<<parNumber<<", value="<<Ampl_fitted<<") to ["<<Ampl_fitted_min<<","<<Ampl_fitted_max<<"]");
+				DEBUG_LOG("Limiting par "<<parName<<" (parNumber="<<parNumber<<", value="<<Ampl_fitted<<") to ["<<Ampl_fitted_min<<","<<Ampl_fitted_max<<"]");
 			#endif
 			fitter->SetVariableLimits(parNumber,Ampl_fitted_min,Ampl_fitted_max);
 			fitter->SetVariableStepSize(parNumber,Ampl_fitted_err);
@@ -1099,7 +1099,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		if(fitter->IsFixedVariable(parNumber)) fitter->ReleaseVariable(parNumber);	
 		if(fitOptions.limitCentroidInFit){
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Limiting par "<<parName<<" (parNumber="<<parNumber<<", value="<<X0_fitted<<") to ["<<X0_fitted_min<<","<<X0_fitted_max<<"]");
+				DEBUG_LOG("Limiting par "<<parName<<" (parNumber="<<parNumber<<", value="<<X0_fitted<<") to ["<<X0_fitted_min<<","<<X0_fitted_max<<"]");
 			#endif
 			fitter->SetVariableLimits(parNumber,X0_fitted_min,X0_fitted_max);
 			fitter->SetVariableStepSize(parNumber,X0_fitted_err);
@@ -1117,7 +1117,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		if(fitter->IsFixedVariable(parNumber)) fitter->ReleaseVariable(parNumber);
 		if(fitOptions.limitCentroidInFit){	
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Limiting par "<<parName<<" (parNumber="<<parNumber<<", value="<<Y0_fitted<<") to ["<<Y0_fitted_min<<","<<Y0_fitted_max<<"]");
+				DEBUG_LOG("Limiting par "<<parName<<" (parNumber="<<parNumber<<", value="<<Y0_fitted<<") to ["<<Y0_fitted_min<<","<<Y0_fitted_max<<"]");
 			#endif
 			fitter->SetVariableLimits(parNumber,Y0_fitted_min,Y0_fitted_max);
 			fitter->SetVariableStepSize(parNumber,Y0_fitted_err);
@@ -1140,7 +1140,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 			if(fitter->IsFixedVariable(parNumber)) fitter->ReleaseVariable(parNumber);
 			if(fitOptions.limitSigmaInFit) {
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Limiting par "<<parName<<" (parNumber="<<parNumber<<", value="<<sigmaX_fitted<<") to ["<<sigmaX_fitted_min<<","<<sigmaX_fitted_max<<"]");		
+					DEBUG_LOG("Limiting par "<<parName<<" (parNumber="<<parNumber<<", value="<<sigmaX_fitted<<") to ["<<sigmaX_fitted_min<<","<<sigmaX_fitted_max<<"]");		
 				#endif
 				fitter->SetVariableLimits(parNumber,sigmaX_fitted_min,sigmaX_fitted_max);
 				fitter->SetVariableStepSize(parNumber,sigmaX_fitted_err);
@@ -1163,7 +1163,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 			if(fitter->IsFixedVariable(parNumber)) fitter->ReleaseVariable(parNumber);
 			if(fitOptions.limitSigmaInFit) {
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Limiting par "<<parName<<" (parNumber="<<parNumber<<", value="<<sigmaY_fitted<<") to ["<<sigmaY_fitted_min<<","<<sigmaY_fitted_max<<"]");		
+					DEBUG_LOG("Limiting par "<<parName<<" (parNumber="<<parNumber<<", value="<<sigmaY_fitted<<") to ["<<sigmaY_fitted_min<<","<<sigmaY_fitted_max<<"]");		
 				#endif
 				fitter->SetVariableLimits(parNumber,sigmaY_fitted_min,sigmaY_fitted_max);
 				fitter->SetVariableStepSize(parNumber,sigmaY_fitted_err);
@@ -1185,7 +1185,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 			if(fitter->IsFixedVariable(parNumber)) fitter->ReleaseVariable(parNumber);
 			if(fitOptions.limitThetaInFit){
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Limiting par "<<parName<<" (parNumber="<<parNumber<<", value="<<theta_fitted<<") to ["<<theta_fitted_min<<","<<theta_fitted_max<<"]");
+					DEBUG_LOG("Limiting par "<<parName<<" (parNumber="<<parNumber<<", value="<<theta_fitted<<") to ["<<theta_fitted_min<<","<<theta_fitted_max<<"]");
 				#endif
 				fitter->SetVariableLimits(parNumber,theta_fitted_min,theta_fitted_max);
 				fitter->SetVariableStepSize(parNumber,theta_fitted_err);
@@ -1207,7 +1207,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		if(fitter->IsFixedVariable(nFitPars-1)) fitter->ReleaseVariable(nFitPars-1);
 		if(fitOptions.limitBkgInFit){
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Limiting offset par (parNumber="<<nFitPars-1<<", value="<<offset_fitted<<") to ["<<offset_fitted_min<<","<<offset_fitted_max<<"]");
+				DEBUG_LOG("Limiting offset par (parNumber="<<nFitPars-1<<", value="<<offset_fitted<<") to ["<<offset_fitted_min<<","<<offset_fitted_max<<"]");
 			#endif
 			fitter->SetVariableLimits(nFitPars-1,offset_fitted_min,offset_fitted_max);
 			fitter->SetVariableStepSize(nFitPars-1,offset_fitted_err);
@@ -1225,13 +1225,13 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	long int niters_fit_max= fitOptions.fitNRetries;	
 
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Start full fit (nretries="<<niters_fit_max<<")");
+		DEBUG_LOG("Start full fit (nretries="<<niters_fit_max<<")");
 	#endif
 
 	while(!stopFit){
 		//Perform minimization
 		#ifdef LOGGING_ENABLED
-			INFO_LOG("Fitting source "<<aSource->GetName()<<" (#"<<niters_fit<<" iter cycles performed) ...");
+			DEBUG_LOG("Fitting source "<<aSource->GetName()<<" (#"<<niters_fit<<" iter cycles performed) ...");
 		#endif
 		bool fitConverged= fitter->Minimize();			
 
@@ -1245,13 +1245,13 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 			modifyParBounds= true;
 			if(fitConverged){
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Fit converged with parameters at limits, will enlarge par bounds and retry...");
+					DEBUG_LOG("Source "<<aSource->GetName()<<" fit converged with parameters at limits, will enlarge par bounds and retry...");
 				#endif
 				m_fitStatus= eFitConvergedWithWarns;
 			}
 			else{
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Fit failed/not-converged and parameters at limits, will enlarge par bounds, switch to a simpler minimizer and retry...");
+					DEBUG_LOG("Source "<<aSource->GetName()<<" fit failed/not-converged and parameters at limits, will enlarge par bounds, switch to a simpler minimizer and retry...");
 				#endif
 				m_fitStatus= eFitNotConverged;	
 			}
@@ -1259,14 +1259,14 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		else{
 			if(fitConverged){
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Fit converged without parameters at limits, will stop fit iterations and get results...");
+					DEBUG_LOG("Source "<<aSource->GetName()<<" fit converged without parameters at limits, will stop fit iterations and get results...");
 				#endif
 				stopFit= true;
 				m_fitStatus= eFitConverged;
 			}
 			else{
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Fit failed without parameters at limits, will set status to not converged and stop iterations ...");
+					DEBUG_LOG("Source "<<aSource->GetName()<<" fit failed without parameters at limits, will set status to not converged and stop iterations ...");
 				#endif
 				stopFit= true;
 				m_fitStatus= eFitNotConverged;
@@ -1319,7 +1319,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 
 		if(niters_fit>niters_fit_max || !fitOptions.fitImproveConvergence) {	
 			#ifdef LOGGING_ENABLED
-				WARN_LOG("Maximum number of fitting cycles reached ("<<niters_fit_max<<") or no further improvements required, will stop fitting!");
+				DEBUG_LOG("Maximum number of fitting cycles reached ("<<niters_fit_max<<") or no further improvements required, will stop fitting!");
 			#endif
 			break;
 		}
@@ -1328,7 +1328,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	}//end loop fit
 
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Source fit ended with status code "<<m_fitStatus<<" ...");
+		DEBUG_LOG("Source "<<aSource->GetName()<<" fit ended with status code: "<<m_fitStatus);
 	#endif
 
 	//==============================================
@@ -1388,7 +1388,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 				if(parAtLimits) {
 					hasParsAtLimits= true;
 					#ifdef LOGGING_ENABLED
-						INFO_LOG("Fit parameter "<<parName_global<<" is at limit (value="<<parVal<<", min/max="<<parVal_min<<"/"<<parVal_max<<" rel diff min/max="<<parRelDiffMin<<"/"<<parRelDiffMax<<", thr="<<parAtLimitThr<<")");
+						DEBUG_LOG("Fit parameter "<<parName_global<<" is at limit (value="<<parVal<<", min/max="<<parVal_min<<"/"<<parVal_max<<" rel diff min/max="<<parRelDiffMin<<"/"<<parRelDiffMax<<", thr="<<parAtLimitThr<<")");
 					#endif
 				}
 			}//close if
@@ -1448,7 +1448,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		if(parAtLimits) {
 			hasParsAtLimits= true;
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Offset parameter is at limit (value="<<fittedOffset<<", min/max="<<fittedOffset_min<<"/"<<fittedOffset_max<<" rel diff min/max="<<parRelDiffMin<<"/"<<parRelDiffMax<<", thr="<<parAtLimitThr<<")");
+				DEBUG_LOG("Offset parameter is at limit (value="<<fittedOffset<<", min/max="<<fittedOffset_min<<"/"<<fittedOffset_max<<" rel diff min/max="<<parRelDiffMin<<"/"<<parRelDiffMax<<", thr="<<parAtLimitThr<<")");
 			#endif
 		}
 	}
@@ -1471,7 +1471,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	int covMatrixStatus= fitter->CovMatrixStatus();
 	
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") fit info: status="<<fitStatus<<", fitterStatus="<<m_fitStatus<<", covMatrixStatus="<<covMatrixStatus<<", IsValidError? "<<fitter->IsValidError()<<", ProvidesError? "<<fitter->ProvidesError()<<", fit strategy="<<fitter->Strategy()<<" (hasParsAtLimits? "<<hasParsAtLimits<<"), NDF="<<NDF<<", Chi2="<<Chi2<<", NPars="<<NPars<<", NFreePars="<<NFreePars<<" NFittedBins="<<NFittedBins);
+		DEBUG_LOG("Source "<<aSource->GetName()<<" fit info: status="<<fitStatus<<", fitterStatus="<<m_fitStatus<<", covMatrixStatus="<<covMatrixStatus<<", IsValidError? "<<fitter->IsValidError()<<", ProvidesError? "<<fitter->ProvidesError()<<", fit strategy="<<fitter->Strategy()<<" (hasParsAtLimits? "<<hasParsAtLimits<<"), nComponents="<<m_NFitComponents<<", NDF="<<NDF<<", Chi2="<<Chi2<<", NPars="<<NPars<<", NFreePars="<<NFreePars<<" NFittedBins="<<NFittedBins);
 	#endif
 
 	m_sourceFitPars.SetChi2(Chi2);
@@ -1534,7 +1534,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	//Compute flux density derivative matrix
 	if(m_sourceFitPars.ComputeFluxDensityDerivMatrix()<0){
 		#ifdef LOGGING_ENABLED
-			WARN_LOG("Failed to compute flux density derivative matrix!");
+			WARN_LOG("Failed to compute flux density derivative matrix for source "<<aSource->GetName()<<"!");
 		#endif
 	}
 
@@ -1545,7 +1545,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	m_sourceFitPars.ComputeFluxDensity();
 	if(m_sourceFitPars.ComputeFluxDensityError()<0){
 		#ifdef LOGGING_ENABLED
-			WARN_LOG("Failed to compute total flux density error!");
+			WARN_LOG("Failed to compute total flux density error for source "<<aSource->GetName()<<"!");
 		#endif
 	}
 	
@@ -1655,7 +1655,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 		//Compute deconvolved WCS ellipse pars
 		if(m_sourceFitPars.ComputeComponentWCSDeconvolvedEllipsePars()<0){
 			#ifdef LOGGING_ENABLED
-				WARN_LOG("Failed to compute WCS fit component beam-deconvolved ellipse pars!");
+				DEBUG_LOG("Failed to compute WCS fit component beam-deconvolved ellipse pars!");
 			#endif
 		}
 	}//close if	
@@ -1769,7 +1769,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 	//==============================================
 	//==       PRINT FIT RESULTS
 	//==============================================
-	m_sourceFitPars.Print();
+	//m_sourceFitPars.Print();
 	
 	//==============================================
 	//==             CLEAR DATA
@@ -1828,7 +1828,7 @@ int SourceFitter::GetParsAtLimits(std::vector<int>& parsAtLimits,ROOT::Math::Min
 			bool isParAtLimits= (parRelDiffMin<parAtLimitThr || parRelDiffMax<parAtLimitThr);
 			if(isParAtLimits) {
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Fit parameter "<<parName<<" is at limit (value="<<parVal<<", min/max="<<parVal_min<<"/"<<parVal_max<<" rel diff min/max="<<parRelDiffMin<<"/"<<parRelDiffMax<<", thr="<<parAtLimitThr<<")");
+					DEBUG_LOG("Fit parameter "<<parName<<" is at limit (value="<<parVal<<", min/max="<<parVal_min<<"/"<<parVal_max<<" rel diff min/max="<<parRelDiffMin<<"/"<<parRelDiffMax<<", thr="<<parAtLimitThr<<")");
 				#endif
 				parsAtLimits.push_back(i);
 			}
@@ -1904,7 +1904,7 @@ int SourceFitter::FitSource(Source* aSource,SourceFitOptions& fitOptions)
 	m_chi2RegPar= fitOptions.chi2RegPar;
 
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Fitting source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") assuming these blob pars: {Bmaj(pix)="<<fitOptions.bmaj<<", Bmin(pix)="<<fitOptions.bmin<<", Bpa(deg)="<<fitOptions.bpa<<"}");
+		DEBUG_LOG("Fitting source (id="<<aSource->Id<<", name="<<aSource->GetName()<<") assuming these blob pars: {Bmaj(pix)="<<fitOptions.bmaj<<", Bmin(pix)="<<fitOptions.bmin<<", Bpa(deg)="<<fitOptions.bpa<<"}");
 	#endif
 
 	//## Initialize data histos
@@ -1958,12 +1958,12 @@ int SourceFitter::FitSource(Source* aSource,SourceFitOptions& fitOptions)
 			int nComponents_iter= static_cast<int>(fitPars_start_iter.size());
 			if(nComponents_iter<=0){
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("No more components left for fitting after iteration...giving up, fit failed!");
+					DEBUG_LOG("No more components left for fitting after iteration...giving up, fit failed!");
 				#endif
 				break;
 			}	
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Repeating fit of source "<<aSource->GetName()<<" with #"<<nComponents_iter<<"/"<<nComponents<<" brightest components...");
+				DEBUG_LOG("Repeating fit of source "<<aSource->GetName()<<" with #"<<nComponents_iter<<"/"<<nComponents<<" brightest components...");
 			#endif
 			niters++;
 
