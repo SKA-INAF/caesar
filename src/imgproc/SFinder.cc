@@ -220,21 +220,21 @@ void SFinder::Clear()
 		if(m_mpiEnabled && m_mpiGroupsInitialized){
 			if( (m_WorkerGroup!=MPI_GROUP_NULL) && (&m_WorkerGroup!=NULL) && (m_WorkerGroup!=NULL) && (m_WorkerGroup!=MPI_GROUP_EMPTY) ) {
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Freeing worker MPI groups...");				
+					DEBUG_LOG("Freeing worker MPI groups...");				
 				#endif
 				MPI_Group_free(&m_WorkerGroup);
 			}
 			
 			if(m_WorkerComm!=MPI_COMM_NULL) {
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Freeing worker MPI comm...");
+					DEBUG_LOG("Freeing worker MPI comm...");
 				#endif
 				MPI_Comm_free(&m_WorkerComm);
 			}
 
 			if( (m_WorldGroup!=MPI_GROUP_NULL) && (&m_WorldGroup!=NULL) && (m_WorldGroup!=MPI_GROUP_EMPTY) ) {
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Freeing world MPI group...");	
+					DEBUG_LOG("Freeing world MPI group...");	
 				#endif
 				MPI_Group_free(&m_WorldGroup);
 			}
