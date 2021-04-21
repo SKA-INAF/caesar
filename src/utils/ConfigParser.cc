@@ -372,7 +372,7 @@ int ConfigParser::RegisterPredefinedOptions()
 		REGISTER_OPTION(fitMinimizer,std::string,"Minuit2","","");
 		REGISTER_OPTION(fitMinimizerAlgo,std::string,"minimize","","");
 		REGISTER_OPTION(fitPrintLevel,int,0,-1,3);
-		REGISTER_OPTION(fitStrategy,int,2,0,3);
+		REGISTER_OPTION(fitStrategy,int,2,-1,3);
 		REGISTER_OPTION(fitUseThreads,bool,false,false,true);
 		REGISTER_OPTION(fitParBoundIncreaseStepSize,double,0.1,0,10);
 		REGISTER_OPTION(fitScaleDataToMax,bool,false,false,true);
