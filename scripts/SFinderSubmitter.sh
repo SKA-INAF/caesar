@@ -233,6 +233,7 @@ if [ "$NARGS" -lt 1 ]; then
 	echo "--loglevel=[LOG_LEVEL] - Logging level string {INFO, DEBUG, WARN, ERROR, OFF} (default=INFO)"
 	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"
 	echo "--addrunindex - Append a run index to submission script (in case of list execution) (default=no)"
+	echo "--jobdir=[JOB_DIR] - Job directory where to run (default=pwd)"
 	echo "--outdir=[OUTPUT_DIR] - Output directory where to put run output file (default=pwd)"
 	echo "--no-logredir - Do not redirect logs to output file in script "	
 	echo "--no-mpi - Disable MPI run (even with 1 proc) (default=enabled)"
@@ -261,6 +262,9 @@ fi
 #######################################
 ##         PARSE ARGS
 #######################################
+export BASEDIR="$PWD"
+export OUTPUT_DIR="$PWD"
+
 ENV_FILE=""
 RUN_SCRIPT=false
 SUBMIT=false
@@ -292,7 +296,6 @@ JOB_USER_GROUP_OPTION=""
 JOB_NNODES="1"
 JOB_NCPUS="1"
 LOG_LEVEL="INFO"
-OUTPUT_DIR=$PWD
 NTHREADS=1
 READ_TILE="false"
 XMIN=0
@@ -508,7 +511,9 @@ do
 		--outdir=*)
     	OUTPUT_DIR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
-
+		--jobdir=*)
+    	BASEDIR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
 		--no-mpi*)
     	MPI_ENABLED=false
     ;;
@@ -1139,6 +1144,16 @@ fi
 #  exit 1
 #fi
 
+if [ "$BASEDIR" = "" ]; then
+  echo "WARN: Empty BASEDIR given, setting it to pwd ($PWD) ..."
+	BASEDIR="$PWD"
+fi
+
+if [ "$OUTPUT_DIR" = "" ]; then
+  echo "WARN: Empty OUTPUT_DIR given, setting it to pwd ($PWD) ..."
+	OUTPUT_DIR="$PWD"
+fi
+
 if [ "$CONTAINER_IMG" = "" ] && [ "$RUN_IN_CONTAINER" = true ]; then
   echo "ERROR: Empty CONTAINER_IMG argument (hint: you must specify a container image if run in container option is activated)!"
   exit 1
@@ -1171,9 +1186,7 @@ fi
 #######################################
 ##     DEFINE & LOAD ENV VARS
 #######################################
-export BASEDIR="$PWD"
-export OUTPUT_DATADIR="$PWD"
-export DATADIR=""
+
 
 ## Load env file
 if [ "$ENV_FILE" != "" ]; then
@@ -1686,6 +1699,7 @@ generate_exec_script(){
 			fi
        
       echo "JOBDIR=$BASEDIR"
+      echo "JOBOUTDIR=$OUTPUT_DIR"
      
       echo " "
       echo " "
@@ -1695,15 +1709,91 @@ generate_exec_script(){
       echo 'echo "****         RUN SOURCE FINDER               ****"'
       echo 'echo "*************************************************"'
       echo 'echo ""'
-      echo '  cd $JOBDIR'
+      echo 'cd $JOBDIR'
 			
 			if [ $REDIRECT_LOGS = true ]; then			
-      	echo "  $exe $exe_args >& $logfile"
+      	echo "$exe $exe_args >& $logfile"
 			else
-				echo "  $exe $exe_args"
+				echo "$exe $exe_args"
       fi
 
-      echo '  echo ""'
+			echo 'JOB_STATUS=$?'
+			echo 'echo "Source finding terminated with status=$JOB_STATUS"'
+
+      echo 'echo ""'
+
+			echo " "
+      echo 'echo "*************************************************"'
+      echo 'echo "****         COPY DATA TO OUTDIR             ****"'
+      echo 'echo "*************************************************"'
+      echo 'echo ""'
+			
+			if [ "$BASEDIR" != "$OUTPUT_DIR" ]; then
+      	echo 'echo "INFO: Copying job outputs in $JOBOUTDIR ..."'
+
+				# - Copy out data
+      	echo "if [ -e "'$JOBDIR'"/$outputfile ] ; then" 
+				echo "  cp "'$JOBDIR'"/$outputfile "'$JOBOUTDIR'
+				echo "fi"
+
+        echo "if [ -e "'$JOBDIR'"/$catalog_file ] ; then" 
+        echo "  cp "'$JOBDIR'"/$catalog_file "'$JOBOUTDIR'
+				echo "fi"
+
+        echo "if [ -e "'$JOBDIR'"/$catalog_fitcomp_file ] ; then" 
+        echo "  cp "'$JOBDIR'"/$catalog_fitcomp_file "'$JOBOUTDIR'
+				echo "fi"
+
+        echo "if [ -e "'$JOBDIR'"/$ds9region_file ] ; then" 
+        echo "  cp "'$JOBDIR'"/$ds9region_file "'$JOBOUTDIR'
+				echo "fi"
+
+        echo "if [ -e "'$JOBDIR'"/$ds9fitregion_file ] ; then" 
+        echo "  cp "'$JOBDIR'"/$ds9fitregion_file "'$JOBOUTDIR'
+				echo "fi"
+
+        echo "if [ -e "'$JOBDIR'"/$outputfile_res ] ; then" 
+        echo "  cp "'$JOBDIR'"/$outputfile_res "'$JOBOUTDIR'
+				echo "fi"
+
+				echo "if [ -e "'$JOBDIR'"/$outputfile_saliency ] ; then" 
+        echo "  cp "'$JOBDIR'"/$outputfile_saliency "'$JOBOUTDIR'
+				echo "fi"
+
+				echo "if [ -e "'$JOBDIR'"/$outputfile_bkg ] ; then" 
+        echo "  cp "'$JOBDIR'"/$outputfile_bkg "'$JOBOUTDIR'
+				echo "fi"
+
+				echo "if [ -e "'$JOBDIR'"/$outputfile_rms ] ; then" 
+        echo "  cp "'$JOBDIR'"/$outputfile_rms "'$JOBOUTDIR'
+				echo "fi"
+
+				echo "if [ -e "'$JOBDIR'"/$outputfile_zmap ] ; then" 
+        echo "  cp "'$JOBDIR'"/$outputfile_zmap "'$JOBOUTDIR'
+				echo "fi"
+
+    		echo "if [ -e "'$JOBDIR'"/$outputfile_zmap ] ; then" 
+        echo "  cp "'$JOBDIR'"/$outputfile_zmap "'$JOBOUTDIR'
+				echo "fi"
+
+				# - Copy config file
+				echo "if [ -e "'$JOBDIR'"/$configfile ] ; then" 
+        echo "  cp "'$JOBDIR'"/$configfile "'$JOBOUTDIR'
+				echo "fi"
+	
+				# - Copy script file
+				echo "if [ -e "'$JOBDIR'"/$shfile ] ; then" 
+        echo "  cp "'$JOBDIR'"/$shfile "'$JOBOUTDIR'
+				echo "fi"
+
+				# - Copy log file
+        if [ $REDIRECT_LOGS = true ]; then	
+           echo "if [ -e "'$JOBDIR'"/$logfile ] ; then" 
+				   #echo "  cp "'$JOBDIR'"/$logfile $OUTPUT_DIR"
+           echo "  cp "'$JOBDIR'"/$logfile "'$JOBOUTDIR'
+				   echo "fi"
+        fi
+			fi
 
       echo " "
       echo " "
@@ -1721,12 +1811,18 @@ generate_exec_script(){
 
 
 
-
-
 #######################################
 ##   GENERATE AND SUBMIT SCRIPT JOBS
 #######################################
+# - Check if job directory exists
+if [ ! -d "$BASEDIR" ] ; then 
+  echo "INFO: Job dir $BASEDIR not existing, creating it now ..."
+	mkdir -p "$BASEDIR" 
+fi
 
+# - Moving to job directory
+echo "INFO: Moving to job directory $BASEDIR ..."
+cd $BASEDIR
 
 if [ "$FILELIST_GIVEN" = true ]; then
 
@@ -1761,6 +1857,7 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		outputfile_rms="out-$filename_base_noext"'_rms.fits'
 		outputfile_zmap="out-$filename_base_noext"'_significance.fits'
 		outputfile_res="out-$filename_base_noext"'_res.fits'
+		outputfile_saliency="out-$filename_base_noext"'_saliency.fits'
 
 
 		## Define output log filename
@@ -1852,6 +1949,7 @@ else
 	outputfile_rms="out-$filename_base_noext"'_rms.fits'
 	outputfile_zmap="out-$filename_base_noext"'_significance.fits'
 	outputfile_res="out-$filename_base_noext"'_res.fits'
+	outputfile_saliency="out-$filename_base_noext"'_saliency.fits'
 
 	## Define output log filename
 	logfile="output_$filename_base_noext"'.log'
