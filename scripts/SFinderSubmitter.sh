@@ -235,6 +235,8 @@ if [ "$NARGS" -lt 1 ]; then
 	echo "--addrunindex - Append a run index to submission script (in case of list execution) (default=no)"
 	echo "--jobdir=[JOB_DIR] - Job directory where to run (default=pwd)"
 	echo "--outdir=[OUTPUT_DIR] - Output directory where to put run output file (default=pwd)"
+	echo "--waitcopy - Wait a bit after copying output files to output dir (default=no)"
+	echo "--copywaittime=[COPY_WAIT_TIME] - Time to wait after copying output files (default=30)"
 	echo "--no-logredir - Do not redirect logs to output file in script "	
 	echo "--no-mpi - Disable MPI run (even with 1 proc) (default=enabled)"
 	echo "--mpioptions - Options to be passed to MPI (e.g. --bind-to {none,hwthread, core, l1cache, l2cache, l3cache, socket, numa, board}) (default=)"
@@ -265,6 +267,8 @@ fi
 export BASEDIR="$PWD"
 export OUTPUT_DIR="$PWD"
 
+WAIT_COPY=false
+COPY_WAIT_TIME=30
 ENV_FILE=""
 RUN_SCRIPT=false
 SUBMIT=false
@@ -511,6 +515,13 @@ do
 		--outdir=*)
     	OUTPUT_DIR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
+		--waitcopy*)
+    	WAIT_COPY=false
+    ;;
+		--copywaittime=*)
+    	COPY_WAIT_TIME=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+	
 		--jobdir=*)
     	BASEDIR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
@@ -1806,6 +1817,13 @@ generate_exec_script(){
 				# - Show output directory
 				echo 'echo "INFO: Show files in $JOBOUTDIR ..."'
 				echo 'ls -ltr $JOBOUTDIR'
+
+				# - Wait a bit after copying data
+				#   NB: Needed if using rclone inside a container, otherwise nothing is copied
+				if [ $WAIT_COPY = true ]; then	
+           echo "sleep $COPY_WAIT_TIME"
+        fi
+
 			fi
 
       echo " "
