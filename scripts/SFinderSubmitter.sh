@@ -1802,6 +1802,10 @@ generate_exec_script(){
            echo "  cp "'$JOBDIR'"/$logfile "'$JOBOUTDIR'
 				   echo "fi"
         fi
+
+				# - Show output directory
+				echo 'echo "INFO: Show files in $JOBOUTDIR ..."'
+				echo 'ls -ltr $JOBOUTDIR'
 			fi
 
       echo " "
