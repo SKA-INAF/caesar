@@ -516,7 +516,7 @@ do
     	OUTPUT_DIR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--waitcopy*)
-    	WAIT_COPY=false
+    	WAIT_COPY=true
     ;;
 		--copywaittime=*)
     	COPY_WAIT_TIME=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
@@ -1820,7 +1820,7 @@ generate_exec_script(){
 
 				# - Wait a bit after copying data
 				#   NB: Needed if using rclone inside a container, otherwise nothing is copied
-				if [ $WAIT_COPY = true ]; then	
+				if [ $WAIT_COPY = true ]; then
            echo "sleep $COPY_WAIT_TIME"
         fi
 
