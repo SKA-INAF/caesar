@@ -237,6 +237,7 @@ if [ "$NARGS" -lt 1 ]; then
 	echo "--outdir=[OUTPUT_DIR] - Output directory where to put run output file (default=pwd)"
 	echo "--waitcopy - Wait a bit after copying output files to output dir (default=no)"
 	echo "--copywaittime=[COPY_WAIT_TIME] - Time to wait after copying output files (default=30)"
+	echo "--save-summaryplot - Save summary plot with image+regions"
 	echo "--no-logredir - Do not redirect logs to output file in script "	
 	echo "--no-mpi - Disable MPI run (even with 1 proc) (default=enabled)"
 	echo "--mpioptions - Options to be passed to MPI (e.g. --bind-to {none,hwthread, core, l1cache, l2cache, l3cache, socket, numa, board}) (default=)"
@@ -445,6 +446,7 @@ SAVE_SIGNIFICANCE_MAP="false"
 SAVE_RESIDUAL_MAP="false"
 SAVE_SALIENCY_MAP="false"
 SAVE_SEGMENTED_MAP="false"
+SAVE_SUMMARY_PLOT=false
 BMAJ=10
 BMIN=5
 BPA=0
@@ -569,7 +571,9 @@ do
 		--save-regions*)
     	SAVE_DS9REGIONS="true"
     ;;
-		
+		--save-summaryplot*)
+    	SAVE_SUMMARY_PLOT=true
+    ;;
 
 		--convertregionstowcs*)
 			CONVERT_DS9REGIONS_TO_WCS="true"
@@ -1735,6 +1739,22 @@ generate_exec_script(){
 
 			echo " "
       echo 'echo "*************************************************"'
+      echo 'echo "****         MAKE SUMMARY PLOT             ****"'
+      echo 'echo "*************************************************"'
+      echo 'echo ""'
+			if [ $SAVE_SUMMARY_PLOT = true ]; then
+				echo "if [ -e "'$JOBDIR'"/$ds9region_file ] ; then" 	
+      	echo '  echo "Making summary plot with input image + extracted source islands ..."'
+				#echo "  python3 $CAESAR_DIR/scripts/draw_img.py --img=$inputfile --region=$ds9region_file --zmin=0 --zmax=0 --cmap=\"afmhot\" --contrast=0.3 --save --outfile=$summary_plot_file "
+				#echo "  python3 $CAESAR_DIR/scripts/draw_img.py --img=$inputfile --region=$ds9region_file --zmin=0 --zmax=0 --cmap=\"gray\" --contrast=0.3 --save --outfile=$summary_plot_file "
+				echo "  python3 $CAESAR_DIR/scripts/draw_img.py --img=$inputfile --region=$ds9region_file --zmin=0 --zmax=0 --cmap=\"gray_r\" --contrast=0.3 --save --outfile=$summary_plot_file "
+									
+				echo 'fi'
+      fi
+			
+
+			echo " "
+      echo 'echo "*************************************************"'
       echo 'echo "****         COPY DATA TO OUTDIR             ****"'
       echo 'echo "*************************************************"'
       echo 'echo ""'
@@ -1813,6 +1833,12 @@ generate_exec_script(){
            echo "  cp "'$JOBDIR'"/$logfile "'$JOBOUTDIR'
 				   echo "fi"
         fi
+
+				# - Copy summary plot file
+        echo "if [ -e "'$JOBDIR'"/$summary_plot_file ] ; then" 
+				echo '  echo "Copying summary plot to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$summary_plot_file "'$JOBOUTDIR'
+				echo "fi"
 
 				# - Show output directory
 				echo 'echo "INFO: Show files in $JOBOUTDIR ..."'
@@ -1893,6 +1919,9 @@ if [ "$FILELIST_GIVEN" = true ]; then
 
 		## Define output log filename
 		logfile="output_$filename_base_noext"'.log'
+
+		## Define summary output plot filename
+		summary_plot_file="plot_$filename_base_noext"'.png'
 
 		## Define config & run script file names 
 		if [ "$APPEND_RUN_INDEX" = true ]; then
@@ -1984,6 +2013,9 @@ else
 
 	## Define output log filename
 	logfile="output_$filename_base_noext"'.log'
+
+	## Define summary output plot filename
+	summary_plot_file="plot_$filename_base_noext"'.png'
 
 	## Define and generate config file
 	configfile="config_$filename_base_noext"'.cfg'

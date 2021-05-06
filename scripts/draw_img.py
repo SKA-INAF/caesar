@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 
 ##################################################
 ###          MODULE IMPORT
@@ -32,7 +31,7 @@ from astropy import units as u
 from astropy.visualization import ZScaleInterval, SqrtStretch, LinearStretch, LogStretch, AsinhStretch, ImageNormalize, MinMaxInterval
 from astropy.visualization import ContrastBiasStretch
 from astropy.visualization import make_lupton_rgb
-import aplpy
+#import aplpy
 
 import regions
 from regions import DS9Parser
