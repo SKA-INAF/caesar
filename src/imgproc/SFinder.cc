@@ -626,6 +626,7 @@ int SFinder::Configure()
 	GET_OPTION_VALUE(saveToFile,m_saveToFile);
 	GET_OPTION_VALUE(saveToFITSFile,m_saveToFITSFile);
 	GET_OPTION_VALUE(saveToCatalogFile,m_saveToCatalogFile);
+	GET_OPTION_VALUE(saveCatalogFileInJson,m_saveCatalogFileInJson);
 	GET_OPTION_VALUE(saveConfig,m_saveConfig);
 	GET_OPTION_VALUE(saveDS9Region,m_saveDS9Region);
 	GET_OPTION_VALUE(ds9RegionFile,m_DS9CatalogFileName);
@@ -900,6 +901,13 @@ int SFinder::Configure()
 	GET_OPTION_VALUE(spMergingUseRobustPars,m_spMergingUseRobustPars);
 	GET_OPTION_VALUE(spMergingAddCurvDist,m_spMergingAddCurvDist);
 	
+	//Set catalog json filenames
+	std::string catalogOutBaseFileName= CodeUtils::ExtractFileNameFromPath(m_catalogOutFileName,true);
+	m_catalogOutFileName_json= catalogOutBaseFileName + std::string(".json");
+	
+	std::string catalogComponentsOutBaseFileName= CodeUtils::ExtractFileNameFromPath(m_catalogComponentsOutFileName,true);
+	m_catalogComponentsOutFileName_json= catalogComponentsOutBaseFileName + std::string(".json");
+
 	return 0;
 
 }//close Configure()
@@ -4202,6 +4210,36 @@ int SFinder::SaveCatalogFile()
 			#endif
 		}
 	}
+
+	//Save in json format (if enabled)
+	if(m_saveCatalogFileInJson)
+	{
+		//Saving island/blob catalog to json file
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Writing source catalog to json file "<<m_catalogOutFileName_json<<" ...");
+		#endif
+		bool dumpNestedSourceInfo= true;
+		status= SourceExporter::WriteToJson(m_catalogOutFileName_json,m_SourceCollection,dumpNestedSourceInfo,m_ds9WCSType,wcs);
+		if(status<0){
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Writing source catalog to json file "<<m_catalogOutFileName_json<<" failed!");
+			#endif
+		}
+
+		//Saving components catalog to json file
+		if(m_fitSources){
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Writing source catalog to json file "<<m_catalogComponentsOutFileName_json<<" ...");
+			#endif
+			status= SourceExporter::WriteComponentsToJson(m_catalogComponentsOutFileName_json,m_SourceCollection,dumpNestedSourceInfo,m_ds9WCSType,wcs);
+			if(status<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Writing source fitted component catalog to json file "<<m_catalogComponentsOutFileName_json<<" failed!");
+				#endif
+			}
+		}		
+
+	}//close if
 
 	return 0;
 

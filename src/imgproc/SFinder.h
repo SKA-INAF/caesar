@@ -314,9 +314,12 @@ class SFinder : public TObject {
 		TFile* m_OutputFile;
 		std::string m_catalogOutFileName;
 		std::string m_catalogComponentsOutFileName;
+		std::string m_catalogOutFileName_json;
+		std::string m_catalogComponentsOutFileName_json;
 		bool m_saveToFile;
 		bool m_saveToFITSFile;
 		bool m_saveToCatalogFile;
+		bool m_saveCatalogFileInJson;
 		bool m_saveConfig;
 		bool m_saveDS9Region;
 		bool m_convertDS9RegionsToWCS;

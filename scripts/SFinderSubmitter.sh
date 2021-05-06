@@ -447,6 +447,7 @@ SAVE_RESIDUAL_MAP="false"
 SAVE_SALIENCY_MAP="false"
 SAVE_SEGMENTED_MAP="false"
 SAVE_SUMMARY_PLOT=false
+SAVE_CATALOG_TO_JSON="false"
 BMAJ=10
 BMIN=5
 BPA=0
@@ -571,10 +572,12 @@ do
 		--save-regions*)
     	SAVE_DS9REGIONS="true"
     ;;
+		--save-catalog-to-json*)
+    	SAVE_CATALOG_TO_JSON="true"
+    ;;
 		--save-summaryplot*)
     	SAVE_SUMMARY_PLOT=true
     ;;
-
 		--convertregionstowcs*)
 			CONVERT_DS9REGIONS_TO_WCS="true"
 		;;
@@ -1355,6 +1358,7 @@ generate_config(){
     echo "significanceMapFITSFile = $outputfile_zmap	        | Output filename where to store significance map in FITS format (.fits)"
     echo 'saveToFile = true																	  | Save results & maps to output ROOT file (T/F)'
 		echo 'saveToCatalogFile = true														| Save sources to catalog files (island, fitted components) (T/F)'
+		echo "saveCatalogFileInJson = $SAVE_CATALOG_TO_JSON				| Save sources to catalog files (island, fitted components) (T/F)"
     echo "saveToFITSFile = $SAVE_FITS													| Save results to output FITS file(s) (T/F)"
 		echo "saveDS9Region = $SAVE_DS9REGIONS									  | Save DS9 region files (T/F) (default=T)"
     echo 'saveConfig = true																	  | Save config options to ROOT file (T/F)'
@@ -1779,6 +1783,16 @@ generate_exec_script(){
         echo "  cp "'$JOBDIR'"/$catalog_fitcomp_file "'$JOBOUTDIR'
 				echo "fi"
 
+				echo "if [ -e "'$JOBDIR'"/$catalog_json_file ] ; then" 
+				echo '  echo "Copying json island catalog output file to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$catalog_json_file "'$JOBOUTDIR'
+				echo "fi"
+
+        echo "if [ -e "'$JOBDIR'"/$catalog_fitcomp_json_file ] ; then" 
+				echo '  echo "Copying json component catalog output file to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$catalog_fitcomp_json_file "'$JOBOUTDIR'
+				echo "fi"
+
         echo "if [ -e "'$JOBDIR'"/$ds9region_file ] ; then" 
 				echo '  echo "Copying ds9 island region output file to $JOBOUTDIR"'
         echo "  cp "'$JOBDIR'"/$ds9region_file "'$JOBOUTDIR'
@@ -1908,6 +1922,8 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		ds9fitregion_file="ds9_fitcomp-$filename_base_noext"'.reg'
 		catalog_file="catalog-$filename_base_noext"'.dat'
 		catalog_fitcomp_file="catalog_fitcomp-$filename_base_noext"'.dat'
+		catalog_json_file="catalog-$filename_base_noext"'.json'
+		catalog_fitcomp_json_file="catalog_fitcomp-$filename_base_noext"'.json'
 
 		## Define FITS map out filenames
 		outputfile_bkg="out-$filename_base_noext"'_bkg.fits'
@@ -2003,6 +2019,8 @@ else
 	ds9fitregion_file="ds9_fitcomp-$filename_base_noext"'.reg'
 	catalog_file="catalog-$filename_base_noext"'.dat'
 	catalog_fitcomp_file="catalog_fitcomp-$filename_base_noext"'.dat'
+	catalog_json_file="catalog-$filename_base_noext"'.json'
+	catalog_fitcomp_json_file="catalog_fitcomp-$filename_base_noext"'.json'
 
 	## Define FITS map out filenames
 	outputfile_bkg="out-$filename_base_noext"'_bkg.fits'

@@ -153,6 +153,7 @@ int ConfigParser::RegisterPredefinedOptions()
 		
 		REGISTER_OPTION(saveToFile,bool,true,false,true);
 		REGISTER_OPTION(saveToCatalogFile,bool,true,false,true);
+		REGISTER_OPTION(saveCatalogFileInJson,bool,true,false,true);
 		REGISTER_OPTION(saveConfig,bool,true,false,true);
 		REGISTER_OPTION(saveResidualMap,bool,true,false,true);
 		REGISTER_OPTION(saveBkgMap,bool,true,false,true);
