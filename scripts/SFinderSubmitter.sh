@@ -1749,9 +1749,7 @@ generate_exec_script(){
 			if [ $SAVE_SUMMARY_PLOT = true ]; then
 				echo "if [ -e "'$JOBDIR'"/$ds9region_file ] ; then" 	
       	echo '  echo "Making summary plot with input image + extracted source islands ..."'
-				#echo "  python3 $CAESAR_DIR/scripts/draw_img.py --img=$inputfile --region=$ds9region_file --zmin=0 --zmax=0 --cmap=\"afmhot\" --contrast=0.3 --save --outfile=$summary_plot_file "
-				#echo "  python3 $CAESAR_DIR/scripts/draw_img.py --img=$inputfile --region=$ds9region_file --zmin=0 --zmax=0 --cmap=\"gray\" --contrast=0.3 --save --outfile=$summary_plot_file "
-				echo "  python3 $CAESAR_DIR/scripts/draw_img.py --img=$inputfile --region=$ds9region_file --zmin=0 --zmax=0 --cmap=\"gray_r\" --contrast=0.3 --save --outfile=$summary_plot_file "
+				echo "  python3 $CAESAR_DIR/scripts/draw_img.py --img=$inputfile --region=$ds9region_file --wcs --zmin=0 --zmax=0 --cmap=\"gray_r\" --contrast=0.3 --save --outfile=$summary_plot_file "
 									
 				echo 'fi'
       fi
