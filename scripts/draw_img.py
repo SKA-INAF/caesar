@@ -27,6 +27,7 @@ from astropy.units import Quantity
 from astropy.modeling.parameters import Parameter
 from astropy.modeling.core import Fittable2DModel
 from astropy import wcs
+from astropy.wcs.utils import wcs_to_celestial_frame
 from astropy import units as u
 from astropy.visualization import ZScaleInterval, SqrtStretch, LinearStretch, LogStretch, AsinhStretch, ImageNormalize, MinMaxInterval
 from astropy.visualization import ContrastBiasStretch
@@ -72,6 +73,8 @@ def get_args():
 	parser.add_argument('-contrast','--contrast', dest='contrast', required=False, type=float, default=0.3, help='zscale contrast value (default=0.3)')
 	parser.add_argument('--showgrid', dest='showgrid', action='store_true')	
 	parser.set_defaults(showgrid=False)
+	parser.add_argument('--showlabels', dest='showlabels', action='store_true')	
+	parser.set_defaults(showlabels=False)
 	parser.add_argument('--wcs', dest='wcs', action='store_true')	
 	parser.set_defaults(wcs=False)
 	parser.add_argument('--save', dest='save', action='store_true')	
@@ -109,6 +112,7 @@ def main():
 	contrast= args.contrast
 	plot_wcs= args.wcs
 	draw_grid= args.showgrid
+	draw_labels= args.showlabels
 	save= args.save
 	outfile= args.outfile
 
@@ -191,8 +195,10 @@ def main():
 	if 'BUNIT' in header:
 		bunit= header['BUNIT']
 
-	# - Get WCS
+	# - Get WCS info
 	wcs = WCS(header, naxis=2)
+	cs= wcs_to_celestial_frame(wcs)
+	cs_name= cs.name
 
 	# - Convert to mJy
 	#data*= 1000
@@ -217,8 +223,12 @@ def main():
 	
 	# - Set axis titles
 	if plot_wcs:
-		ax.set_xlabel('Right Ascension (deg)',size=18, labelpad=0.7)
-		ax.set_ylabel('Declination (deg)',size=18)
+		if cs_name=='galactic':
+			ax.set_xlabel('Galactic Longitude (deg)',size=18, labelpad=0.7)
+			ax.set_ylabel('Galactic Latitude (deg)',size=18)
+		else:
+			ax.set_xlabel('Right Ascension (deg)',size=18, labelpad=0.7)
+			ax.set_ylabel('Declination (deg)',size=18)
 	else:
 		ax.set_xlabel('x',size=18, labelpad=0.7)
 		ax.set_ylabel('y',size=18)
@@ -269,24 +279,58 @@ def main():
 		logger.info("Superimposing region ...")
 		for r in regs:
 			
-			if plot_wcs:
-				#points_x= r.vertices.galactic.l.value
-				#points_y= r.vertices.galactic.b.value
-				points_x= r.vertices.ra.value
-				points_y= r.vertices.dec.value
-			else:
-				points_x= r.vertices.x
-				points_y= r.vertices.y
+			label= ''
+			if draw_labels and 'text' in r.meta:
+				label= r.meta['text']
 
-			vertices= [tuple(x) for x in zip(points_x,points_y)]
-			polygon = Polygon(vertices)
-			
-			if plot_wcs:
-				r_pix= r.to_pixel(wcs)
-			else:
+			# - Check if region is in pixel coordinates
+			is_pix_region= False
+			try:
+				r.to_pixel(wcs)
+				is_pix_region= False
+			except:
+				is_pix_region= True
+
+			if is_pix_region:	
 				r_pix= r
-			r_pix.plot(ax=ax, color=region_color, linestyle=region_style)
+				r_sky= r.to_sky(wcs)
+			else:
+				r_pix= r.to_pixel(wcs)
+				r_sky= r		
 			
+
+			#if plot_wcs:
+			#	if cs_name=='galactic':
+			#		points_x= r_sky.vertices.galactic.l.value
+			#		points_y= r_sky.vertices.galactic.b.value
+			#	else:
+			#		points_x= r_sky.vertices.ra.value
+			#		points_y= r_sky.vertices.dec.value
+			#	vertices= [tuple(x) for x in zip(points_x,points_y)]
+			#	polygon = Polygon(vertices)
+			#	x,y = polygon.exterior.xy
+			#	plt.plot(x, y, color=region_color, linestyle=region_style, label=label)
+			#else:
+			#	r_pix.plot(ax=ax, color=region_color, linestyle=region_style, label=label)
+			
+			# - Even if draw_wcs is enabled, plot the region in pix coordinates and it will work
+			r_pix.plot(ax=ax, color=region_color, linestyle=region_style, label=label)
+			
+			# - Draw labels
+			if draw_labels:
+				bbox= r.bounding_box
+				label_color= 'black'
+				if bbox is not None:
+					xmin= bbox.ixmin
+					xmax= bbox.ixmax
+					ymin= bbox.iymin
+					ymax= bbox.iymax
+					x_label= xmin + 0.5*(xmax-xmin)
+					#x_label= xmax
+					y_label= ymax
+					#y_label= ymin + 0.5*(ymax-ymin)
+					plt.text(x_label, y_label, label, color=label_color)
+
 
 	# - Save or display
 	if save:
