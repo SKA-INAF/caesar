@@ -197,8 +197,13 @@ def main():
 
 	# - Get WCS info
 	wcs = WCS(header, naxis=2)
-	cs= wcs_to_celestial_frame(wcs)
-	cs_name= cs.name
+	cs_name= "image"
+	try:
+		cs= wcs_to_celestial_frame(wcs)
+		cs_name= cs.name
+	except Exception as e:
+		logger.warn("Failed to get celestial frame from wcs (err=%s), disable plot_wcs option ..." % str(e))
+		plot_wcs= False
 
 	# - Convert to mJy
 	#data*= 1000
