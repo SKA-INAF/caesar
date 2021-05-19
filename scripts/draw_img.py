@@ -298,10 +298,10 @@ def main():
 
 			if is_pix_region:	
 				r_pix= r
-				r_sky= r.to_sky(wcs)
+				#r_sky= r.to_sky(wcs)
 			else:
 				r_pix= r.to_pixel(wcs)
-				r_sky= r		
+				#r_sky= r		
 			
 
 			#if plot_wcs:
