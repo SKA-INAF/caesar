@@ -41,6 +41,8 @@
 #include <TEllipse.h>
 #include <TRandom.h>
 #include <TRandom3.h>
+#include <TKey.h>
+#include <TROOT.h>
 
 #include <iostream>
 #include <vector>

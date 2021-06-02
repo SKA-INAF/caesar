@@ -40,7 +40,8 @@
 #include <TRandom.h>
 #include <TRandom3.h>
 #include <TGraphErrors.h>
-
+#include <TKey.h>
+#include <TROOT.h>
 
 #include <iostream>
 #include <vector>
