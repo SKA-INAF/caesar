@@ -137,38 +137,59 @@ def main():
 	# - Remove 3 and 4 channels
 	nchan= len(data.shape)
 	logger.info("Input image has %d channels..." % nchan)
+
 	if nchan==4:
 		logger.info("Removing fit degenerated axis 3 & 4 ...")
 		data= data[0,0,:,:]
 		header['NAXIS'] = 2
-		del header['NAXIS3']
-		del header['NAXIS4']
-		del header['CTYPE3']
-		del header['CRVAL3']
-		del header['CDELT3']
-		del header['CRPIX3']
+		if 'NAXIS3' in header:
+			del header['NAXIS3']
+		if 'NAXIS4' in header:
+			del header['NAXIS4']
+		if 'CTYPE3' in header:
+			del header['CTYPE3']
+		if 'CRVAL3' in header:
+			del header['CRVAL3']
+		if 'CDELT3' in header:
+			del header['CDELT3']
+		if 'CRPIX3' in header:
+			del header['CRPIX3']
 		if 'CROTA3' in header:
 			del header['CROTA3']
-		del header['CTYPE4']
-		del header['CRVAL4']
-		del header['CDELT4']
-		del header['CRPIX4']
+		if 'CTYPE4' in header:
+			del header['CTYPE4']
+		if 'CRVAL4' in header:
+			del header['CRVAL4']
+		if 'CDELT4' in header:
+			del header['CDELT4']
+		if 'CRPIX4' in header:
+			del header['CRPIX4']
 		if 'CROTA4' in header:
 			del header['CROTA4']
-		del header['CUNIT3']
-		del header['CUNIT4']
+		if 'CUNIT3' in header:
+			del header['CUNIT3']
+		if 'CUNIT4' in header:
+			del header['CUNIT4']
+
 	elif nchan==3:
 		logger.info("Removing fit degenerated axis 3 ...")
 		data= data[0,:,:]
 		header['NAXIS'] = 2
-		del header['NAXIS3']
-		del header['CTYPE3']
-		del header['CRVAL3']
-		del header['CDELT3']
-		del header['CRPIX3']
+		if 'NAXIS3' in header:
+			del header['NAXIS3']
+		if 'CTYPE3' in header:
+			del header['CTYPE3']
+		if 'CRVAL3' in header:
+			del header['CRVAL3']
+		if 'CDELT3' in header:
+			del header['CDELT3']
+		if 'CRPIX3' in header:
+			del header['CRPIX3']
 		if 'CROTA3' in header:
 			del header['CROTA3']
-		del header['CUNIT3']
+		if 'CUNIT3' in header:
+			del header['CUNIT3']
+
 	elif nchan==2:	
 
 		if 'NAXIS3' in header:
