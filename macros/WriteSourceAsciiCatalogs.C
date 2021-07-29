@@ -45,12 +45,13 @@ void WriteSourceAsciiCatalogs(std::string filename="",std::string outfilename="c
 	int wcsType= eJ2000;
 	WCS* wcs= 0;
 	bool writeAdditionalSourceInfo= true;
+	bool convertBrightenessToFlux= true;
 	
 	cout<<"INFO: Writing source catalog..."<<endl;
-	SourceExporter::WriteToAscii(outfilename,sources,dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,delimiter);
+	SourceExporter::WriteToAscii(outfilename,sources,dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,convertBrightenessToFlux,delimiter);
 
 	cout<<"INFO: Writing source component catalog..."<<endl;
-	SourceExporter::WriteComponentsToAscii(outfilename_comp,sources,dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,delimiter);
+	SourceExporter::WriteComponentsToAscii(outfilename_comp,sources,dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,convertBrightenessToFlux,delimiter);
 
 }//close macro
 

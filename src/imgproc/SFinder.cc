@@ -99,11 +99,11 @@ SFinder::~SFinder(){
 	
 	//Clearup
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Clearup source finder allocated data...");
+		DEBUG_LOG("Clearup source finder allocated data...");
 	#endif
 	Clear();
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Clearup completed...");
+		DEBUG_LOG("Clearup completed...");
 	#endif
 
 }//close destructor
@@ -111,7 +111,6 @@ SFinder::~SFinder(){
 
 void SFinder::Clear()
 {
-
 	//## Close open ROOT file
 	//## NB: When objects are written to file their memory is released, so don't delete them!
 	if(m_procId==MASTER_ID){
@@ -221,21 +220,21 @@ void SFinder::Clear()
 		if(m_mpiEnabled && m_mpiGroupsInitialized){
 			if( (m_WorkerGroup!=MPI_GROUP_NULL) && (&m_WorkerGroup!=NULL) && (m_WorkerGroup!=NULL) && (m_WorkerGroup!=MPI_GROUP_EMPTY) ) {
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Freeing worker MPI groups...");				
+					DEBUG_LOG("Freeing worker MPI groups...");				
 				#endif
 				MPI_Group_free(&m_WorkerGroup);
 			}
 			
 			if(m_WorkerComm!=MPI_COMM_NULL) {
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Freeing worker MPI comm...");
+					DEBUG_LOG("Freeing worker MPI comm...");
 				#endif
 				MPI_Comm_free(&m_WorkerComm);
 			}
 
 			if( (m_WorldGroup!=MPI_GROUP_NULL) && (&m_WorldGroup!=NULL) && (m_WorldGroup!=MPI_GROUP_EMPTY) ) {
 				#ifdef LOGGING_ENABLED
-					INFO_LOG("Freeing world MPI group...");	
+					DEBUG_LOG("Freeing world MPI group...");	
 				#endif
 				MPI_Group_free(&m_WorldGroup);
 			}
@@ -625,7 +624,9 @@ int SFinder::Configure()
 	GET_OPTION_VALUE(outputCatalogFile,m_catalogOutFileName);
 	GET_OPTION_VALUE(outputComponentCatalogFile,m_catalogComponentsOutFileName);
 	GET_OPTION_VALUE(saveToFile,m_saveToFile);
+	GET_OPTION_VALUE(saveToFITSFile,m_saveToFITSFile);
 	GET_OPTION_VALUE(saveToCatalogFile,m_saveToCatalogFile);
+	GET_OPTION_VALUE(saveCatalogFileInJson,m_saveCatalogFileInJson);
 	GET_OPTION_VALUE(saveConfig,m_saveConfig);
 	GET_OPTION_VALUE(saveDS9Region,m_saveDS9Region);
 	GET_OPTION_VALUE(ds9RegionFile,m_DS9CatalogFileName);
@@ -637,10 +638,14 @@ int SFinder::Configure()
 	GET_OPTION_VALUE(saveSources,m_saveSources);
 	GET_OPTION_VALUE(isInteractiveRun,m_IsInteractiveRun);
 	GET_OPTION_VALUE(saveResidualMap,m_saveResidualMap);
+	GET_OPTION_VALUE(residualMapFITSFile,m_residualMapFITSFile);
 	GET_OPTION_VALUE(saveInputMap,m_saveInputMap);
 	GET_OPTION_VALUE(saveSignificanceMap,m_saveSignificanceMap);
+	GET_OPTION_VALUE(significanceMapFITSFile,m_significanceMapFITSFile);
 	GET_OPTION_VALUE(saveBkgMap,m_saveBkgMap);
+	GET_OPTION_VALUE(bkgMapFITSFile,m_bkgMapFITSFile);
 	GET_OPTION_VALUE(saveNoiseMap,m_saveNoiseMap);
+	GET_OPTION_VALUE(noiseMapFITSFile,m_noiseMapFITSFile);
 	GET_OPTION_VALUE(saveSaliencyMap,m_saveSaliencyMap);
 	GET_OPTION_VALUE(saveEdgenessMap,m_saveEdgenessMap);
 	GET_OPTION_VALUE(saveCurvatureMap,m_saveCurvatureMap);
@@ -724,6 +729,7 @@ int SFinder::Configure()
 	GET_OPTION_VALUE(residualModel,m_residualModel);
 	GET_OPTION_VALUE(residualModelRandomize,m_residualModelRandomize);
 	GET_OPTION_VALUE(psSubtractionMethod,m_psSubtractionMethod);
+	GET_OPTION_VALUE(residualBkgAroundSource,m_residualBkgAroundSource);
 	
 	//Get source fitting options
 	GET_OPTION_VALUE(fitSources,m_fitSources);
@@ -895,6 +901,13 @@ int SFinder::Configure()
 	GET_OPTION_VALUE(spMergingUseRobustPars,m_spMergingUseRobustPars);
 	GET_OPTION_VALUE(spMergingAddCurvDist,m_spMergingAddCurvDist);
 	
+	//Set catalog json filenames
+	std::string catalogOutBaseFileName= CodeUtils::ExtractFileNameFromPath(m_catalogOutFileName,true);
+	m_catalogOutFileName_json= catalogOutBaseFileName + std::string(".json");
+	
+	std::string catalogComponentsOutBaseFileName= CodeUtils::ExtractFileNameFromPath(m_catalogComponentsOutFileName,true);
+	m_catalogComponentsOutFileName_json= catalogComponentsOutBaseFileName + std::string(".json");
+
 	return 0;
 
 }//close Configure()
@@ -1975,6 +1988,27 @@ Image* SFinder::FindResidualMap(Image* inputImg,ImgBkgData* bkgData,std::vector<
 	//#endif
 	//########################
 
+	//Compute source binary mask
+	bool isBinary= true;
+	bool invertMask= true;
+	Image* smaskImg_binary= inputImg->GetSourceMask(sources,isBinary,invertMask);
+	if(!smaskImg_binary){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to compute source binary mask!");	
+		#endif
+		return nullptr;
+	}
+
+	//Set bkg to be used in residual map	
+	//NB: pass bkgData=0 if selected to use bkg around source
+	ImgBkgData* bkgData_res= bkgData;
+	if(m_residualBkgAroundSource) {
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Using bkg around source for residual (passing bkgData=0 to task) ...");
+		#endif
+		bkgData_res= 0;
+	}
+
 	//Compute residual map
 	Image* residualImg= 0;
 	if(m_UseResidualInExtendedSearch && sources.size()>0){
@@ -1984,8 +2018,9 @@ Image* SFinder::FindResidualMap(Image* inputImg,ImgBkgData* bkgData,std::vector<
 		residualImg= inputImg->GetSourceResidual(
 			sources,
 			m_dilateKernelSize,m_residualModel,m_removedSourceType,m_removeNestedSources,	
-			bkgData,m_UseLocalBkg,
-			m_residualModelRandomize,m_residualZThr,m_residualZHighThr,m_psSubtractionMethod
+			bkgData_res,m_UseLocalBkg,
+			m_residualModelRandomize,m_residualZThr,m_residualZHighThr,m_psSubtractionMethod,
+			smaskImg_binary,m_sourceBkgBoxBorderSize
 		);
 
 	}//close if
@@ -1994,6 +2029,12 @@ Image* SFinder::FindResidualMap(Image* inputImg,ImgBkgData* bkgData,std::vector<
 			INFO_LOG("Setting residual image to input image...");
 		#endif
 		residualImg= inputImg->GetCloned("",true,true);
+	}
+
+	//Clear data
+	if(smaskImg_binary){
+		delete smaskImg_binary;
+		smaskImg_binary= 0;
 	}
 
 	if(!residualImg){
@@ -3601,7 +3642,7 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 		fitInMultithread= false;
 	}
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Fitting sources in multithread? "<<fitInMultithread);
+		DEBUG_LOG("Fitting sources in multithread? "<<fitInMultithread);
 	#endif
 
 	//## NB: Convert scale pars in pixels assuming they represent multiple of beam width (Bmin)	
@@ -3621,8 +3662,7 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 	fitOptions.blobMapKernelFactor= m_nestedBlobKernFactor; 
 
 	long int nFittedSources= 0;
-	std::vector<std::string> fittedSourceNames;
-
+	
 	#ifdef OPENMP_ENABLED
 		#pragma omp parallel for if(fitInMultithread)
 	#endif
@@ -3639,12 +3679,10 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 		if(isFittable) {
 			//Fit mother source
 			#ifdef LOGGING_ENABLED
-				INFO_LOG("Source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") fittable as a whole...");
+				DEBUG_LOG("Source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") fittable as a whole...");
 			#endif
 
-			
 			nFittedSources++;
-			fittedSourceNames.push_back(sources[i]->GetName());
 
 			if(sources[i]->Fit(fitOptions)<0) {
 				#ifdef LOGGING_ENABLED
@@ -3690,16 +3728,6 @@ int SFinder::FitSources(std::vector<Source*>& sources)
 		INFO_LOG("Fitted #"<<nFittedSources<<"/"<<sources.size()<<" sources at this stage...");
 	#endif
 
-	//== DEBUG ==
-	std::stringstream ss;
-	ss<<"fitted sources {";
-	for(size_t i=0;i<fittedSourceNames.size();i++){
-		ss<<fittedSourceNames[i]<<",";
-	}
-	ss<<"}";
-	#ifdef LOGGING_ENABLED
-		INFO_LOG(ss.str());
-	#endif
 
 	return 0;
 
@@ -3895,7 +3923,7 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 	//## If no info is available (or use of beam info is off) interpret grid & box options as fractions wrt image size
 	double boxSizeX= m_BoxSizeX;
 	double boxSizeY= m_BoxSizeY;
-
+	
 	int pixelWidthInBeam= 0;
 	if(m_UseBeamInfoInBkg){
 
@@ -3941,6 +3969,7 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 
 	}//close if use beam info
 	else{
+		/*
 		#ifdef LOGGING_ENABLED
 			WARN_LOG("Using image fractions to set bkg box size (beam info option is turned off)...");
 		#endif
@@ -3948,6 +3977,7 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 		double Ny= static_cast<double>(img->GetNy());
 		boxSizeX= m_BoxSizeX*Nx;
 		boxSizeY= m_BoxSizeY*Ny;
+		*/
 		#ifdef LOGGING_ENABLED
 			INFO_LOG("Setting bkg boxes to ("<<boxSizeX<<","<<boxSizeY<<") pixels ...");	
 		#endif
@@ -3958,6 +3988,23 @@ ImgBkgData* SFinder::ComputeStatsAndBkg(Image* img,bool useRange,double minThr,d
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Setting grid size to ("<<gridSizeX<<","<<gridSizeY<<") pixels ...");
 	#endif
+
+	//## Check box size vs image size	
+	long int Nx= img->GetNx();
+	long int Ny= img->GetNy();
+	if(boxSizeX>=Nx || boxSizeY>=Ny)
+	{
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Bkg box size ("<<boxSizeX<<","<<boxSizeY<<") >= image size ("<<Nx<<","<<Ny<<"), switching from local to global bkg calculation ...");
+		#endif
+		m_UseLocalBkg= false;
+	}
+
+	if(!m_UseLocalBkg){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Using global bkg (ignoring bkg box & grid) ...");
+		#endif
+	}
 
 	//## Compute Bkg
 	auto t0_bkg = chrono::steady_clock::now();	
@@ -3999,7 +4046,7 @@ int SFinder::SaveDS9RegionFile()
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("Saving DS9 region header...");
 	#endif
-
+	fprintf(fout,"# Region file format: DS9 version 4.1\n");
 	fprintf(fout,"global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
 	fprintf(fout,"%s\n",ds9WCSTypeHeader.c_str());
 
@@ -4064,6 +4111,7 @@ int SFinder::SaveDS9RegionFile()
 		#ifdef LOGGING_ENABLED
 			DEBUG_LOG("Saving DS9 region header for fitted source catalog...");
 		#endif
+		fprintf(fout_fit,"# Region file format: DS9 version 4.1\n");
 		fprintf(fout_fit,"global color=red font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
 		fprintf(fout_fit,"%s\n",ds9WCSTypeHeader.c_str());
 
@@ -4149,6 +4197,36 @@ int SFinder::SaveCatalogFile()
 		}
 	}
 
+	//Save in json format (if enabled)
+	if(m_saveCatalogFileInJson)
+	{
+		//Saving island/blob catalog to json file
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Writing source catalog to json file "<<m_catalogOutFileName_json<<" ...");
+		#endif
+		bool dumpNestedSourceInfo= true;
+		status= SourceExporter::WriteToJson(m_catalogOutFileName_json,m_SourceCollection,dumpNestedSourceInfo,m_ds9WCSType,wcs);
+		if(status<0){
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Writing source catalog to json file "<<m_catalogOutFileName_json<<" failed!");
+			#endif
+		}
+
+		//Saving components catalog to json file
+		if(m_fitSources){
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Writing source catalog to json file "<<m_catalogComponentsOutFileName_json<<" ...");
+			#endif
+			status= SourceExporter::WriteComponentsToJson(m_catalogComponentsOutFileName_json,m_SourceCollection,dumpNestedSourceInfo,m_ds9WCSType,wcs);
+			if(status<0){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Writing source fitted component catalog to json file "<<m_catalogComponentsOutFileName_json<<" failed!");
+				#endif
+			}
+		}		
+
+	}//close if
+
 	return 0;
 
 }//close SaveCatalogFile()
@@ -4224,7 +4302,12 @@ int SFinder::Save()
 			INFO_LOG("Saving residual map to file...");
 		#endif
 		m_ResidualImg->SetNameTitle("img_residual","img_residual");
-		m_ResidualImg->Write();
+		if(m_saveToFITSFile){
+			m_ResidualImg->WriteFITS(m_residualMapFITSFile);
+		}
+		else{
+			m_ResidualImg->Write();
+		}
 	}
 	
 	//Save significance map?
@@ -4233,7 +4316,12 @@ int SFinder::Save()
 			INFO_LOG("Saving significance map to file...");
 		#endif
 		m_SignificanceMap->SetNameTitle("img_significance","img_significance");
-		m_SignificanceMap->Write();
+		if(m_saveToFITSFile){
+			m_SignificanceMap->WriteFITS(m_significanceMapFITSFile);
+		}
+		else{
+			m_SignificanceMap->Write();
+		}
 	}
 
 	//Save bkg & noise maps
@@ -4242,11 +4330,24 @@ int SFinder::Save()
 			INFO_LOG("Saving bkg map to file...");
 		#endif
 		(m_BkgData->BkgMap)->SetNameTitle("img_bkg","img_bkg");
-		(m_BkgData->BkgMap)->Write();
+		if(m_saveToFITSFile){
+			(m_BkgData->BkgMap)->WriteFITS(m_bkgMapFITSFile);
+		}
+		else{
+			(m_BkgData->BkgMap)->Write();
+		}
 	}
 	if(m_saveNoiseMap && m_BkgData && m_BkgData->NoiseMap){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Saving bkg rms map to file...");
+		#endif	
 		(m_BkgData->NoiseMap)->SetNameTitle("img_rms","img_rms");
-		(m_BkgData->NoiseMap)->Write();
+		if(m_saveToFITSFile){
+			(m_BkgData->NoiseMap)->WriteFITS(m_noiseMapFITSFile);
+		}
+		else{
+			(m_BkgData->NoiseMap)->Write();
+		}
 	}
 
 	//Save saliency map

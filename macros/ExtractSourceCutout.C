@@ -12,7 +12,7 @@ using namespace std;
 using namespace Caesar;
 
 
-int ExtractSourceCutout(std::string imgfilename,std::string catalogfile,int cutoutSize=100,int offset=0,bool randomizeOffset=false, std::string sourcefilelist="",std::string label="source",bool writeHeader=false,std::string fileprefix="")
+int ExtractSourceCutout(std::string imgfilename,std::string catalogfile,int cutoutSize=100,int offset=0,bool randomizeOffset=false, std::string sourcefilelist="",std::string label="source",bool writeHeader=false,std::string fileprefix="",bool maskAllSources=false)
 {
 	//Require cutout size to be "even"
 	if(cutoutSize%2!=0){
@@ -118,25 +118,29 @@ int ExtractSourceCutout(std::string imgfilename,std::string catalogfile,int cuto
 	cout<<"INFO: Computing selected source mask..."<<endl;
 	bool copyMetaData= true;
 	bool resetStats= true;
-	Image* smask= img->GetCloned("smask",copyMetaData,resetStats);	
-	smask->Reset();
+	Image* smask= 0;
 
-	for(size_t i=0;i<sources_sel.size();i++){
-		Source* source= sources_sel[i];
-		for(int l=0;l<source->GetNPixels();l++){
-			Pixel* pixel= source->GetPixel(l);
-			long int id= pixel->id;
-			double x= pixel->x;
-			double y= pixel->y;
-			long int gBinId= img->FindBin(x,y);
-			if(gBinId<0){
-				cerr<<"WARN: Cannot find gbin of pixel ("<<x<<","<<y<<"), skip..."<<endl;
-				continue;
-			}		
-			smask->SetPixelValue(gBinId,1);
+	if(maskAllSources){
+		smask= img->GetCloned("smask",copyMetaData,resetStats);	
+		smask->Reset();
 
-		}//end loop pixels		
-	}//end loop sel sources
+		for(size_t i=0;i<sources_sel.size();i++){
+			Source* source= sources_sel[i];
+			for(int l=0;l<source->GetNPixels();l++){
+				Pixel* pixel= source->GetPixel(l);
+				long int id= pixel->id;
+				double x= pixel->x;
+				double y= pixel->y;
+				long int gBinId= img->FindBin(x,y);
+				if(gBinId<0){
+					cerr<<"WARN: Cannot find gbin of pixel ("<<x<<","<<y<<"), skip..."<<endl;
+					continue;
+				}		
+				smask->SetPixelValue(gBinId,1);
+
+			}//end loop pixels		
+		}//end loop sel sources
+	}//close if
 
 	/*
 	bool isBinary= true;	
@@ -228,8 +232,36 @@ int ExtractSourceCutout(std::string imgfilename,std::string catalogfile,int cuto
 		long int ymax= y0 + cutoutHalfWidth-1;
 		//long int ymax= y0 + cutoutHalfWidth;
 		
+		cout<<"(x0,y0)=("<<x0<<","<<y0<<"), xmin/max="<<xmin<<"/"<<xmax<<", ymin/ymax="<<ymin<<"/"<<ymax<<endl;
+	
 		Image* cutoutImg= img->GetTile(xmin,xmax,ymin,ymax);
-		Image* cutoutImg_mask= smask->GetTile(xmin,xmax,ymin,ymax);
+
+
+		//Find mask
+		Image* cutoutImg_mask= 0;
+		if(maskAllSources){
+			cutoutImg_mask= smask->GetTile(xmin,xmax,ymin,ymax);
+		}
+		else{		
+			cutoutImg_mask= img->GetTile(xmin,xmax,ymin,ymax);
+			cutoutImg_mask->Reset();
+
+			for(int l=0;l<source->GetNPixels();l++){
+				Pixel* pixel= source->GetPixel(l);
+				long int id= pixel->id;
+				double x= pixel->x - xmin;
+				double y= pixel->y - ymin;
+				//long int gBinId= cutoutImg_mask->FindBin(x,y);
+				long int gBinId= cutoutImg_mask->GetBin(x,y);
+				if(gBinId<0){
+					cerr<<"WARN: Cannot find gbin of pixel ("<<x<<","<<y<<"), skip..."<<endl;
+					continue;
+				}		
+				cutoutImg_mask->SetPixelValue(gBinId,1);
+
+			}//end loop pixels
+		}//close if
+
 		if(!cutoutImg || !cutoutImg_mask){
 			cerr<<"ERROR: Failed to extract cutout for source "<<sname<<", skip to next!"<<endl;
 			continue;

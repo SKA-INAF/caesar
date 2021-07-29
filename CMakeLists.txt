@@ -453,6 +453,11 @@ if(BUILD_APPS)
 	target_link_libraries(SourceRefitterExe Caesar ${LINKED_LIBS})
 	set_target_properties(SourceRefitterExe PROPERTIES OUTPUT_NAME SourceRefitter)
 
+	add_executable(CrossMatchSimSourcesExe ${Task_CrossMatchSimSources_SRCS})
+	target_link_libraries(CrossMatchSimSourcesExe Caesar ${LINKED_LIBS})
+	set_target_properties(CrossMatchSimSourcesExe PROPERTIES OUTPUT_NAME CrossMatchSimSources)
+
+
 	if(ENABLE_MPI AND MPI_FOUND)
 		include_directories(${MPI_CXX_INCLUDE_PATH})
 		add_executable(FindSourceMPIExe ${Task_FindSourceMPI_SRCS})
@@ -656,6 +661,7 @@ if(BUILD_APPS)
 		SourceAsciiExporter
 		SourceMVClassifier
 		SourceRefitter
+		CrossMatchSimSources
 	)
 	if(ENABLE_MPI)
 		list(APPEND EXE_FILES FindSourceMPI)

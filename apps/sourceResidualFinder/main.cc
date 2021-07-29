@@ -58,6 +58,7 @@ void Usage(char* exeName){
 	cout<<"-l, --removedSourceType=[TYPE] - Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"<<endl;
 	cout<<"-a, --removeNestedSources - If a source has nested sources, remove nested rather than mother source (default=no)"<<endl;
 	cout<<"-k, --dilateKernelSize=[SIZE] - Kernel size in pixel used to dilate image around sources (default=9)"<<endl;
+	cout<<"-V, --globalbkg - Use global bkg rather than local bkg (default=use local)"<<endl;
 	cout<<"-z, --bkgAroundSource - Use bkg computed in a box around source and not from the bkg map (default=use bkg map)"<<endl;
 	cout<<"-Z, --bkgBoxThickness=[THICKNESS] - Bkg box thickness in pixels (default=20)"<<endl;
 	cout<<"-j, --randomizeBkg - Randomize bkg in dilated pixels (default=no)"<<endl;
@@ -97,6 +98,7 @@ static const struct option options_tab[] = {
 	{ "removedSourceType", required_argument, 0, 'l' },
 	{ "removeNestedSources", no_argument, 0, 'a' },
 	{ "dilateKernelSize", required_argument, 0, 'k' },
+	{ "globalbkg", no_argument, 0, 'V' },
 	{ "bkgAroundSource", no_argument, 0, 'z' },
 	{ "bkgBoxThickness", required_argument, 0, 'Z' },
 	{ "randomizeBkg", no_argument, 0, 'j' },
@@ -485,7 +487,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hc:i:s:o:O:p:r:R:l:ak:T:t:m:n:Nb:Bg:e:PSAdD:fGquU:zZ:jv:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hc:i:s:o:O:p:r:R:l:ak:T:t:m:n:Nb:Bg:e:PSAdD:fGquU:zZ:jv:V",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -592,6 +594,11 @@ int ParseOptions(int argc, char *argv[])
 			{
 				searchNestedSources= false;
 				break;	
+			}
+			case 'V':
+			{
+				useLocalBkg= false;
+				break;
 			}
 			case 'b':
 			{
@@ -1215,7 +1222,9 @@ int FindSources()
 		return -1;
 	}
 
-	
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("#"<<sources.size()<<" sources found...");
+	#endif
 
 	return 0;
 

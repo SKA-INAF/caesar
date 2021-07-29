@@ -153,6 +153,7 @@ int ConfigParser::RegisterPredefinedOptions()
 		
 		REGISTER_OPTION(saveToFile,bool,true,false,true);
 		REGISTER_OPTION(saveToCatalogFile,bool,true,false,true);
+		REGISTER_OPTION(saveCatalogFileInJson,bool,true,false,true);
 		REGISTER_OPTION(saveConfig,bool,true,false,true);
 		REGISTER_OPTION(saveResidualMap,bool,true,false,true);
 		REGISTER_OPTION(saveBkgMap,bool,true,false,true);
@@ -315,6 +316,7 @@ int ConfigParser::RegisterPredefinedOptions()
 		REGISTER_OPTION(residualModel,int,1,0,3);
 		REGISTER_OPTION(residualModelRandomize,bool,false,false,true);
 		REGISTER_OPTION(psSubtractionMethod,int,1,0,3);
+		REGISTER_OPTION(residualBkgAroundSource,bool,true,false,true);
 
 		//REGISTER_OPTION(dilateZBrightThr,double,10,0,10000);
 		//REGISTER_OPTION(dilateZThr,double,5,0,10000);
@@ -328,7 +330,7 @@ int ConfigParser::RegisterPredefinedOptions()
 		//==  Source fitting options   ==
 		//==================================
 		REGISTER_OPTION(fitSources,bool,false,false,true);
-		REGISTER_OPTION(nBeamsMaxToFit,double,20,0,100000);
+		REGISTER_OPTION(nBeamsMaxToFit,double,100,0,100000);
 		REGISTER_OPTION(fitMaxNComponents,int,5,0,100);		
 		REGISTER_OPTION(fitWithCentroidLimits,bool,true,false,true);
 		REGISTER_OPTION(fixCentroidInPreFit,bool,false,false,true);
@@ -340,17 +342,17 @@ int ConfigParser::RegisterPredefinedOptions()
 		REGISTER_OPTION(fitWithAmplLimits,bool,true,false,true);
 		//REGISTER_OPTION(fixAmplInPreFit,bool,false,false,true);
 		REGISTER_OPTION(fixAmplInPreFit,bool,true,false,true);
-		REGISTER_OPTION(fitAmplLimit,double,0.3,0,2);
+		REGISTER_OPTION(fitAmplLimit,double,0.5,0,2);
 		REGISTER_OPTION(fitWithSigmaLimits,bool,true,false,true);
 		//REGISTER_OPTION(fixSigmaInPreFit,bool,true,false,true);
 		REGISTER_OPTION(fixSigmaInPreFit,bool,false,false,true);
-		REGISTER_OPTION(fitSigmaLimit,double,0.3,0,2);
+		REGISTER_OPTION(fitSigmaLimit,double,0.5,0,2);
 		REGISTER_OPTION(fitWithFixedSigma,bool,false,false,true);
 		REGISTER_OPTION(fitWithThetaLimits,bool,true,false,true);
 		//REGISTER_OPTION(fixThetaInPreFit,bool,true,false,true);
 		REGISTER_OPTION(fixThetaInPreFit,bool,false,false,true);
 		REGISTER_OPTION(fitWithFixedTheta,bool,false,false,true);
-		REGISTER_OPTION(fitThetaLimit,double,90,0,361);
+		REGISTER_OPTION(fitThetaLimit,double,360,0,361);
 		REGISTER_OPTION(useFluxZCutInFit,bool,false,false,true);
 		REGISTER_OPTION(fitZCutMin,double,2.5,0,1000);
 		REGISTER_OPTION(peakMinKernelSize,int,3,0,101);
@@ -371,7 +373,7 @@ int ConfigParser::RegisterPredefinedOptions()
 		REGISTER_OPTION(fitMinimizer,std::string,"Minuit2","","");
 		REGISTER_OPTION(fitMinimizerAlgo,std::string,"minimize","","");
 		REGISTER_OPTION(fitPrintLevel,int,0,-1,3);
-		REGISTER_OPTION(fitStrategy,int,2,0,3);
+		REGISTER_OPTION(fitStrategy,int,2,-1,3);
 		REGISTER_OPTION(fitUseThreads,bool,false,false,true);
 		REGISTER_OPTION(fitParBoundIncreaseStepSize,double,0.1,0,10);
 		REGISTER_OPTION(fitScaleDataToMax,bool,false,false,true);

@@ -7,7 +7,7 @@ You can use the executable ``FindBkg`` installed in the CAESAR `bin` directory t
 
 .. code:: bash
 
-    $ ./FindBkg [OPTIONS]
+    $ ./FindBkg [options]
         
     =========== USAGE ===========
     Usage: FindBkg [options]

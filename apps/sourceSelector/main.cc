@@ -37,6 +37,8 @@
 #include <TFile.h>
 #include <TTree.h>
 #include <TEllipse.h>
+#include <TKey.h>
+#include <TROOT.h>
 
 #include <iostream>
 #include <vector>

@@ -143,8 +143,10 @@ int Init()
 int ReadLabelData()
 {
 	//Read label data
+	cout<<"INFO: Reading label data "<<gLabelFileName<<" ..."<<endl;
+	char delimiter= '|';
 	TTree* labelData= new TTree;
-	labelData->ReadFile(gLabelFileName.c_str(),"sname/C:componentId/I:objType/C:objName/C:isConfirmed/I:objRA/D:objDec/D",gDelimiter);
+	labelData->ReadFile(gLabelFileName.c_str(),"sname/C:componentId/I:objType/C:objName/C:isConfirmed/I:objRA/D:objDec/D",delimiter);
 
 	char sname[100];
 	int componentId;
@@ -387,9 +389,9 @@ int SaveCatalog()
 	int wcsType= eJ2000;
 	WCS* wcs= 0;
 	bool writeAdditionalSourceInfo= true;
-	char delimiter= ',';
+	bool convertBrightenessToFlux= true;
 
-	int status= SourceExporter::WriteToAscii(gCatalogOutFileName,gSources,dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,delimiter);
+	int status= SourceExporter::WriteToAscii(gCatalogOutFileName,gSources,dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,convertBrightenessToFlux,gDelimiter);
 	if(status<0){
 		cerr<<"WARN: Writing source catalog to file "<<gCatalogOutFileName<<" failed!"<<endl;
 	}
@@ -397,7 +399,7 @@ int SaveCatalog()
 	//Saving source fitted components to ascii file
 	cout<<"INFO: Writing source catalog to file "<<gCatalogComponentsOutFileName<<" ..."<<endl;
 	
-	status= SourceExporter::WriteComponentsToAscii(gCatalogComponentsOutFileName,gSources,dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,delimiter);
+	status= SourceExporter::WriteComponentsToAscii(gCatalogComponentsOutFileName,gSources,dumpNestedSourceInfo,wcsType,wcs,writeAdditionalSourceInfo,convertBrightenessToFlux,gDelimiter);
 	if(status<0){
 		cerr<<"WARN: Writing source fitted component catalog to file "<<gCatalogComponentsOutFileName<<" failed!"<<endl;
 	}

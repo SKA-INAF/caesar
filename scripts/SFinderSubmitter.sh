@@ -26,6 +26,7 @@ if [ "$NARGS" -lt 1 ]; then
 
 	echo "*** OPTIONAL ARGS ***"
 	echo "=== SFINDER OUTPUT OPTIONS ==="
+	echo "--save-fits - Save maps (if save enabled) in FITS format (default=ROOT format)"
 	echo "--save-inputmap - Save input map in output ROOT file (default=no)"
 	echo "--save-bkgmap - Save bkg map in output ROOT file (default=no)"
 	echo "--save-rmsmap - Save rms map in output ROOT file (default=no)"	
@@ -58,6 +59,7 @@ if [ "$NARGS" -lt 1 ]; then
 	echo "--mappixsize=[MAP_PIXSIZE] - Map pixel size in arcsec (NB: used only when info is not available in input map) (default=1 arcsec)"
 	echo "--globalbkg - Use global bkg (default=use local bkg)"
 	echo "--bkgestimator=[BKG_ESTIMATOR] - Stat estimator used for bkg (1=Mean,2=Median,3=BiWeight,4=ClippedMedian) (default=2)"
+	echo "--bkgboxpix - Consider box size option expressed in pixels and not as a multiple of beam size (default=no)"
 	echo "--bkgbox=[BKG_BOXSIZE] - Box size (muliple of beam size) used to compute local bkg (default=20 x beam)"
 	echo "--bkggrid=[BKG_GRIDSIZE] - Grid size (fraction of bkg box) used to compute local bkg (default=0.2 x box)"
 	echo "--no-bkg2ndpass - Do not perform a 2nd pass in bkg estimation (default=true)"
@@ -68,8 +70,8 @@ if [ "$NARGS" -lt 1 ]; then
 	echo "=== SFINDER SOURCE FINDING OPTIONS ==="
 	echo "--mergeedgesources - Merge sources at tile edges. NB: Used for multitile processing. (default=no)"
 	echo "--no-mergesources - Disable source merging in each tile (default=enabled)."
-	echo "--no-mergecompactsources - Disable compact-compact source merging in each tile (default=enabled)."
-	echo "--no-mergeextsources - Disable extended-extended and extended-compact source merging in each tile (default=enabled)."
+	#echo "--no-mergecompactsources - Disable compact-compact source merging in each tile (default=enabled)."
+	#echo "--no-mergeextsources - Disable extended-extended and extended-compact source merging in each tile (default=enabled)."
 	echo ""
 
 	echo "=== SFINDER COMPACT SOURCE OPTIONS ==="
@@ -128,6 +130,7 @@ if [ "$NARGS" -lt 1 ]; then
 	echo "--dilatekernsize=[DILATE_KERNEL_SIZE] - Size of dilating kernel in pixels (default=9)"
 	echo "--res-removedsourcetype=[RESIDUAL_REMOVED_SOURCE_TYPE] - Type of source dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED) (default=2)"
 	echo "--res-pssubtractionmethod=[PS_SUBTRACTION_METHOD] - Method used to subtract point-sources in residual map (1=DILATION, 2=FIT MODEL REMOVAL)"
+	echo "--res-bkgaroundsource - Usebkg computed around source rather than the one computed using the global/local bkg map (default=false)"
 	echo ""
 
 	echo "=== SFINDER SOURCE FITTING OPTIONS ==="
@@ -135,7 +138,7 @@ if [ "$NARGS" -lt 1 ]; then
 	echo "--fit-usethreads - Enable multithread in source fitting (NB: use Minuit2 minimizer if enabled) (default=disabled)"
 	echo "--fit-minimizer=[FIT_MINIMIZER] - Fit minimizer {Minuit,Minuit2} (default=Minuit2)"
 	echo "--fit-minimizeralgo=[FIT_MINIMIZER_ALGO] - Fit minimizer algo {migrad,simplex,minimize,scan,fumili (Minuit2)} (default=minimize)"
-	echo "--fit-printlevel=[FIT_PRINTLEVEL] - Fit print level (default=1)"
+	echo "--fit-printlevel=[FIT_PRINTLEVEL] - Fit print level (default=0)"
 	echo "--fit-strategy=[FIT_STRATEGY] - Fit strategy (default=2)"
 	echo "--fit-maxnbeams=[FIT_MAX_NBEAMS] - Maximum number of beams for fitting if compact source (default=20)"
 	echo "--fit-maxcomponents=[FIT_MAX_COMPONENTS] - Maximum number of components fitted in a blob (default=3)"	
@@ -230,7 +233,11 @@ if [ "$NARGS" -lt 1 ]; then
 	echo "--loglevel=[LOG_LEVEL] - Logging level string {INFO, DEBUG, WARN, ERROR, OFF} (default=INFO)"
 	echo "--maxfiles=[NMAX_PROCESSED_FILES] - Maximum number of input files processed in filelist (default=-1=all files)"
 	echo "--addrunindex - Append a run index to submission script (in case of list execution) (default=no)"
+	echo "--jobdir=[JOB_DIR] - Job directory where to run (default=pwd)"
 	echo "--outdir=[OUTPUT_DIR] - Output directory where to put run output file (default=pwd)"
+	echo "--waitcopy - Wait a bit after copying output files to output dir (default=no)"
+	echo "--copywaittime=[COPY_WAIT_TIME] - Time to wait after copying output files (default=30)"
+	echo "--save-summaryplot - Save summary plot with image+regions"
 	echo "--no-logredir - Do not redirect logs to output file in script "	
 	echo "--no-mpi - Disable MPI run (even with 1 proc) (default=enabled)"
 	echo "--mpioptions - Options to be passed to MPI (e.g. --bind-to {none,hwthread, core, l1cache, l2cache, l3cache, socket, numa, board}) (default=)"
@@ -258,6 +265,11 @@ fi
 #######################################
 ##         PARSE ARGS
 #######################################
+export BASEDIR="$PWD"
+export OUTPUT_DIR="$PWD"
+
+WAIT_COPY=false
+COPY_WAIT_TIME=30
 ENV_FILE=""
 RUN_SCRIPT=false
 SUBMIT=false
@@ -289,7 +301,6 @@ JOB_USER_GROUP_OPTION=""
 JOB_NNODES="1"
 JOB_NCPUS="1"
 LOG_LEVEL="INFO"
-OUTPUT_DIR=$PWD
 NTHREADS=1
 READ_TILE="false"
 XMIN=0
@@ -298,6 +309,7 @@ YMIN=0
 YMAX=0
 USE_PARALLEL_MEDIAN_ALGO="true"
 USE_LOCAL_BKG="true"
+BKG_SIZE_IN_BEAM="true"
 BKG_ESTIMATOR="2"
 BKG_BOXSIZE="20"
 BKG_GRIDSIZE="0.2"
@@ -309,10 +321,11 @@ NPIX_MIN="5"
 SEED_THR="5"
 MERGE_THR="2.6"
 SEARCH_COMPACT_SOURCES="true"
-COMPACT_SOURCE_SEARCH_NITERS="5"
-SEED_THR_STEP="1"
+COMPACT_SOURCE_SEARCH_NITERS="1"
+SEED_THR_STEP="0.5"
 
 COMPUTE_RESIDUAL_MAP="false"
+RESIDUAL_BKG_AROUND_SOURCE="false"
 ##DILATE_NESTED="false"
 RESIDUAL_REMOVE_NESTED="false"
 ##DILATE_BRIGHT_THR="10"
@@ -378,7 +391,7 @@ FIT_SOURCES="false"
 FIT_USETHREADS="false"
 FIT_MINIMIZER="Minuit2"
 FIT_MINIMIZER_ALGO="minimize"
-FIT_PRINTLEVEL="1"
+FIT_PRINTLEVEL="0"
 FIT_STRATEGY="2"
 FIT_MAX_NBEAMS="20"
 FIT_MAX_COMPONENTS="3"
@@ -425,6 +438,7 @@ MERGE_EDGE_SOURCES="false"
 MERGE_SOURCES="true"
 #MERGE_COMPACT_SOURCES="true" # REMOVED FROM OPTION LIST
 #MERGE_EXTENDED_SOURCES="true" # REMOVED FROM OPTION LIST
+SAVE_FITS="false"
 SAVE_INPUT_MAP="false"
 SAVE_BKG_MAP="false"
 SAVE_RMS_MAP="false"
@@ -432,6 +446,8 @@ SAVE_SIGNIFICANCE_MAP="false"
 SAVE_RESIDUAL_MAP="false"
 SAVE_SALIENCY_MAP="false"
 SAVE_SEGMENTED_MAP="false"
+SAVE_SUMMARY_PLOT=false
+SAVE_CATALOG_TO_JSON="false"
 BMAJ=10
 BMIN=5
 BPA=0
@@ -462,36 +478,36 @@ do
 	case $item in 
 		## MANDATORY ##	
 		--filelist=*)
-    	FILELIST=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	FILELIST=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			if [ "$FILELIST" != "" ]; then
 				FILELIST_GIVEN=true
 			fi
     ;;
 		--inputfile=*)
-    	INPUTFILE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    	INPUTFILE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`		
 			if [ "$INPUTFILE" != "" ]; then
 				INPUTFILE_GIVEN=true
 			fi
     ;;	
 		--envfile=*)
-    	ENV_FILE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	ENV_FILE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 	
 		## OPTIONAL ##	
 		--containerimg=*)
-    	CONTAINER_IMG=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CONTAINER_IMG=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--containerrun*)
     	RUN_IN_CONTAINER=true
     ;;
 		--containeroptions=*)
-    	CONTAINER_OPTIONS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CONTAINER_OPTIONS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--loglevel=*)
-    	LOG_LEVEL=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	LOG_LEVEL=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--maxfiles=*)
-    	NMAX_PROCESSED_FILES=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	NMAX_PROCESSED_FILES=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--addrunindex*)
 			APPEND_RUN_INDEX=true
@@ -500,26 +516,38 @@ do
 			REDIRECT_LOGS=false
 		;;
 		--outdir=*)
-    	OUTPUT_DIR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	OUTPUT_DIR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
-
+		--waitcopy*)
+    	WAIT_COPY=true
+    ;;
+		--copywaittime=*)
+    	COPY_WAIT_TIME=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
+	
+		--jobdir=*)
+    	BASEDIR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
+    ;;
 		--no-mpi*)
     	MPI_ENABLED=false
     ;;
 		--nproc=*)
-      NPROC=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+      NPROC=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--mpioptions=*)
-      MPI_OPTIONS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+      MPI_OPTIONS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--hostfile=*)
-    	HOSTFILE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	HOSTFILE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			HOSTFILE_GIVEN=true
     ;;
 		--nthreads=*)
-    	NTHREADS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	NTHREADS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 			
+		--save-fits*)
+    	SAVE_FITS="true"
+    ;;
 		--save-inputmap*)
     	SAVE_INPUT_MAP="true"
     ;;
@@ -544,50 +572,54 @@ do
 		--save-regions*)
     	SAVE_DS9REGIONS="true"
     ;;
-		
-
+		--save-catalog-to-json*)
+    	SAVE_CATALOG_TO_JSON="true"
+    ;;
+		--save-summaryplot*)
+    	SAVE_SUMMARY_PLOT=true
+    ;;
 		--convertregionstowcs*)
 			CONVERT_DS9REGIONS_TO_WCS="true"
 		;;
 		--regionwcs=*)
-			DS9REGION_WCSTYPE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+			DS9REGION_WCSTYPE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`	
 		;;
 
 		--bmaj=*)
-    	BMAJ=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    	BMAJ=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
 		--bmin=*)
-    	BMIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    	BMIN=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
 		--bpa=*)
-    	BPA=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    	BPA=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
 		--mappixsize=*)
-    	MAP_PIXSIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`		
+    	MAP_PIXSIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
 
     --tilesize=*)
-    	TILE_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	TILE_SIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			SPLIT_IN_TILES="true"
     ;;
 		--tilestep=*)
-    	TILE_STEP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	TILE_STEP=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			TILE_OVERLAP="true"
     ;;
 		--xmin=*)
-    	XMIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	XMIN=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			READ_TILE="true"
     ;;
 		--xmax=*)
-    	XMAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	XMAX=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			READ_TILE="true"
     ;;
 		--ymin=*)
-    	YMIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	YMIN=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			READ_TILE="true"
     ;;
 		--ymax=*)
-    	YMAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	YMAX=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			READ_TILE="true"
     ;;
 		
@@ -600,16 +632,19 @@ do
 		--globalbkg*)
     	USE_LOCAL_BKG="false"
     ;;
+		--bkgboxpix*)
+			BKG_SIZE_IN_BEAM="false"
+		;;
 		--bkgbox=*)
-    	BKG_BOXSIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
-			USE_LOCAL_BKG="true"
+    	BKG_BOXSIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
+			#USE_LOCAL_BKG="true"
     ;;
 		--bkggrid=*)
-    	BKG_GRIDSIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
-			USE_LOCAL_BKG="true"
+    	BKG_GRIDSIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
+			#USE_LOCAL_BKG="true"
     ;;
 		--bkgestimator=*)
-			BKG_ESTIMATOR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			BKG_ESTIMATOR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--no-bkg2ndpass*)
 			BKG_USE_2ND_PASS="false"
@@ -618,7 +653,7 @@ do
 			BKG_SKIP_OUTLIERS="true"
 		;;
 		--sourcebkgboxborder=*)
-			SOURCE_BKGBOX_BORDER=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			SOURCE_BKGBOX_BORDER=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 
 		## SOURCE MERGING
@@ -628,12 +663,12 @@ do
 		--no-mergesources*)
     	MERGE_SOURCES="false"
     ;;
-		--no-mergecompactsources*)
-    	MERGE_COMPACT_SOURCES="false"
-    ;;
-		--no-mergeextsources*)
-    	MERGE_EXTENDED_SOURCES="false"
-    ;;
+		## --no-mergecompactsources*)
+    ##	MERGE_COMPACT_SOURCES="false"
+    ##;;
+		## --no-mergeextsources*)
+    ##	MERGE_EXTENDED_SOURCES="false"
+    ##;;
 
 		## COMPACT SOURCE OPTIONS
 		--no-compactsearch*)
@@ -641,22 +676,22 @@ do
     ;;
 		
 		--compactsearchiters=*)
-			COMPACT_SOURCE_SEARCH_NITERS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			COMPACT_SOURCE_SEARCH_NITERS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--seedthrstep=*)		
-			SEED_THR_STEP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			SEED_THR_STEP=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 
 		--npixmin=*)
-    	NPIX_MIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	NPIX_MIN=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		
 		--seedthr=*)
-    	SEED_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SEED_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
 		--mergethr=*)
-    	MERGE_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	MERGE_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
 		## SOURCE SELECTION
@@ -683,25 +718,25 @@ do
     ;;
 		
 		--minboundingbox=*)
-    	MIN_BOUNDING_BOX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	MIN_BOUNDING_BOX=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--circratiothr=*)
-    	CIRC_RATIO_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CIRC_RATIO_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--elongationthr=*)
-    	ELONGATION_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	ELONGATION_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--ellipsearearatiominthr=*)
-    	ELLIPSE_AREA_RATIO_MIN_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	ELLIPSE_AREA_RATIO_MIN_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--ellipsearearatiomaxthr=*)
-    	ELLIPSE_AREA_RATIO_MAX_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	ELLIPSE_AREA_RATIO_MAX_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--maxnpix=*)
-    	MAX_NPIX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	MAX_NPIX=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;	
 		--nbeamsthr=*)
-    	NBEAMS_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	NBEAMS_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 	
 		## NESTED OPTIONS
@@ -709,37 +744,37 @@ do
     	SEARCH_NESTED_SOURCES="false"
     ;;
 		--blobmaskmethod=*)
-			BLOB_MASK_METHOD=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			BLOB_MASK_METHOD=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--nested-sourcetobeamthr=*)
-    	NESTED_SOURCE_TO_BEAM_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	NESTED_SOURCE_TO_BEAM_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--nested-blobthr=*)
-    	NESTED_BLOB_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	NESTED_BLOB_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--nested-minmotherdist=*)
-    	NESTED_MIN_MOTHER_DIST=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	NESTED_MIN_MOTHER_DIST=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--nested-maxmotherpixmatch=*)
-    	NESTED_MAX_MOTHER_PIX_MATCH=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	NESTED_MAX_MOTHER_PIX_MATCH=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--nested-blobpeakzthr=*)
-			NESTED_BLOB_PEAK_ZTHR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			NESTED_BLOB_PEAK_ZTHR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--nested-blobpeakzthrmerge=*)
-			NESTED_BLOB_PEAK_ZTHR_MERGE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			NESTED_BLOB_PEAK_ZTHR_MERGE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--nested-blobminscale=*)
-			NESTED_BLOB_MIN_SCALE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			NESTED_BLOB_MIN_SCALE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--nested-blobmaxscale=*)
-			NESTED_BLOB_MAX_SCALE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			NESTED_BLOB_MAX_SCALE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--nested-blobscalestep=*)
-			NESTED_BLOB_SCALE_STEP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			NESTED_BLOB_SCALE_STEP=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--nested-blobkernfactor=*)
-			NESTED_BLOB_KERN_FACTOR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			NESTED_BLOB_KERN_FACTOR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 
 		## RESIDUAL OPTIONS
@@ -747,22 +782,25 @@ do
     	COMPUTE_RESIDUAL_MAP="true"
     ;;
 		--res-zthr=*)
-    	RESIDUAL_ZTHR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	RESIDUAL_ZTHR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--res-zhighthr=*)
-    	RESIDUAL_ZHIGHTHR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	RESIDUAL_ZHIGHTHR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--res-removenested*)
 			RESIDUAL_REMOVE_NESTED="true"		
 		;;
 		--res-removedsourcetype=*)
-			RESIDUAL_REMOVED_SOURCE_TYPE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			RESIDUAL_REMOVED_SOURCE_TYPE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--dilatekernsize=*)
-			DILATE_KERNEL_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			DILATE_KERNEL_SIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--res-pssubtractionmethod=*)
-			PS_SUBTRACTION_METHOD=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			PS_SUBTRACTION_METHOD=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
+		;;
+		--res-bkgaroundsource*)
+			RESIDUAL_BKG_AROUND_SOURCE="true"
 		;;
 
 		## SMOOTHING FILTER OPTIONS
@@ -770,13 +808,13 @@ do
     	USE_PRESMOOTHING="false"
     ;;
 		--smoothfilter=*)
-			SMOOTH_FILTER=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			SMOOTH_FILTER=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--guidedfilter-radius=*)
-			GUIDED_FILTER_RADIUS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			GUIDED_FILTER_RADIUS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--guidedfilter-eps=*)
-			GUIDED_FILTER_EPS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			GUIDED_FILTER_EPS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		
 
@@ -786,10 +824,10 @@ do
     ;;
 
 		--extsfinder=*)
-    	EXT_SFINDER_METHOD=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	EXT_SFINDER_METHOD=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--activecontour=*)
-    	AC_METHOD=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	AC_METHOD=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		
 
@@ -801,22 +839,22 @@ do
     	FIT_USETHREADS="true"
     ;;
 		--fit-minimizer=*)
-			FIT_MINIMIZER=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_MINIMIZER=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-minimizeralgo=*)
-			FIT_MINIMIZER_ALGO=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_MINIMIZER_ALGO=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-printlevel=*)
-			FIT_PRINTLEVEL=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_PRINTLEVEL=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-strategy=*)
-			FIT_STRATEGY=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_STRATEGY=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-maxnbeams=*)
-			FIT_MAX_NBEAMS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_MAX_NBEAMS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-maxcomponents=*)
-    	FIT_MAX_COMPONENTS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	FIT_MAX_COMPONENTS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--fit-usenestedascomponents*)
 			FIT_USE_NESTED_AS_COMPONENTS="true"
@@ -831,13 +869,13 @@ do
 			FIT_USE_BKGBOX_ESTIMATE="true"
 		;;
 		--fit-bkg=*)
-    	FIT_BKG=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	FIT_BKG=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--fit-nobkglimits*)
     	FIT_WITH_BKG_LIMITS="false"
     ;;
 		--fit-ampllimit=*)
-    	FIT_AMPL_LIMIT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	FIT_AMPL_LIMIT=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;	
 		--fit-noampllimits*)
     	FIT_WITH_AMPL_LIMITS="false"
@@ -846,7 +884,7 @@ do
     	PREFIT_FIX_AMPL="false"
     ;;	
 		--fit-sigmalimit=*)
-    	FIT_SIGMA_LIMIT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	FIT_SIGMA_LIMIT=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--prefit-fixsigma*)
     	PREFIT_FIX_SIGMA="true"
@@ -858,13 +896,13 @@ do
     	FIT_WITH_POS_LIMITS="false"
     ;;
 		--fit-poslimit=*)
-    	FIT_POS_LIMIT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	FIT_POS_LIMIT=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--prefit-freepos*)
 			PREFIT_FIX_POS="false"
 		;;
 		--fit-thetalimit=*)
-    	FIT_THETA_LIMIT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	FIT_THETA_LIMIT=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--prefit-fixtheta*)
     	PREFIT_FIX_THETA="true"
@@ -879,19 +917,19 @@ do
     	FIT_WITH_THETA_FIXED="true"
     ;;
 		--fit-peakminkern=*)
-    	PEAK_MIN_KERN_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	PEAK_MIN_KERN_SIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--fit-peakmaxkern=*)
-    	PEAK_MAX_KERN_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	PEAK_MAX_KERN_SIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--fit-peakmultiplicitythr=*)
-    	PEAK_KERNEL_MULTIPLICITY_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	PEAK_KERNEL_MULTIPLICITY_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--fit-peakshifttol=*)
-    	PEAK_SHIFT_TOLERANCE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	PEAK_SHIFT_TOLERANCE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--fit-peakzthrmin=*)
-    	PEAK_ZTHR_MIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	PEAK_ZTHR_MIN=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
 		--fit-noimproveconvergence*)
@@ -904,16 +942,16 @@ do
 			FIT_IMPROVE_ERRORS="true"
 		;;
 		--fit-parboundincreasestep=*)
-			FIT_PARBOUNDINCREASE_STEPSIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_PARBOUNDINCREASE_STEPSIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-maxniters=*)
-			FIT_MAXNITERS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_MAXNITERS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-nretries=*)
-			FIT_NRETRIES=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_NRETRIES=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-fcntol=*)
-			FIT_FCNTOL=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_FCNTOL=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-scaledatatomax*)
 			FIT_SCALE_DATA_TO_MAX="true"
@@ -922,7 +960,7 @@ do
 			FIT_USE_CHI2_CUT="false"
 		;;
 		--fit-chi2cut=*)
-			FIT_CHI2_CUT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+			FIT_CHI2_CUT=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 		;;
 		--fit-useellipsecuts*)
 			FIT_USE_ELLIPSE_CUTS="true"
@@ -935,19 +973,19 @@ do
 		;;
 
 		--saliency-thr=*)
-    	SALIENCY_THR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SALIENCY_THR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--saliency-minreso=*)
-    	SALIENCY_MIN_RESO=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SALIENCY_MIN_RESO=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--saliency-maxreso=*)
-    	SALIENCY_MAX_RESO=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SALIENCY_MAX_RESO=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--saliency-resostep=*)
-    	SALIENCY_RESO_STEP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SALIENCY_RESO_STEP=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--saliency-nn=*)
-    	SALIENCY_NN_PAR=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SALIENCY_NN_PAR=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--saliency-usebkgmap*)
     	USE_BKG_MAP_IN_SALIENCY="true"
@@ -960,64 +998,64 @@ do
 		;;
 
 		--sp-size=*)
-    	SP_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SP_SIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--sp-beta=*)
-    	SP_BETA=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SP_BETA=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--sp-minarea=*)
-    	SP_MINAREA=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	SP_MINAREA=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
 		## WAVELET TRANSFORM FILTER OPTIONS
 		--wtscalemin=*)
-    	WTSCALE_MIN=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	WTSCALE_MIN=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--wtscalemax=*)
-    	WTSCALE_MAX=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	WTSCALE_MAX=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
 		## ACTIVE CONTOURS OPTIONS
 		--ac-niters=*)
-    	AC_NITERS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	AC_NITERS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--ac-levelset=*)
-    	AC_LEVELSET_METHOD=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	AC_LEVELSET_METHOD=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--ac-levelsetsize=*)
-    	AC_LEVELSET_SIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	AC_LEVELSET_SIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--ac-tolerance=*)
-    	AC_TOLERANCE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	AC_TOLERANCE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 
 		## CHAN-VESE OPTIONS
 		--cv-nitersinner=*)
-    	CV_NITERS_INNER=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_NITERS_INNER=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-nitersreinit=*)
-    	CV_NITERS_REINIT=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_NITERS_REINIT=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-timestep=*)
-    	CV_TIMESTEP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_TIMESTEP=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-wsize=*)
-    	CV_WINDOWSIZE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_WINDOWSIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-lambda1=*)
-    	CV_LAMBDA1=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_LAMBDA1=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-lambda2=*)
-    	CV_LAMBDA2=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_LAMBDA2=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-mu=*)
-    	CV_MU=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_MU=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-nu=*)
-    	CV_NU=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_NU=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--cv-p=*)
-    	CV_P=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	CV_P=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;		
 
 
@@ -1029,25 +1067,25 @@ do
     	SUBMIT=true
     ;;
 		--batchsystem=*)
-    	BATCH_SYSTEM=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	BATCH_SYSTEM=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--queue=*)
-    	BATCH_QUEUE=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+    	BATCH_QUEUE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--jobwalltime=*)
-			JOB_WALLTIME=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+			JOB_WALLTIME=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`	
 		;;	
 		--jobcpus=*)
-      JOB_NCPUS=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+      JOB_NCPUS=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--jobnodes=*)
-      JOB_NNODES=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`
+      JOB_NNODES=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
     ;;
 		--jobmemory=*)
-			JOB_MEMORY=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+			JOB_MEMORY=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`	
 		;;
 		--jobusergroup=*)
-			JOB_USER_GROUP=`echo $item | sed 's/[-a-zA-Z0-9]*=//'`	
+			JOB_USER_GROUP=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`	
 			JOB_USER_GROUP_OPTION="#PBS -A $JOB_USER_GROUP"
 		;;
 
@@ -1069,7 +1107,7 @@ echo "RUN_IN_CONTAINER? $RUN_IN_CONTAINER, CONTAINER_IMG=$CONTAINER_IMG, CONTAIN
 echo "ENV_FILE: $ENV_FILE"
 echo "INPUTFILE: $INPUTFILE"
 echo "FILELIST: $FILELIST, NMAX_PROCESSED_FILES: $NMAX_PROCESSED_FILES"
-echo "SAVE_INPUT_MAP? $SAVE_INPUT_MAP, SAVE_BKG_MAP: $SAVE_BKG_MAP, SAVE_RMS_MAP? $SAVE_RMS_MAP, SAVE_SIGNIFICANCE_MAP? $SAVE_SIGNIFICANCE_MAP, SAVE_RESIDUAL_MAP: $SAVE_RESIDUAL_MAP"
+echo "SAVE_FITS? $SAVE_FITS, SAVE_INPUT_MAP? $SAVE_INPUT_MAP, SAVE_BKG_MAP: $SAVE_BKG_MAP, SAVE_RMS_MAP? $SAVE_RMS_MAP, SAVE_SIGNIFICANCE_MAP? $SAVE_SIGNIFICANCE_MAP, SAVE_RESIDUAL_MAP: $SAVE_RESIDUAL_MAP"
 echo "SAVE_SALIENCY_MAP? $SAVE_SALIENCY_MAP, SAVE_SEGMENTED_MAP? $SAVE_SEGMENTED_MAP"
 echo "SPLIT_IN_TILES? $SPLIT_IN_TILES, TILE_SIZE: $TILE_SIZE, TILE_STEP: $TILE_STEP"
 echo "NPROC: $NPROC, NTHREADS: $NTHREADS, MPI_ENABLED? $MPI_ENABLED, MPI_OPTIONS: $MPI_OPTIONS"
@@ -1124,6 +1162,16 @@ fi
 #  exit 1
 #fi
 
+if [ "$BASEDIR" = "" ]; then
+  echo "WARN: Empty BASEDIR given, setting it to pwd ($PWD) ..."
+	BASEDIR="$PWD"
+fi
+
+if [ "$OUTPUT_DIR" = "" ]; then
+  echo "WARN: Empty OUTPUT_DIR given, setting it to pwd ($PWD) ..."
+	OUTPUT_DIR="$PWD"
+fi
+
 if [ "$CONTAINER_IMG" = "" ] && [ "$RUN_IN_CONTAINER" = true ]; then
   echo "ERROR: Empty CONTAINER_IMG argument (hint: you must specify a container image if run in container option is activated)!"
   exit 1
@@ -1156,9 +1204,7 @@ fi
 #######################################
 ##     DEFINE & LOAD ENV VARS
 #######################################
-export BASEDIR="$PWD"
-export OUTPUT_DATADIR="$PWD"
-export DATADIR=""
+
 
 ## Load env file
 if [ "$ENV_FILE" != "" ]; then
@@ -1191,13 +1237,17 @@ if [ "$BATCH_SYSTEM" = "PBS" ]; then
 elif [ "$BATCH_SYSTEM" = "SLURM" ]; then
   BATCH_SUB_CMD="sbatch"
 	BATCH_QUEUE_NAME_OPTION="-p"
-	BATCH_JOB_NAME_DIRECTIVE="#SBATCH -J"
-	BATCH_JOB_OUTFILE_DIRECTIVE="#SBATCH -o $BASEDIR"
-	BATCH_JOB_ERRFILE_DIRECTIVE="#SBATCH -e $BASEDIR"
+	###BATCH_JOB_NAME_DIRECTIVE="#SBATCH -J"
+	BATCH_JOB_NAME_DIRECTIVE="#SBATCH --job-name="
+  ###BATCH_JOB_OUTFILE_DIRECTIVE="#SBATCH -o $BASEDIR"
+	###BATCH_JOB_ERRFILE_DIRECTIVE="#SBATCH -e $BASEDIR"
 	BATCH_JOB_JOINOUTERR_DIRECTIVE="" # There is no such option in SLURM
 	BATCH_JOB_WALLTIME_DIRECTIVE="#SBATCH --time=$JOB_WALLTIME"
 	BATCH_JOB_SHELL_DIRECTIVE="" # Equivalent SLURM directive not found
-	BATCH_JOB_USERGRP_DIRECTIVE="#SBATCH -A $JOB_USER_GROUP"
+	BATCH_JOB_USERGRP_DIRECTIVE=""	
+	if [ "$JOB_USER_GROUP" != "" ]; then
+		BATCH_JOB_USERGRP_DIRECTIVE="#SBATCH --account=$JOB_USER_GROUP"
+	fi	
 	BATCH_JOB_PRIORITY="" # Equivalent SLURM directive not found
 	BATCH_JOB_NOREQUEUE_DIRECTIVE="#SBATCH --no-requeue"
 	BATCH_JOB_SCATTER_DIRECTIVE="#SBATCH --spread-job"
@@ -1301,14 +1351,15 @@ generate_config(){
 		echo "convertDS9RegionsToWCS = $CONVERT_DS9REGIONS_TO_WCS | Convert DS9 regions (contours & ellipses) to WCS (default=false)"
 		echo "ds9WCSType = $DS9REGION_WCSTYPE                     | DS9 region WCS output format (0=J2000,1=B1950,2=GAL) (default=0)"
     echo 'inputMapFITSFile = 	input_map.fits				          | Output filename where to store input map in FITS format (.fits)'
-    echo 'residualMapFITSFile = residual_map.fits		          | Output filename where to store residual map in FITS format (.fits)'
+    echo "residualMapFITSFile = $outputfile_res		            | Output filename where to store residual map in FITS format (.fits)"
     echo 'saliencyMapFITSFile = saliency_map.fits		          | Output filename where to store saliency map in FITS format (.fits)'
-    echo 'bkgMapFITSFile = bkg_map.fits							          | Output filename where to store bkg map in FITS format (.fits)'
-		echo 'noiseMapFITSFile = noise_map.fits					          | Output filename where to store noise map in FITS format (.fits)'
-    echo 'significanceMapFITSFile = significance_map.fits	    | Output filename where to store significance map in FITS format (.fits)' 
+    echo "bkgMapFITSFile = $outputfile_bkg							      | Output filename where to store bkg map in FITS format (.fits)"
+		echo "noiseMapFITSFile = $outputfile_rms					        | Output filename where to store noise map in FITS format (.fits)"
+    echo "significanceMapFITSFile = $outputfile_zmap	        | Output filename where to store significance map in FITS format (.fits)"
     echo 'saveToFile = true																	  | Save results & maps to output ROOT file (T/F)'
-		echo 'saveToCatalogFile = true														! Save sources to catalog files (island, fitted components) (T/F)'
-    echo 'saveToFITSFile = false														  | Save results to output FITS file(s) (T/F)'
+		echo 'saveToCatalogFile = true														| Save sources to catalog files (island, fitted components) (T/F)'
+		echo "saveCatalogFileInJson = $SAVE_CATALOG_TO_JSON				| Save sources to catalog files (island, fitted components) (T/F)"
+    echo "saveToFITSFile = $SAVE_FITS													| Save results to output FITS file(s) (T/F)"
 		echo "saveDS9Region = $SAVE_DS9REGIONS									  | Save DS9 region files (T/F) (default=T)"
     echo 'saveConfig = true																	  | Save config options to ROOT file (T/F)'
 		echo 'saveSources = true																  | Save sources to ROOT file (T/F)'
@@ -1337,7 +1388,7 @@ generate_config(){
     echo "use2ndPassInLocalBkg = $BKG_USE_2ND_PASS	        | Use 2nd pass to refine noise calculation in local bkg (T/F)"
 		echo "skipOutliersInLocalBkg = $BKG_SKIP_OUTLIERS				| Skip outliers (e.g. bright point sources) in local bkg computation (T/F)"
 		echo "bkgEstimator = $BKG_ESTIMATOR                     | Background estimator (1=Mean,2=Median,3=BiWeight,4=ClippedMedian)"
-    echo 'useBeamInfoInBkg = true                           | Use beam information in bkg box definition (if available) (T/F)'
+    echo "useBeamInfoInBkg = $BKG_SIZE_IN_BEAM              | Use beam information in bkg box definition (if available) (T/F)"
 		echo "boxSizeX = $BKG_BOXSIZE										        | X Size of local background box in #pixels"
 		echo "boxSizeY = $BKG_BOXSIZE										        | Y Size of local background box in #pixels"
 		echo "gridSizeX = $BKG_GRIDSIZE									        | X Size of local background grid used for bkg interpolation"
@@ -1394,7 +1445,7 @@ generate_config(){
 		echo "fitScaleDataToMax = $FIT_SCALE_DATA_TO_MAX            | Scale source flux data to max peak flux if true, otherwise scale to mJy units (default=false)"
 		echo "fitMinimizer = $FIT_MINIMIZER                         | Minimizer {Minuit,Minuit2} (default=Minuit) (T/F)"
 		echo "fitMinimizerAlgo = $FIT_MINIMIZER_ALGO         				| Minimizer algorithm: {migrad,simplex,scan,minimize,fumili} (default=minimize)"
-		echo "fitPrintLevel = $FIT_PRINTLEVEL                				| Minimizer print level (default=1)"
+		echo "fitPrintLevel = $FIT_PRINTLEVEL                				| Minimizer print level (default=0)"
 		echo "fitStrategy = $FIT_STRATEGY                    				| Minimizer strategy (higher means more accurate but more fcn calls) (default=2)"
 		echo "nBeamsMaxToFit = $FIT_MAX_NBEAMS							 				| Maximum number of beams in compact source for fitting (if above thr fitting not performed)"
 		echo "fitUseNestedAsComponents = $FIT_USE_NESTED_AS_COMPONENTS  | If true use nested sources (if any) to estimate fitted components, otherwise estimate blended blobs (default=false)"
@@ -1466,15 +1517,16 @@ generate_config(){
 		echo '//================================'
 		echo '//==  SOURCE RESIDUAL OPTIONS   =='
 		echo '//================================'
-		echo "computeResidualMap = $COMPUTE_RESIDUAL_MAP          | Compute compact source residual map (after compact source search) (T/F)"
-		echo "removeNestedSources = $RESIDUAL_REMOVE_NESTED				| Dilate sources nested inside bright sources (T/F)"
-		echo "residualZThr = $RESIDUAL_ZTHR                       | Significance threshold (in sigmas) above which sources of selected type are dilated"
-		echo "residualZHighThr = $RESIDUAL_ZHIGHTHR               | Significance threshold (in sigmas) above which sources are always dilated (even if they have nested or different type)"
-		echo "dilateKernelSize = $DILATE_KERNEL_SIZE							| Size of kernel (odd) to be used in dilation operation"
-		echo "removedSourceType = $RESIDUAL_REMOVED_SOURCE_TYPE   | Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"
-		echo 'residualModel = 1																    | Model used to replace residual pixel values (1=bkg,2=source median)'
-		echo 'residualModelRandomize = false											| Randomize pixel values used to replace residual pixels (T/F)'
-		echo "psSubtractionMethod = $PS_SUBTRACTION_METHOD        | Point-source subtraction method (1=dilation, 2=model subtraction (default=1)"
+		echo "computeResidualMap = $COMPUTE_RESIDUAL_MAP            | Compute compact source residual map (after compact source search) (T/F)"
+		echo "removeNestedSources = $RESIDUAL_REMOVE_NESTED				  | Dilate sources nested inside bright sources (T/F)"
+		echo "residualZThr = $RESIDUAL_ZTHR                         | Significance threshold (in sigmas) above which sources of selected type are dilated"
+		echo "residualZHighThr = $RESIDUAL_ZHIGHTHR                 | Significance threshold (in sigmas) above which sources are always dilated (even if they have nested or different type)"
+		echo "dilateKernelSize = $DILATE_KERNEL_SIZE							  | Size of kernel (odd) to be used in dilation operation"
+		echo "removedSourceType = $RESIDUAL_REMOVED_SOURCE_TYPE     | Type of bright sources to be dilated from the input image (-1=ALL,1=COMPACT,2=POINT-LIKE,3=EXTENDED)"
+		echo 'residualModel = 1																      | Model used to replace residual pixel values (1=bkg,2=source median)'
+		echo 'residualModelRandomize = false											  | Randomize pixel values used to replace residual pixels (T/F)'
+		echo "psSubtractionMethod = $PS_SUBTRACTION_METHOD          | Point-source subtraction method (1=dilation, 2=model subtraction (default=1)"
+		echo "residualBkgAroundSource = $RESIDUAL_BKG_AROUND_SOURCE | Use bkg around source and not global/local bkg map (default=no)"
 		echo '###'
 		echo '###'
 		echo '//============================================='
@@ -1600,46 +1652,54 @@ generate_exec_script(){
 	echo "INFO: Creating sh file $shfile (jobindex=$jobindex, exe=$exe, exe_args=$exe_args)..."
 	( 
 			echo "#!/bin/bash -e"
-			#echo "#PBS -N SFinderJob$jobindex"
-			#echo "#PBS -j oe"
-  		#echo "#PBS -o $BASEDIR"
-			#echo "#PBS -l select=1:ncpus=1:mpiprocs=$NPROC:mem=$JOB_MEMORY"'GB'
-    	#echo "#PBS -l walltime=$JOB_WALLTIME"
-			#echo "#PBS -l place=scatter"
-    	#echo '#PBS -r n'
-      #echo '#PBS -S /bin/bash' 
-      #echo '#PBS -p 1'
-			#echo "$JOB_USER_GROUP_OPTION"
+			
+      if [ "$BATCH_SYSTEM" = "PBS" ]; then
+				echo "$BATCH_JOB_NAME_DIRECTIVE SFinderJob$jobindex"
+			elif [ "$BATCH_SYSTEM" = "SLURM" ]; then
+				echo "$BATCH_JOB_NAME_DIRECTIVE"''"SFinderJob$jobindex"
+			else
+				echo "$BATCH_JOB_NAME_DIRECTIVE SFinderJob$jobindex"
+			fi
 
-			#echo "$BATCH_JOB_NAME_DIRECTIVE SFinderJob$jobindex"
-			#echo "$BATCH_JOB_OUTFILE_DIRECTIVE $BASEDIR"
-			#echo "$BATCH_JOB_ERRFILE_DIRECTIVE $BASEDIR"
-			#echo "$BATCH_JOB_JOINOUTERR_DIRECTIVE"
-			#echo "$BATCH_JOB_WALLTIME_DIRECTIVE$JOB_WALLTIME"
-			#echo "$BATCH_JOB_SHELL_DIRECTIVE"
-			#echo "$BATCH_JOB_USERGRP_DIRECTIVE $JOB_USER_GROUP"
-			#echo "$BATCH_JOB_PRIORITY"
-			#echo "$BATCH_JOB_NOREQUEUE_DIRECTIVE"
-			#echo "$BATCH_JOB_SCATTER_DIRECTIVE"
-			#echo "$BATCH_JOB_NNODES_DIRECTIVE$JOB_NNODES"
-			#echo "$BATCH_JOB_NPROC_DIRECTIVE$NPROC"
-			#echo "$BATCH_JOB_MEM_DIRECTIVE$JOB_MEMORY"'gb'
-			#echo "$BATCH_JOB_NCORE_DIRECTIVE$JOB_NCPUS"
-
-			echo "$BATCH_JOB_NAME_DIRECTIVE SFinderJob$jobindex"
-			echo "$BATCH_JOB_OUTFILE_DIRECTIVE"
-			echo "$BATCH_JOB_ERRFILE_DIRECTIVE"
-			echo "$BATCH_JOB_JOINOUTERR_DIRECTIVE"
-			echo "$BATCH_JOB_WALLTIME_DIRECTIVE"
-			echo "$BATCH_JOB_SHELL_DIRECTIVE"
-			echo "$BATCH_JOB_USERGRP_DIRECTIVE"
-			echo "$BATCH_JOB_PRIORITY"
-			echo "$BATCH_JOB_NOREQUEUE_DIRECTIVE"
-			echo "$BATCH_JOB_SCATTER_DIRECTIVE"
-			echo "$BATCH_JOB_NNODES_DIRECTIVE"
-			echo "$BATCH_JOB_NPROC_DIRECTIVE"
-			echo "$BATCH_JOB_MEM_DIRECTIVE"
-			echo "$BATCH_JOB_NCORE_DIRECTIVE"
+			if [ "$BATCH_JOB_OUTFILE_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_OUTFILE_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_ERRFILE_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_ERRFILE_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_JOINOUTERR_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_JOINOUTERR_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_JOINOUTERR_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_JOINOUTERR_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_SHELL_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_SHELL_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_USERGRP_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_USERGRP_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_PRIORITY" != "" ]; then
+				echo "$BATCH_JOB_PRIORITY"
+			fi
+			if [ "$BATCH_JOB_NOREQUEUE_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_NOREQUEUE_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_SCATTER_DIRECTIVE" != "" ]; then			
+				echo "$BATCH_JOB_SCATTER_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_NNODES_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_NNODES_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_NPROC_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_NPROC_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_MEM_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_MEM_DIRECTIVE"
+			fi
+			if [ "$BATCH_JOB_NCORE_DIRECTIVE" != "" ]; then
+				echo "$BATCH_JOB_NCORE_DIRECTIVE"
+			fi
 
       echo " "
       echo " "
@@ -1658,6 +1718,7 @@ generate_exec_script(){
 			fi
        
       echo "JOBDIR=$BASEDIR"
+      echo "JOBOUTDIR=$OUTPUT_DIR"
      
       echo " "
       echo " "
@@ -1667,15 +1728,141 @@ generate_exec_script(){
       echo 'echo "****         RUN SOURCE FINDER               ****"'
       echo 'echo "*************************************************"'
       echo 'echo ""'
-      echo '  cd $JOBDIR'
+      echo 'cd $JOBDIR'
 			
 			if [ $REDIRECT_LOGS = true ]; then			
-      	echo "  $exe $exe_args >& $logfile"
+      	echo "$exe $exe_args >& $logfile"
 			else
-				echo "  $exe $exe_args"
+				echo "$exe $exe_args"
       fi
 
-      echo '  echo ""'
+			echo 'JOB_STATUS=$?'
+			echo 'echo "Source finding terminated with status=$JOB_STATUS"'
+
+      echo 'echo ""'
+
+			echo " "
+      echo 'echo "*************************************************"'
+      echo 'echo "****         MAKE SUMMARY PLOT             ****"'
+      echo 'echo "*************************************************"'
+      echo 'echo ""'
+			if [ $SAVE_SUMMARY_PLOT = true ]; then
+				echo "if [ -e "'$JOBDIR'"/$ds9region_file ] ; then" 	
+      	echo '  echo "Making summary plot with input image + extracted source islands ..."'
+				echo "  python3 $CAESAR_DIR/scripts/draw_img.py --img=$inputfile --region=$ds9region_file --wcs --zmin=0 --zmax=0 --cmap=\"gray_r\" --contrast=0.3 --save --outfile=$summary_plot_file "
+									
+				echo 'fi'
+      fi
+			
+
+			echo " "
+      echo 'echo "*************************************************"'
+      echo 'echo "****         COPY DATA TO OUTDIR             ****"'
+      echo 'echo "*************************************************"'
+      echo 'echo ""'
+			
+			if [ "$BASEDIR" != "$OUTPUT_DIR" ]; then
+      	echo 'echo "INFO: Copying job outputs in $JOBOUTDIR ..."'
+				echo 'ls -ltr $JOBDIR'
+
+				# - Copy out data
+      	echo "if [ -e "'$JOBDIR'"/$outputfile ] ; then" 
+				echo '  echo "Copying ROOT output file to $JOBOUTDIR"'
+				echo "  cp "'$JOBDIR'"/$outputfile "'$JOBOUTDIR'
+				echo "fi"
+
+        echo "if [ -e "'$JOBDIR'"/$catalog_file ] ; then" 
+				echo '  echo "Copying ascii island catalog output file to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$catalog_file "'$JOBOUTDIR'
+				echo "fi"
+
+        echo "if [ -e "'$JOBDIR'"/$catalog_fitcomp_file ] ; then" 
+				echo '  echo "Copying ascii component catalog output file to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$catalog_fitcomp_file "'$JOBOUTDIR'
+				echo "fi"
+
+				echo "if [ -e "'$JOBDIR'"/$catalog_json_file ] ; then" 
+				echo '  echo "Copying json island catalog output file to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$catalog_json_file "'$JOBOUTDIR'
+				echo "fi"
+
+        echo "if [ -e "'$JOBDIR'"/$catalog_fitcomp_json_file ] ; then" 
+				echo '  echo "Copying json component catalog output file to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$catalog_fitcomp_json_file "'$JOBOUTDIR'
+				echo "fi"
+
+        echo "if [ -e "'$JOBDIR'"/$ds9region_file ] ; then" 
+				echo '  echo "Copying ds9 island region output file to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$ds9region_file "'$JOBOUTDIR'
+				echo "fi"
+
+        echo "if [ -e "'$JOBDIR'"/$ds9fitregion_file ] ; then" 
+				echo '  echo "Copying ds9 component region output file to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$ds9fitregion_file "'$JOBOUTDIR'
+				echo "fi"
+
+        echo "if [ -e "'$JOBDIR'"/$outputfile_res ] ; then" 
+				echo '  echo "Copying residual map output file to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$outputfile_res "'$JOBOUTDIR'
+				echo "fi"
+
+				echo "if [ -e "'$JOBDIR'"/$outputfile_saliency ] ; then" 
+				echo '  echo "Copying saliency map output file to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$outputfile_saliency "'$JOBOUTDIR'
+				echo "fi"
+
+				echo "if [ -e "'$JOBDIR'"/$outputfile_bkg ] ; then" 
+				echo '  echo "Copying bkg map output file to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$outputfile_bkg "'$JOBOUTDIR'
+				echo "fi"
+
+				echo "if [ -e "'$JOBDIR'"/$outputfile_rms ] ; then" 
+				echo '  echo "Copying noise map output file to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$outputfile_rms "'$JOBOUTDIR'
+				echo "fi"
+
+				echo "if [ -e "'$JOBDIR'"/$outputfile_zmap ] ; then" 
+				echo '  echo "Copying significance map output file to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$outputfile_zmap "'$JOBOUTDIR'
+				echo "fi"
+
+				# - Copy config file
+				echo "if [ -e "'$JOBDIR'"/$configfile ] ; then" 
+				echo '  echo "Copying config file to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$configfile "'$JOBOUTDIR'
+				echo "fi"
+	
+				# - Copy script file
+				echo "if [ -e "'$JOBDIR'"/$shfile ] ; then" 
+				echo '  echo "Copying runscript file to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$shfile "'$JOBOUTDIR'
+				echo "fi"
+
+				# - Copy log file
+        if [ $REDIRECT_LOGS = true ]; then	
+           echo "if [ -e "'$JOBDIR'"/$logfile ] ; then" 
+				   echo '  echo "Copying log file to $JOBOUTDIR"'
+           echo "  cp "'$JOBDIR'"/$logfile "'$JOBOUTDIR'
+				   echo "fi"
+        fi
+
+				# - Copy summary plot file
+        echo "if [ -e "'$JOBDIR'"/$summary_plot_file ] ; then" 
+				echo '  echo "Copying summary plot to $JOBOUTDIR"'
+        echo "  cp "'$JOBDIR'"/$summary_plot_file "'$JOBOUTDIR'
+				echo "fi"
+
+				# - Show output directory
+				echo 'echo "INFO: Show files in $JOBOUTDIR ..."'
+				echo 'ls -ltr $JOBOUTDIR'
+
+				# - Wait a bit after copying data
+				#   NB: Needed if using rclone inside a container, otherwise nothing is copied
+				if [ $WAIT_COPY = true ]; then
+           echo "sleep $COPY_WAIT_TIME"
+        fi
+
+			fi
 
       echo " "
       echo " "
@@ -1693,12 +1880,18 @@ generate_exec_script(){
 
 
 
-
-
 #######################################
 ##   GENERATE AND SUBMIT SCRIPT JOBS
 #######################################
+# - Check if job directory exists
+if [ ! -d "$BASEDIR" ] ; then 
+  echo "INFO: Job dir $BASEDIR not existing, creating it now ..."
+	mkdir -p "$BASEDIR" 
+fi
 
+# - Moving to job directory
+echo "INFO: Moving to job directory $BASEDIR ..."
+cd $BASEDIR
 
 if [ "$FILELIST_GIVEN" = true ]; then
 
@@ -1714,7 +1907,7 @@ if [ "$FILELIST_GIVEN" = true ]; then
 	do
 
 		## Extract base filename from file given in list 
-		filename_base=$(basename "$filename")
+		filename_base=$(/usr/bin/basename "$filename")
 		file_extension="${filename_base##*.}"
 		filename_base_noext="${filename_base%.*}"
 
@@ -1727,9 +1920,22 @@ if [ "$FILELIST_GIVEN" = true ]; then
 		ds9fitregion_file="ds9_fitcomp-$filename_base_noext"'.reg'
 		catalog_file="catalog-$filename_base_noext"'.dat'
 		catalog_fitcomp_file="catalog_fitcomp-$filename_base_noext"'.dat'
+		catalog_json_file="catalog-$filename_base_noext"'.json'
+		catalog_fitcomp_json_file="catalog_fitcomp-$filename_base_noext"'.json'
+
+		## Define FITS map out filenames
+		outputfile_bkg="out-$filename_base_noext"'_bkg.fits'
+		outputfile_rms="out-$filename_base_noext"'_rms.fits'
+		outputfile_zmap="out-$filename_base_noext"'_significance.fits'
+		outputfile_res="out-$filename_base_noext"'_res.fits'
+		outputfile_saliency="out-$filename_base_noext"'_saliency.fits'
+
 
 		## Define output log filename
 		logfile="output_$filename_base_noext"'.log'
+
+		## Define summary output plot filename
+		summary_plot_file="plot_$filename_base_noext"'.png'
 
 		## Define config & run script file names 
 		if [ "$APPEND_RUN_INDEX" = true ]; then
@@ -1798,7 +2004,7 @@ else
 	################################################
 
 	## Extract base filename from file given in list 
-	filename_base=$(basename "$INPUTFILE")
+	filename_base=$(/usr/bin/basename "$INPUTFILE")
 	file_extension="${filename_base##*.}"
 	filename_base_noext="${filename_base%.*}"
 
@@ -1811,10 +2017,21 @@ else
 	ds9fitregion_file="ds9_fitcomp-$filename_base_noext"'.reg'
 	catalog_file="catalog-$filename_base_noext"'.dat'
 	catalog_fitcomp_file="catalog_fitcomp-$filename_base_noext"'.dat'
+	catalog_json_file="catalog-$filename_base_noext"'.json'
+	catalog_fitcomp_json_file="catalog_fitcomp-$filename_base_noext"'.json'
 
+	## Define FITS map out filenames
+	outputfile_bkg="out-$filename_base_noext"'_bkg.fits'
+	outputfile_rms="out-$filename_base_noext"'_rms.fits'
+	outputfile_zmap="out-$filename_base_noext"'_significance.fits'
+	outputfile_res="out-$filename_base_noext"'_res.fits'
+	outputfile_saliency="out-$filename_base_noext"'_saliency.fits'
 
 	## Define output log filename
 	logfile="output_$filename_base_noext"'.log'
+
+	## Define summary output plot filename
+	summary_plot_file="plot_$filename_base_noext"'.png'
 
 	## Define and generate config file
 	configfile="config_$filename_base_noext"'.cfg'

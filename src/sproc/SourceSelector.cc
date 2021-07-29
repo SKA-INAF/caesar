@@ -482,9 +482,11 @@ bool SourceSelector::CompactSourceCut(Source* source,Cut* cut)
 	bool largerThanBeam= (nBeams>nBeamsThr);
 	bool goodFit= (
 		hasFitInfo && 
-		(fitQuality==eMQFit || fitQuality==eHQFit) ||
-		(fitStatus==eFitConverged || fitStatus==eFitConvergedWithWarns) ||
-		redChi2<=redChi2Thr
+		(
+			(fitQuality==eMQFit || fitQuality==eHQFit) ||
+			(fitStatus==eFitConverged || fitStatus==eFitConvergedWithWarns) ||
+			redChi2<=redChi2Thr
+		)			
 	);
 
 	bool isCompact= (

@@ -1411,7 +1411,9 @@ int ComputeSourceCountsModels()
 	double freqScaleFactor= pow(refFreq/gDataFrequency,gDataSpectralIndex);
 	double lgFreqScaleFactor= log10(freqScaleFactor);
 
-	double alphaEG_min= -0.9;
+	//double alphaEG_min= -0.9;
+	//double alphaEG_max= -0.7;
+	double alphaEG_min= -1.1;
 	double alphaEG_max= -0.7;
 	double freqScaleFactor_min= pow(refFreq/gDataFrequency,alphaEG_min);
 	double freqScaleFactor_max= pow(refFreq/gDataFrequency,alphaEG_max);

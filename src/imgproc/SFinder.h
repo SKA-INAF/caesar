@@ -314,8 +314,12 @@ class SFinder : public TObject {
 		TFile* m_OutputFile;
 		std::string m_catalogOutFileName;
 		std::string m_catalogComponentsOutFileName;
+		std::string m_catalogOutFileName_json;
+		std::string m_catalogComponentsOutFileName_json;
 		bool m_saveToFile;
+		bool m_saveToFITSFile;
 		bool m_saveToCatalogFile;
+		bool m_saveCatalogFileInJson;
 		bool m_saveConfig;
 		bool m_saveDS9Region;
 		bool m_convertDS9RegionsToWCS;
@@ -327,10 +331,14 @@ class SFinder : public TObject {
 		TTree* m_SourceTree;
 		bool m_saveSources;
 		bool m_saveResidualMap;
+		std::string m_residualMapFITSFile;
 		bool m_saveInputMap;
 		bool m_saveSignificanceMap;
+		std::string m_significanceMapFITSFile;
 		bool m_saveBkgMap;
+		std::string m_bkgMapFITSFile;
 		bool m_saveNoiseMap;
+		std::string m_noiseMapFITSFile;
 		bool m_saveSaliencyMap;
 		bool m_saveEdgenessMap;
 		bool m_saveCurvatureMap;
@@ -478,6 +486,7 @@ class SFinder : public TObject {
 		//bool m_DilateRandomize;
 		bool m_residualModelRandomize;
 		int m_psSubtractionMethod;
+		bool m_residualBkgAroundSource;
 		bool m_UseResidualInExtendedSearch;
 
 		//Smoothing

@@ -37,6 +37,8 @@
 #include <ZernikeMoments.h>
 #include <WCSUtils.h>
 
+#include <BlobFinder.h>
+
 #include <TObject.h>
 #include <TMatrixD.h>
 
@@ -1156,6 +1158,77 @@ int Blob::GetSampleStdDev(double& sigmaX,double& sigmaY,double& covXY)
 	
 }//close GetSampleStdDev()
 
+
+Image* Blob::GetNestedBlobMask(Image* sourceImg,int pixMargin,double nestedBlobMinScale,double nestedBlobMaxScale,double nestedBlobScaleStep,double nestedBlobPeakZThr,double nestedBlobPeakZMergeThr,int NMinPix,double nestedBlobThrFactor,double nestedBlobKernFactor)
+{
+	//Check metadata
+	if(!m_imgMetaData) {
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("No image metadata present for this blob, please set it!");
+		#endif
+		return nullptr;	
+	}
+	
+	//Get source image	
+	bool useLocalBkg= false;
+	int bkgEstimator= eMedianBkg;
+	bool deleteImg= false;
+	if(!sourceImg){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Source image not given, computing it ...");	
+		#endif
+		sourceImg= this->GetImage(eFluxMap,pixMargin);
+		sourceImg->ComputeStats(true);
+		//sourceImg->ComputeBkg(bkgEstimator,useLocalBkg);
+		deleteImg= true;
+	}
+
+	if(!sourceImg){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Failed to get source image!");	
+		#endif
+		return nullptr;
+	}
+
+	//Get image parameters
+	double beamBmaj= m_imgMetaData->Bmaj;
+	double beamBmin= m_imgMetaData->Bmin;
+	//double beamBpa= m_imgMetaData->Bpa;
+	double pixSizeX= m_imgMetaData->dX; 
+	double pixSizeY= m_imgMetaData->dY;
+	double pixSize= fabs(std::min(pixSizeX,pixSizeY));
+	double beamWidth= fabs(std::min(beamBmaj,beamBmin));
+	double beamPixSize= beamWidth/pixSize;
+
+	double sigmaMin= nestedBlobMinScale*beamPixSize/GausSigma2FWHM;//convert from FWHM to sigma
+	double sigmaMax= nestedBlobMaxScale*beamPixSize/GausSigma2FWHM;//convert from FWHM to sigma
+	double sigmaStep= nestedBlobScaleStep;	
+	#ifdef LOGGING_ENABLED	
+		DEBUG_LOG("Computing multi-scale blob mask (scale min/max/step="<<sigmaMin<<"/"<<sigmaMax<<"/"<<sigmaStep<<") ...");
+	#endif
+
+	Image* blobMask= BlobFinder::ComputeMultiScaleBlobMask(
+		sourceImg,
+		sigmaMin,sigmaMax,sigmaStep,
+		nestedBlobPeakZThr,nestedBlobPeakZMergeThr,NMinPix,
+		nestedBlobThrFactor,nestedBlobKernFactor,
+		useLocalBkg
+	);
+
+	if(!blobMask){
+		#ifdef LOGGING_ENABLED	
+			ERROR_LOG("Failed to compute blob mask!");
+		#endif
+	}
+
+	if(deleteImg){
+		delete sourceImg;
+		sourceImg= 0;
+	}
+
+	return blobMask;
+
+}//close GetNestedBlobMask()
 
 
 }//close namespace
