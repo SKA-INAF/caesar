@@ -870,64 +870,8 @@ int Blob::ComputeZernikeMoments(int order){
 
 }//close ComputeZernikeMoments()
 
-/*
-Contour* Blob::GetWCSContour(int index,WorldCoor* wcs,int coordSystem,int pixOffset,bool computePars) 
-{
-	//## Check requested contour index
-	if(index<0 || index>=(int)m_Contours.size() ) {	
-		#ifdef LOGGING_ENABLED
-			WARN_LOG("Requested contour index exceed contour size (N="<<m_Contours.size()<<"), returning nullptr!");
-		#endif
-		return nullptr;
-	}
-	
-	//## Convert contour to WCS
-	//Create WCS if not provided
-	bool deleteWCS= false;
-	if(!wcs){
-		if(!m_imgMetaData){
-			#ifdef LOGGING_ENABLED
-				WARN_LOG("Requested to convert contour to WCS but no wcs was provided and no metadata are available to built it, returning null ptr!");
-			#endif
-			return nullptr;
-		}
-		wcs= m_imgMetaData->GetWorldCoord(coordSystem);
-		if(!wcs){
-			#ifdef LOGGING_ENABLED
-				ERROR_LOG("Failed to get WorldCoord system from metadata!");
-			#endif
-			return nullptr;
-		}
-		deleteWCS= true;
-	}//close if
 
-	//Convert contour to WCS
-	Contour* contour_wcs= AstroUtils::PixelToWCSContour(m_Contours[index],wcs,pixOffset);
-	if(!contour_wcs){
-		#ifdef LOGGING_ENABLED	
-			ERROR_LOG("Failed to compute WCS contour!");
-		#endif
-		if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
-		return nullptr;	
-	}
-	
-	//Compute contour parameters?
-	if(computePars && contour_wcs->ComputeParameters()<0){
-		#ifdef LOGGING_ENABLED
-			WARN_LOG("Failed to compute WCS contour parameters!");		
-		#endif
-	}
-
-	//Delete WCS
-	if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
-
-	return contour_wcs;
-		
-}//close GetWCSContour()
-*/
-
-
-Contour* Blob::GetWCSContour(int index,WCS* wcs,int coordSystem,int pixOffset,bool computePars) 
+Contour* Blob::GetWCSContour(int index,WCS* wcs,int coordSystem,double pixOffset,bool computePars,bool castCoordsToInt) 
 {
 	//## Check requested contour index
 	if(index<0 || index>=(int)m_Contours.size() ) {
@@ -958,12 +902,11 @@ Contour* Blob::GetWCSContour(int index,WCS* wcs,int coordSystem,int pixOffset,bo
 	}//close if
 
 	//Convert contour to WCS
-	Contour* contour_wcs= AstroUtils::PixelToWCSContour(m_Contours[index],wcs,pixOffset);
+	Contour* contour_wcs= AstroUtils::PixelToWCSContour(m_Contours[index],wcs,pixOffset,castCoordsToInt);
 	if(!contour_wcs){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to compute WCS contour!");
 		#endif
-		//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 		if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 		return nullptr;	
 	}
@@ -976,70 +919,15 @@ Contour* Blob::GetWCSContour(int index,WCS* wcs,int coordSystem,int pixOffset,bo
 	}
 
 	//Delete WCS
-	//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	return contour_wcs;
 		
 }//close GetWCSContour()
 
-/*
-std::vector<Contour*> Blob::GetWCSContours(WorldCoor* wcs,int coordSystem,int pixOffset,bool computePars)
-{
-	//## Convert contours to WCS
-	//Create WCS if not provided
-	bool deleteWCS= false;
-	std::vector<Contour*> contours_wcs;
-
-	if(!wcs){
-		if(!m_imgMetaData){
-			#ifdef LOGGING_ENABLED
-				WARN_LOG("Requested to convert contour to WCS but no wcs was provided and no metadata are available to built it, returning null ptr!");
-			#endif
-			return contours_wcs;
-		}
-		wcs= m_imgMetaData->GetWorldCoord(coordSystem);
-		if(!wcs){		
-			#ifdef LOGGING_ENABLED
-				ERROR_LOG("Failed to get WorldCoord system from metadata!");
-			#endif
-			return contours_wcs;
-		}
-		deleteWCS= true;
-	}//close if
-
-	//Loop over contours and convert to WCS
-	//NB: If conversion fails vector and memory is cleared inside PixelToWCSContours method
-	if(AstroUtils::PixelToWCSContours(contours_wcs,m_Contours,wcs,pixOffset)<0){
-		#ifdef LOGGING_ENABLED
-			ERROR_LOG("Failed to convert contours to WCS!");
-		#endif
-		if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
-		return contours_wcs;
-	}
-
-	//Compute contour parameters?
-	if(computePars){
-		for(size_t i=0;i<contours_wcs.size();i++){
-			if(contours_wcs[i]->ComputeParameters()<0){
-				#ifdef LOGGING_ENABLED
-					WARN_LOG("Failed to compute WCS contour parameters!");		
-				#endif
-				continue;
-			}
-		}//end loop contours
-	}
-
-	//Delete WCS
-	if(deleteWCS) CodeUtils::DeletePtr<WorldCoor>(wcs);
-
-	return contours_wcs;
-
-}//close GetWCSContours()
-*/
 
 
-std::vector<Contour*> Blob::GetWCSContours(WCS* wcs,int coordSystem,int pixOffset,bool computePars)
+std::vector<Contour*> Blob::GetWCSContours(WCS* wcs,int coordSystem,double pixOffset,bool computePars,bool castCoordsToInt)
 {
 	//## Convert contours to WCS
 	//Create WCS if not provided
@@ -1065,11 +953,10 @@ std::vector<Contour*> Blob::GetWCSContours(WCS* wcs,int coordSystem,int pixOffse
 
 	//Loop over contours and convert to WCS
 	//NB: If conversion fails vector and memory is cleared inside PixelToWCSContours method
-	if(AstroUtils::PixelToWCSContours(contours_wcs,m_Contours,wcs,pixOffset)<0){
+	if(AstroUtils::PixelToWCSContours(contours_wcs,m_Contours,wcs,pixOffset,castCoordsToInt)<0){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Failed to convert contours to WCS!");
 		#endif
-		//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 		if(deleteWCS) WCSUtils::DeleteWCS(&wcs);		
 		return contours_wcs;
 	}
@@ -1087,7 +974,6 @@ std::vector<Contour*> Blob::GetWCSContours(WCS* wcs,int coordSystem,int pixOffse
 	}
 
 	//Delete WCS
-	//if(deleteWCS) CodeUtils::DeletePtr<WCS>(wcs);
 	if(deleteWCS) WCSUtils::DeleteWCS(&wcs);
 
 	return contours_wcs;

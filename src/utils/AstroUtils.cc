@@ -453,7 +453,7 @@ int AstroUtils::PixelToWCSStrCoords(Caesar::Image* image,double ix,double iy,std
 }//close PixelToWCSStrCoords()
 
 
-Contour* AstroUtils::PixelToWCSContour(Contour* contour,WCS* wcs,int pixOffset)
+Contour* AstroUtils::PixelToWCSContour(Contour* contour,WCS* wcs,double pixOffset,bool castCoordsToInt)
 {
 	//Check input data
 	if(!contour){
@@ -474,7 +474,8 @@ Contour* AstroUtils::PixelToWCSContour(Contour* contour,WCS* wcs,int pixOffset)
 	double y_wcs= 0;
 	Contour* contour_wcs= new Contour;
 	
-	for(int i=0;i<contour->GetN();i++){
+	for(int i=0;i<contour->GetN();i++)
+	{
 		//Get pix contour point
 		TVector2* contPnt= contour->GetPoint(i);
 		if(!contPnt) {
@@ -485,7 +486,12 @@ Contour* AstroUtils::PixelToWCSContour(Contour* contour,WCS* wcs,int pixOffset)
 		}
 		double x= contPnt->X() + pixOffset; 
 		double y= contPnt->Y() + pixOffset;
-		WCSUtils::pix2wcs (wcs,x,y,&x_wcs, &y_wcs);
+		if(castCoordsToInt){
+			x= static_cast<long int>(contPnt->X()) + pixOffset;
+			y= static_cast<long int>(contPnt->Y()) + pixOffset;
+		}
+
+		WCSUtils::pix2wcs (wcs,x,y,&x_wcs,&y_wcs);
 
 		//Fill new contour with sky coords
 		contour_wcs->AddPoint(TVector2(x_wcs,y_wcs));
@@ -496,7 +502,7 @@ Contour* AstroUtils::PixelToWCSContour(Contour* contour,WCS* wcs,int pixOffset)
 }//close PixelToWCSContour()
 
 
-int AstroUtils::PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vector<Contour*>const& contours,WCS* wcs,int pixOffset)
+int AstroUtils::PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vector<Contour*>const& contours,WCS* wcs,double pixOffset,bool castCoordsToInt)
 {
 	//Check input data
 	if(!wcs){
@@ -517,7 +523,7 @@ int AstroUtils::PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vect
 
 	//Loop over contours and convert them
 	for(size_t i=0;i<contours.size();i++){
-		Contour* contour_wcs= PixelToWCSContour(contours[i],wcs,pixOffset);
+		Contour* contour_wcs= PixelToWCSContour(contours[i],wcs,pixOffset,castCoordsToInt);
 		if(!contour_wcs){
 			#ifdef LOGGING_ENABLED
 				ERROR_LOG("Failed to convert contour no. "<<i+1<<"!");
@@ -534,7 +540,7 @@ int AstroUtils::PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vect
 
 
 
-TEllipse* AstroUtils::PixelToWCSEllipse(TEllipse* ellipse,WCS* wcs,int pixOffset)
+TEllipse* AstroUtils::PixelToWCSEllipse(TEllipse* ellipse,WCS* wcs,double pixOffset)
 {
 	//NB: See Aegean source finder wcs_helpers.py method
 	//Check input data
@@ -617,7 +623,7 @@ TEllipse* AstroUtils::PixelToWCSEllipse(TEllipse* ellipse,WCS* wcs,int pixOffset
 }//close PixelToWCSEllipse()
 
 
-TEllipse* AstroUtils::PixelToWCSEllipseSimple(TEllipse* ellipse,WCS* wcs,int pixOffset)
+TEllipse* AstroUtils::PixelToWCSEllipseSimple(TEllipse* ellipse,WCS* wcs,double pixOffset)
 {
 	//Check input data
 	if(!ellipse){
@@ -869,6 +875,7 @@ double AstroUtils::GetWCSPointBearing(double ra1,double dec1,double ra2,double d
 
 }//close GetWCSPointBearing()
 
+/*
 std::string AstroUtils::EllipseToDS9Region(TEllipse* ellipse,std::string text,std::string color,std::vector<std::string> tags,bool useImageCoords)
 {
 	//Check input data
@@ -906,8 +913,46 @@ std::string AstroUtils::EllipseToDS9Region(TEllipse* ellipse,std::string text,st
 	return sstream.str();
 
 }//close EllipseToDS9Region()
+*/
 
+std::string AstroUtils::EllipseToDS9Region(TEllipse* ellipse,std::string text,std::string color,std::vector<std::string> tags,double pixOffset)
+{
+	//Check input data
+	if(!ellipse){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input ellipse given!");
+		#endif
+		return std::string("");
+	}
+	
+	//Get ellipse pars
+	double x0= ellipse->GetX1();
+	double y0= ellipse->GetY1();
+	x0+= pixOffset;//offset should be =1 for pixel coordinates in DS9
+	y0+= pixOffset;//offset should be =1 for pixel coordinates in DS9
+	
+	//double R1= ellipse->GetR1()*2;//DS9 wants axis (not semi-axis) NOT TRUE!!!
+	//double R2= ellipse->GetR2()*2;//DS9 wants axis (not semi-axis) NOT TRUE!!!
+	double R1= ellipse->GetR1();
+	double R2= ellipse->GetR2();
+	double theta= ellipse->GetTheta();
+	//theta-= 90;//DS9 format??
 
+	//Encode to string
+	std::stringstream sstream;
+	sstream<<"ellipse "<<x0<<" "<<y0<<" "<<R1<<" "<<R2<<" "<<theta<<" ";
+	sstream<<"# ";
+	sstream<<"text={"<<text<<"} ";
+	sstream<<"color="<<color<<" ";
+	for(size_t k=0;k<tags.size();k++){
+		sstream<<"tag={"<<tags[k]<<"} ";
+	}
+
+	return sstream.str();
+
+}//close EllipseToDS9Region()
+
+/*
 std::string AstroUtils::ContourToDS9Region(Contour* contour,std::string text,std::string color,std::vector<std::string> tags,bool useImageCoords)
 {
 	//Check input data
@@ -947,6 +992,62 @@ std::string AstroUtils::ContourToDS9Region(Contour* contour,std::string text,std
 		else{
 			double x= contPnt->X();
 			double y= contPnt->Y();
+			sstream<<std::fixed<<std::setprecision(4)<<x<<" "<<y<<" ";
+		}
+		
+	}//end loop contour points
+	sstream<<"# ";
+
+	sstream<<"text={"<<text<<"} ";
+	sstream<<"color="<<color<<" ";
+	for(size_t k=0;k<tags.size();k++){
+		sstream<<"tag={"<<tags[k]<<"} ";
+	}
+	
+	return sstream.str();
+
+}//close ContourToDS9Region()
+*/
+
+std::string AstroUtils::ContourToDS9Region(Contour* contour,std::string text,std::string color,std::vector<std::string> tags,bool useImageCoords,double pixOffset)
+{
+	//Check input data
+	if(!contour){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Null ptr to input contour given!");
+		#endif
+		return std::string("");
+	}
+
+	//Check size of contour
+	//NB: DS9 crashes miserably when given a polygon region with one point 
+	int nPoints= contour->GetN();
+	if(nPoints<=1){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Too few points (<=1) present in contour, will return empty string!");
+		#endif
+		return std::string("");
+	}
+	
+	//Loop over contour points and encode to string
+	std::stringstream sstream;
+	sstream<<"polygon ";
+	for(int j=0;j<nPoints;j++){
+		TVector2* contPnt= contour->GetPoint(j);
+		if(!contPnt) {
+			#ifdef LOGGING_ENABLED
+				WARN_LOG("Null ptr to contour point, skip to next!");
+			#endif
+			continue;
+		}
+		if(useImageCoords){
+			long int x= static_cast<long int>(contPnt->X()) + pixOffset;//offset should be 1 in DS9 as DS9 starts pix numbering from 1
+			long int y= static_cast<long int>(contPnt->Y()) + pixOffset;//offset should be 1 in DS9 as DS9 starts pix numbering from 1
+			sstream<<x<<" "<<y<<" ";
+		}
+		else{
+			double x= contPnt->X() + pixOffset;
+			double y= contPnt->Y() + pixOffset;
 			sstream<<std::fixed<<std::setprecision(4)<<x<<" "<<y<<" ";
 		}
 		

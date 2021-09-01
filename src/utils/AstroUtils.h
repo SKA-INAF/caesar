@@ -154,22 +154,22 @@ class AstroUtils : public TObject {
 		/**
 		* \brief Convert contour from pixel coordinates to sky coordinates
 		*/
-		static Contour* PixelToWCSContour(Contour* contour,WCS* wcs,int pixOffset=0);
+		static Contour* PixelToWCSContour(Contour* contour,WCS* wcs,double pixOffset=0,bool castCoordsToInt=false);
 
 		/**
 		* \brief Convert contour list from pixel coordinates to sky coordinates
 		*/
-		static int PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vector<Contour*>const& contours,WCS* wcs,int pixOffset=0);
+		static int PixelToWCSContours(std::vector<Contour*>& contours_wcs,std::vector<Contour*>const& contours,WCS* wcs,double pixOffset=0,bool castCoordsToInt=false);
 	
 		/**
 		* \brief Convert ellipse from pixel coordinates to sky coordinates
 		*/
-		static TEllipse* PixelToWCSEllipse(TEllipse* ellipse,WCS* wcs,int pixOffset=0);
+		static TEllipse* PixelToWCSEllipse(TEllipse* ellipse,WCS* wcs,double pixOffset=0);
 	
 		/**
 		* \brief Convert ellipse from pixel coordinates to sky coordinates neglecting sky projection and assuming Euclidean distances
 		*/
-		static TEllipse* PixelToWCSEllipseSimple(TEllipse* ellipse,WCS* wcs,int pixOffset=0);
+		static TEllipse* PixelToWCSEllipseSimple(TEllipse* ellipse,WCS* wcs,double pixOffset=0);
 	
 		/**
 		* \brief Compute ellipse deconvolved from ellipse beam
@@ -205,13 +205,15 @@ class AstroUtils : public TObject {
 		/**
 		* \brief Convert ellipse to DS9 format
 		*/
-		static std::string EllipseToDS9Region(TEllipse* ellipse,std::string text="",std::string color="white",std::vector<std::string> tags={},bool useImageCoords=true);
+		//static std::string EllipseToDS9Region(TEllipse* ellipse,std::string text="",std::string color="white",std::vector<std::string> tags={},bool useImageCoords=true);
+		static std::string EllipseToDS9Region(TEllipse* ellipse,std::string text="",std::string color="white",std::vector<std::string> tags={},double pixOffset=0);
 		
 		/**
 		* \brief Convert contour to DS9 format
 		*/
-		static std::string ContourToDS9Region(Contour* contour,std::string text="",std::string color="white",std::vector<std::string> tags={},bool useImageCoords=true);
-
+		//static std::string ContourToDS9Region(Contour* contour,std::string text="",std::string color="white",std::vector<std::string> tags={},bool useImageCoords=true);
+		static std::string ContourToDS9Region(Contour* contour,std::string text="",std::string color="white",std::vector<std::string> tags={},bool useImageCoords=true,double pixOffset=0);
+		
 		/**
 		* \brief Returns DS9 WCS type header from flag
 		*/
