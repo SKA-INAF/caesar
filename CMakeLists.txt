@@ -359,7 +359,7 @@ execute_process(
 execute_process(
 	COMMAND "${GIT_EXECUTABLE}" shortlog -nse
 	#COMMAND awk "{print $2\" \"$3}"   # Get only authors with more than 10 commits
-	COMMAND awk "$1>10 {print $2\" \"$3}"   # Get only authors with more than 10 commits
+	COMMAND awk "$1>10 {print $2\"-\"$3}"   # Get only authors with more than 10 commits
 	COMMAND paste -s -d ";"  - -
 	WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 	RESULT_VARIABLE res
