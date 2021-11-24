@@ -389,3 +389,12 @@ if (ENABLE_CASACORE)
 	endif()	
 endif()
 
+#======================================
+#==   Check for GIT                 ===
+#======================================
+MESSAGE(STATUS "Looking for Git")
+find_package(Git)
+if (NOT Git_FOUND)
+	MESSAGE(STATUS "Git not found, cannot generate software version number!")
+endif()
+
