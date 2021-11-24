@@ -338,7 +338,8 @@ add_custom_target(ProtobufSchema ALL
 #===          COMPUTE VERSION NUMBERS
 #===============================================================================================
 execute_process(
-	COMMAND "${GIT_EXECUTABLE}" describe --always HEAD
+	#COMMAND "${GIT_EXECUTABLE}" describe --always HEAD
+	COMMAND "${GIT_EXECUTABLE}" describe --tags
 	WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 	RESULT_VARIABLE res
 	OUTPUT_VARIABLE CAESAR_VERSION
