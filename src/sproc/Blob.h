@@ -575,23 +575,16 @@ class Blob : public TNamed {
 			return m_Contours[index];
 		}
 
-		/**
-		* \brief Return contours converted in WCS (TO BE DEPRECATED)
-		*/
-		//std::vector<Contour*> GetWCSContours(WorldCoor* wcs=0,int coordSystem=-1,int pixOffset=0,bool computePars=false);
+	
 		/**
 		* \brief Return contours converted in WCS 
 		*/
-		std::vector<Contour*> GetWCSContours(WCS* wcs=0,int coordSystem=-1,int pixOffset=0,bool computePars=false);
+		std::vector<Contour*> GetWCSContours(WCS* wcs=0,int coordSystem=-1,double pixOffset=0,bool computePars=false,bool castCoordsToInt=false);
 		
-		/**
-		* \brief Return contour with index and convert to WCS (TO BE DEPRECATED)
-		*/
-		//Contour* GetWCSContour(int index,WorldCoor* wcs=0,int coordSystem=-1,int pixOffset=0,bool computePars=false);
 		/**
 		* \brief Return contour with index and convert to WCS
 		*/
-		Contour* GetWCSContour(int index,WCS* wcs=0,int coordSystem=-1,int pixOffset=0,bool computePars=false);
+		Contour* GetWCSContour(int index,WCS* wcs=0,int coordSystem=-1,double pixOffset=0,bool computePars=false,bool castCoordsToInt=false);
 
 
 

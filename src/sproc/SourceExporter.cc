@@ -2629,12 +2629,20 @@ const std::string SourceExporter::SourceToDS9Region(Source* source,bool dumpNest
 	std::string regionColor= GetDS9RegionColor(source);
 	std::vector<std::string> regionTags {source->GetDS9RegionTag()};
 	std::string region= "";
+
 	bool useImageCoords= true;
-	if(convertToWCS) useImageCoords= false;
+	double pixOffset= 1;
+	//double pixOffset= 0;
+	bool castCoordsToInt= true;//Cast coordinates to pixel center
+	bool computeContourPars= false;
+	if(convertToWCS) {
+		useImageCoords= false;
+		pixOffset= 0;
+	}
 	
 	if(convertToWCS){
-		int pixOffset= 1;
-		std::vector<Contour*> contours_wcs= source->GetWCSContours(wcs,coordSystem,pixOffset);		
+		
+		std::vector<Contour*> contours_wcs= source->GetWCSContours(wcs,coordSystem,pixOffset,computeContourPars,castCoordsToInt);		
 		if(contours_wcs.empty()){
 			#ifdef LOGGING_ENABLED
 				WARN_LOG("Failed to convert contours in WCS, region will be empty!");
@@ -2643,7 +2651,7 @@ const std::string SourceExporter::SourceToDS9Region(Source* source,bool dumpNest
 		else{
 			//Loop over WCS contours
 			for(size_t i=0; i<contours_wcs.size(); i++){ 
-				region= AstroUtils::ContourToDS9Region(contours_wcs[i],regionText,regionColor,regionTags,useImageCoords);
+				region= AstroUtils::ContourToDS9Region(contours_wcs[i],regionText,regionColor,regionTags,useImageCoords,pixOffset);
 			}
 
 			//Delete contours at the end
@@ -2654,7 +2662,7 @@ const std::string SourceExporter::SourceToDS9Region(Source* source,bool dumpNest
 	else{
 		std::vector<Contour*> contours= source->GetContours();
 		for(size_t i=0; i<contours.size(); i++){ 
-			region= AstroUtils::ContourToDS9Region(contours[i],regionText,regionColor,regionTags,useImageCoords);
+			region= AstroUtils::ContourToDS9Region(contours[i],regionText,regionColor,regionTags,useImageCoords,pixOffset);
 		}
 	}//close else
 
@@ -2675,7 +2683,7 @@ const std::string SourceExporter::SourceToDS9Region(Source* source,bool dumpNest
 			std::string region_nested= "";
 			if(convertToWCS){
 				int pixOffset= 1;
-				std::vector<Contour*> contours_wcs= nestedSources[k]->GetWCSContours(wcs,coordSystem,pixOffset);
+				std::vector<Contour*> contours_wcs= nestedSources[k]->GetWCSContours(wcs,coordSystem,pixOffset,computeContourPars,castCoordsToInt);
 				if(contours_wcs.empty()){
 					#ifdef LOGGING_ENABLED
 						WARN_LOG("Failed to convert contours in WCS, region will be empty!");
@@ -2684,7 +2692,7 @@ const std::string SourceExporter::SourceToDS9Region(Source* source,bool dumpNest
 				else{
 					//Loop over WCS contours
 					for(size_t i=0;i<contours_wcs.size(); i++){ 
-						region_nested= AstroUtils::ContourToDS9Region(contours_wcs[i],regionText_nested,regionColor_nested,regionTags_nested,useImageCoords);
+						region_nested= AstroUtils::ContourToDS9Region(contours_wcs[i],regionText_nested,regionColor_nested,regionTags_nested,useImageCoords,pixOffset);
 					}
 
 					//Delete contours at the end
@@ -2694,7 +2702,7 @@ const std::string SourceExporter::SourceToDS9Region(Source* source,bool dumpNest
 			else{
 				std::vector<Contour*> nestedContours= nestedSources[k]->GetContours();
 				for(size_t i=0;i<nestedContours.size(); i++){ 
-					region_nested= AstroUtils::ContourToDS9Region(nestedContours[i],regionText_nested,regionColor_nested,regionTags_nested,useImageCoords);
+					region_nested= AstroUtils::ContourToDS9Region(nestedContours[i],regionText_nested,regionColor_nested,regionTags_nested,useImageCoords,pixOffset);
 				}
 			}//close else
 
@@ -2788,11 +2796,11 @@ const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,
 		return std::string("");
 	}
 
-	bool useImageCoords= true;
-	int pixOffset= 0;
+	//bool useImageCoords= true;
+	double pixOffset= 1;
 	if(convertToWCS) {
-		useImageCoords= false;
-		pixOffset= 1;
+		//useImageCoords= false;
+		pixOffset= 0;
 	}
 
 	//Check if source has fit info
@@ -2806,8 +2814,8 @@ const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,
 
 		//Get fit ellipses
 		std::vector<TEllipse*> ellipses;
-		
-		if(source->GetFitEllipses(ellipses,useFWHM,convertToWCS,wcs,coordSystem,pixOffset)<0){
+		double thisPixOffset= 0;//set to zero, shifting is done in EllipseToDS9Region
+		if(source->GetFitEllipses(ellipses,useFWHM,convertToWCS,wcs,coordSystem,thisPixOffset)<0){
 			#ifdef LOGGING_ENABLED
 				ERROR_LOG("Failed to get WorldCoord system from metadata!");
 			#endif
@@ -2842,7 +2850,8 @@ const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,
 			std::string regionColor= "red";
 			
 			std::vector<std::string> regionTags {fitComponentTypeStr,"fit-component",fitComponentFlagStr,fitQualityFlagStr};
-			std::string region= AstroUtils::EllipseToDS9Region(ellipses[i],regionText,regionColor,regionTags,useImageCoords);
+			//std::string region= AstroUtils::EllipseToDS9Region(ellipses[i],regionText,regionColor,regionTags,useImageCoords);
+			std::string region= AstroUtils::EllipseToDS9Region(ellipses[i],regionText,regionColor,regionTags,pixOffset);
 			sstream<<region;
 
 			if(i!=ellipses.size()-1) sstream<<endl;

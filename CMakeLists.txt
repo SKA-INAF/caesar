@@ -334,7 +334,37 @@ add_custom_target(ProtobufSchema ALL
 
 #-----------------------------------------------------------------------------------------------
 
+#===============================================================================================
+#===          COMPUTE VERSION NUMBERS
+#===============================================================================================
+execute_process(
+	COMMAND "${GIT_EXECUTABLE}" describe --always HEAD
+	WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+	RESULT_VARIABLE res
+	OUTPUT_VARIABLE CAESAR_VERSION
+	ERROR_QUIET
+	OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 
+execute_process(
+	COMMAND "${GIT_EXECUTABLE}" rev-parse --short HEAD
+	WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+	RESULT_VARIABLE res
+	OUTPUT_VARIABLE CAESAR_SHA_VERSION
+	ERROR_QUIET
+	OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+set_property(GLOBAL APPEND
+	PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/.git/index"
+)
+
+set(CAESAR_VERSION_DEFINES "-DCAESAR_VERSION=\\\"${CAESAR_VERSION}\\\" -DCAESAR_SHA_VERSION=\\\"${CAESAR_SHA_VERSION}\\\"")
+MESSAGE(STATUS "CAESAR_VERSION_DEFINES ${CAESAR_VERSION_DEFINES}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CAESAR_VERSION_DEFINES}")
+
+MESSAGE(STATUS "CAESAR_VERSION: ${CAESAR_VERSION}")
+MESSAGE(STATUS "CAESAR_SHA_VERSION: ${CAESAR_SHA_VERSION}")
 
 #===============================================================================================
 #===                    BUILD PROJECT SHARED LIB
