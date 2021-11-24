@@ -142,6 +142,20 @@ inline std::string GetSourceFlagStr(int sourceFlag)
 }
 
 /**
+* \brief Convert source flag enumeration to sourceness label string
+*/
+inline std::string GetSourcenessLabel(int sourceFlag)
+{
+	std::string flagStr= "";
+	if(sourceFlag==eReal) flagStr= "REAL";
+	else if(sourceFlag==eCandidate) flagStr= "CANDIDATE";
+	else if(sourceFlag==eFake) flagStr= "FALSE";
+	else if(sourceFlag==eUnknownSourceFlag) flagStr= "UNKNOWN";
+	else flagStr= "UNKNOWN";
+	return flagStr;
+}
+
+/**
 * \brief Convert source flag enumeration from string
 */
 inline int GetSourceFlag(std::string flagStr)
@@ -167,6 +181,21 @@ inline std::string GetSourceTypeStr(int sourceType)
 	else if(sourceType==eExtended) typeStr= "extended";
 	else if(sourceType==eCompactPlusExtended) typeStr= "compact-extended";
 	else typeStr= "unknown-type";
+	return typeStr;
+}
+
+/**
+* \brief Convert source type enumeration to morph label string
+*/
+inline std::string GetSourceMorphLabel(int sourceType)
+{
+	std::string typeStr= "";
+	if(sourceType==eUnknownType) typeStr= "UNKNOWN";
+	else if(sourceType==eCompact) typeStr= "COMPACT";
+	else if(sourceType==ePointLike) typeStr= "POINT-LIKE";
+	else if(sourceType==eExtended) typeStr= "EXTENDED";
+	else if(sourceType==eCompactPlusExtended) typeStr= "COMPACT-EXTENDED";
+	else typeStr= "UNKNOWN";
 	return typeStr;
 }
 
@@ -221,6 +250,20 @@ inline std::string GetSourceFitQualityStr(int fitQuality)
 	else if(fitQuality==eMQFit) flagStr= "mq-fit";
 	else if(fitQuality==eHQFit) flagStr= "hq-fit";
 	else flagStr= "uq-fit";//unknown
+	return flagStr;
+}
+
+/**
+* \brief Convert source fit quality enumeration to string (v2)
+*/
+inline std::string GetSourceFitQualityStr_V2(int fitQuality)
+{
+	std::string flagStr= "";
+	if(fitQuality==eBadFit) flagStr= "BAD";
+	else if(fitQuality==eLQFit) flagStr= "LOW";
+	else if(fitQuality==eMQFit) flagStr= "MEDIUM";
+	else if(fitQuality==eHQFit) flagStr= "HIGH";
+	else flagStr= "UNKNOWN";//unknown
 	return flagStr;
 }
 
@@ -474,6 +517,27 @@ inline int GetAstroObjectType(std::string typeStr)
 	else type= eUNKNOWN_OBJECT;
 
 	return type;
+}
+
+
+/**
+* \brief Convert astro object type enumeration to string
+*/
+inline std::string GetAstroObjectLabel(int type)
+{
+	std::string typeStr= "UNKNOWN";
+	if(type==eMULTI_CLASS_OBJECT) typeStr= "MULTI-CLASS";
+	else if(type==eSTAR) typeStr= "STAR";
+	else if(type==eYSO) typeStr= "YSO";
+	else if(type==ePULSAR) typeStr= "PULSAR";
+	else if(type==eHII) typeStr= "HII";
+	else if(type==ePN) typeStr= "PN";	
+	else if(type==eSNR ) typeStr= "SNR";
+	else if(type==eGALAXY) typeStr= "GALAXY";
+	else if(type==eQSO) typeStr= "QSO";
+	else typeStr= "UNKNOWN";
+
+	return typeStr;
 }
 
 #ifdef __MAKECINT__

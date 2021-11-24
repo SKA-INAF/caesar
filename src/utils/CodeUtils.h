@@ -46,6 +46,7 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/string_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <boost/algorithm/string/join.hpp>
 
 #include <cstdlib>
 #include <iomanip>
@@ -815,6 +816,15 @@ class CodeUtils : public TObject {
         }
     	}
     	return result;		
+		}
+
+		/**
+		* \brief Join string from string vector using delimiter
+		*/
+		static std::string JoinStringVec(const std::vector<std::string>& vec, std::string delim)
+		{
+			std::string s= boost::algorithm::join(vec, delim);
+			return s;
 		}
 
 		/**

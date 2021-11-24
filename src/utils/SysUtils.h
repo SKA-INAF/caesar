@@ -47,6 +47,7 @@
 #include <ctime>
 #include <limits.h>
 
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 using namespace std;
 
@@ -224,6 +225,17 @@ class SysUtils : public TObject {
     	}
     	return (result) ;
 		}
+
+		/**
+		* \brief Get current timestamp in ISO 8601 format string
+		*/
+		static std::string GetISOTimestamp()
+		{
+			boost::posix_time::ptime now = boost::posix_time::microsec_clock::universal_time();
+			std::string now_str= boost::posix_time::to_iso_extended_string(now);
+			return now_str;
+		}
+	
 		
 		/**
 		* \brief Convert a timestamp to seconds
