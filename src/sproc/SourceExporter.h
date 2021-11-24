@@ -59,6 +59,7 @@ namespace Caesar {
 
 class Source;
 class WCS;
+class ImgMetaData;
 
 
 struct SourceTreeData 
@@ -246,7 +247,27 @@ class SourceExporter : public TObject
 		//=======================================
 		//==      JSON EXPORT
 		//=======================================
-		
+		/**
+		* \brief Write json file from source collection
+		*/
+		static int WriteToFullJson(std::string filename,const std::vector<Source*>& sources,bool dumpNestedSourceInfo=true,int wcsType=eJ2000,WCS* wcs=0,bool convertBrightnessToFlux=true);
+		/**
+		* \brief Fill json metadata fields
+		*/
+		static int FillJsonMetadata(Json::Value& json, ImgMetaData* metadata);
+		/**
+		* \brief Fill json source island fields
+		*/
+		static int FillJsonSource(Json::Value& json, Source* source, bool dumpNestedSourceInfo=true, WCS* wcs=0, int index=-1, int parent_index=-1, int parent_island_index=-1, bool convertBrightnessToFlux=true);
+		/**
+		* \brief Fill json source island fields
+		*/
+		static int FillJsonSourceIsland(Json::Value& json, Source* source, WCS* wcs=0, int parent_index=-1, int parent_island_index=-1, bool convertBrightnessToFlux=true);
+		/**
+		* \brief Fill json source components fields
+		*/
+		static int FillJsonSourceComponents(Json::Value& json, Source* source, WCS* wcs=0, bool convertBrightnessToFlux=true);
+
 		/**
 		* \brief Write json file from source collection
 		*/

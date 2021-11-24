@@ -774,6 +774,54 @@ class Source : public Blob {
 		* \brief Compute component object class id from astro object data (if available)
 		*/
 		int ComputeComponentObjClassId();
+		/**
+		* \brief Compute if source island is resolved according to XXL survey criterion
+		*/
+		bool IsResolved_XXLSurveyMethod(double p0=1.08, double p1=2.03)
+		{	
+			double beamArea= this->GetBeamFluxIntegral();	
+			double S= m_S/beamArea;
+			double Speak= m_Smax;
+			double bkgRMSSum= m_bkgRMSSum;
+			double nPix= NPix;
+			double avgBkgRMS= bkgRMSSum/nPix;
+			if(m_HasFitInfo){
+				double fluxDensity= m_fitPars.GetFluxDensity();
+				S= fluxDensity/beamArea;
+			}
+			double snr= Speak/avgBkgRMS;
+			double fluxToPeakRatio= S/Speak;
+			double sourceResolveThr= p0 + p1/snr;
+			bool resolved= (fluxToPeakRatio>sourceResolveThr);
+
+			return resolved;
+		}
+
+		/**
+		* \brief Compute if source fit component is resolved according to XXL survey criterion
+		*/
+		bool IsComponentResolved_XXLSurveyMethod(int componentId, double p0=1.08, double p1=2.03)
+		{	
+			//Check if has fit info
+			if(!m_HasFitInfo) return false;
+
+			//Compute condition
+			double beamArea= this->GetBeamFluxIntegral();	
+			double Speak_comp= m_fitPars.GetComponentPeakFlux(componentId);
+			double fluxDensity_comp= m_fitPars.GetComponentFluxDensity(componentId);
+			double S_comp= fluxDensity_comp/beamArea;
+			double bkgRMSSum= m_bkgRMSSum;
+			double nPix= NPix;
+			double avgBkgRMS= bkgRMSSum/nPix;
+			double snr_comp= Speak_comp/avgBkgRMS;
+			double fluxToPeakRatio_comp= S_comp/Speak_comp;
+			double sourceResolveThr_comp= p0 + p1/snr_comp;
+			bool resolved_comp= (fluxToPeakRatio_comp>sourceResolveThr_comp);
+		
+			return resolved_comp;
+
+		}
+
 
 
 	protected:
