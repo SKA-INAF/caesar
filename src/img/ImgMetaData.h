@@ -183,12 +183,15 @@ class ImgMetaData : public TObject {
 		//Obs Epoch
 		double Epoch;
 
+		//Filename & size
+		std::string filename;//filename without path
+		long int filesize;//MB
 
 	private:
 		//Type of WCS
 		std::string m_wcsType;
 		
-	ClassDef(ImgMetaData,3)
+	ClassDef(ImgMetaData,4)
 
 };
 

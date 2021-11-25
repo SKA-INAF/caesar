@@ -67,7 +67,9 @@ void ImgMetaData::Init()
 	Freq= 0; dFreq= 0; FreqRef= 0;
 	FreqUnit= "";
 	Epoch= 0;
-	m_wcsType= "";	
+	m_wcsType= "";
+	filename= "";
+	filesize= 0;
 
 }//close Init()
 
@@ -97,6 +99,8 @@ void ImgMetaData::SetFITSCards(Caesar::FITSFileInfo& fits_info){
 	Freq= (fits_info.header).Freq;
 	FreqRef= (fits_info.header).FreqRef;
 	dFreq= (fits_info.header).dFreq;
+	filename= (fits_info.info).filename;
+	filesize= (fits_info.info).size/1024.;
 		
 }//close SetFITSCards()
 
