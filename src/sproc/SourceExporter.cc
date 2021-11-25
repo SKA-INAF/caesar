@@ -1815,8 +1815,11 @@ int SourceExporter::FillJsonSourceComponents(Json::Value& json, Source* source, 
 
 		//- Spectral info
 		json_component["spectral_info"]= Json::Value(Json::ValueType::objectValue);
-		if(hasSpectralIndexData)
+		if(hasSpectralIndexData && sid_comp.size()==nComponents)
 		{
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Filling spectral info for component no. "<<k+1<<" (sid size="<<sid_comp.size()<<", ncomp="<<nComponents<<") ...");
+			#endif
 			Json::Value json_spectralinfo;
 			json_spectralinfo["alpha"]= sid_comp[k].spectralIndex;
 			json_spectralinfo["alpha_err"]= sid_comp[k].spectralIndex;
@@ -1824,6 +1827,10 @@ int SourceExporter::FillJsonSourceComponents(Json::Value& json, Source* source, 
 			json_spectralinfo["chi2"]= sid_comp[k].spectralFitChi2;
 			json_spectralinfo["ndf"]= sid_comp[k].spectralFitNDF;
 		
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Completed spectral info for component no. "<<k+1<<" ...");
+			#endif
+
 			json_component["spectral_info"]= json_spectralinfo; 
 		}
 

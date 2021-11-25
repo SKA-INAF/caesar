@@ -695,7 +695,7 @@ class Source : public Blob {
 		*/
 		void SetSpectralIndexData(SpectralIndexData& data){
 			m_spectralIndexData= data;
-			m_hasSpectralIndexData= true;
+			if(data.hasSpectralIndex) m_hasSpectralIndexData= true;
 		}
 		/**
 		* \brief Has component spectral index data
@@ -714,7 +714,7 @@ class Source : public Blob {
 		*/
 		void SetComponentSpectralIndexData(std::vector<SpectralIndexData>& data){
 			m_componentSpectralIndexData= data;
-			m_hasComponentSpectralIndexData= true;
+			if(!data.empty()) m_hasComponentSpectralIndexData= true;
 		}
 		/**
 		* \brief Has astro object data
@@ -733,8 +733,10 @@ class Source : public Blob {
 		*/
 		void SetAstroObjects(std::vector<AstroObject>& data){
 			m_astroObjects= data;
-			m_hasAstroObjectData= true;
-			ComputeObjClassId();
+			if(!data.empty()){
+				m_hasAstroObjectData= true;
+				ComputeObjClassId();
+			}
 		}
 		/**
 		* \brief Add astro objects data
