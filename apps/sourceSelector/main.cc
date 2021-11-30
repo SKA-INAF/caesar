@@ -472,7 +472,11 @@ int ReadSourceData(std::string filename)
 	#ifdef LOGGING_ENABLED
 		INFO_LOG("Reading #"<<sourceTree->GetEntries()<<" sources in file "<<filename<<"...");
 	#endif
-	for(int i=0;i<sourceTree->GetEntries();i++){
+	for(int i=0;i<sourceTree->GetEntries();i++)
+	{
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Getting entry source no. "<<i+1<<" from tree ...");
+		#endif
 		sourceTree->GetEntry(i);
 		
 		#ifdef LOGGING_ENABLED
@@ -480,10 +484,16 @@ int ReadSourceData(std::string filename)
 		#endif
 
 		//Copy source
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Reading source no. "<<i+1<<" (name="<<aSource->GetName()<<") ...");
+		#endif
 		Source* source= new Source;
 		*source= *aSource;
 		
 		//Add sources to list
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Adding source no. "<<i+1<<" (name="<<aSource->GetName()<<") to list ...");
+		#endif
 		m_sources.push_back(source);
 
 	}//end loop sources
@@ -529,7 +539,11 @@ int SaveSources()
 	}
 
 	//Loop over selected sources and write TTree to output file
-	for(size_t i=0;i<m_sources_sel.size();i++){
+	for(size_t i=0;i<m_sources_sel.size();i++)
+	{
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Fill source "<<i+1<<" (name="<<m_sources_sel[i]->GetName()<<" to TTree ...");
+		#endif
 		m_source= m_sources_sel[i];
 		outputTree->Fill();
 	}
