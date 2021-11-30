@@ -159,6 +159,10 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 	//## Loop over source collection and apply cuts to each source
 	for(size_t i=0;i<sources.size();i++)
 	{
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Processing source no. "<<i+1<<" (name="<<sources[i]->GetName()<<") ...");
+		#endif
+
 		//## Process mother source
 		Source* aSource= new Source;
 		*aSource= *(sources[i]);
@@ -213,11 +217,18 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 
 		
 		//## Process nested sources
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Processing nested sources for source "<<i+1<<" (name="<<aSource->GetName()<<") ...");
+		#endif
+
 		std::vector<Source*> nestedSources= aSource->GetNestedSources();
 		std::vector<Source*> nestedSources_sel;
 
 		for(size_t j=0;j<nestedSources.size();j++)
 		{
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Processing nested source no. "<<j<<" for source "<<i+1<<" (name="<<aSource->GetName()<<") ...");
+			#endif
 			Source* aNestedSource= new Source;
 			*aNestedSource= *(nestedSources[j]);
 
@@ -243,7 +254,8 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 				int nComponents_nested_after= aNestedSource->GetNSelFitComponents();
 				int nComponents_nested_rejected= nComponents_nested_before-nComponents_nested_after;
 				
-				if(!passed_nested) {
+				if(!passed_nested) 
+				{
 					#ifdef LOGGING_ENABLED
 						DEBUG_LOG("Source "<<aNestedSource->GetName()<<": cut="<<cutName<<" (nComponents(BEFORE)="<<nComponents_nested_before<<", nComponents(AFTER)="<<nComponents_nested_after<<"), passed? "<<passed_nested);
 					#endif
@@ -264,7 +276,12 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 			}
 
 			//Add nested sources to selected
-			if(passed_nested) nestedSources_sel.push_back(aNestedSource);
+			if(passed_nested) {
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Adding nested source no. "<<j<<" for source "<<i+1<<" (name="<<aSource->GetName()<<") to selected collection ...");
+				#endif
+				nestedSources_sel.push_back(aNestedSource);
+			}
 
 		}//end loop nested sources
 
@@ -282,15 +299,32 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 			for(size_t j=0;j<nestedSources_sel.size();j++) nSourceComponents_sel+= nestedSources_sel[j]->GetNSelFitComponents();		
 	
 			//- Update nested sources in mother source
-			if(nestedSources_sel.empty()) aSource->ClearNestedSources();
-			else aSource->SetNestedSources(nestedSources_sel);
+			if(nestedSources_sel.empty()) {
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Clearing nested sources for source "<<aSource->GetName()<<" ...");
+				#endif
+				aSource->ClearNestedSources();
+			}
+			else {
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Setting nested sources (#"<<nestedSources_sel.size()<<") in source "<<aSource->GetName()<<" ...");
+				#endif
+				aSource->SetNestedSources(nestedSources_sel);
+			}
+			
 
 			//- Add selected source to collection
 			sources_sel.push_back(aSource);
 		}
 		else
 		{
-			if(!nestedSources_sel.empty()){
+
+			if(!nestedSources_sel.empty())
+			{	
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Add nested sources to collection as mother sources ...");
+				#endif
+
 				//- Increment source counters for nested sources only
 				//  Add nested sources to collection as mother sources
 				nSources_sel+= nestedSources_sel.size();
@@ -299,8 +333,8 @@ int SourceSelector::SelectSources(std::vector<Source*>& sources_sel,const std::v
 					nSourceComponents_sel+= nestedSources_sel[j]->GetNSelFitComponents();	
 					sources_sel.push_back(nestedSources_sel[j]);
 				}
-			}
-		}
+			}//close if
+		}//close else
 		
 	}//end loop sources
 
