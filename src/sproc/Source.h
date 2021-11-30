@@ -881,7 +881,7 @@ class Source : public Blob {
 		//Nested source info
 		int m_DepthLevel;
 		bool m_HasNestedSources;
-		Source* m_NestedSource;
+		//Source* m_NestedSource;
 		std::vector<Source*> m_NestedSources;	
 
 		//True source info
@@ -907,7 +907,7 @@ class Source : public Blob {
 		bool m_hasComponentAstroObjectData;
 		std::vector<std::vector<AstroObject>> m_componentAstroObjects;
 		
-		ClassDef(Source,9)
+		ClassDef(Source,10)
 
 	public:
 		

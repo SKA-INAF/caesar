@@ -94,7 +94,19 @@ Source::Source(std::vector<Pixel*>const& pixels,std::string name)
 
 Source::~Source()
 {
-	
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Deleting source "<<this->GetName()<<" ...");
+	#endif
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Deleting nested sources for source "<<this->GetName()<<" ...");
+	#endif
+	ClearNestedSources();
+
+	#ifdef LOGGING_ENABLED
+		DEBUG_LOG("Source "<<this->GetName()<<" delete complete ...");
+	#endif
+
 }//close destructor
 
 
@@ -103,7 +115,7 @@ Source::Source(const Source& source)
 {
   // Contour copy constructor
 	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("Copy constuctor called...");
+		DEBUG_LOG("Copy constuctor called for source "<<this->GetName()<<" ...");
 	#endif
   Init();
   ((Source&)source).Copy(*this);
@@ -113,13 +125,13 @@ void Source::Copy(TObject &obj) const
 {
 	//Copy mother blob 
 	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("Copy blob...");
+		DEBUG_LOG("Copy blob "<<this->GetName()<<" ...");
 	#endif
 	Blob::Copy((Source&)obj);
 
 	// Copy this source to source obj	
 	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("Copy source variables...");
+		DEBUG_LOG("Copy source "<<this->GetName()<<" variables...");
 	#endif
   ((Source&)obj).Type = Type;
 	((Source&)obj).Flag = Flag;	
@@ -168,10 +180,14 @@ void Source::Copy(TObject &obj) const
 
 	//Delete first a previously existing vector
 	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("Delete existing nested source list ...");
+		DEBUG_LOG("Delete existing nested source list (#"<<(((Source&)obj).m_NestedSources).size()<<") from source "<<this->GetName()<<" ...");
 	#endif
-	for(size_t i=0;i<(((Source&)obj).m_NestedSources).size();i++){
+	for(size_t i=0;i<(((Source&)obj).m_NestedSources).size();i++)
+	{
 		if( (((Source&)obj).m_NestedSources)[i] ){
+			#ifdef LOGGING_ENABLED
+				INFO_LOG("Delete nested source "<<(((Source&)obj).m_NestedSources)[i]->GetName()<<" ...");
+			#endif
 			delete (((Source&)obj).m_NestedSources)[i];
 			(((Source&)obj).m_NestedSources)[i]= 0;
 		}
@@ -179,16 +195,23 @@ void Source::Copy(TObject &obj) const
 	(((Source&)obj).m_NestedSources).clear();
 
 	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("Copy nested source list ...");
+		DEBUG_LOG("Copy nested source list (#"<<m_NestedSources.size()<<") in source "<<this->GetName()<<" ...");
 	#endif
-	((Source&)obj).m_NestedSource= 0;
-	for(unsigned int i=0;i<m_NestedSources.size();i++){
-		((Source&)obj).m_NestedSource= new Source;
-		*(((Source&)obj).m_NestedSource)= *(m_NestedSources[i]);
-		(((Source&)obj).m_NestedSources).push_back( ((Source&)obj).m_NestedSource );
+	//((Source&)obj).m_NestedSource= 0;
+	for(size_t i=0;i<m_NestedSources.size();i++)
+	{
+		//((Source&)obj).m_NestedSource= new Source;
+		Source* aSource= new Source;
+		#ifdef LOGGING_ENABLED
+			DEBUG_LOG("Copying nested source "<<m_NestedSources[i]->GetName()<<" ...");
+		#endif
+		//*(((Source&)obj).m_NestedSource)= *(m_NestedSources[i]);
+		*aSource= *(m_NestedSources[i]);
+		//(((Source&)obj).m_NestedSources).push_back( ((Source&)obj).m_NestedSource );
+		(((Source&)obj).m_NestedSources).push_back(aSource);
 	}
 	#ifdef LOGGING_ENABLED
-		DEBUG_LOG("End copy source ...");
+		DEBUG_LOG("End copy source "<<this->GetName()<<" ...");
 	#endif
 	
 }//close Copy()
@@ -215,7 +238,7 @@ void Source::Init(){
 	//Init nested source info
 	m_DepthLevel= 0;
 	m_HasNestedSources= false;
-	m_NestedSource= 0;
+	//m_NestedSource= 0;
 	m_NestedSources.clear();
 
 	//Init source true info
