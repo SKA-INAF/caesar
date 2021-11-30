@@ -4205,7 +4205,8 @@ int SFinder::SaveCatalogFile()
 			INFO_LOG("Writing source catalog to json file "<<m_catalogOutFileName_json<<" ...");
 		#endif
 		bool dumpNestedSourceInfo= true;
-		status= SourceExporter::WriteToJson(m_catalogOutFileName_json,m_SourceCollection,dumpNestedSourceInfo,m_ds9WCSType,wcs);
+		//status= SourceExporter::WriteToJson(m_catalogOutFileName_json,m_SourceCollection,dumpNestedSourceInfo,m_ds9WCSType,wcs);
+		status= SourceExporter::WriteToFullJson(m_catalogOutFileName_json,m_SourceCollection,dumpNestedSourceInfo,m_ds9WCSType,wcs,wcs);
 		if(status<0){
 			#ifdef LOGGING_ENABLED
 				WARN_LOG("Writing source catalog to json file "<<m_catalogOutFileName_json<<" failed!");
