@@ -41,7 +41,8 @@ void WriteSourceJsonCatalog(std::string filename="",std::string outfilename="sou
 
 	//## Write source collection to simple TTree
 	cout<<"INFO: Writing source json catalog ..."<<endl;
-	SourceExporter::WriteToJson(outfilename,sources);
+	SourceExporter::WriteToFullJson(outfilename,sources);
+	//SourceExporter::WriteToJson(outfilename,sources);
 
 	//cout<<"INFO: Writing source component json catalog ..."<<endl;
 	//SourceExporter::WriteComponentsToJson(outfilename_comp,sources);

@@ -381,6 +381,8 @@ class SourceComponentPars : public TObject {
 		*/
 		double GetPeakFlux(){return FitPars["A"];}
 
+		
+
 	private:
 
 		/**
