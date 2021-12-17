@@ -103,9 +103,15 @@ struct OptionHelper  {
 		root["max"]= maxValue;
 		return 0;
 	}
+	static std::string GetJsonPrintable(std::string& name,T& value,T& defaultValue,T& minValue,T& maxValue){
+		std::stringstream ss;
+		ss<<"Option: {\"name\": \""<<name<<"\", \"value\": "<<value<<", \"default\": "<<defaultValue<<", \"min\": "<<minValue<<", \"max\": "<<maxValue<<"}";
+		return ss.str();
+	}
+
 	static std::string GetPrintable(std::string& name,T& value,T& defaultValue,T& minValue,T& maxValue){
 		std::stringstream ss;
-		ss<<"Option: {\"name\": \""<<name<<"\", \"value\": "<<value<<", \"default\": "<<defaultValue<<", \"min\": "<<minValue<<" \"max\": "<<maxValue<<"}";
+		ss<<"\""<<name<<"\": "<<value<<" (default/min/max: "<<defaultValue<<"/"<<minValue<<"/"<<maxValue<<")";
 		return ss.str();
 	}
 	
@@ -135,9 +141,15 @@ struct OptionHelper<std::string> {
 		root["max"]= maxValue;
 		return 0;
 	}
-	static std::string GetPrintable(std::string& name,std::string& value,std::string& defaultValue,std::string& minValue,std::string& maxValue){
+	static std::string GetJsonPrintable(std::string& name,std::string& value,std::string& defaultValue,std::string& minValue,std::string& maxValue){
 		std::stringstream ss;
 		ss<<"Option: {\"name\": \""<<name<<"\", \"value\": "<<value<<", \"default\": "<<defaultValue<<", \"min\": "<<minValue<<" \"max\": "<<maxValue<<"}";
+		return ss.str();
+	}
+
+	static std::string GetPrintable(std::string& name,std::string& value,std::string& defaultValue,std::string& minValue,std::string& maxValue){
+		std::stringstream ss;
+		ss<<"\""<<name<<"\": "<<value<<" (default: "<<defaultValue<<")";
 		return ss.str();
 	}
 
@@ -164,11 +176,17 @@ struct OptionHelper<long int> {
 		root["max"]= Json::Value( static_cast<Json::Int64>(maxValue) );
 		return 0;
 	}	
-	static std::string GetPrintable(std::string& name,long int& value,long int& defaultValue,long int& minValue,long int& maxValue){
+	static std::string GetJsonPrintable(std::string& name,long int& value,long int& defaultValue,long int& minValue,long int& maxValue){
 		std::stringstream ss;
 		ss<<"Option: {\"name\": \""<<name<<"\", \"value\": "<<value<<", \"default\": "<<defaultValue<<", \"min\": "<<minValue<<" \"max\": "<<maxValue<<"}";
 		return ss.str();
 	}
+	static std::string GetPrintable(std::string& name,long int& value,long int& defaultValue,long int& minValue,long int& maxValue){
+		std::stringstream ss;
+		ss<<"\""<<name<<"\": "<<value<<" (default/min/max: "<<defaultValue<<"/"<<minValue<<"/"<<maxValue<<")";
+		return ss.str();
+	}	
+
 	//ClassDef(OptionHelper<long int>,1)
 
 };//close template specialization for long int
@@ -191,9 +209,14 @@ struct OptionHelper<bool>  {
 		root["max"]= maxValue;
 		return 0;
 	}
-	static std::string GetPrintable(std::string& name,bool& value,bool& defaultValue,bool& minValue,bool& maxValue){
+	static std::string GetJsonPrintable(std::string& name,bool& value,bool& defaultValue,bool& minValue,bool& maxValue){
 		std::stringstream ss;
 		ss<<std::boolalpha<<"Option: {\"name\": \""<<name<<"\", \"value\": "<<value<<", \"default\": "<<defaultValue<<", \"min\": "<<minValue<<" \"max\": "<<maxValue<<"}";
+		return ss.str();
+	}
+	static std::string GetPrintable(std::string& name,bool& value,bool& defaultValue,bool& minValue,bool& maxValue){
+		std::stringstream ss;
+		ss<<std::boolalpha<<"\""<<name<<"\": "<<value<<" (default: "<<defaultValue<<")";
 		return ss.str();
 	}
 	//ClassDef(OptionHelper<bool>,1)

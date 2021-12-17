@@ -47,6 +47,9 @@ void Usage(char* exeName){
   cout<<"-h, --help \t Show help message and exit"<<endl;
 	cout<<"-c, --config \t Config file containing option settings"<<endl;
 	cout<<"-m, --no-mpi \t Disable MPI run (e.g. run normally)"<<endl;
+	cout<<"-o, --options \t Show all defined configuration options"<<endl;
+	cout<<"-v, --version \t Print software version information"<<endl;
+	cout<<"-a, --authors \t Print authors information"<<endl;
 	cout<<"=============================="<<endl;
 }//close Usage()
 
@@ -55,6 +58,9 @@ static const struct option options_tab[] = {
   { "help", no_argument, 0, 'h' },
 	{ "config", required_argument, 0, 'c' },
 	{ "no-mpi", no_argument, 0, 'm' },
+	{ "options", no_argument, 0, 'o' },
+	{ "version", no_argument, 0, 'v' },
+	{ "authors", no_argument, 0, 'a' },
   {(char*)0, (int)0, (int*)0, (int)0}
 };
 
@@ -158,7 +164,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hc:m",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hc:mova",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -179,6 +185,38 @@ int ParseOptions(int argc, char *argv[])
 			{
 				mpiRunEnabled= false;
       	break;
+			}
+			case 'o':
+			{
+				cout<<"== CONFIG OPTIONS =="<<endl;
+				ConfigParser::Instance().PrintOptions();
+				cout<<"========================"<<endl;
+				exit(0);
+			}
+			case 'v':
+			{
+				std::string software_version= CAESAR_VERSION + std::string("_") + CAESAR_SHA_VERSION;
+				cout<<"caesar "<<software_version<<endl;
+				exit(0);
+			}
+			case 'a':
+			{
+				std::string authors_str= CAESAR_AUTHORS;
+				std::string contacts_str= CAESAR_AUTHOR_CONTACTS;
+		
+				std::vector<std::string> authors= CodeUtils::SplitStringOnPattern(authors_str, ';');
+				std::vector<std::string> contacts= CodeUtils::SplitStringOnPattern(contacts_str, ';');
+
+				for(size_t i=0;i<authors.size();i++)
+				{
+					std::string author_raw= authors[i];
+					std::vector<std::string> author_fields= CodeUtils::SplitStringOnPattern(author_raw, '-');
+					std::string author= CodeUtils::JoinStringVec(author_fields, " ");
+					std::string contact= contacts[i];
+					cout<<author<<" ("<<contact<<")"<<endl;
+				}
+
+				exit(0);
 			}
 			default:
 			{
