@@ -118,8 +118,8 @@ endif()
 	
 
 #---Locate the ROOT package and defines a number of variables (e.g. ROOT_INCLUDE_DIRS)
-SET (ROOT_REQUIRED_MODULES MathCore RIO Hist Tree Net PyROOT Minuit MathMore TMVA)
-SET (ROOT_OPTIONAL_MODULES Minuit2 FITSIO)
+SET (ROOT_REQUIRED_MODULES MathCore RIO Hist Tree Net Minuit MathMore TMVA)
+SET (ROOT_OPTIONAL_MODULES Minuit2 FITSIO PyROOT3)
 if(ENABLE_R)
 	list(APPEND ROOT_REQUIRED_MODULES RInterface Rtools)
 else()
