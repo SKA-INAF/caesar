@@ -117,8 +117,9 @@ endif()
 
 	
 # - Determine ROOT python version and pyroot components
+find_program(ROOT_CONFIG_EXECUTABLE NAMES root-config)
 #SET(PYVERSION_ROOT "3.6.13")
-execute_process( COMMAND "root-config --python-version"
+execute_process( COMMAND "${ROOT_CONFIG_EXECUTABLE}" --python-version
                  OUTPUT_VARIABLE PYVERSION_ROOT
  	               OUTPUT_STRIP_TRAILING_WHITESPACE )
 
