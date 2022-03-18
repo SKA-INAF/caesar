@@ -21,9 +21,6 @@ progress from the SCORPIO survey", MNRAS (2016) doi: 10.1093/mnras/stw982, arXiv
 or consider including me (`S. Riggi, INAF - Osservatorio Astrofisico di Catania, Via S. Sofia 78, I-95123, Catania, Italy`)
 as a co-author on your publications.
 
-## **Status**
-At present CAESAR is still being developed with major functionalities to be integrated in this repository. The API could be therefore subjected to significant changes. 
-
 ## **Installation**  
 
 ### **Prerequisites**
