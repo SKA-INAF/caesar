@@ -294,6 +294,7 @@
 
 // - Source export classes
 #pragma link C++ class Caesar::SourceExporter+;
+#pragma link C++ class Caesar::SourceImporter+;
 
 //slic generator
 #pragma link C++ class Caesar::SLICData+;
