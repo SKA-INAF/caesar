@@ -1763,7 +1763,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 				#ifdef LOGGING_ENABLED
 					INFO_LOG("Fit ellipse selection cut for fit component no. "<<k+1<<" of source "<<aSource->GetName()<<" not passed, flagging this component as fake...");
 				#endif
-				m_sourceFitPars.SetComponentFlag(k,eFake);
+				m_sourceFitPars.SetComponentSourcenessId(k,eFake);
 			}
 	
 		}//end loop fit components

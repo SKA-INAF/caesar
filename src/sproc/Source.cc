@@ -133,14 +133,18 @@ void Source::Copy(TObject &obj) const
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("Copy source "<<this->GetName()<<" variables...");
 	#endif
-  ((Source&)obj).Type = Type;
-	((Source&)obj).Flag = Flag;	
+  ((Source&)obj).MorphId = MorphId;
+	//((Source&)obj).Flag = Flag;
+	((Source&)obj).SourcenessId = SourcenessId;	
 	((Source&)obj).SimType= SimType;
 	((Source&)obj).SimMaxScale= SimMaxScale;
+	((Source&)obj).SourcenessScore= SourcenessScore;
+
 	((Source&)obj).m_BeamFluxIntegral = m_BeamFluxIntegral;
 	((Source&)obj).m_IsGoodSource = m_IsGoodSource;	
 	((Source&)obj).m_DepthLevel = m_DepthLevel;
 	((Source&)obj).m_HasNestedSources = m_HasNestedSources;
+	((Source&)obj).m_NestedAsCompositeSourceComponents = m_NestedAsCompositeSourceComponents;	
 
 	((Source&)obj).m_S_true= m_S_true;
 	((Source&)obj).m_X0_true= m_X0_true;
@@ -169,6 +173,7 @@ void Source::Copy(TObject &obj) const
 	((Source&)obj).ObjClassSubId= ObjClassSubId;
 	((Source&)obj).ObjLocationId= ObjLocationId;
 	((Source&)obj).ObjConfirmed= ObjConfirmed;
+	((Source&)obj).ObjClassScore= ObjClassScore;
 	
 	//Set object component class ids
 	((Source&)obj).componentObjLocationIds= componentObjLocationIds;
@@ -176,8 +181,10 @@ void Source::Copy(TObject &obj) const
 	((Source&)obj).componentObjClassIds= componentObjClassIds;
 	((Source&)obj).componentObjClassSubIds= componentObjClassSubIds;
 	((Source&)obj).componentObjConfirmed= componentObjConfirmed;
-	
 
+	//Set user tags
+	((Source&)obj).m_tags= m_tags;
+	
 	//Delete first a previously existing vector
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("Delete existing nested source list (#"<<(((Source&)obj).m_NestedSources).size()<<") from source "<<this->GetName()<<" ...");
@@ -226,11 +233,12 @@ Source& Source::operator=(const Source& source) {
 void Source::Init(){
 
 	//Init source flags
-	//Type= eUnknown;
-	Type= eUnknownType;
-	Flag= eCandidate;
+	MorphId= eUnknownMorph;
+	SourcenessId= eCandidate;
+	
 	SimType= eUnknownSimClass;
 	SimMaxScale= 0;
+	SourcenessScore= -1;//not assessed by default
 	m_BeamFluxIntegral= 0;
 	
 	m_IsGoodSource= true;
@@ -240,6 +248,7 @@ void Source::Init(){
 	m_HasNestedSources= false;
 	//m_NestedSource= 0;
 	m_NestedSources.clear();
+	m_NestedAsCompositeSourceComponents= false;
 
 	//Init source true info
 	m_HasTrueInfo= false;
@@ -268,6 +277,7 @@ void Source::Init(){
 	ObjClassId= eUNKNOWN_OBJECT;
 	ObjClassSubId= eUNKNOWN_OBJECT;
 	ObjConfirmed= false;
+	ObjClassScore= -1;//not assessed
 
 	//Init component object class ids
 	componentObjLocationIds.clear();
@@ -275,6 +285,9 @@ void Source::Init(){
 	componentObjClassIds.clear();
 	componentObjClassSubIds.clear();
 	componentObjConfirmed.clear();
+
+	//Init tags
+	m_tags.clear();
 
 }//close Init()
 
@@ -321,7 +334,7 @@ int Source::Draw(int pixMargin,ImgType imgType,bool drawImg,bool drawContours,bo
 
 		//Draw main source info
 		TPaveText* sourceMainInfoText = new TPaveText(0.4,0.15,0.8,0.3,"NDC");
-		sourceMainInfoText->AddText(Form("Name: %s, Type: %d, Freq: %s",this->GetName(),Type,freq.Data()));
+		sourceMainInfoText->AddText(Form("Name: %s, MorphId: %d, Freq: %s",this->GetName(),MorphId,freq.Data()));
 		sourceMainInfoText->AddText(Form("NPix: %ld, Xmin/Xmax: %1.2f/%1.2f, Ymin/Ymax: %1.2f/%1.2f",NPix,m_Xmin,m_Xmax,m_Ymin,m_Ymax));
 		sourceMainInfoText->AddText(Form("C(%1.2f,%1.2f), Wc(%1.2f,%1.2f)",X0,Y0,m_Sx,m_Sy));
 		sourceMainInfoText->AddText(Form("Stot(mJy): %1.1f, Smin/Smax(mJy): %1.2f/%1.2f",m_S*1.e+3,m_Smin*1.e+3,m_Smax*1.e+3));
@@ -475,12 +488,12 @@ const std::string Source::GetDS9Region(bool dumpNestedSourceInfo,bool convertToW
 	std::string regionColor= this->GetDS9RegionColor();
 
 	//- source type
-	std::string sourceTypeStr= GetSourceTypeStr(this->Type);
+	std::string sourceMorphLabel= GetSourceMorphLabel(this->MorphId);
 
 	//- source flag
-	std::string sourceFlagStr= GetSourceFlagStr(this->Flag);
+	std::string sourcenessStr= GetSourcenessLabel(this->SourcenessId);
 
-	std::vector<std::string> regionTags {sourceTypeStr,sourceFlagStr};
+	std::vector<std::string> regionTags {sourceMorphLabel, sourcenessStr};
 
 
 	std::string region= "";
@@ -530,10 +543,10 @@ const std::string Source::GetDS9Region(bool dumpNestedSourceInfo,bool convertToW
 
 			std::string regionText_nested= m_NestedSources[k]->GetName();
 			std::string regionColor_nested= m_NestedSources[k]->GetDS9RegionColor();
-			std::string sourceTypeStr_nested= GetSourceTypeStr(m_NestedSources[k]->Type);	
-			std::string sourceFlagStr_nested= GetSourceFlagStr(m_NestedSources[k]->Flag);
-			//std::vector<std::string> regionTags_nested {m_NestedSources[k]->GetDS9RegionTag()};
-			std::vector<std::string> regionTags_nested {sourceTypeStr_nested,sourceFlagStr_nested};
+			std::string sourceMorphStr_nested= GetSourceMorphLabel(m_NestedSources[k]->MorphId);	
+			std::string sourcenessStr_nested= GetSourcenessLabel(m_NestedSources[k]->SourcenessId);
+
+			std::vector<std::string> regionTags_nested {sourceMorphStr_nested, sourcenessStr_nested};
 
 			std::string region_nested= "";
 			if(convertToWCS)
@@ -619,19 +632,22 @@ const std::string Source::GetDS9FittedEllipseRegion(bool useFWHM,bool dumpNested
 			if(!ellipses[i]) continue;
 
 			//Get fit component flag
-			int fitComponentFlag= -1;
-			m_fitPars.GetComponentFlag(fitComponentFlag,i);
-			std::string fitComponentFlagStr= GetSourceFlagStr(fitComponentFlag);
+			//int fitComponentFlag= -1;
+			//m_fitPars.GetComponentFlag(fitComponentFlag,i);
+			//std::string fitComponentFlagStr= GetSourceFlagStr(fitComponentFlag);
+			int fitComponentSourcenessId= -1;
+			m_fitPars.GetComponentSourcenessId(fitComponentSourcenessId,i);
+			std::string fitComponentSourcenessStr= GetSourcenessLabel(fitComponentSourcenessId);
 
 			//Get fit component type
-			int fitComponentType= -1;
-			m_fitPars.GetComponentType(fitComponentType,i);
-			std::string fitComponentTypeStr= GetSourceTypeStr(fitComponentType);
+			int fitComponentMorphId= -1;
+			m_fitPars.GetComponentMorphId(fitComponentMorphId,i);
+			std::string fitComponentMorphStr= GetSourceMorphLabel(fitComponentMorphId);
 
 			//Get encoded string region
 			std::string regionText(Form("%s_fitcomp%d",this->GetName(),(int)(i+1)));
 			std::string regionColor= "red";
-			std::vector<std::string> regionTags {fitComponentTypeStr,"fit-component",fitComponentFlagStr,fitQualityFlagStr};
+			std::vector<std::string> regionTags {fitComponentMorphStr,"FIT-COMPONENT",fitComponentSourcenessStr,fitQualityFlagStr};
 
 			//std::string region= AstroUtils::EllipseToDS9Region(ellipses[i],regionText,regionColor,regionTags,useImageCoords);
 			std::string region= AstroUtils::EllipseToDS9Region(ellipses[i],regionText,regionColor,regionTags,pixOffset);
@@ -1177,28 +1193,26 @@ int Source::MergeSource(Source* aSource,bool copyPixels,bool checkIfAdjacent,boo
 	
 	
 	//Set new source type
-	int mergedSourceType= aSource->Type;
-	if( this->Type==eCompact || this->Type==ePointLike ){
-		if(mergedSourceType==eCompact || mergedSourceType==ePointLike) this->Type= eCompact; 
-		else if(mergedSourceType==eExtended || mergedSourceType==eCompactPlusExtended) this->Type= eCompactPlusExtended; 
-		//else this->Type= eUnknown;
-		else this->Type= eUnknownType; 
+	int mergedSourceMorphId= aSource->MorphId;
+	if( this->MorphId==eCompact || this->MorphId==ePointLike ){
+		if(mergedSourceMorphId==eCompact || mergedSourceMorphId==ePointLike) this->MorphId= eCompact; 
+		else if(mergedSourceMorphId==eExtended || mergedSourceMorphId==eCompactPlusExtended) this->MorphId= eCompactPlusExtended; 
+		else this->MorphId= eUnknownMorph; 
 	}
-	else if( this->Type==eExtended ){
-		if(mergedSourceType==eCompact || mergedSourceType==ePointLike) this->Type= eCompactPlusExtended; 
-		else if(mergedSourceType==eExtended) this->Type= eExtended;  
-		else if(mergedSourceType==eCompactPlusExtended) this->Type= eCompactPlusExtended; 
-		//else this->Type= eUnknown;
-		else this->Type= eUnknownType; 
+	else if( this->MorphId==eExtended ){
+		if(mergedSourceMorphId==eCompact || mergedSourceMorphId==ePointLike) this->MorphId= eCompactPlusExtended; 
+		else if(mergedSourceMorphId==eExtended) this->MorphId= eExtended;  
+		else if(mergedSourceMorphId==eCompactPlusExtended) this->MorphId= eCompactPlusExtended;
+		else if(mergedSourceMorphId==eDiffuse) this->MorphId= eDiffuse; 
+		else this->MorphId= eUnknownMorph; 
 	}
-	else if( this->Type==eCompactPlusExtended ){
-		//if(mergedSourceType==eUnknown) this->Type= eUnknown; 
-		if(mergedSourceType==eUnknownType) this->Type= eUnknownType; 
-		else this->Type= eCompactPlusExtended;  
+	else if( this->MorphId==eCompactPlusExtended ){
+		if(mergedSourceMorphId==eUnknownMorph) this->MorphId= eUnknownMorph;
+		else if(mergedSourceMorphId==eDiffuse) this->MorphId= eDiffuse;
+		else this->MorphId= eCompactPlusExtended;  
 	}
 	else{
-		//this->Type= eUnknown;
-		this->Type= eUnknownType; 
+		this->MorphId= eUnknownMorph; 
 	}
 
 	//Set sim max scale to max of the two sources

@@ -1100,9 +1100,9 @@ class SourceFitPars : public TObject {
 		}//close GetComponentFluxDerivMatrix()
 
 		/**
-		* \brief Set component flag
+		* \brief Set component sourceness id
 		*/
-		int SetComponentFlag(int componentId,int flag)
+		int SetComponentSourcenessId(int componentId, int flag)
 		{		
 			//Check component id	
 			if(componentId<0 || componentId>=nComponents){
@@ -1113,15 +1113,15 @@ class SourceFitPars : public TObject {
 			}
 
 			//Get component fit ellipse pars
-			pars[componentId].SetFlag(flag);
+			pars[componentId].SetSourcenessId(flag);
 
 			return 0;
 		}
 	
 		/**
-		* \brief Get component flag
+		* \brief Get component sourceness id
 		*/
-		int GetComponentFlag(int& flag,int componentId)
+		int GetComponentSourcenessId(int& flag, int componentId)
 		{
 			//Check component id
 			flag= -1;
@@ -1133,15 +1133,15 @@ class SourceFitPars : public TObject {
 			}
 	
 			//Retrieve flag
-			flag= pars[componentId].GetFlag();
+			flag= pars[componentId].GetSourcenessId();
 
 			return 0;
 		}
 
 		/**
-		* \brief Set component flag
+		* \brief Set component morph id
 		*/
-		int SetComponentType(int componentId,int type)
+		int SetComponentMorphId(int componentId,int flag)
 		{		
 			//Check component id	
 			if(componentId<0 || componentId>=nComponents){
@@ -1152,18 +1152,18 @@ class SourceFitPars : public TObject {
 			}
 
 			//Get component fit ellipse pars
-			pars[componentId].SetType(type);
+			pars[componentId].SetMorphId(flag);
 
 			return 0;
 		}
 
 		/**
-		* \brief Get component type
+		* \brief Get component morph id
 		*/
-		int GetComponentType(int& type,int componentId)
+		int GetComponentMorphId(int& flag,int componentId)
 		{
 			//Check component id
-			type= -1;
+			flag= -1;
 			if(componentId<0 || componentId>=nComponents){
 				#ifdef LOGGING_ENABLED
 					WARN_LOG("Component "<<componentId<<" does not exist!");
@@ -1172,7 +1172,7 @@ class SourceFitPars : public TObject {
 			}
 	
 			//Retrieve flag
-			type= pars[componentId].GetType();
+			flag= pars[componentId].GetMorphId();
 
 			return 0;
 		}

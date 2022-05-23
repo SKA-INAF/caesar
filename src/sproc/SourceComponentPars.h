@@ -131,24 +131,24 @@ class SourceComponentPars : public TObject {
 		std::map<std::string,double>const& GetFitParErrors() const {return FitParsErr;}		
 
 		/** 
-		\brief Get source component flag
+		\brief Get fit component sourceness id
  		*/	
-		int GetFlag(){return m_flag;}
+		int GetSourcenessId(){return m_sourcenessId;}
 
 		/** 
-		\brief Set source component flag
+		\brief Set fit component sourceness id
  		*/
-		void SetFlag(int flag){m_flag=flag;}
+		void SetSourcenessId(int flag){m_sourcenessId=flag;}
 
 		/** 
-		\brief Get source component type
+		\brief Get source component morph id
  		*/	
-		int GetType(){return m_type;}
+		int GetMorphId(){return m_morphId;}
 
 		/** 
-		\brief Set source component type
+		\brief Set source component morph id
  		*/
-		void SetType(int type){m_type=type;}
+		void SetMorphId(int flag){m_morphId=flag;}
 
 		/** 
 		\brief Get source component selected flag
@@ -461,11 +461,11 @@ class SourceComponentPars : public TObject {
 		double m_bmin_deconv_wcs;
 		double m_pa_deconv_wcs;
 
-		//- Source component flag
-		int m_flag;
+		//- Fit component sourceness
+		int m_sourcenessId;
 
-		//- Source component type
-		int m_type;
+		//- Source component morph id
+		int m_morphId;
 
 		//- Source component selection flag
 		bool m_selected;

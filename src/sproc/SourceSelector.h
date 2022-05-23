@@ -156,13 +156,13 @@ class SourceSelector : public TObject
 		*/
 		static bool SourceComponentPeakSNRCut(Source* aSource,Cut* cut);
 		/**
-		* \brief Select source fitted components by type
+		* \brief Select source fitted components by morphology flag
 		*/
-		static bool SourceComponentTypeCut(Source* aSource,Cut* cut);
+		static bool SourceComponentMorphCut(Source* aSource,Cut* cut);
 		/**
-		* \brief Select source fitted components by flag
+		* \brief Select source fitted components by sourceness
 		*/
-		static bool SourceComponentFlagCut(Source* aSource,Cut* cut);
+		static bool SourceComponentSourcenessCut(Source* aSource,Cut* cut);
 		/**
 		* \brief Select source fitted components by centroid distance
 		*/
@@ -206,13 +206,13 @@ class SourceSelector : public TObject
 		*/
 		static bool BeamAreaRatioCut(Source* source,Cut* cut);
 		/**
-		* \brief Select source by type flag
+		* \brief Select source by morphology flag
 		*/
-		static bool SourceTypeCut(Source* source,Cut* cut);
+		static bool SourceMorphCut(Source* source,Cut* cut);
 		/**
 		* \brief Select source by sourceness flag
 		*/
-		static bool SourceFlagCut(Source* source,Cut* cut);
+		static bool SourcenessCut(Source* source,Cut* cut);
 		/**
 		* \brief Select source by source sim type
 		*/

@@ -209,8 +209,8 @@ int DS9RegionParser::ParseRegionMetaData(DS9RegionMetaData& metadata,const std::
 	std::string name_delim_stop= "}";
 	std::string tag_delim_start= "tag={";
 	std::string tag_delim_stop= "}";
-	std::vector<std::string> sourceTypes {"unknown-type","compact","point-like","extended","compact-extended"};
-	std::vector<std::string> sourceFlags {"unknown-flag","real","candidate","fake"};
+	std::vector<std::string> sourceMorphLabels {"UNKNOWN-MORPH","COMPACT","POINT-LIKE","EXTENDED","COMPACT-EXTENDED","DIFFUSE"};
+	std::vector<std::string> sourcenessLabels {"REAL","CANDIDATE","FAKE"};
 	std::vector<std::string> sourceFitQualities {"uq-fit","hq-fit","mq-fit","lq-fit","bad-fit"};
 
 	//Loop over metadata and parse
@@ -236,28 +236,28 @@ int DS9RegionParser::ParseRegionMetaData(DS9RegionMetaData& metadata,const std::
 		if(first!=std::string::npos && last!=std::string::npos){
 			std::string tag= data_str.substr(first+tag_delim_start.size(),last-first-tag_delim_start.size());
 
-			//Parse source type
-			for(size_t j=0;j<sourceTypes.size();j++){
-				bool hasPattern= CodeUtils::HasPatternInString(tag,sourceTypes[j]);
+			//Parse source morph id
+			for(size_t j=0;j<sourceMorphLabels.size();j++){
+				bool hasPattern= CodeUtils::HasPatternInString(tag,sourceMorphLabels[j]);
 				if(!hasPattern) continue;
-				int sourceType= GetSourceType(sourceTypes[j]); 
+				int sourceMorphId= GetSourceMorphId(sourceMorphLabels[j]); 
 				#ifdef LOGGING_ENABLED
-					DEBUG_LOG("sourceType="<<sourceType);
+					DEBUG_LOG("sourceMorphId="<<sourceMorphId);
 				#endif
-				metadata.sourceType= sourceType;	
-				metadata.hasSourceType= true;
+				metadata.sourceMorphId= sourceMorphId;	
+				metadata.hasSourceMorphId= true;
 			}
 		
 			//Parse source flag
-			for(size_t j=0;j<sourceFlags.size();j++){
-				bool hasPattern= CodeUtils::HasPatternInString(tag,sourceFlags[j]);
+			for(size_t j=0;j<sourcenessLabels.size();j++){
+				bool hasPattern= CodeUtils::HasPatternInString(tag,sourcenessLabels[j]);
 				if(!hasPattern) continue;
-				int sourceFlag= GetSourceFlag(sourceFlags[j]); 
+				int sourcenessId= GetSourcenessId(sourcenessLabels[j]); 
 				#ifdef LOGGING_ENABLED
-					DEBUG_LOG("sourceFlag="<<sourceFlag);
+					DEBUG_LOG("sourcenessId="<<sourcenessId);
 				#endif
-				metadata.sourceFlag= sourceFlag;	
-				metadata.hasSourceFlag= true;
+				metadata.sourcenessId= sourcenessId;	
+				metadata.hasSourcenessId= true;
 			}
 
 			//Parse source fit qualities

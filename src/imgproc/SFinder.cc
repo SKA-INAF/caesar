@@ -725,7 +725,7 @@ int SFinder::Configure()
 	GET_OPTION_VALUE(residualZThr,m_residualZThr);
 	GET_OPTION_VALUE(removeNestedSources,m_removeNestedSources);
 	GET_OPTION_VALUE(dilateKernelSize,m_dilateKernelSize);
-	GET_OPTION_VALUE(removedSourceType,m_removedSourceType);
+	GET_OPTION_VALUE(removedSourceType,m_removedSourceMorphId);
 	GET_OPTION_VALUE(residualModel,m_residualModel);
 	GET_OPTION_VALUE(residualModelRandomize,m_residualModelRandomize);
 	GET_OPTION_VALUE(psSubtractionMethod,m_psSubtractionMethod);
@@ -1759,13 +1759,13 @@ Image* SFinder::FindCompactSourcesRobust(Image* inputImg,ImgBkgData* bkgData,Tas
 		sources_merged[k]->SetId(k+1);
 		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
 		sources_merged[k]->SetBeamFluxIntegral(beamArea);
-		sources_merged[k]->SetType(eCompact);
+		sources_merged[k]->SetMorphId(eCompact);
 		std::vector<Source*> nestedSources= sources_merged[k]->GetNestedSources();
 		for(size_t l=0;l<nestedSources.size();l++){
 			nestedSources[l]->SetId(l+1);
 			nestedSources[l]->SetName(Form("S%d_N%d",(signed)(k+1),(signed)(l+1)));
 			nestedSources[l]->SetBeamFluxIntegral(beamArea);
-			nestedSources[l]->SetType(eCompact);
+			nestedSources[l]->SetMorphId(eCompact);
 		}
 	}
 	
@@ -1932,7 +1932,7 @@ Image* SFinder::FindCompactSources(Image* inputImg, ImgBkgData* bkgData, TaskDat
 		INFO_LOG("#"<<nSources<<" compact sources detected in input image ...");
 	#endif
 	for(size_t k=0;k<sources.size();k++) {
-		sources[k]->SetType(eCompact);
+		sources[k]->SetMorphId(eCompact);
 	}
 	
 	//## Apply source selection?
@@ -1983,7 +1983,7 @@ Image* SFinder::FindResidualMap(Image* inputImg,ImgBkgData* bkgData,std::vector<
 	//#ifdef LOGGING_ENABLED
 	//	INFO_LOG("Printing source info before residual map...");
 	//	for(size_t k=0;k<sources.size();k++) {
-	//		INFO_LOG("Source no. "<<k<<": name="<<sources[k]->GetName()<<",id="<<sources[k]->Id<<", n="<<sources[k]->NPix<<" type="<<sources[k]->Type<<" (X0,Y0)=("<<sources[k]->X0<<","<<sources[k]->Y0<<")");
+	//		INFO_LOG("Source no. "<<k<<": name="<<sources[k]->GetName()<<",id="<<sources[k]->Id<<", n="<<sources[k]->NPix<<" morphId="<<sources[k]->MorphId<<" (X0,Y0)=("<<sources[k]->X0<<","<<sources[k]->Y0<<")");
 	//	}//end loop sources
 	//#endif
 	//########################
@@ -2017,7 +2017,7 @@ Image* SFinder::FindResidualMap(Image* inputImg,ImgBkgData* bkgData,std::vector<
 		#endif
 		residualImg= inputImg->GetSourceResidual(
 			sources,
-			m_dilateKernelSize,m_residualModel,m_removedSourceType,m_removeNestedSources,	
+			m_dilateKernelSize,m_residualModel,m_removedSourceMorphId,m_removeNestedSources,	
 			bkgData_res,m_UseLocalBkg,
 			m_residualModelRandomize,m_residualZThr,m_residualZHighThr,m_psSubtractionMethod,
 			smaskImg_binary,m_sourceBkgBoxBorderSize
@@ -2353,7 +2353,7 @@ Image* SFinder::FindExtendedSources_SalThr(Image* inputImg,ImgBkgData* bkgData,T
 	for(size_t k=0;k<sources.size();k++) {
 		sources[k]->SetId(k+1);
 		sources[k]->SetName(Form("Sext%d",(signed)(k+1)));
-		sources[k]->SetType(eExtended);
+		sources[k]->SetMorphId(eExtended);
 		sources[k]->SetBeamFluxIntegral(fluxCorrection);
 	}
 	
@@ -2649,7 +2649,7 @@ Image* SFinder::FindExtendedSources_HClust(Image* inputImg,ImgBkgData* bkgData,T
 	for(size_t k=0;k<sources.size();k++) {
 		sources[k]->SetId(k+1);
 		sources[k]->SetName(Form("Sext%d",(signed)(k+1)));
-		sources[k]->SetType(eExtended);
+		sources[k]->SetMorphId(eExtended);
 		sources[k]->SetBeamFluxIntegral(fluxCorrection);
 	}
 	
@@ -3094,7 +3094,7 @@ Image* SFinder::FindExtendedSources_AC(Image* inputImg,ImgBkgData* bkgData,TaskD
 	for(size_t k=0;k<sources.size();k++) {
 		sources[k]->SetId(k+1);
 		sources[k]->SetName(Form("Sext%d",(signed)(k+1)));
-		sources[k]->SetType(eExtended);
+		sources[k]->SetMorphId(eExtended);
 		sources[k]->SetBeamFluxIntegral(fluxCorrection);
 	}
 
@@ -3252,7 +3252,7 @@ Image* SFinder::FindExtendedSources_WT(Image* inputImg,TaskData* taskData,Image*
 	for(size_t k=0;k<sources.size();k++){
 		sources[k]->SetId(k+1);
 		sources[k]->SetName(Form("Sext%d",(signed)(k+1)));	
-		sources[k]->SetType(eExtended);
+		sources[k]->SetMorphId(eExtended);
 		sources[k]->SetBeamFluxIntegral(fluxCorrection);
 	}
 
@@ -3311,7 +3311,7 @@ int SFinder::SelectSources(std::vector<Source*>& sources)
 			#ifdef LOGGING_ENABLED
 				DEBUG_LOG("Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as a point-like source ...");
 			#endif
-			sources[i]->SetType(ePointLike);
+			sources[i]->SetMorphId(ePointLike);
 		}
 		else{
 			#ifdef LOGGING_ENABLED
@@ -3345,7 +3345,7 @@ int SFinder::SelectSources(std::vector<Source*>& sources)
 				#ifdef LOGGING_ENABLED
 					DEBUG_LOG("Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as a point-like source ...");
 				#endif
-				nestedSources[j]->SetType(ePointLike);
+				nestedSources[j]->SetMorphId(ePointLike);
 			}
 			
 			//Add to selected nested list
@@ -3508,12 +3508,12 @@ bool SFinder::IsPointLikeSource(Source* aSource)
 bool SFinder::IsFittableSource(Source* aSource)
 {
 	//Check if not point-like or compact
-	int sourceType= aSource->Type;
-	bool isCompact= (sourceType==ePointLike || sourceType==eCompact);
+	int sourceMorphId= aSource->MorphId;
+	bool isCompact= (sourceMorphId==ePointLike || sourceMorphId==eCompact);
 	if(!isCompact) return false;
 
 	//If compact source check nbeams (if too large do not perform fit)
-	if(sourceType==eCompact){
+	if(sourceMorphId==eCompact){
 		double NPix= aSource->GetNPixels();
 		double beamArea= aSource->GetBeamFluxIntegral();
 		double nBeams= 0;
@@ -4059,7 +4059,7 @@ int SFinder::SaveDS9RegionFile()
 	WCS* wcs= 0;
 
 	for(size_t k=0;k<m_SourceCollection.size();k++){
-		int source_type= m_SourceCollection[k]->Type;
+		//int source_type= m_SourceCollection[k]->MorphId;
 		bool isAtEdge= m_SourceCollection[k]->IsAtEdge();
 
 		//If WCS is not computed, compute it
@@ -5036,13 +5036,13 @@ int SFinder::MergeTaskData()
 
 				//Process sources not at edge
 				for(size_t k=0;k<(m_taskDataPerWorkers[i][j]->sources).size();k++){
-					int sourceType= (m_taskDataPerWorkers[i][j]->sources)[k]->Type;
+					int sourceMorphId= (m_taskDataPerWorkers[i][j]->sources)[k]->MorphId;
 					bool hasFitInfo= (m_taskDataPerWorkers[i][j]->sources)[k]->HasFitInfo();
-					if(sourceType==eCompact) nCompactSources++;
-					else if(sourceType==eExtended) nExtendedSources++;
-					else if(sourceType==ePointLike) nPointLikeSources++;
+					if(sourceMorphId==eCompact) nCompactSources++;
+					else if(sourceMorphId==eExtended) nExtendedSources++;
+					else if(sourceMorphId==ePointLike) nPointLikeSources++;
 					else nUnknown++;
-					if( (sourceType==ePointLike || sourceType==eCompact) && hasFitInfo ) nCompactSourcesWithFitInfo++;
+					if( (sourceMorphId==ePointLike || sourceMorphId==eCompact) && hasFitInfo ) nCompactSourcesWithFitInfo++;
 
 					//Reset source name (otherwise we have sources with same name coming from different workers)
 					(m_taskDataPerWorkers[i][j]->sources)[k]->SetId(nSourcesFinal);
@@ -5061,13 +5061,13 @@ int SFinder::MergeTaskData()
 
 				//Add edge sources not merged (if merging was not selected as option)
 				for(size_t k=0;k<(m_taskDataPerWorkers[i][j]->sources_edge).size();k++){
-					int sourceType= (m_taskDataPerWorkers[i][j]->sources_edge)[k]->Type;
+					int sourceMorphId= (m_taskDataPerWorkers[i][j]->sources_edge)[k]->MorphId;
 					bool hasFitInfo= (m_taskDataPerWorkers[i][j]->sources_edge)[k]->HasFitInfo();
-					if(sourceType==eCompact) nCompactSources++;
-					else if(sourceType==eExtended) nExtendedSources++;
-					else if(sourceType==ePointLike) nPointLikeSources++;
+					if(sourceMorphId==eCompact) nCompactSources++;
+					else if(sourceMorphId==eExtended) nExtendedSources++;
+					else if(sourceMorphId==ePointLike) nPointLikeSources++;
 					else nUnknown++;
-					if( (sourceType==ePointLike || sourceType==eCompact) && hasFitInfo ) nCompactSourcesWithFitInfo_edge++;
+					if( (sourceMorphId==ePointLike || sourceMorphId==eCompact) && hasFitInfo ) nCompactSourcesWithFitInfo_edge++;
 
 					//Reset source name (otherwise we have sources with same name coming from different workers)
 					(m_taskDataPerWorkers[i][j]->sources_edge)[k]->SetId(nSourcesFinal);
@@ -5217,10 +5217,10 @@ int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* task
 		sources_merged[k]->SetId(k+1);
 		sources_merged[k]->SetName(Form("S%d",(signed)(k+1)));
 		sources_merged[k]->SetBeamFluxIntegral(beamArea);
-		sources_merged[k]->SetType(eCompact);
+		sources_merged[k]->SetMorphId(eCompact);
 		bool isFittable= IsFittableSource(sources_merged[k]);
 		if(!isFittable){
-			sources_merged[k]->SetType(eExtended);
+			sources_merged[k]->SetMorphId(eExtended);
 		}
 
 		std::vector<Source*> nestedSources= sources_merged[k]->GetNestedSources();
@@ -5228,13 +5228,13 @@ int SFinder::MergeTaskSources(Image* inputImg,ImgBkgData* bkgData,TaskData* task
 			nestedSources[l]->SetId(l+1);
 			nestedSources[l]->SetName(Form("S%d_N%d",(signed)(k+1),(signed)(l+1)));
 			nestedSources[l]->SetBeamFluxIntegral(beamArea);
-			nestedSources[l]->SetType(eCompact);
+			nestedSources[l]->SetMorphId(eCompact);
 			bool isFittable_nested= IsFittableSource(nestedSources[l]);
 			if(!isFittable_nested){
-				nestedSources[l]->SetType(eExtended);
+				nestedSources[l]->SetMorphId(eExtended);
 			}
-			if(sources_merged[k]->Type==eExtended && nestedSources[l]->Type==eCompact){
-				sources_merged[k]->SetType(eCompactPlusExtended);
+			if(sources_merged[k]->MorphId==eExtended && nestedSources[l]->MorphId==eCompact){
+				sources_merged[k]->SetMorphId(eCompactPlusExtended);
 			}
 		}//end loop nested sources
 	}//end loop sources
@@ -5428,7 +5428,7 @@ int SFinder::MergeSourcesAtEdge()
 
 		//Merge other sources in the group if any 
 		int nMerged= 0;
-		int source_type= source->Type;
+		//int source_type= source->MorphId;
 		for(size_t j=1;j<connected_source_indexes[i].size();j++){
 			int index_adj= connected_source_indexes[i][j];
 			long int sindex_adj= sourcesToBeMerged[index_adj].source_index;

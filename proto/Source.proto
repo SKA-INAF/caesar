@@ -325,9 +325,9 @@ message SourceComponentPars {
 	optional float m_bmin_deconv_wcs= 36;
 	optional float m_pa_deconv_wcs= 37;
 
-	optional int32 m_flag= 38;
+	optional int32 m_sourcenessId= 38;
 	optional float m_pixSize= 39;
-	optional int32 m_type= 40;
+	optional int32 m_morphId= 40;
 	optional bool m_selected= 41;
 
 }//close SourceComponentPars()
@@ -378,8 +378,8 @@ message SourceFitPars {
 //==============================
 message Source {
 	optional Blob blob= 1;
-	optional int32 Type= 2;
-	optional int32 Flag= 3;
+	optional int32 MorphId= 2;
+	optional int32 SourcenessId= 3;
 	optional int32 SimType= 4;
 	optional float SimMaxScale= 5;
 	optional float m_BeamFluxIntegral= 6;
@@ -389,42 +389,51 @@ message Source {
 	optional int32 m_DepthLevel= 8;
 	optional bool m_HasNestedSources= 9;
 	repeated Source m_NestedSources= 10;
+	optional bool m_NestedAsCompositeSourceComponents= 11;
 
 	//True source info
-	optional bool m_HasTrueInfo= 11;
-	optional float m_S_true= 12;
-	optional float m_X0_true= 13;
-	optional float m_Y0_true= 14;
+	optional bool m_HasTrueInfo= 12;
+	optional float m_S_true= 13;
+	optional float m_X0_true= 14;
+	optional float m_Y0_true= 15;
 
 	//Fit pars
-	optional bool m_HasFitInfo= 15;
-	optional SourceFitPars m_fitPars= 16;
-	optional int32 m_fitStatus= 17;
+	optional bool m_HasFitInfo= 16;
+	optional SourceFitPars m_fitPars= 17;
+	optional int32 m_fitStatus= 18;
 
 	//Spectral index data
-	optional bool m_hasSpectralIndexData= 18;
-	optional SpectralIndexData m_spectralIndexData= 19;
-	optional bool m_hasComponentSpectralIndexData= 20;
-	optional SpectralIndexDataCollection m_componentSpectralIndexData= 21;
+	optional bool m_hasSpectralIndexData= 19;
+	optional SpectralIndexData m_spectralIndexData= 20;
+	optional bool m_hasComponentSpectralIndexData= 21;
+	optional SpectralIndexDataCollection m_componentSpectralIndexData= 22;
 	
 	//Object class ids
-	optional int32 ObjLocationId= 22;
-	optional int32 ObjClassId= 23;
-	optional string ObjClassStrId= 24;
-	optional int32 ObjClassSubId= 25;
-	optional bool ObjConfirmed= 26;
-	repeated int32 componentObjLocationId= 27;
-	repeated int32 componentObjClassId= 28;
-	repeated string componentObjClassStrId= 29;
-	repeated int32 componentObjClassSubId= 30;
-	repeated bool componentObjConfirmed= 31;
-
+	optional int32 ObjLocationId= 23;
+	optional int32 ObjClassId= 24;
+	optional string ObjClassStrId= 25;
+	optional int32 ObjClassSubId= 26;
+	optional bool ObjConfirmed= 27;
+	repeated int32 componentObjLocationId= 28;
+	repeated int32 componentObjClassId= 29;
+	repeated string componentObjClassStrId= 30;
+	repeated int32 componentObjClassSubId= 31;
+	repeated bool componentObjConfirmed= 32;
 
 	//Astro objects
-	optional bool m_hasAstroObjectData= 32;
-	optional AstroObjectCollection m_astroObjects= 33;
-	optional bool m_hasComponentAstroObjectData= 34;
-	repeated AstroObjectCollection m_componentAstroObjects= 35;
+	optional bool m_hasAstroObjectData= 33;
+	optional AstroObjectCollection m_astroObjects= 34;
+	optional bool m_hasComponentAstroObjectData= 35;
+	repeated AstroObjectCollection m_componentAstroObjects= 36;
+
+	//User tags
+	repeated string tags= 37;
+
+	//Sourceness score 
+	optional float SourcenessScore= 38;
+
+	//Astro object classification score
+	optional float ObjClassScore= 39;
 
 }//close Source schema
 

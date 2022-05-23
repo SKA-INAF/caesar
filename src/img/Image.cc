@@ -2083,7 +2083,7 @@ int Image::FindExtendedSource_CV(std::vector<Source*>& sources,Image* initSegmIm
 		int imgMedian= m_Stats->median;
 		for(size_t k=0;k<sources.size();k++){
 			//Tag sources as extended
-			sources[k]->SetType(eExtended);
+			sources[k]->SetMorphId(eExtended);
 
 			//Check if source is a "negative excess"
 			double Smedian= sources[k]->Median;
@@ -2706,7 +2706,7 @@ Image* Image::GetSourceMask(std::vector<Source*>const& sources,bool isBinary,boo
 }//close GetSourceMask()
 
 
-Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,int dilateModel,int dilateSourceType,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr,int psSubtractionMethod,Image* mask,int bkgBoxThickness)
+Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,int dilateModel,int dilateSourceMorphId,bool skipToNested,ImgBkgData* bkgData,bool useLocalBkg,bool randomize,double zThr,double zBrightThr,int psSubtractionMethod,Image* mask,int bkgBoxThickness)
 {
 	//Check bkg data
 	if(dilateModel==eDilateWithBkg){
@@ -2759,14 +2759,14 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 	std::vector<Source*> psSources;
 	for(size_t i=0;i<sources.size();i++){
 		Source* source= sources[i];
-		int sourceType= source->Type;
+		int sourceMorphId= source->MorphId;
 		bool hasFitInfo= source->HasFitInfo();
 		bool hasNestedSources= source->HasNestedSources();
-		bool isSelectedSource= (dilateSourceType==-1 || sourceType==dilateSourceType);
+		bool isSelectedSource= (dilateSourceMorphId==-1 || sourceMorphId==dilateSourceMorphId);
 		bool addToPSList= (
 			hasFitInfo && 
 			psSubtractionMethod==ePS_MODELSUBTRACTION &&
-			(dilateSourceType==-1 || dilateSourceType==ePointLike || dilateSourceType==eCompact)
+			(dilateSourceMorphId==-1 || dilateSourceMorphId==ePointLike || dilateSourceMorphId==eCompact)
 		);
 		
 		//Check is source stats are available
@@ -2797,7 +2797,7 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 		if(fabs(Z)>zBrightThr) isBrightSource= true;
 		
 		#ifdef LOGGING_ENABLED
-			DEBUG_LOG("Source "<<source->GetName()<<" sourceType="<<sourceType<<", hasFitInfo?"<<hasFitInfo<<", hasNestedSources?"<<hasNestedSources<<", isSelectedSource?"<<isSelectedSource<<", addToPSList? "<<addToPSList<<" (psSubtractionMethod="<<psSubtractionMethod<<", dilateSourceType="<<dilateSourceType<<"), isDilatedSource? "<<isDilatedSource<<", isBrightSource? "<<isBrightSource);
+			DEBUG_LOG("Source "<<source->GetName()<<" sourceMorphId="<<sourceMorphId<<", hasFitInfo?"<<hasFitInfo<<", hasNestedSources?"<<hasNestedSources<<", isSelectedSource?"<<isSelectedSource<<", addToPSList? "<<addToPSList<<" (psSubtractionMethod="<<psSubtractionMethod<<", dilateSourceMorphId="<<dilateSourceMorphId<<"), isDilatedSource? "<<isDilatedSource<<", isBrightSource? "<<isBrightSource);
 		#endif
 
 		//Select source
@@ -2812,14 +2812,16 @@ Image* Image::GetSourceResidual(std::vector<Source*>const& sources,int kernSize,
 			if(hasNestedSources && skipToNested){
 				std::vector<Source*> nestedSources= source->GetNestedSources();
 				for(size_t k=0;k<nestedSources.size();k++){
-					int nestedSourceType= nestedSources[k]->Type;
+					int nestedSourceMorphId= nestedSources[k]->MorphId;
 					bool hasFitInfo_nested= source->HasFitInfo();
-					bool isSelectedSource_nested= (dilateSourceType==-1 || nestedSourceType==sourceType);
+					//bool isSelectedSource_nested= (dilateSourceMorphId==-1 || nestedSourceMorphId==sourceMorphId);//possible bug??
+					bool isSelectedSource_nested= (dilateSourceMorphId==-1 || nestedSourceMorphId==dilateSourceMorphId);//possible bug??
+
 					if(!isSelectedSource_nested) continue;
 					bool addToPSList_nested= (
 						hasFitInfo_nested && 
 						psSubtractionMethod==ePS_MODELSUBTRACTION &&
-						(dilateSourceType==-1 || dilateSourceType==ePointLike || dilateSourceType==eCompact)
+						(dilateSourceMorphId==-1 || dilateSourceMorphId==ePointLike || dilateSourceMorphId==eCompact)
 					);
 					
 					if(addToPSList_nested) psSources.push_back(nestedSources[k]);
@@ -4328,14 +4330,13 @@ int Image::Draw(std::vector<Source*>const& sources,int palette,bool drawFull,boo
 
 	//Draw sources in current canvas
 	for(unsigned int k=0;k<sources.size();k++){	
-		int type= sources[k]->Type;
+		int type= sources[k]->MorphId;
 		int lineColor= kBlack;
-		if(type==eCompact)
-			lineColor= kBlack;	
-		else if(type==ePointLike)
-			lineColor= kRed;
-		else if(type==eExtended)
-			lineColor= kGreen+1;	
+		if(type==eCompact) lineColor= kBlack;	
+		else if(type==ePointLike) lineColor= kRed;
+		else if(type==eExtended) lineColor= kGreen+1;
+		else if(type==eCompactPlusExtended) lineColor= kMagenta;
+		else if(type==eDiffuse) lineColor= kYellow;	
 		sources[k]->Draw(false,false,true,lineColor);
 	}//end loop sources
 
@@ -4449,14 +4450,13 @@ int Image::Plot(std::vector<Source*>const& sources,bool useCurrentCanvas,bool dr
 
 	//## Draw sources
 	for(unsigned int k=0;k<sources.size();k++){	
-		int type= sources[k]->Type;
+		int type= sources[k]->MorphId;
 		int lineColor= kBlack;
-		if(type==eCompact)
-			lineColor= kBlack;	
-		else if(type==ePointLike)
-			lineColor= kRed;
-		else if(type==eExtended)
-			lineColor= kGreen+1;	
+		if(type==eCompact) lineColor= kBlack;	
+		else if(type==ePointLike) lineColor= kRed;
+		else if(type==eExtended) lineColor= kGreen+1;	
+		else if(type==eCompactPlusExtended) lineColor= kMagenta;	
+		else if(type==eDiffuse) lineColor= kYellow;	
 		sources[k]->Draw(false,false,true,lineColor);
 	}//end loop sources
 

@@ -31,6 +31,7 @@
 
 #include <TMath.h>
 #include <math.h>
+#include <algorithm>
 #include <string>
 
 namespace Caesar {
@@ -107,8 +108,19 @@ enum BkgMethod {
 /**
 * \brief Source type enumeration
 */
+/*
 enum SourceType {
 	eUnknownType=0,
+	eCompact=1,
+	ePointLike=2,
+	eExtended=3,
+	eCompactPlusExtended=4,
+	eDiffuse=5
+};
+*/
+
+enum SourceMorphology {
+	eUnknownMorph=0,
 	eCompact=1,
 	ePointLike=2,
 	eExtended=3,
@@ -119,8 +131,8 @@ enum SourceType {
 /**
 * \brief Source flag enumeration
 */
-enum SourceFlag {
-  eUnknownSourceFlag=-1,
+enum Sourceness {
+  //eUnknownSourceFlag=-1,
 	eReal=1,
 	eCandidate=2,
 	eFake=3
@@ -128,50 +140,38 @@ enum SourceFlag {
 
 
 /**
-* \brief Convert source flag enumeration to string
+* \brief Convert sourceness flag enumeration to string
 */
-inline std::string GetSourceFlagStr(int sourceFlag)
+inline std::string GetSourcenessLabel(int flag)
 {
-	std::string flagStr= "";
-	if(sourceFlag==eReal) flagStr= "real";
-	else if(sourceFlag==eCandidate) flagStr= "candidate";
-	else if(sourceFlag==eFake) flagStr= "fake";
-	else if(sourceFlag==eUnknownSourceFlag) flagStr= "unknown-flag";
-	else flagStr= "unknown-flag";
-	return flagStr;
-}
-
-/**
-* \brief Convert source flag enumeration to sourceness label string
-*/
-inline std::string GetSourcenessLabel(int sourceFlag)
-{
-	std::string flagStr= "";
-	if(sourceFlag==eReal) flagStr= "REAL";
-	else if(sourceFlag==eCandidate) flagStr= "CANDIDATE";
-	else if(sourceFlag==eFake) flagStr= "FALSE";
-	else if(sourceFlag==eUnknownSourceFlag) flagStr= "UNKNOWN";
-	else flagStr= "UNKNOWN";
-	return flagStr;
+	std::string label= "CANDIDATE";
+	if(flag==eReal) label= "REAL";
+	else if(flag==eCandidate) label= "CANDIDATE";
+	else if(flag==eFake) label= "FALSE";
+	else label= "CANDIDATE";
+	return label;
 }
 
 /**
 * \brief Convert source flag enumeration from string
 */
-inline int GetSourceFlag(std::string flagStr)
+inline int GetSourcenessId(std::string label)
 {
-	int sourceFlag= eUnknownSourceFlag;
-	if(flagStr=="real") sourceFlag= eReal;
-	else if(flagStr=="candidate") sourceFlag= eCandidate;
-	else if(flagStr=="fake") sourceFlag= eFake;
-	else if(flagStr=="unknown-flag") sourceFlag= eUnknownSourceFlag;
-	else sourceFlag= eUnknownSourceFlag;
-	return sourceFlag;
+	//Convert label to upper case
+	std::transform(label.begin(), label.end(), label.begin(), ::toupper);
+
+	int flag= eCandidate;
+	if(label=="REAL") flag= eReal;
+	else if(label=="CANDIDATE") flag= eCandidate;
+	else if(label=="FAKE" || label=="SPURIOUS" || label=="FALSE") flag= eFake;
+	else flag= eCandidate;
+	return flag;
 }
 
 /**
 * \brief Convert source type enumeration to string
 */
+/*
 inline std::string GetSourceTypeStr(int sourceType)
 {
 	std::string typeStr= "";
@@ -183,35 +183,54 @@ inline std::string GetSourceTypeStr(int sourceType)
 	else typeStr= "unknown-type";
 	return typeStr;
 }
+*/
 
 /**
 * \brief Convert source type enumeration to morph label string
 */
-inline std::string GetSourceMorphLabel(int sourceType)
+inline std::string GetSourceMorphLabel(int flag)
 {
-	std::string typeStr= "";
-	if(sourceType==eUnknownType) typeStr= "UNKNOWN";
-	else if(sourceType==eCompact) typeStr= "COMPACT";
-	else if(sourceType==ePointLike) typeStr= "POINT-LIKE";
-	else if(sourceType==eExtended) typeStr= "EXTENDED";
-	else if(sourceType==eCompactPlusExtended) typeStr= "COMPACT-EXTENDED";
-	else typeStr= "UNKNOWN";
-	return typeStr;
+	std::string label= "";
+	if(flag==eUnknownMorph) label= "UNKNOWN-MORPH";
+	else if(flag==eCompact) label= "COMPACT";
+	else if(flag==ePointLike) label= "POINT-LIKE";
+	else if(flag==eExtended) label= "EXTENDED";
+	else if(flag==eCompactPlusExtended) label= "COMPACT-EXTENDED";
+	else if(flag==eDiffuse) label= "DIFFUSE";
+	else label= "UNKNOWN-MORPH";
+	return label;
 }
 
 /**
 * \brief Convert source type string to enumeration
 */
+/*
 inline int GetSourceType(std::string typeStr)
 {
 	int type= eUnknownType;
-	if(typeStr=="" || typeStr=="unknown-type") type= eUnknownType;
-	else if(typeStr=="compact") type= eCompact;
-	else if(typeStr=="point-like") type= ePointLike;
-	else if(typeStr=="extended") type= eExtended;
-	else if(typeStr=="compact-extended") type= eCompactPlusExtended;
+	if(typeStr=="" || typeStr=="unknown-type" || typeStr=="UNKNOWN") type= eUnknownType;
+	else if(typeStr=="compact" || typeStr=="COMPACT") type= eCompact;
+	else if(typeStr=="point-like" || typeStr=="POINT-LIKE") type= ePointLike;
+	else if(typeStr=="extended" || typeStr=="EXTENDED") type= eExtended;
+	else if(typeStr=="compact-extended" || typeStr=="COMPACT-EXTENDED") type= eCompactPlusExtended;
 	else type= eUnknownType;
 	return type;
+}
+*/
+inline int GetSourceMorphId(std::string label)
+{
+	//Convert label to upper case
+	std::transform(label.begin(), label.end(), label.begin(), ::toupper);
+
+	int flag= eUnknownMorph;
+	if(label=="" || label=="UNKNOWN-MORPH" || label=="UNKNOWN") flag= eUnknownMorph;
+	else if(label=="COMPACT") flag= eCompact;
+	else if(label=="POINT-LIKE") flag= ePointLike;
+	else if(label=="EXTENDED") flag= eExtended;
+	else if(label=="COMPACT-EXTENDED") flag= eCompactPlusExtended;
+	else if(label=="DIFFUSE") flag= eDiffuse;
+	else flag= eUnknownMorph;
+	return flag;
 }
 
 /**
@@ -244,6 +263,17 @@ enum SourceFitQuality
 */
 inline std::string GetSourceFitQualityStr(int fitQuality)
 {
+	std::string label= "";
+	if(fitQuality==eBadFit) label= "BAD-FIT";
+	else if(fitQuality==eLQFit) label= "LQ-FIT";
+	else if(fitQuality==eMQFit) label= "MQ-FIT";
+	else if(fitQuality==eHQFit) label= "HQ-FIT";
+	else label= "UNKNOWN-FIT-QUALITY";
+	return label;
+}
+/*
+inline std::string GetSourceFitQualityStr(int fitQuality)
+{
 	std::string flagStr= "";
 	if(fitQuality==eBadFit) flagStr= "bad-fit";
 	else if(fitQuality==eLQFit) flagStr= "lq-fit";
@@ -252,6 +282,7 @@ inline std::string GetSourceFitQualityStr(int fitQuality)
 	else flagStr= "uq-fit";//unknown
 	return flagStr;
 }
+*/
 
 /**
 * \brief Convert source fit quality enumeration to string (v2)
@@ -263,13 +294,26 @@ inline std::string GetSourceFitQualityStr_V2(int fitQuality)
 	else if(fitQuality==eLQFit) flagStr= "LOW";
 	else if(fitQuality==eMQFit) flagStr= "MEDIUM";
 	else if(fitQuality==eHQFit) flagStr= "HIGH";
-	else flagStr= "UNKNOWN";//unknown
+	else flagStr= "UNKNOWN";
 	return flagStr;
 }
 
 /**
 * \brief Convert source fit quality enumeration to string
 */
+inline int GetSourceFitQuality(std::string label)
+{
+	int fitQuality= eUnknownFitQuality;
+	if(label=="BAD-FIT") fitQuality= eBadFit;
+	else if(label=="LQ-FIT") fitQuality= eLQFit;
+	else if(label=="MQ-FIT") fitQuality= eMQFit;
+	else if(label=="HQ-FIT") fitQuality= eHQFit;
+	else if(label=="UNKNOWN-FIT-QUALITY") fitQuality= eUnknownFitQuality;
+	else fitQuality= eUnknownFitQuality;
+	return fitQuality;
+}
+
+/*
 inline int GetSourceFitQuality(std::string flagStr)
 {
 	int fitQuality= eUnknownFitQuality;
@@ -281,7 +325,7 @@ inline int GetSourceFitQuality(std::string flagStr)
 	else fitQuality= eUnknownFitQuality;
 	return fitQuality;
 }
-		
+*/
 
 enum ColorPaletteStyle {
 	eRAINBOW= 0,

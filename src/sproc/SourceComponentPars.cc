@@ -106,8 +106,8 @@ SourceComponentPars::SourceComponentPars()
 	InitEllipsePars();
 
 	//Init other vars
-	m_flag= eCandidate;
-	m_type= ePointLike;
+	m_sourcenessId= eCandidate;
+	m_morphId= ePointLike;
 	m_selected= true;
 
 }//close costructor
@@ -180,8 +180,8 @@ void SourceComponentPars::Copy(TObject &obj) const
 	((SourceComponentPars&)obj).m_bmin_deconv_wcs = m_bmin_deconv_wcs;
 	((SourceComponentPars&)obj).m_pa_deconv_wcs = m_pa_deconv_wcs;
 				
-	((SourceComponentPars&)obj).m_flag = m_flag;
-	((SourceComponentPars&)obj).m_type = m_type;
+	((SourceComponentPars&)obj).m_sourcenessId = m_sourcenessId;	
+	((SourceComponentPars&)obj).m_morphId = m_morphId;
 	((SourceComponentPars&)obj).m_selected = m_selected;
 						
 	//Copy maps
@@ -204,8 +204,8 @@ void SourceComponentPars::Init()
 	InitEllipsePars();
 
 	//Init other vars
-	m_flag= eCandidate;
-	m_type= ePointLike;
+	m_sourcenessId= eCandidate;
+	m_morphId= ePointLike;
 	m_selected= true;
 
 }//close Init()

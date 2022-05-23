@@ -177,13 +177,13 @@ class Source : public Blob {
 		
 	public:
 		/**
-		* \brief Set source type
+		* \brief Set source morphology id
 		*/
-		void SetType(SourceType choice){Type=choice;}
+		void SetMorphId(SourceMorphology choice){MorphId=choice;}
 		/**
-		* \brief Set source flag
+		* \brief Set sourceness id
 		*/
-		void SetFlag(SourceFlag choice){Flag=choice;}
+		void SetSourcenessId(Sourceness choice){SourcenessId=choice;}
 		/**
 		* \brief Set source sim type
 		*/
@@ -228,7 +228,7 @@ class Source : public Blob {
 			int nestedId= nNestedSources+1;
 			TString nestedName= Form("%s_N%d",this->GetName(),nestedId);
 			aNestedSource->Id= nestedId;
-			aNestedSource->Type= aNestedSource->Type;
+			aNestedSource->MorphId= aNestedSource->MorphId;
 			aNestedSource->SetName(std::string(nestedName));
 			aNestedSource->m_DepthLevel= this->m_DepthLevel+1;
 			m_NestedSources.push_back(aNestedSource);
@@ -320,6 +320,15 @@ class Source : public Blob {
 		*/
 		int FindNestedSources(std::vector<Source*>& nestedSources,double nestedBlobMinScale=1,double nestedBlobMaxScale=3,double nestedBlobScaleStep=1,double nestedBlobPeakZThr=5,double nestedBlobPeakZMergeThr=2.5,int minPixels=5,double nestedBlobThrFactor=0,double nestedBlobKernFactor=6,double minNestedMotherDist=2,double maxMatchingPixFraction=0.5);
 	
+		/**
+		* \brief Are nested part of composite source?
+		*/
+		bool AreNestedComponentsOfCompositeSource(){return m_NestedAsCompositeSourceComponents;}
+		/**
+		* \brief Set has nested sources
+		*/
+		void SetAreNestedComponentsOfCompositeSource(bool val){m_NestedAsCompositeSourceComponents=val;}
+
 
 		/**
 		* \brief Draw contours
@@ -346,12 +355,14 @@ class Source : public Blob {
 		/**
 		* \brief Get DS9 region color according to source type
 		*/
-		std::string GetDS9RegionColor(){
+		std::string GetDS9RegionColor()
+		{
 			std::string colorStr= "white";
-			if(Type==eExtended) colorStr= "green";
-			else if(Type==eCompactPlusExtended) colorStr= "magenta";
-			else if(Type==ePointLike) colorStr= "red";
-			else if(Type==eCompact) colorStr= "blue";
+			if(MorphId==eExtended) colorStr= "green";
+			else if(MorphId==eCompactPlusExtended) colorStr= "magenta";
+			else if(MorphId==ePointLike) colorStr= "red";
+			else if(MorphId==eCompact) colorStr= "blue";
+			else if(MorphId==eDiffuse) colorStr= "yellow";
 			else colorStr= "white";
 			return colorStr;
 		}//close GetDS9RegionColor()
@@ -359,14 +370,21 @@ class Source : public Blob {
 		/**
 		* \brief Get DS9 region tag according to source type
 		*/
-		std::string GetDS9RegionTag(){
+		std::string GetDS9RegionTag()
+		{
+			/*
 			std::string tagStr= "unknown-type";
-			if(Type==eExtended) tagStr= "extended";
-			else if(Type==eCompactPlusExtended) tagStr= "extended-compact";
-			else if(Type==ePointLike) tagStr= "point-like";
-			else if(Type==eCompact) tagStr= "compact";
+			if(MorphId==eExtended) tagStr= "extended";
+			else if(MorphId==eCompactPlusExtended) tagStr= "extended-compact";
+			else if(MorphId==ePointLike) tagStr= "point-like";
+			else if(MorphId==eCompact) tagStr= "compact";
 			else tagStr= "unknown-type";
 			return tagStr;
+			*/
+
+			std::string label= GetSourceMorphLabel(MorphId);
+			return label;
+
 		}//close GetDS9RegionTag()
 
 		//================================================
@@ -377,7 +395,7 @@ class Source : public Blob {
 		*/
 		void Print(){
 			cout<<"*** SOURCE NO. "<<Id<<" (NAME: "<<this->GetName()<<") ***"<<endl;
-			cout<<"N= "<<NPix<<", Type="<<Type<<", Pos("<<X0<<","<<Y0<<"), BoundingBox(["<<m_Xmin<<","<<m_Xmax<<"], ["<<m_Ymin<<","<<m_Ymax<<"])"<<endl;
+			cout<<"N= "<<NPix<<", MorphId="<<MorphId<<", Pos("<<X0<<","<<Y0<<"), BoundingBox(["<<m_Xmin<<","<<m_Xmax<<"], ["<<m_Ymin<<","<<m_Ymax<<"])"<<endl;
 			cout<<"S="<<m_S<<", Smin/Smax="<<m_Smin<<"/"<<m_Smax<<", Mean="<<Mean<<", RMS="<<RMS<<", Median="<<Median<<", MedianRMS="<<MedianRMS<<endl;
 			cout<<"****************************"<<endl;
 		}
@@ -518,19 +536,19 @@ class Source : public Blob {
 		/**
 		* \brief Set fit component flag
 		*/
-		int SetFitComponentFlag(int componentId,int flag)
+		int SetFitComponentSourcenessId(int componentId,int flag)
 		{
 			if(!m_HasFitInfo) return -1;
-			return m_fitPars.SetComponentFlag(componentId,flag);
+			return m_fitPars.SetComponentSourcenessId(componentId, flag);
 		}
 
 		/**
 		* \brief Get fit component flag
 		*/
-		int GetFitComponentFlag(int& flag,int componentId)
+		int GetFitComponentSourcenessId(int& flag, int componentId)
 		{
 			if(!m_HasFitInfo) return -1;
-			return m_fitPars.GetComponentFlag(flag,componentId);
+			return m_fitPars.GetComponentSourcenessId(flag, componentId);
 		}
 
 		/**
@@ -824,7 +842,16 @@ class Source : public Blob {
 
 		}
 
-
+		/**
+		* \brief Get user tags
+		*/
+		std::vector<std::string>& GetTags(){return m_tags;}
+		/**
+		* \brief Set tags
+		*/
+		void SetTags(std::vector<std::string>& data){
+			m_tags= data;
+		}
 
 	protected:
 		/**
@@ -853,17 +880,20 @@ class Source : public Blob {
 	public:
 
 		//Source flags
-		int Type;
-		int Flag;
+		int MorphId;
+		int SourcenessId;
+		float SourcenessScore;
+ 
 		int SimType;
 		float SimMaxScale;//in arcsec
-
+		
 		//Object type
 		int ObjLocationId;
 		std::string ObjClassStrId;
 		int ObjClassId;
 		int ObjClassSubId;
 		bool ObjConfirmed;
+		float ObjClassScore;
 
 		//Component object type
 		std::vector<int> componentObjLocationIds;
@@ -871,6 +901,8 @@ class Source : public Blob {
 		std::vector<int> componentObjClassIds;
 		std::vector<int> componentObjClassSubIds;
 		std::vector<bool> componentObjConfirmed;
+
+		
 
 	private:
 		double m_BeamFluxIntegral;
@@ -882,7 +914,8 @@ class Source : public Blob {
 		int m_DepthLevel;
 		bool m_HasNestedSources;
 		//Source* m_NestedSource;
-		std::vector<Source*> m_NestedSources;	
+		std::vector<Source*> m_NestedSources;
+		bool m_NestedAsCompositeSourceComponents;
 
 		//True source info
 		bool m_HasTrueInfo;
@@ -906,8 +939,11 @@ class Source : public Blob {
 		std::vector<AstroObject> m_astroObjects;
 		bool m_hasComponentAstroObjectData;
 		std::vector<std::vector<AstroObject>> m_componentAstroObjects;
+
+		//User tags
+		std::vector<std::string> m_tags;
 		
-		ClassDef(Source,10)
+		ClassDef(Source,11)
 
 	public:
 		
@@ -932,8 +968,8 @@ struct SourceCompareByLargerPeakFlux {
 #pragma link C++ class Source+;
 #pragma link C++ class vector<Source>+;
 #pragma link C++ class vector<Source*>+;
-#pragma link C++ enum SourceType+;
-#pragma link C++ enum SourceFlag+;
+#pragma link C++ enum SourceMorphology+;
+#pragma link C++ enum Sourceness+;
 #pragma link C++ enum SimSourceType+;
 #endif
 
