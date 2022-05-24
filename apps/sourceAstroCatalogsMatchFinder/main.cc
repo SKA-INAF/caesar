@@ -86,8 +86,8 @@ void Usage(char* exeName)
 	cout<<"-a, --compMatchOverlapThr \t Source fit component contour overlap fraction (wrt to total area) threshold (default=0.8)"<<endl;
 	cout<<"-d, --compMatchOverlapLowThr \t Source fit component contour overlap fraction (wrt to total area) low threshold (default=0.2)"<<endl;
 	cout<<"-l, --applyComponentAreaRatioThr \t If enabled and if source fit component is fully enclosed inside another (or viceversa) a match requires that the source1/source2 area ratio is higher than the component overlap threshold. If disabled, assume a match whenever a source component is fully enclosed in a source (or viceversa) (default=false)"<<endl;
-	cout<<"-f, --filterByType \t Consider only sources with given type when searching the match (default=no)"<<endl;
-	cout<<"-s, --selectedType=[TYPE] \t Source types to be crossmatched (1=COMPACT, 2=POINT-LIKE, 3=EXTENDED, 4=COMPACT_WITH_EXTENDED) (default=-1)"<<endl;
+	cout<<"-f, --filterByMorphId \t Consider only sources with given morph id when searching the match (default=no)"<<endl;
+	cout<<"-s, --selectedMorphId=[MORPH_ID] \t Source types to be crossmatched (1=COMPACT, 2=POINT-LIKE, 3=EXTENDED, 4=COMPACT_WITH_EXTENDED, 5=DIFFUSE) (default=-1)"<<endl;
 	cout<<"-F, --filterObjectByType \t Consider only object with given type when searching the match (default=no)"<<endl;
 	cout<<"-S, --selectedObjectType=[TYPE] \t Object types to be crossmatched (default=-1)"<<endl;
 	cout<<"-g, --shuffleSources \t Randomize sources and catalog sources in an annulus centred on their original position (default=no)"<<endl;
@@ -126,8 +126,8 @@ static const struct option options_tab[] = {
 	{ "compMatchOverlapThr", required_argument, 0, 'a'},
 	{ "compMatchOverlapLowThr", required_argument, 0, 'd'},
 	{ "applyComponentAreaRatioThr", no_argument, 0, 'l'},	
-	{ "filterByType", no_argument, 0, 'f'},
-	{ "selectedType", required_argument, 0, 's'},
+	{ "filterByMorphId", no_argument, 0, 'f'},
+	{ "selectedMorphId", required_argument, 0, 's'},
 	{ "filterObjectByType", no_argument, 0, 'F'},
 	{ "selectedObjectType", required_argument, 0, 'S'},
 	{ "shuffleSources", no_argument, 0, 'g'},	
@@ -161,7 +161,7 @@ float compMatchOverlapThr= 0.8;//fraction of overlap above which source fit comp
 float compMatchOverlapLowThr= 0.2;//fraction of overlap above which source fit component and region are matched
 bool applySourceComponentAreaRatioThr= false;
 bool correctFlux= false;
-bool selectSourceByType= false;//default=all true sources searched 
+bool selectSourceByMorphId= false;//default=all true sources searched 
 std::vector<int> stypes;
 bool selectObjectByType= false;//default=all object searched 
 std::vector<int> otypes;
@@ -735,7 +735,7 @@ int ParseOptions(int argc, char *argv[])
 			}	
 			case 'f':
 			{
-				selectSourceByType= true;
+				selectSourceByMorphId= true;
 				break;
 			}
 			case 's':	
@@ -898,7 +898,7 @@ int Init()
 	matchSummaryTree->Branch("matchSourceComponentsByOverlap",&matchSourceComponentsByOverlap);
 	matchSummaryTree->Branch("compMatchOverlapThr",&compMatchOverlapThr);
 	matchSummaryTree->Branch("compMatchOverlapLowThr",&compMatchOverlapLowThr);
-	matchSummaryTree->Branch("selectSourceByType",&selectSourceByType);
+	matchSummaryTree->Branch("selectSourceByMorphId",&selectSourceByMorphId);
 	matchSummaryTree->Branch("applySourceAreaRatioThr",&applySourceAreaRatioThr);
 	matchSummaryTree->Branch("applySourceComponentAreaRatioThr",&applySourceComponentAreaRatioThr);
 	matchSummaryTree->Branch("nCatalogs",&nCatalogs);
@@ -2032,18 +2032,18 @@ int ReadData(std::string filename)
 	for(int i=0;i<sourceTree->GetEntries();i++)
 	{
 		sourceTree->GetEntry(i);
-		int type= aSource->Type;
+		int morphId= aSource->MorphId;
 		
 		#ifdef LOGGING_ENABLED
 			if(i%1000==0) INFO_LOG("Reading source no. "<<i+1<<"/"<<sourceTree->GetEntries()<<"...");
 		#endif
 
 
-		//Select source by type?
-		if(selectSourceByType){
+		//Select source by morph id?
+		if(selectSourceByMorphId){
 			bool skipSource= true;
 			for(size_t j=0;j<stypes.size();j++){
-				if( stypes[j]==-1 || type==stypes[j]) {
+				if( stypes[j]==-1 || morphId==stypes[j]) {
 					skipSource= false;
 					break;
 				}

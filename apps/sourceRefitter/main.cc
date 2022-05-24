@@ -652,12 +652,12 @@ int Init(){
 bool IsFittableSource(Source* aSource)
 {
 	//Check if not point-like or compact
-	int sourceType= aSource->Type;
-	bool isCompact= (sourceType==ePointLike || sourceType==eCompact);
+	int sourceMorphId= aSource->MorphId;
+	bool isCompact= (sourceMorphId==ePointLike || sourceMorphId==eCompact);
 	if(!isCompact) return false;
 
 	//If compact source check nbeams (if too large do not perform fit)
-	if(sourceType==eCompact){
+	if(sourceMorphId==eCompact){
 		double NPix= aSource->GetNPixels();
 		double beamArea= aSource->GetBeamFluxIntegral();
 		double nBeams= 0;

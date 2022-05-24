@@ -84,8 +84,8 @@ void Usage(char* exeName)
 	cout<<"-a, --compMatchOverlapThr \t Source fit component contour overlap fraction (wrt to total area) threshold (default=0.8)"<<endl;
 	cout<<"-d, --compMatchOverlapLowThr \t Source fit component contour overlap fraction (wrt to total area) low threshold (default=0.2)"<<endl;
 	cout<<"-l, --applyComponentAreaRatioThr \t If enabled and if source fit component is fully enclosed inside another (or viceversa) a match requires that the source1/source2 area ratio is higher than the component overlap threshold. If disabled, assume a match whenever a source component is fully enclosed in a source (or viceversa) (default=false)"<<endl;
-	cout<<"-f, --filterByType \t Consider only true sources with given type when searching the match (default=no)"<<endl;
-	cout<<"-s, --selectedType=[TYPE] \t True source types to be crossmatched (1=COMPACT, 2=POINT-LIKE, 3=EXTENDED, 4=COMPACT_WITH_EXTENDED) (default=-1)"<<endl;
+	cout<<"-f, --filterByMorphId \t Consider only true sources with given morph id when searching the match (default=no)"<<endl;
+	cout<<"-s, --selectedMorphId=[MORPH_ID] \t True source morph ids to be crossmatched (1=COMPACT, 2=POINT-LIKE, 3=EXTENDED, 4=COMPACT_WITH_EXTENDED, 5=DIFFUSE) (default=-1)"<<endl;
 	cout<<"-F, --filterBySimType \t Consider only true sources with given sim type when searching the match (default=no)"<<endl;
 	cout<<"-S, --selectedSimType=[TYPE] \t True source sim types to be crossmatched (eRingLike=1,eBubbleLike=2,eEllipseLike=3,eDiskLike=4,eBlobLike=5) (default=-1)"<<endl;
 	cout<<"-g, --shuffleSources \t Randomize sources and catalog sources in an annulus centred on their original position (default=no)"<<endl;
@@ -126,9 +126,9 @@ static const struct option options_tab[] = {
 	{ "compMatchOverlapLowThr", required_argument, 0, 'd'},
 	{ "applyComponentAreaRatioThr", no_argument, 0, 'l'},	
 	{ "minSourceMatchClusterSize",required_argument,0,'n'},
-	{ "filterByType", no_argument, 0, 'f'},
+	{ "filterByMorphId", no_argument, 0, 'f'},
 	{ "filterBySimType", no_argument, 0, 'F'},
-	{ "selectedType", required_argument, 0, 's'},	
+	{ "selectedMorphId", required_argument, 0, 's'},	
 	{ "selectedSimType", required_argument, 0, 'S'},
 	{ "shuffleSources", no_argument, 0, 'g'},	
 	{ "shuffleRmin", required_argument, 0, 'r'},
@@ -163,7 +163,7 @@ bool correctFlux= false;
 bool shiftFlux= false;
 double fluxShift= 0;
 bool saveAllSources= false;
-bool selectSourceByType= false;//default=all true sources searched 
+bool selectSourceByMorphId= false;//default=all true sources searched 
 std::vector<int> stypes;
 std::vector<int> ssimtypes;
 bool selectSourceBySimType= false;//default=all true sources searched 
@@ -676,7 +676,7 @@ int ParseOptions(int argc, char *argv[])
 			}	
 			case 'f':
 			{
-				selectSourceByType= true;
+				selectSourceByMorphId= true;
 				break;
 			}
 			case 's':	
@@ -803,7 +803,7 @@ int Init(){
 	matchOptionTree->Branch("matchSourceComponentsByOverlap",&matchSourceComponentsByOverlap);
 	matchOptionTree->Branch("compMatchOverlapThr",&compMatchOverlapThr);
 	matchOptionTree->Branch("compMatchOverlapLowThr",&compMatchOverlapLowThr);
-	matchOptionTree->Branch("selectSourceByType",&selectSourceByType);
+	matchOptionTree->Branch("selectSourceByMorphId",&selectSourceByMorphId);
 	matchOptionTree->Branch("selectSourceBySimType",&selectSourceBySimType);
 	matchOptionTree->Branch("applySourceAreaRatioThr",&applySourceAreaRatioThr);
 	matchOptionTree->Branch("applySourceComponentAreaRatioThr",&applySourceComponentAreaRatioThr);
@@ -1842,7 +1842,7 @@ int ReadData(std::string filename)
 	for(int i=0;i<sourceTree->GetEntries();i++)
 	{
 		sourceTree->GetEntry(i);
-		int type= aSource->Type;
+		int morphId= aSource->MorphId;
 		int simType= aSource->SimType;
 		
 		#ifdef LOGGING_ENABLED
@@ -1850,11 +1850,11 @@ int ReadData(std::string filename)
 		#endif
 
 
-		//Select source by type?
-		if(selectSourceByType){
+		//Select source by morphId?
+		if(selectSourceByMorphId){
 			bool skipSource= true;
 			for(size_t j=0;j<stypes.size();j++){
-				if( stypes[j]==-1 || type==stypes[j]) {
+				if( stypes[j]==-1 || morphId==stypes[j]) {
 					skipSource= false;
 					break;
 				}
@@ -1866,7 +1866,7 @@ int ReadData(std::string filename)
 		if(selectSourceBySimType){
 			bool skipSource= true;
 			for(size_t j=0;j<ssimtypes.size();j++){
-				if( ssimtypes[j]==-1 || type==ssimtypes[j]) {
+				if( ssimtypes[j]==-1 || simType==ssimtypes[j]) {
 					skipSource= false;
 					break;
 				}
@@ -2151,7 +2151,7 @@ int ReadSourceData(std::string filename,int catalogIndex)
 	#endif
 	for(int i=0;i<sourceTree->GetEntries();i++){
 		sourceTree->GetEntry(i);
-		int type= aSource->Type;
+		int morphId= aSource->MorphId;
 		int simType= aSource->SimType;
 
 		#ifdef LOGGING_ENABLED
@@ -2159,11 +2159,11 @@ int ReadSourceData(std::string filename,int catalogIndex)
 		#endif
 
 
-		//Select source by type?
-		if(selectSourceByType){
+		//Select source by morph id?
+		if(selectSourceByMorphId){
 			bool skipSource= true;
 			for(size_t j=0;j<stypes.size();j++){
-				if( stypes[j]==-1 || type==stypes[j]) {
+				if( stypes[j]==-1 || morphId==stypes[j]) {
 					skipSource= false;
 					break;
 				}
@@ -2175,7 +2175,7 @@ int ReadSourceData(std::string filename,int catalogIndex)
 		if(selectSourceBySimType){
 			bool skipSource= true;
 			for(size_t j=0;j<ssimtypes.size();j++){
-				if( ssimtypes[j]==-1 || type==ssimtypes[j]) {
+				if( ssimtypes[j]==-1 || simType==ssimtypes[j]) {
 					skipSource= false;
 					break;
 				}

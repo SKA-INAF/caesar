@@ -54,8 +54,8 @@ void Usage(char* exeName){
 	cout<<"-T, --posThr=[POS_THESHOLD] \t Pixel dustance below which two sources are matched (default=2.5)"<<endl;
 	cout<<"-a, --applyFluxOverlapThr \t Apply flux overlap threshold in extended source matching (default=not applied)"<<endl;
 	cout<<"-A, --fluxOverlapThr=[FLUX_THRESHOLD] \t Flux overlap threshold in extended source matching (default=0.5)"<<endl;
-	cout<<"-f, --filterByType \t Consider only true sources with given type when searching the match (default=no)"<<endl;
-	cout<<"-s, --selectedType=[TYPE] \t True source types to be crossmatched (1=COMPACT, 2=POINT-LIKE, 3=EXTENDED, 4=COMPACT_WITH_EXTENDED) (default=-1)"<<endl;
+	cout<<"-f, --filterByMorphId \t Consider only true sources with given morph id when searching the match (default=no)"<<endl;
+	cout<<"-s, --selectedMorphId=[MORPH_ID] \t True source morph ids to be crossmatched (1=COMPACT, 2=POINT-LIKE, 3=EXTENDED, 4=COMPACT_WITH_EXTENDED, 5=DIFFUSE) (default=-1)"<<endl;
 	cout<<"-F, --filterBySimType \t Consider only true sources with given sim type when searching the match (default=no)"<<endl;
 	cout<<"-S, --selectedSimType=[TYPE] \t True source sim types to be crossmatched (eRingLike=1,eBubbleLike=2,eEllipseLike=3,eDiskLike=4,eBlobLike=5) (default=-1)"<<endl;
 	cout<<"-e, --no-compactSourceCorrelation \t Disable correlation search for compact sources (default=enabled)"<<endl;
@@ -76,9 +76,9 @@ static const struct option options_tab[] = {
 	{ "overlapThr", required_argument, 0, 't'},
 	{ "posThr", required_argument, 0, 'T'},
 	{ "correctFlux", no_argument, 0, 'c'},
-	{ "filterByType", no_argument, 0, 'f'},
+	{ "filterByMorphId", no_argument, 0, 'f'},
 	{ "filterBySimType", no_argument, 0, 'F'},
-	{ "selectedType", required_argument, 0, 's'},	
+	{ "selectedMorphId", required_argument, 0, 's'},	
 	{ "selectedSimType", required_argument, 0, 'S'},
 	{ "applyFluxOverlapThr", no_argument, 0, 'a'},	
 	{ "fluxOverlapThr", required_argument, 0, 'A'},
@@ -95,8 +95,8 @@ int verbosity= 4;//INFO level
 float matchOverlapThr= 0.9;//fraction of overlap above which two sources are matched
 bool correctFlux= false;
 float matchPosThr= 2.5;//#pixels below which two sources are matched
-bool selectTrueSourceByType= false;//default=all true sources searched 
-int selectedTrueSourceType= -1;
+bool selectTrueSourceByMorphId= false;//default=all true sources searched 
+int selectedTrueSourceMorphId= -1;
 bool selectTrueSourceBySimType= false;//default=all true sources searched 
 int selectedTrueSourceSimType= -1;
 bool enableCompactSourceCorrelation= true;
@@ -116,7 +116,7 @@ std::vector<Source*> sources_rec;
 int SourceFoundFlag;
 int nSourceMatches;
 std::string SourceName;
-int sourceType;
+int sourceMorphId;
 int SourceSimType;
 double sourceSimMaxScale;
 long int NPix;
@@ -132,7 +132,7 @@ double Y0_true;
 double fluxDensity_true;
 double beamArea_true;
 std::string SourceName_rec;
-int sourceType_rec;
+int sourceMorphId_rec;
 int IsNestedSource_rec;
 long int NPix_rec;
 double S_rec;
@@ -173,7 +173,7 @@ double chi2_fit;
 double ndf_fit;
 double ncomponents_fit;
 int fitQuality;
-int fitComponentFlag;
+int fitComponentSourceness;
 const int MAX_NTRUE_MATCH_SOURCES= 1000;
 int nTrueMatchedSources;
 std::vector<std::string> SourceNameList_true;
@@ -346,12 +346,12 @@ int ParseOptions(int argc, char *argv[])
 			}
 			case 'f':
 			{
-				selectTrueSourceByType= true;
+				selectTrueSourceByMorphId= true;
 				break;
 			}
 			case 's':
 			{
-				selectedTrueSourceType= atoi(optarg);
+				selectedTrueSourceMorphId= atoi(optarg);
 				break;
 			}
 			case 'F':
@@ -465,14 +465,14 @@ int FindSourceMatches()
 			if(i%100==0) INFO_LOG("Finding cross-match for source no. "<<i<<"/"<<sources.size()<<"...");
 		#endif
 
-		//Find source match according to source type (e.g. compact/point-like vs extended)
-		int sourceType= sources[i]->Type;
-		if(enableCompactSourceCorrelation && (sourceType==eCompact || sourceType==ePointLike) ){
+		//Find source match according to source morph id (e.g. compact/point-like vs extended)
+		int sMorphId= sources[i]->MorphId;
+		if(enableCompactSourceCorrelation && (sMorphId==eCompact || sMorphId==ePointLike) ){
 			nCompactSources++;
 			bool isCompactSourceFound= FindPointSourceMatch(i);
 			if(isCompactSourceFound) nCompactSources_found++;
 		}
-		if(enableExtendedSourceCorrelation && (sourceType==eExtended || sourceType==eCompactPlusExtended) ){
+		if(enableExtendedSourceCorrelation && (sMorphId==eExtended || sMorphId==eCompactPlusExtended) ){
 			nExtendedSources++;
 			bool isExtendedSourceFound= FindExtendedSourceMatch(i);
 			if(isExtendedSourceFound) nExtendedSources_found++;
@@ -498,7 +498,7 @@ bool FindPointSourceMatch(int source_true_index)
 	NPix= source_true->GetNPixels();
 	SourceFoundFlag= 0;
 	SourceName= std::string(source_true->GetName());
-	sourceType= source_true->Type;
+	sourceMorphId= source_true->MorphId;
 	SourceSimType= source_true->SimType;
 	X0= source_true->X0;
 	Y0= source_true->Y0;
@@ -528,7 +528,7 @@ bool FindPointSourceMatch(int source_true_index)
 	Y0_rec= -1;
 	X0_sweighted_rec= -1;
 	Y0_sweighted_rec= -1;
-	sourceType_rec= -1;
+	sourceMorphId_rec= -1;
 	MatchFraction= 0.;
 	MatchFraction_rec= 0.;
 	S_bkg= 0;
@@ -554,7 +554,7 @@ bool FindPointSourceMatch(int source_true_index)
 	ndf_fit= -1;
 	ncomponents_fit= -1;
 	fitQuality= -1;
-	fitComponentFlag= -1;
+	fitComponentSourceness= -1;
 
 	//## Search for extended source associations by matching pixels
 	//SourcePosMatchPars match_info;
@@ -578,7 +578,7 @@ bool FindPointSourceMatch(int source_true_index)
 
 		NPix_rec= match_source->GetNPixels();
 		SourceName_rec= std::string(match_source->GetName());
-		sourceType_rec= match_source->Type;
+		sourceMorphId_rec= match_source->MorphId;
 		X0_rec= match_source->X0;
 		Y0_rec= match_source->Y0;
 		X0_sweighted_rec= match_source->GetSx();
@@ -635,7 +635,7 @@ bool FindPointSourceMatch(int source_true_index)
 			ncomponents_fit= fitPars.GetNComponents();
 			fitQuality= fitPars.GetFitQuality();
 		
-			fitPars.GetComponentFlag(fitComponentFlag,componentIndex);
+			fitPars.GetComponentSourcenessId(fitComponentSourceness,componentIndex);
 
 			//Correct flux from Jy/beam to Jy
 			if(correctFlux){
@@ -698,7 +698,7 @@ bool FindExtendedSourceMatch(int source_true_index)
 	Source* source_true= sources[source_true_index]; 
 	NPix= source_true->GetNPixels();
 	SourceName= std::string(source_true->GetName());
-	sourceType= source_true->Type;
+	sourceMorphId= source_true->MorphId;
 	SourceSimType= source_true->SimType;
 	sourceSimMaxScale= source_true->SimMaxScale;
 	X0= source_true->X0;
@@ -728,7 +728,7 @@ bool FindExtendedSourceMatch(int source_true_index)
 	Y0_rec= -1;
 	X0_sweighted_rec= -1;
 	Y0_sweighted_rec= -1;
-	sourceType_rec= -1;
+	sourceMorphId_rec= -1;
 	MatchFraction= 0.;
 	MatchFraction_rec= 0.;
 	Sratio= 0.;
@@ -766,7 +766,7 @@ bool FindExtendedSourceMatch(int source_true_index)
 		dY= static_cast<double>(match_info.dY);
 		NPix_rec= sources_rec[match_source_index]->GetNPixels();
 		SourceName_rec= std::string(sources_rec[match_source_index]->GetName());
-		sourceType_rec= sources_rec[match_source_index]->Type;
+		sourceMorphId_rec= sources_rec[match_source_index]->MorphId;
 		X0_rec= sources_rec[match_source_index]->X0;
 		Y0_rec= sources_rec[match_source_index]->Y0;
 		X0_sweighted_rec= sources_rec[match_source_index]->GetSx();
@@ -855,7 +855,7 @@ int FindRealAndFakeSources()
 			if(i%100==0) INFO_LOG("Finding associations for rec source no. "<<i<<"/"<<sources_rec.size()<<"...");
 		#endif
 
-		int sourceType= sources_rec[i]->Type;
+		int sMorphId= sources_rec[i]->MorphId;
 
 		//Store mother rec source associations to true sources
 		#ifdef LOGGING_ENABLED
@@ -863,7 +863,7 @@ int FindRealAndFakeSources()
 		#endif
 		if(FindRecSourceMatch(sources_rec[i],i,-1)<0){
 			#ifdef LOGGING_ENABLED
-				WARN_LOG("Failed to find true associations to rec source "<<i<<" (type="<<sourceType<<")!");
+				WARN_LOG("Failed to find true associations to rec source "<<i<<" (morphId="<<sMorphId<<")!");
 			#endif
 		}
 
@@ -876,20 +876,20 @@ int FindRealAndFakeSources()
 
 			if(FindRecSourceMatch(nestedSources[k],i,k)<0){
 				#ifdef LOGGING_ENABLED
-					WARN_LOG("Failed to find true associations to nested source no. "<<k+1<<" of rec source "<<i<<" (type="<<sourceType<<")!");
+					WARN_LOG("Failed to find true associations to nested source no. "<<k+1<<" of rec source "<<i<<" (morphId="<<sMorphId<<")!");
 				#endif
 			}
 		}//end loop nested
 
 		/*
-		if(enableCompactSourceCorrelation && (sourceType==eCompact || sourceType==ePointLike) ){
+		if(enableCompactSourceCorrelation && (sMorphId==eCompact || sMorphId==ePointLike) ){
 			if(FindPointSourceRealAndFakeSources(i)<0){
 				#ifdef LOGGING_ENABLED
 					WARN_LOG("Failed to find true associations to rec source "<<i<<"!");
 				#endif
 			}
 		}
-		if(enableExtendedSourceCorrelation && (sourceType==eExtended || sourceType==eCompactPlusExtended) ){
+		if(enableExtendedSourceCorrelation && (sMorphId==eExtended || sMorphId==eCompactPlusExtended) ){
 			if(FindExtendedRealAndFakeSources(i)<0){
 				#ifdef LOGGING_ENABLED
 					WARN_LOG("Failed to find true associations to rec source "<<i<<"!");
@@ -919,7 +919,7 @@ int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex)
 	SourceName_rec= std::string(source_rec->GetName());
 	IsNestedSource_rec= 0;
 	if(nestedIndex!=-1) IsNestedSource_rec= 1;
-	sourceType_rec= source_rec->Type;
+	sourceMorphId_rec= source_rec->MorphId;
 	NPix_rec= source_rec->GetNPixels();			
 	X0_rec= source_rec->X0;
 	Y0_rec= source_rec->Y0;
@@ -942,7 +942,7 @@ int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex)
 	chi2_fit= -1;
 	ndf_fit= -1;
 	fitQuality= -1;
-	fitComponentFlag= -1;
+	fitComponentSourceness= -1;
 
 	//Init association info
 	nTrueMatchedSources= 0;
@@ -955,7 +955,7 @@ int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex)
 		SourceFitPars fitPars= source_rec->GetFitPars();
 		for(int k=0;k<fitPars.GetNComponents();k++){
 			SourceName_rec= sname + std::string(Form("_fitcomp%d",k+1));
-			sourceType_rec= ePointLike;
+			sourceMorphId_rec= ePointLike;
 			X0_rec= fitPars.GetParValue(k,"x0");	
 			Y0_rec= fitPars.GetParValue(k,"y0");
 			Smax_rec= fitPars.GetParValue(k,"A");	
@@ -965,7 +965,7 @@ int FindRecSourceMatch(Source* source_rec,int sourceIndex,int nestedIndex)
 			chi2_fit= fitPars.GetChi2();
 			ndf_fit= fitPars.GetNDF();
 			fitQuality= fitPars.GetFitQuality();
-			fitPars.GetComponentFlag(fitComponentFlag,k);
+			fitPars.GetComponentSourcenessId(fitComponentSourceness,k);
 
 			fluxDensity_rec= fitPars.GetComponentFluxDensity(k);
 			if(correctFlux){
@@ -1038,7 +1038,7 @@ int FindPointSourceRealAndFakeSources(int source_rec_index)
 	Source* source_rec= sources_rec[source_rec_index]; 
 	std::string sname= std::string(source_rec->GetName());
 	SourceName_rec= std::string(source_rec->GetName());
-	sourceType_rec= source_rec->Type;			
+	sourceMorphId_rec= source_rec->MorphId;			
 	X0_rec= source_rec->X0;
 	Y0_rec= source_rec->Y0;
 	Smax_rec= source_rec->GetSmax();
@@ -1143,7 +1143,7 @@ int FindExtendedRealAndFakeSources(int source_rec_index)
 	int sourceIndex= source_rec_index;
 	Source* source_rec= sources_rec[source_rec_index]; 
 	SourceName_rec= std::string(source_rec->GetName());
-	sourceType_rec= source_rec->Type;			
+	sourceMorphId_rec= source_rec->MorphId;			
 	X0_rec= source_rec->X0;
 	Y0_rec= source_rec->Y0;
 	Smax_rec= source_rec->GetSmax();
@@ -1199,7 +1199,7 @@ void Init(){
 	matchedSourceInfo->Branch("found",&SourceFoundFlag,"found/I");
 	matchedSourceInfo->Branch("nMatches",&nSourceMatches,"nMatches/I");
 	matchedSourceInfo->Branch("name",&SourceName);
-	matchedSourceInfo->Branch("type",&sourceType,"type/I");
+	matchedSourceInfo->Branch("morphId",&sourceMorphId,"morphId/I");
 	matchedSourceInfo->Branch("simtype",&SourceSimType,"simtype/I");
 	matchedSourceInfo->Branch("NPix",&NPix,"NPix/L");	
 	matchedSourceInfo->Branch("S",&S,"S/D");
@@ -1214,7 +1214,7 @@ void Init(){
 	matchedSourceInfo->Branch("fluxDensity_true",&fluxDensity_true,"fluxDensity_true/D");
 	matchedSourceInfo->Branch("beamArea_true",&beamArea_true,"beamArea_true/D");
 	matchedSourceInfo->Branch("name_rec",&SourceName_rec);	
-	matchedSourceInfo->Branch("type_rec",&sourceType_rec,"type_rec/I");
+	matchedSourceInfo->Branch("morphId_rec",&sourceMorphId_rec,"morphId_rec/I");
 	matchedSourceInfo->Branch("NPix_rec",&NPix_rec,"NPix_rec/L");	
 	matchedSourceInfo->Branch("S_rec",&S_rec,"S_rec/D");
 	matchedSourceInfo->Branch("Smax_rec",&Smax_rec,"Smax_rec/D");
@@ -1248,13 +1248,13 @@ void Init(){
 	matchedSourceInfo->Branch("ndf_fit",&ndf_fit,"ndf_fit/D");
 	matchedSourceInfo->Branch("ncomponents_fit",&ncomponents_fit,"ncomponents_fit/D");
 	matchedSourceInfo->Branch("fitQuality",&fitQuality,"fitQuality/I");
-	matchedSourceInfo->Branch("fitComponentFlag",&fitComponentFlag,"fitComponentFlag/I");
+	matchedSourceInfo->Branch("sourceness",&fitComponentSourceness,"sourceness/I");
 	
 	
 	if(!matchedExtSourceInfo) matchedExtSourceInfo= new TTree("ExtSourceMatchInfo","ExtSourceMatchInfo");
 	matchedExtSourceInfo->Branch("found",&SourceFoundFlag,"found/I");
 	matchedExtSourceInfo->Branch("name",&SourceName);
-	matchedExtSourceInfo->Branch("type",&sourceType,"type/I");
+	matchedExtSourceInfo->Branch("morphId",&sourceMorphId,"morphId/I");
 	matchedExtSourceInfo->Branch("simtype",&SourceSimType,"simtype/I");
 	matchedExtSourceInfo->Branch("simmaxscale",&sourceSimMaxScale,"simmaxscale/D");
 	matchedExtSourceInfo->Branch("NPix",&NPix,"NPix/L");	
@@ -1270,7 +1270,7 @@ void Init(){
 	matchedExtSourceInfo->Branch("fluxDensity_true",&fluxDensity_true,"fluxDensity_true/D");
 	matchedExtSourceInfo->Branch("beamArea_true",&beamArea_true,"beamArea_true/D");
 	matchedExtSourceInfo->Branch("name_rec",&SourceName_rec);	
-	matchedExtSourceInfo->Branch("type_rec",&sourceType_rec,"type_rec/I");
+	matchedExtSourceInfo->Branch("morphId_rec",&sourceMorphId_rec,"morphId_rec/I");
 	matchedExtSourceInfo->Branch("NPix_rec",&NPix_rec,"NPix_rec/L");	
 	matchedExtSourceInfo->Branch("S_rec",&S_rec,"S_rec/D");
 	matchedExtSourceInfo->Branch("Smax_rec",&Smax_rec,"Smax_rec/D");
@@ -1292,7 +1292,7 @@ void Init(){
 	//Create rec source info (useful for reliability estimation)
 	if(!recSourceInfo) recSourceInfo= new TTree("RecSourceInfo","RecSourceInfo");
 	recSourceInfo->Branch("name_rec",&SourceName_rec);
-	recSourceInfo->Branch("type_rec",&sourceType_rec,"type_rec/I");
+	recSourceInfo->Branch("morphId_rec",&sourceMorphId_rec,"morphId_rec/I");
 	recSourceInfo->Branch("HasFitInfo",&HasFitInfo,"HasFitInfo/I");	
 	recSourceInfo->Branch("IsNestedSource",&IsNestedSource_rec,"IsNestedSource/I");
 	recSourceInfo->Branch("NPix_rec",&NPix_rec,"NPix_rec/L");	
@@ -1305,7 +1305,7 @@ void Init(){
 	recSourceInfo->Branch("chi2_fit",&chi2_fit,"chi2_fit/D");
 	recSourceInfo->Branch("ndf_fit",&ndf_fit,"ndf_fit/D");
 	recSourceInfo->Branch("fitQuality",&fitQuality,"fitQuality/I");	
-	recSourceInfo->Branch("fitComponentFlag",&fitComponentFlag,"fitComponentFlag/I");
+	recSourceInfo->Branch("sourceness",&fitComponentSourceness,"sourceness/I");
 	recSourceInfo->Branch("fluxDensity_rec",&fluxDensity_rec,"fluxDensity_rec/D");	
 	recSourceInfo->Branch("beamArea_rec",&beamArea_rec,"beamArea_rec/D");	
 	recSourceInfo->Branch("nTrueMatchedSources",&nTrueMatchedSources,"nTrueMatchedSources/I");
@@ -1317,7 +1317,7 @@ void Init(){
 	/*
 	if(!recExtSourceInfo) recExtSourceInfo= new TTree("RecExtSourceInfo","RecExtSourceInfo");
 	recExtSourceInfo->Branch("name_rec",&SourceName_rec);
-	recExtSourceInfo->Branch("type_rec",&sourceType_rec,"type_rec/I");
+	recExtSourceInfo->Branch("morphId_rec",&sourceMorphId_rec,"morphId_rec/I");
 	recExtSourceInfo->Branch("X0_rec",&X0_rec,"X0_rec/D");
 	recExtSourceInfo->Branch("Y0_rec",&Y0_rec,"Y0_rec/D");
 	recExtSourceInfo->Branch("Smax_rec",&Smax_rec,"Smax_rec/D");	
@@ -1393,13 +1393,13 @@ int ReadSourceData()
 	#endif
 	for(int i=0;i<sourceTree->GetEntries();i++){
 		sourceTree->GetEntry(i);
-		int type= aSource->Type;
+		int morphId= aSource->MorphId;
 		int simType= aSource->SimType;
 
-		//Select source by type?
-		if( selectTrueSourceByType && type!=selectedTrueSourceType && type!=-1) {
+		//Select source by morphId?
+		if( selectTrueSourceByMorphId && morphId!=selectedTrueSourceMorphId && morphId!=-1) {
 			#ifdef LOGGING_ENABLED
-				DEBUG_LOG("Skip true source type "<<type<<" (selected type="<<selectedTrueSourceType<<")...");
+				DEBUG_LOG("Skip true source morphId "<<morphId<<" (selected morphId="<<selectedTrueSourceMorphId<<")...");
 			#endif
 			continue;
 		}

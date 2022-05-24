@@ -76,7 +76,8 @@ void Usage(char* exeName)
 	cout<<"-C, --catalogVersion=[CATALOG_VERSION] \t Catalog version (default=3)"<<endl;
 	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (root format) in which to store source match info (default=output.root)"<<endl;
 	cout<<"-T, --matchPosThr=[POS_THRESHOLD] \t Source island centroid distance in arcsec below which we have a match (default=8)"<<endl;
-	
+	cout<<"-d, --dumpFalseSourceRegions \t Write DS9 regions with false detections found above SNR threshold (default=no)"<<endl;
+	cout<<"-s, --dumpFalseSourceSNRThr=[THRESHOLD] \t SNR threshold to write false source region (default=0)"<<endl;
 	cout<<"-v, --verbosity=[LEVEL] \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	
 	cout<<"=============================="<<endl;
@@ -93,6 +94,8 @@ static const struct option options_tab[] = {
 	{ "catalogType", required_argument, 0, 'c' },	
 	{ "verbosity", required_argument, 0, 'v'},
 	{ "output", required_argument, 0, 'o' },	
+	{ "dumpFalseSourceRegions", no_argument, 0, 'd' },
+	{ "dumpFalseSourceSNRThr", required_argument, 0, 's' },		
 	{ "matchPosThr", required_argument, 0, 't'},	
   {(char*)0, (int)0, (int*)0, (int)0}
 };
@@ -108,6 +111,8 @@ std::string gRegionFileName= "";
 std::string gMapFileName= "";
 float gMatchPosThr= 8;//dist in arcsec below which two sources can be matched
 int verbosity= 4;//INFO level
+bool gDumpFalseSourceRegion= false;
+double gDumpFalseSourceRegionSNRThr= 0;
 
 enum CatalogType {
 	eCAESAR_CATALOG=1,
@@ -131,8 +136,8 @@ WCS* gWCS= 0;
 // - CATALOG READ
 const int gNDataCols= 6;
 const int gNDataCols_caesar= 42;
-const int gNDataCols_caesar_v2= 47;
-const int gNDataCols_caesar_v3= 47;
+const int gNDataCols_caesar_v2= 48;//47;
+const int gNDataCols_caesar_v3= 48;//47;
 const int gNDataCols_selavy= 37;
 const int gNDataCols_aegean= 27;
 std::vector<std::string> gSkipLinePatterns {};
@@ -217,11 +222,13 @@ double gSourceGalPosY_true;
 double gSourceJ2000PosX_true;
 double gSourceJ2000PosY_true;
 double gSourceFlux_true;
+double gSourcePeakFlux_true;
 double gSourceSNR_true;
 std::string gSourceName_rec;
 double gSourcePosX_rec;
 double gSourcePosY_rec;
 double gSourceFlux_rec;
+double gSourcePeakFlux_rec;
 double gSourceGalPosX_rec;
 double gSourceGalPosY_rec;
 double gSourceJ2000PosX_rec;
@@ -311,7 +318,7 @@ static int ParseData_caesar(SourceInfo& info,const std::vector<std::string>& fie
 static int ParseData_selavy(SourceInfo& info,const std::vector<std::string>& fields);
 static int ParseData_aegean(SourceInfo& info,const std::vector<std::string>& fields);
 bool HasPattern(std::string,std::string);
-int FindSourceMatch(const std::vector<SourceInfo>& sources_ref,const std::vector<SourceInfo>& sources_rec);
+int FindSourceMatch(const std::vector<SourceInfo>& sources_ref,const std::vector<SourceInfo>& sources_rec, std::string outfile_falseSources="");
 void Save();
 
 
@@ -434,7 +441,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:I:C:c:o:v:m:r:t:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:I:C:c:o:v:m:r:t:ds:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -491,6 +498,16 @@ int ParseOptions(int argc, char *argv[])
 			{
 				verbosity= atoi(optarg);	
 				break;	
+			}
+			case 'd':
+			{
+				gDumpFalseSourceRegion= true;
+				break;
+			}
+			case 's':
+			{
+				gDumpFalseSourceRegionSNRThr= atof(optarg);
+				break;
 			}
 			default:
 			{
@@ -566,6 +583,7 @@ int Init()
 	gMatchDataTree->Branch("ra",&gSourceJ2000PosX_true);
 	gMatchDataTree->Branch("dec",&gSourceJ2000PosY_true);
 	gMatchDataTree->Branch("flux",&gSourceFlux_true);
+	gMatchDataTree->Branch("peakflux",&gSourcePeakFlux_true);
 	gMatchDataTree->Branch("isFound",&gIsFound);
 	//gMatchDataTree->Branch("name_rec",&gSourceName_rec);
 	gMatchDataTree->Branch("x_rec",&gSourcePosX_rec);
@@ -575,6 +593,7 @@ int Init()
 	gMatchDataTree->Branch("ra_rec",&gSourceJ2000PosX_rec);
 	gMatchDataTree->Branch("dec_rec",&gSourceJ2000PosY_rec);
 	gMatchDataTree->Branch("flux_rec",&gSourceFlux_rec);
+	gMatchDataTree->Branch("peakflux_rec",&gSourcePeakFlux_rec);
 	gMatchDataTree->Branch("snr_rec",&gSourceSNR_rec);
 
 	//Init histos
@@ -770,9 +789,8 @@ int Init()
 }//close Init()
 
 
-int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<SourceInfo>& sources_rec)
+int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<SourceInfo>& sources_rec, std::string outfile_falseSources)
 {
-	
 	//- Find if ref source if found in rec catalog
 	long int nMatch= 0;
 	long int nMatch_sel= 0;
@@ -800,6 +818,7 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 		gSourcePosX_true= x;
 		gSourcePosY_true= y;
 		gSourceFlux_true= flux;
+		gSourcePeakFlux_true= peakFlux;
 		gSourceJ2000PosX_true= ra;
 		gSourceJ2000PosY_true= dec;
 		gSourceGalPosX_true= l;
@@ -835,7 +854,8 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 		std::vector<double> ddec_list;
 		std::vector<double> reclgflux_list;
 		std::vector<double> dflux_list;
-		std::vector<double> dlgflux_list;		
+		std::vector<double> dlgflux_list;
+		std::vector<double> peakflux_list;
 		std::vector<double> dpeakflux_list;
 		std::vector<double> snr_list;
 		std::vector<size_t> recindex_list;	
@@ -897,6 +917,7 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 			dra_list.push_back(dra);
 			ddec_list.push_back(ddec);	
 			reclgflux_list.push_back(lgflux_rec);
+			peakflux_list.push_back(peakFlux_rec);
 			dflux_list.push_back(dflux_rel);
 			dlgflux_list.push_back(dlgflux);	
 			dpeakflux_list.push_back(dpeakflux_rel);	
@@ -911,6 +932,7 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 		gSourcePosX_rec= -999;
 		gSourcePosY_rec= -999;
 		gSourceFlux_rec= -999;
+		gSourcePeakFlux_rec= -999;
 		gSourceJ2000PosX_rec= -999;
 		gSourceJ2000PosY_rec= -999;
 		gSourceGalPosX_rec= -999;
@@ -936,6 +958,7 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 			double dpos= sqrt(dx*dx + dy*dy); 
 			double dpos_wcs= sqrt(dra*dra + ddec*ddec); 	
 			double lgFlux_rec= reclgflux_list[0];
+			double peakFlux_rec= peakflux_list[0];
 			double dflux_rel= dflux_list[0];
 			double dlgflux= dlgflux_list[0];
 			double dpeakflux_rel= dpeakflux_list[0];
@@ -966,6 +989,7 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 				ddec= ddec_list[best_index];
 				dpos_wcs= sqrt(dra*dra + ddec*ddec); 
 				lgFlux_rec= reclgflux_list[best_index];
+				peakFlux_rec= peakflux_list[best_index];
 				dflux_rel= dflux_list[best_index];
 				dlgflux= dlgflux_list[best_index];
 				snr_rec= snr_list[best_index];
@@ -981,6 +1005,7 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 			gSourcePosX_rec= x_rec;
 			gSourcePosY_rec= y_rec;
 			gSourceFlux_rec= pow(10,lgFlux_rec);
+			gSourcePeakFlux_rec= peakFlux_rec;
 			gSourceJ2000PosX_rec= ra_rec;
 			gSourceJ2000PosY_rec= dec_rec;
 			gSourceGalPosX_rec= l_rec;
@@ -1053,15 +1078,37 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 
 	}//end loop ref sources
 
+	double totCompleteness= 0;
+	if(nSources>0) totCompleteness= (double)(nMatch)/(double)(nSources);
+
 	#ifdef LOGGING_ENABLED	
-		INFO_LOG("#"<<nMatch<<"/"<<nSources<<" source match ...");
+		INFO_LOG("#"<<nMatch<<"/"<<nSources<<" sources detected ==> completeness="<<totCompleteness<<" ...");
 	#endif
 
 	//======================================
 	//==      RELIABILITY
 	//======================================	
-	int nRecSources_true= 0;
-	int nSelSources_true= 0;
+	long int nRecSources= 0;
+	long int nRecSources_true= 0;
+	long int nSelSources_true= 0;
+	long int nRecSources_above5Sigma= 0;
+	long int nRecSources_above5Sigma_true= 0;
+	long int nRecSources_above10Sigma= 0;
+	long int nRecSources_above10Sigma_true= 0;
+	long int nRecSources_above1mJy= 0;
+	long int nRecSources_above1mJy_true= 0;
+	long int nRecSources_above10mJy= 0;
+	long int nRecSources_above10mJy_true= 0;
+	long int nRecSources_above100mJy= 0;
+	long int nRecSources_above100mJy_true= 0;
+
+	FILE* fout= 0;
+	if(gDumpFalseSourceRegion){
+		fout= fopen(outfile_falseSources.c_str(),"w");
+  	fprintf(fout,"# Region file format: DS9 version 4.1\n");
+  	fprintf(fout,"global color=yellow font=\"helvetica 8 normal\" edit=1 move=1 delete=1 include=1\n");
+  	fprintf(fout,"image\n");
+	}
 
 	for(size_t j=0;j<sources_rec.size();j++)
 	{	
@@ -1074,6 +1121,11 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 		double lgFlux_rec= log10(flux_rec);
 		double l_rec= sources_rec[j].l;
 		double b_rec= sources_rec[j].b;
+		double snr_rec= sources_rec[j].snr;
+		std::string name_rec= sources_rec[j].name;
+		double bmaj_rec= sources_rec[j].bmaj_pix;
+		double bmin_rec= sources_rec[j].bmin_pix;
+		double pa_rec= sources_rec[j].pa_pix;
 
 		//Skip source if outside mosaic region
 		if(gSelectRegion){
@@ -1087,21 +1139,62 @@ int FindSourceMatch(const std::vector<SourceInfo>& sources,const std::vector<Sou
 			if(!isInside) continue;
 		}//close if gSelectRegion
 
+		nRecSources++;
+		if(snr_rec>=5) nRecSources_above5Sigma++;
+		if(snr_rec>=10) nRecSources_above10Sigma++;
+		if(flux_rec>0.001) nRecSources_above1mJy++;
+		if(flux_rec>0.01) nRecSources_above10mJy++;
+		if(flux_rec>0.1) nRecSources_above100mJy++;
+
 		//Fill histos
 		gFluxHisto_reliability->Fill(lgFlux_rec,1);
 		gFluxHisto_fdr->Fill(lgFlux_rec,1);
 		if(isRecSourceFound[j]) {
 			gFluxHisto_rec_reliability->Fill(lgFlux_rec,1);
 			nRecSources_true++;
+			if(snr_rec>=5) nRecSources_above5Sigma_true++;
+			if(snr_rec>=10) nRecSources_above10Sigma_true++;
+			if(flux_rec>0.001) nRecSources_above1mJy_true++;
+			if(flux_rec>0.01) nRecSources_above10mJy_true++;
+			if(flux_rec>0.1) nRecSources_above100mJy_true++;
 		}
 		else {
 			gFluxHisto_rec_fdr->Fill(lgFlux_rec,1);
+
+			//Add false detection to DS9 file
+			if(gDumpFalseSourceRegion && snr_rec>=gDumpFalseSourceRegionSNRThr){
+				std::stringstream ss;
+    		ss<<"ellipse("<<x_rec+1<<","<<y_rec+1<<","<<bmaj_rec<<","<<bmin_rec<<","<<pa_rec-90<<") # text={"<<name_rec<<"}, tag={snr="<<snr_rec<<"}";
+    		if(fout) fprintf(fout,"%s\n",ss.str().c_str());
+			}
 		}
 
 	}//end loop rec sources
 
+	if(fout) fclose(fout);
+
+	double totReliability= 0;
+	if(nRecSources>0) totReliability= (double)(nRecSources_true)/(double)(nRecSources);
+	double totReliability_above5Sigma= 0;
+	if(nRecSources_above5Sigma>0) totReliability_above5Sigma= (double)(nRecSources_above5Sigma_true)/(double)(nRecSources_above5Sigma);
+	double totReliability_above10Sigma= 0;
+	if(nRecSources_above10Sigma>0) totReliability_above10Sigma= (double)(nRecSources_above10Sigma_true)/(double)(nRecSources_above10Sigma);
+
+	double totReliability_above1mJy= 0;
+	if(nRecSources_above1mJy>0) totReliability_above1mJy= (double)(nRecSources_above1mJy_true)/(double)(nRecSources_above1mJy);
+	double totReliability_above10mJy= 0;
+	if(nRecSources_above10mJy>0) totReliability_above10mJy= (double)(nRecSources_above10mJy_true)/(double)(nRecSources_above10mJy);
+	double totReliability_above100mJy= 0;
+	if(nRecSources_above100mJy>0) totReliability_above100mJy= (double)(nRecSources_above100mJy_true)/(double)(nRecSources_above100mJy);
+
+
 	#ifdef LOGGING_ENABLED	
-		INFO_LOG("#"<<nRecSources_true<<"/"<<sources_rec.size()<<" good detection ...");
+		INFO_LOG("#"<<nRecSources_true<<"/"<<nRecSources<<" true/detected sources ==> reliability="<<totReliability<<" ...");
+		INFO_LOG("#"<<nRecSources_above5Sigma_true<<"/"<<nRecSources_above5Sigma<<" true/detected sources above 5 sigmas ==> reliability="<<totReliability_above5Sigma<<" ...");
+		INFO_LOG("#"<<nRecSources_above10Sigma_true<<"/"<<nRecSources_above10Sigma<<" true/detected sources above 10 sigmas ==> reliability="<<totReliability_above10Sigma<<" ...");
+		INFO_LOG("#"<<nRecSources_above1mJy_true<<"/"<<nRecSources_above1mJy<<" true/detected sources above 1 mJy ==> reliability="<<totReliability_above1mJy<<" ...");
+		INFO_LOG("#"<<nRecSources_above10mJy_true<<"/"<<nRecSources_above10mJy<<" true/detected sources above 10 mJy ==> reliability="<<totReliability_above10mJy<<" ...");
+		INFO_LOG("#"<<nRecSources_above100mJy_true<<"/"<<nRecSources_above100mJy<<" true/detected sources above 100 mJy ==> reliability="<<totReliability_above100mJy<<" ...");
 	#endif
 
 	return 0;
@@ -1455,8 +1548,15 @@ int ReadCatalogData()
 		}
 		cout<<"INFO: #"<<sources_rec.size()<<" ref sources found in catalog file "<<gFileNames_rec[i]<<endl;
 
+		//- Set false source name
+		std::string outfile_falseSources= "";
+		if(gDumpFalseSourceRegion){
+			std::string filename_noExt= CodeUtils::ExtractFileNameFromPath(gFileNames_rec[i],true);
+			outfile_falseSources= std::string("falseSources_") + filename_noExt + std::string(".reg");
+		}
+
 		//- Find matches
-		FindSourceMatch(sources,sources_rec);
+		FindSourceMatch(sources,sources_rec,outfile_falseSources);
 
 	}//end loop files
 
@@ -1673,7 +1773,7 @@ int ParseData_caesar(SourceInfo& info,const std::vector<std::string>& fields)
 	else if(gCatalogVersion==3) NDataCols= gNDataCols_caesar_v3; 
 
 	//Check number of fields present
-	if(fields.size()<NDataCols){
+	if(fields.size()!=NDataCols){
 		#ifdef LOGGING_ENABLED
 			ERROR_LOG("Invalid number of fields found in line ("<<fields.size()<<") when "<<NDataCols<<" expected!");
 		#endif
@@ -1728,13 +1828,13 @@ int ParseData_caesar(SourceInfo& info,const std::vector<std::string>& fields)
 	else if(gCatalogVersion==2 || gCatalogVersion==3){
 		bkgSum= atof(fields[41].c_str());
 		rmsSum= atof(fields[42].c_str());
-		chi2= atof(fields[NDataCols-4].c_str());
-		ndf= atof(fields[NDataCols-3].c_str());
+		chi2= atof(fields[43].c_str());
+		ndf= atof(fields[44].c_str());
 		eccentricityRatio= atof(fields[38].c_str());
 		areaRatio= atof(fields[39].c_str());
 		rotAngleVSBeam= atof(fields[40].c_str());
-		fitQuality= atoi(fields[NDataCols-2].c_str());
-		flag= atoi(fields[NDataCols-1].c_str());
+		fitQuality= atoi(fields[45].c_str());
+		flag= atoi(fields[46].c_str());
 	}
 
 	double avgBkg= bkgSum/(double)(nPix);

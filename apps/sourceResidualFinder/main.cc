@@ -1261,7 +1261,7 @@ int SelectSources()
 			#ifdef LOGGING_ENABLED
 				INFO_LOG("Source no. "<<i<<" (name="<<sourceName<<",id="<<sourceId<<", n="<<NPix<<"("<<X0<<","<<Y0<<")) tagged as a point-like source ...");
 			#endif
-			sources[i]->SetType(ePointLike);
+			sources[i]->SetMorphId(ePointLike);
 		}
 
 		//Tag nested sources
@@ -1283,7 +1283,7 @@ int SelectSources()
 				#ifdef LOGGING_ENABLED
 					INFO_LOG("Source no. "<<i<<": nested source no. "<<j<<" (name="<<nestedSourceName<<",id="<<nestedSourceId<<", n="<<nestedNPix<<"("<<nestedX0<<","<<nestedY0<<")) tagged as a point-like source ...");
 				#endif
-				nestedSources[j]->SetType(ePointLike);
+				nestedSources[j]->SetMorphId(ePointLike);
 			}
 		}//end loop nested sources
 			
