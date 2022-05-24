@@ -89,8 +89,8 @@ void Usage(char* exeName)
 	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (ROOT format) where to store selected sources (default=sources.root)"<<endl;
 	cout<<"-R, --region-output=[REGION_OUTPUT_FILE] \t Output DS9 region file name where to store selected sources (default=sources.reg)"<<endl;
 	cout<<"-C, --catalog-output=[CATALOG_OUTPUT_FILE] \t Output catalog file name where to store selected sources (default=catalog.dat)"<<endl;
-	cout<<"-f, --filterByType \t Consider only true sources with given type when searching the match (default=no)"<<endl;
-	cout<<"-s, --selectedType=[TYPE] \t True source types to be crossmatched (1=COMPACT, 2=POINT-LIKE, 3=EXTENDED, 4=COMPACT_WITH_EXTENDED) (default=-1)"<<endl;
+	cout<<"-f, --filterByMorphId \t Consider only true sources with given morph id when searching the match (default=no)"<<endl;
+	cout<<"-s, --selectedMorphId=[MORPH_ID] \t True source morph id to be crossmatched (1=COMPACT, 2=POINT-LIKE, 3=EXTENDED, 4=COMPACT_WITH_EXTENDED, 5=DIFFUSE) (default=-1)"<<endl;
 	cout<<"-v, --verbosity=[LEVEL] \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	cout<<"=============================="<<endl;
 
@@ -111,8 +111,8 @@ static const struct option options_tab[] = {
 	{ "trainsize", required_argument, 0, 'T' },
 	{ "region-output", required_argument, 0, 'R' },
 	{ "catalog-output", required_argument, 0, 'C' },
-	{ "filterByType", no_argument, 0, 'f'},
-	{ "selectedType", required_argument, 0, 's'},	
+	{ "filterByMorphId", no_argument, 0, 'f'},
+	{ "selectedMorphId", required_argument, 0, 's'},	
 	{ "verbosity", required_argument, 0, 'v'},
 	{ "output", required_argument, 0, 'o' },
 	{ "interactive", no_argument, 0, 'I' },
@@ -129,7 +129,7 @@ struct SourceComponentData
 	double areaRatio;
 	double eccentricityRatio;	
 	double eccentricityDiff;
-	int flag;
+	int sourceness;
 	int classOutput;
 	bool isSelected;
 
@@ -142,7 +142,7 @@ struct SourceComponentData
 		areaRatio= -999;
 		eccentricityRatio= -999;
 		eccentricityDiff= -999;
-		flag= 0;
+		sourceness= 0;
 		classOutput= 0;	
 		isSelected= true;
 	}
@@ -154,7 +154,7 @@ struct SourceComponentData
 		areaRatio= -999;
 		eccentricityRatio= -999;
 		eccentricityDiff= -999;
-		flag= 0;
+		sourceness= 0;
 		classOutput= 0;
 		isSelected= true;
 	}
@@ -176,7 +176,7 @@ std::string regionOutputFileName= "sources.reg";
 std::string regionComponentsOutputFileName= "sources_fitcomp.reg";
 std::string catalogOutputFileName= "catalog.dat";
 std::string catalogComponentsOutputFileName= "catalog_fitcomp.dat";
-bool selectSourceByType= false;//default=all true sources searched 
+bool selectSourceByMorphId= false;//default=all true sources searched 
 std::vector<int> stypes;
 int ds9WCSType= 0;//use original WCS type to save catalog
 int verbosity= 4;//INFO level
@@ -531,7 +531,7 @@ int ParseOptions(int argc, char *argv[])
 			}
 			case 'f':
 			{
-				selectSourceByType= true;
+				selectSourceByMorphId= true;
 				break;
 			}
 			case 's':	
@@ -1446,20 +1446,20 @@ int ApplyClassifier(std::string weightFileName)
 			continue;
 		}
 			
-		//Set source component flag
-		int componentFlag= 0;
+		//Set source component sourcess
+		int componentSourceness= 0;
 		if(isClassifiedAsSignal) {
-			componentFlag= eReal;
+			componentSourceness= eReal;
 			nSignalSources++;
 		}
 		else {
-			componentFlag= eFake;
+			componentSourceness= eFake;
 			nBkgSources++;
 		}
 
-		if(source->SetFitComponentFlag(gFitComponentIndex,componentFlag)<0){
+		if(source->SetFitComponentSourcenessId(gFitComponentIndex,componentSourceness)<0){
 			#ifdef LOGGING_ENABLED
-				WARN_LOG("Failed to set flag of fit component "<<gFitComponentIndex<<"!");
+				WARN_LOG("Failed to set sourceness of fit component "<<gFitComponentIndex<<"!");
 			#endif
 			continue;
 		}
@@ -1552,18 +1552,18 @@ int ReadSourceData(std::string filename)
 
 	for(int i=0;i<sourceTree->GetEntries();i++){
 		sourceTree->GetEntry(i);
-		int type= aSource->Type;
+		int morphId= aSource->MorphId;
 		
 		#ifdef LOGGING_ENABLED
 			if(i%1000==0) INFO_LOG("Reading source no. "<<i+1<<"/"<<sourceTree->GetEntries()<<"...");
 		#endif
 
 
-		//Select source by type?
-		if(selectSourceByType){
+		//Select source by morph id?
+		if(selectSourceByMorphId){
 			bool skipSource= true;
 			for(size_t j=0;j<stypes.size();j++){
-				if( stypes[j]==-1 || type==stypes[j]) {
+				if( stypes[j]==-1 || morphId==stypes[j]) {
 					skipSource= false;
 					break;
 				}
@@ -1646,13 +1646,13 @@ int FillSourcePars(std::vector<SourceComponentData*>& pars,Source* aSource,int s
 
 			std::string sname= sourceName + std::string(Form("_fitcomp%d",k+1));
 
-			//Compute source component flag
-			int flag= eUnknownSourceFlag;
-			fitPars.GetComponentFlag(flag,k);
+			//Compute source component sourceness
+			int sourceness= eCandidate;
+			fitPars.GetComponentSourcenessId(sourceness,k);
 
 			int classFlag= -1;
-			if(flag==eFake || flag==eCandidate) classFlag= 0;
-			else if(flag==eReal) classFlag= 1;
+			if(sourceness==eFake || sourceness==eCandidate) classFlag= 0;
+			else if(sourceness==eReal) classFlag= 1;
 			else{
 				if(gTrainClassifier){
 					#ifdef LOGGING_ENABLED
@@ -1722,7 +1722,7 @@ int FillSourcePars(std::vector<SourceComponentData*>& pars,Source* aSource,int s
 			//Fill component par
 			cData= new SourceComponentData(k,sourceIndex,nestedSourceIndex);
 			cData->sname= sname;
-			cData->flag= flag;		
+			cData->sourceness= sourceness;		
 			cData->classOutput= classFlag;
 			cData->peakSNR= peakSNR;
 			cData->eccentricityRatio= eccentricityRatio;
