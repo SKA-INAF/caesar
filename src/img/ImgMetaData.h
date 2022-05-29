@@ -129,6 +129,16 @@ class ImgMetaData : public TObject {
 		bool HasBeamInfo();
 
 		/**
+		* \brief Set beam info
+		*/
+		void SetBeamInfo(double bmaj, double bmin, double pa)
+		{
+			Bmaj= bmaj;
+			Bmin= bmin;
+			Bpa= pa;
+		}
+
+		/**
 		* \brief Check if frequency info have been specified and are valid
 		*/
 		bool HasFrequencyInfo();

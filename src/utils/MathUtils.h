@@ -389,6 +389,78 @@ class MathUtils : public TObject {
 		}
 
 		/**
+		* \brief Check if 2D point is lying on segment a-b including vertex
+		*/
+		static bool IsPointInsideSegment(TVector2 point, TVector2 a, TVector2 b, double epsilon=1.e-12);
+
+		/**
+		* \brief Check if 2D point is lying on polygon boundary, including vertices
+		*/
+		static bool IsPointOnPolygonBoundary(const TVector2& point, const std::vector<TVector2>& polygon);
+
+		/**
+		* \brief Check if 2D point is lying on polygon boundary, including vertices
+		*/
+		static bool IsPointOnPolygonBoundary(double x, double y, const std::vector<TVector2>& polygon)
+		{
+			TVector2 point(x, y);
+			return IsPointOnPolygonBoundary(point, polygon);
+		}
+
+		/**
+		* \brief Check if 2D point with coordinates (x,y) is inside a polygon (version 2)
+		*/
+		/*
+		static bool IsPointInsidePolygonV2(const TVector2& point,const std::vector<TVector2>& polygon)
+		{
+			return IsPointInsidePolygonV2(point.X(),point.Y(),polygon);
+		} 
+		*/
+		
+		/**
+		* \brief Check if 2D point with coordinates (x,y) is inside a polygon (version 2)
+		*/
+		//static bool IsPointInsidePolygonV2(double x,double y,const std::vector<TVector2>& polygon, bool include_borders=false);
+
+		
+		/**
+ 		* @brief Check if a point lies inside, on or outside any polygon.
+ 		*
+ 		* Winding number algorithm can be used to check if any point lies inside a
+ 		* polygon. A more detailed explanation can be found in the blog post. The link
+ 		* is attached at the top of the file.
+		*
+ 		*
+ 		* @param query_point Point to check.
+ 		* @param vertices Vertices making up the polygon in anticlockwise direction.
+ 		* @return  = 1: query_point lies inside the polygon.
+ 		*          = 0: query_point lies on the polygon.
+ 		*          =-1: query_point lies outside the polygon.
+ 		*/
+		//static int query_point_inside_polygon(const TVector2& query_point, const std::vector<TVector2>& vertices);
+
+
+		/**
+ 		* @brief The result can be used to test if the query point lies on the left or
+ 		*        right side of the line formed by pt1 and pt2 when viewed in
+ 		*        anticlockwise  direction.
+ 		*
+ 		* @param pt1: First point to form equation of line.
+ 		* @param pt2: Second point to form equation of line.
+ 		* @param query_point: Query point
+ 		* @return: > 0: Query point lies on left of the line.
+ 		*          = 0: Query point lies on the line.
+ 		*          < 0: Query point lies on right of the line.
+ 		*/	
+		/*
+		static double substitute_point_in_line(const TVector2& pt1, const TVector2& pt2, const TVector2& query_point) 
+		{
+    	return ((query_point.Y() - pt1.Y()) * (pt2.X() - pt1.X())) -
+           	 ((query_point.X() - pt1.X()) * (pt2.Y() - pt1.Y()));
+		};
+		*/
+
+		/**
 		* \brief Compute rotated coordinates (x,y)
 		*/
 		static void ComputeRotatedCoords(double& xrot,double& yrot,double x,double y,double cx,double cy,double theta);

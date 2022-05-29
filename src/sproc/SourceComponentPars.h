@@ -141,6 +141,16 @@ class SourceComponentPars : public TObject {
 		void SetSourcenessId(int flag){m_sourcenessId=flag;}
 
 		/** 
+		\brief Get fit component sourceness score
+ 		*/	
+		int GetSourcenessScore(){return m_sourcenessScore;}
+
+		/** 
+		\brief Set fit component sourceness score
+ 		*/
+		void SetSourcenessScore(int flag){m_sourcenessScore=flag;}
+
+		/** 
 		\brief Get source component morph id
  		*/	
 		int GetMorphId(){return m_morphId;}
@@ -353,6 +363,7 @@ class SourceComponentPars : public TObject {
 			m_bmaj_deconv_wcs= bmaj_wcs;
 			m_bmin_deconv_wcs= bmin_wcs;
 			m_pa_deconv_wcs= pa_wcs;
+			m_hasWCSDeconvolvedEllipsePars= true;
 		}
 
 		/**
@@ -463,6 +474,7 @@ class SourceComponentPars : public TObject {
 
 		//- Fit component sourceness
 		int m_sourcenessId;
+		double m_sourcenessScore;
 
 		//- Source component morph id
 		int m_morphId;

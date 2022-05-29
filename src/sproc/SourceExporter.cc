@@ -1292,22 +1292,29 @@ int SourceExporter::FillJsonSource(Json::Value& json, Source* source, bool dumpN
 
 	//Get object type
 	int objClassId= source->ObjClassId;
+	int objClassSubId= source->ObjClassSubId;
 	std::string objClassLabel= GetAstroObjectLabel(objClassId);
+	std::string objClassSecondaryLabel= GetAstroObjectLabel(objClassSubId);
+	float objClassScore= source->ObjClassScore;
 
 	//Get sky position	
 	double X0_wcs= 0;
 	double Y0_wcs= 0;
 	if(wcs) source->GetWCSPos(X0_wcs,Y0_wcs,wcs,eJ2000);
 
+	//Get source depth level
+	int nestLevel= source->GetDepthLevel();
+
 	//Fill main json fields
 	Json::Value json_source= Json::Value(Json::ValueType::objectValue);
-	json_source["index"]= index;
+	//json_source["index"]= index;
 	json_source["name"]= name;
-	json_source["valid_pars"]= 1;//set to true by default
+	//json_source["valid_pars"]= 1;//set to true by default
 	json_source["iau_name"]= iauName;
-	json_source["classid"]= objClassId;
-  json_source["label"]= objClassLabel; 
-  json_source["nislands"]= 1; 
+	//json_source["class_id"]= objClassId;
+	json_source["class_label"]= objClassLabel;
+	json_source["class_score"]= objClassScore;
+  json_source["nislands"]= 1;
   json_source["x0"]= source->X0;
   json_source["y0"]= source->Y0;
 	json_source["ra"]= X0_wcs;
@@ -1316,7 +1323,8 @@ int SourceExporter::FillJsonSource(Json::Value& json, Source* source, bool dumpN
 	json_source["sourceness_label"]= GetSourcenessLabel(source->SourcenessId);
 	json_source["sourceness_score"]= -1;//not assessed by default
   json_source["tags"]= Json::arrayValue;//user tags left empty by default
- 
+	json_source["nest_level"]= nestLevel; 
+
 	//Fill island fields	
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("Fill island fields...");
@@ -1369,6 +1377,14 @@ int SourceExporter::FillJsonSourceIsland(Json::Value& json, Source* source, WCS*
 	bool useWeightedPos= false;
 	std::string iauName= name;
 	if(wcs) iauName= source->GetIAUName(useWeightedPos,wcs,eJ2000);
+
+	//Get object type
+	int objClassId= source->ObjClassId;
+	int objClassSubId= source->ObjClassSubId;
+	if(objClassSubId==eUNKNOWN_OBJECT) objClassSubId= objClassId;
+	std::string objClassLabel= GetAstroObjectLabel(objClassId);
+	std::string objClassSecondaryLabel= GetAstroObjectLabel(objClassSubId);
+	float objClassScore= source->ObjClassScore;
 
 	//Compute WCS centroid
 	double X0_wcs= 0;
@@ -1448,11 +1464,11 @@ int SourceExporter::FillJsonSourceIsland(Json::Value& json, Source* source, WCS*
 	json["iau_name"]= iauName;
 
 	// - Parent source index
-	json["parent_index"]= parent_index;
-	json["parent_island_index"]= parent_island_index;
+	//json["parent_index"]= parent_index;
+	//json["parent_island_index"]= parent_island_index;
 	
 	// - Set bool flag indicating if source island pars are valid
-	json["valid_pars"]= 1;//set valid as default
+	//json["valid_pars"]= 1;//set valid as default
 
 	//- Number of pixels
 	json["npix"]= source->NPix;
@@ -1479,8 +1495,9 @@ int SourceExporter::FillJsonSourceIsland(Json::Value& json, Source* source, WCS*
 	json["dec_max"]= ymax_wcs;
 
 	//- Flux 
-	json["Stot"]= source->GetS();
-	json["Smax"]= source->GetSmax();
+	json["Stot"]= source->GetS()/beamArea;//in Jy
+	json["Smax"]= source->GetSmax();//in Jy/beam
+	/*
 	if(convertBrightnessToFlux){
 		json["S"]= flux;
 		json["S_err"]= fluxErr;
@@ -1489,6 +1506,7 @@ int SourceExporter::FillJsonSourceIsland(Json::Value& json, Source* source, WCS*
 		json["S"]= fluxDensity;
 		json["S_err"]= fluxDensityErr;
 	}
+	*/
 
 	//- Bkg/noise estimators
 	json["bkg"]= bkgLevel;
@@ -1498,13 +1516,17 @@ int SourceExporter::FillJsonSourceIsland(Json::Value& json, Source* source, WCS*
 	json["morph_label"]= GetSourceMorphLabel(source->MorphId);
 	json["sourceness_label"]= GetSourcenessLabel(source->SourcenessId);
 	json["sourceness_score"]= -1;//not assessed by default
-	json["border"]= source->IsAtEdge();
+	json["border"]= static_cast<int>(source->IsAtEdge());
+
+	//- Source classification
+	json["class_label"]= objClassSecondaryLabel;
+	json["class_score"]= objClassScore;
 
 	//- User tags (empty list by default)
 	json["tags"]= Json::arrayValue;
 
 	//- Morph parameters
-	json["resolved"]= resolved;
+	json["resolved"]= static_cast<int>(resolved);
 	json["beam_area_ratio_par"]= nBeams;
 	json["circ_ratio_par"]= circRatio;
 	json["elongation_par"]= elongation;
@@ -1547,8 +1569,8 @@ int SourceExporter::FillJsonSourceIsland(Json::Value& json, Source* source, WCS*
 	if(hasSpectralIndexData){
 		Json::Value json_spectralinfo;
 		json_spectralinfo["alpha"]= sid.spectralIndex;
-		json_spectralinfo["alpha_err"]= sid.spectralIndex;
-		json_spectralinfo["fit"]= sid.isSpectralIndexFit;
+		json_spectralinfo["alpha_err"]= sid.spectralIndexErr;
+		json_spectralinfo["fit"]= static_cast<int>(sid.isSpectralIndexFit);
 		json_spectralinfo["chi2"]= sid.spectralFitChi2;
 		json_spectralinfo["ndf"]= sid.spectralFitNDF;
 		
@@ -1572,10 +1594,25 @@ int SourceExporter::FillJsonSourceIsland(Json::Value& json, Source* source, WCS*
 		Json::Value json_fitinfo;
 		json_fitinfo["ncomponents"]= nSelFitComponents;
 		json_fitinfo["model"]= "gaus";
+		json_fitinfo["ndata"]= fitPars.GetNFitPoints();
 		json_fitinfo["npars"]= fitPars.GetNPars();
+		json_fitinfo["npars_free"]= fitPars.GetNFreePars();
 		json_fitinfo["chi2"]= fitPars.GetChi2();
 		json_fitinfo["ndf"]= fitPars.GetNDF();
 		json_fitinfo["fit_quality"]= GetSourceFitQualityStr_V2(fitPars.GetFitQuality());
+		json_fitinfo["flux"]= flux;
+		json_fitinfo["flux_err"]= fluxErr;
+		
+		TMatrixD covMatrix= fitPars.GetCovarianceMatrix();
+		json_fitinfo["cov_matrix"]= Json::arrayValue;//store only upper triangular matrix as C is symmetric
+		for(int i=0;i<covMatrix.GetNrows();i++){
+			for(int j=0;j<covMatrix.GetNcols();j++){
+				if(i<=j){
+					double c_ij= covMatrix(i,j);
+					json_fitinfo["cov_matrix"].append(c_ij);
+				}
+			}
+		}
 
 		//Fill fit components
 		#ifdef LOGGING_ENABLED
@@ -1817,7 +1854,7 @@ int SourceExporter::FillJsonSourceComponents(Json::Value& json, Source* source, 
 		json_component["morph_label"]= GetSourceMorphLabel(componentMorphId);
 		json_component["sourceness_label"]= GetSourcenessLabel(componentSourcenessId);
 		json_component["sourceness_score"]= -1;//set to non-assessed
-		json_component["resolved"]= resolved;
+		json_component["resolved"]= static_cast<int>(resolved);
 		json_component["eccentricity_ratio"]= EccentricityRatio;
 		json_component["area_ratio"]= AreaRatio;
 		json_component["rot_angle_vs_beam"]= RotAngle;
@@ -1832,7 +1869,7 @@ int SourceExporter::FillJsonSourceComponents(Json::Value& json, Source* source, 
 			Json::Value json_spectralinfo;
 			json_spectralinfo["alpha"]= sid_comp[k].spectralIndex;
 			json_spectralinfo["alpha_err"]= sid_comp[k].spectralIndex;
-			json_spectralinfo["fit"]= sid_comp[k].isSpectralIndexFit;
+			json_spectralinfo["fit"]= static_cast<int>(sid_comp[k].isSpectralIndexFit);
 			json_spectralinfo["chi2"]= sid_comp[k].spectralFitChi2;
 			json_spectralinfo["ndf"]= sid_comp[k].spectralFitNDF;
 		
@@ -2291,7 +2328,7 @@ int SourceExporter::SourceComponentsToJson(std::vector<Json::Value>& jsonValues,
 			double pa_deconv_wcs= 0;
 			if(fitPars.GetComponentFitWCSDeconvolvedEllipsePars(k,bmaj_deconv_wcs,bmin_deconv_wcs,pa_deconv_wcs)<0){
 				#ifdef LOGGING_ENABLED
-					DEBUG_LOG("Failed to retrieve WCS beam-deconvolved ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+					WARN_LOG("Failed to retrieve WCS beam-deconvolved ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
 				#endif
 			}
 

@@ -304,11 +304,11 @@ inline std::string GetSourceFitQualityStr_V2(int fitQuality)
 inline int GetSourceFitQuality(std::string label)
 {
 	int fitQuality= eUnknownFitQuality;
-	if(label=="BAD-FIT") fitQuality= eBadFit;
-	else if(label=="LQ-FIT") fitQuality= eLQFit;
-	else if(label=="MQ-FIT") fitQuality= eMQFit;
-	else if(label=="HQ-FIT") fitQuality= eHQFit;
-	else if(label=="UNKNOWN-FIT-QUALITY") fitQuality= eUnknownFitQuality;
+	if(label=="BAD-FIT" || label=="BAD") fitQuality= eBadFit;
+	else if(label=="LQ-FIT" || label=="LOW") fitQuality= eLQFit;
+	else if(label=="MQ-FIT" || label=="MEDIUM") fitQuality= eMQFit;
+	else if(label=="HQ-FIT" || label=="HIGH") fitQuality= eHQFit;
+	else if(label=="UNKNOWN-FIT-QUALITY" || label=="UNKNOWN") fitQuality= eUnknownFitQuality;
 	else fitQuality= eUnknownFitQuality;
 	return fitQuality;
 }
@@ -326,6 +326,8 @@ inline int GetSourceFitQuality(std::string flagStr)
 	return fitQuality;
 }
 */
+
+
 
 enum ColorPaletteStyle {
 	eRAINBOW= 0,
@@ -415,6 +417,20 @@ enum SourceFitStatus {
 	eFitConverged= 3,
 	eFitConvergedWithWarns= 4
 };
+
+/**
+* \brief Get fit status from quality flag
+*/
+inline int GetSourceFitStatusFromFitQuality(int fitQuality)
+{
+	int fitStatus= eFitUnknownStatus;
+	if(fitQuality==eBadFit) fitStatus= eFitNotConverged;
+	else if(fitQuality==eLQFit || fitQuality==eMQFit || fitQuality==eHQFit) fitStatus= eFitConverged;
+	else if(fitQuality==eUnknownFitQuality) fitStatus= eFitUnknownStatus;
+	else fitStatus= eFitUnknownStatus;
+	return fitStatus;
+}
+
 
 /**
 * \brief Logger target enumerations
@@ -552,12 +568,16 @@ inline int GetAstroObjectType(std::string typeStr)
 	else if(typeStr=="GALAXY_C5") type= eGALAXY_C5;
 	else if(typeStr=="GALAXY_C6") type= eGALAXY_C6;
 	*/
+	else if(typeStr=="GALAXY") type= eGALAXY;
 	else if(typeStr=="GALAXY_C1") type= eGALAXY;
 	else if(typeStr=="GALAXY_C2") type= eGALAXY;
 	else if(typeStr=="GALAXY_C3") type= eGALAXY;
 	else if(typeStr=="GALAXY_C4") type= eGALAXY;
 	else if(typeStr=="GALAXY_C5") type= eGALAXY;
 	else if(typeStr=="GALAXY_C6") type= eGALAXY;
+	else if(typeStr=="QSO") type= eQSO;
+
+	else if(typeStr=="MULTI-CLASS") type= eMULTI_CLASS_OBJECT;
 	else type= eUNKNOWN_OBJECT;
 
 	return type;

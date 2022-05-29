@@ -280,6 +280,8 @@ class SourceFitPars : public TObject {
 		*/
 		double GetComponentFluxDensity(int componentId);
 
+		
+
 		/**
 		* \brief Get component flux density error
 		*/
@@ -369,6 +371,22 @@ class SourceFitPars : public TObject {
 		}
 
 		/**
+		* \brief Set component fit ellipse pars
+		*/
+		int SetComponentFitEllipsePars(int componentId,double x0,double y0,double bmaj,double bmin,double pa)
+		{
+			if(componentId<0 || componentId>=nComponents){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
+				return -1;
+			}
+			pars[componentId].SetEllipsePars(x0,y0,bmaj,bmin,pa);
+
+			return 0;
+		}
+
+		/**
 		* \brief Get component fit ellipse eccentricity
 		*/
 		double GetComponentFitEllipseEccentricity(int componentId)
@@ -380,6 +398,22 @@ class SourceFitPars : public TObject {
 				return 0;
 			}
 			return pars[componentId].GetEllipseEccentricity();
+		}
+
+		/**
+		* \brief Set component fit ellipse eccentricity
+		*/
+		int SetComponentFitEllipseEccentricity(int componentId, double E)
+		{
+			if(componentId<0 || componentId>=nComponents){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist, returning E=0!");
+				#endif
+				return 0;
+			}
+			pars[componentId].SetEllipseEccentricity(E);
+
+			return 0;
 		}
 
 		/**
@@ -397,6 +431,22 @@ class SourceFitPars : public TObject {
 		}
 
 		/**
+		* \brief Set component fit ellipse area
+		*/
+		int SetComponentFitEllipseArea(int componentId, double A)
+		{
+			if(componentId<0 || componentId>=nComponents){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist, returning A=0!");
+				#endif
+				return 0;
+			}
+			pars[componentId].SetEllipseArea(A);
+
+			return 0;
+		}
+
+		/**
 		* \brief Get component fit ellipse rot angle vs beam
 		*/
 		double GetComponentFitEllipseRotAngleVSBeam(int componentId)
@@ -408,6 +458,22 @@ class SourceFitPars : public TObject {
 				return 0;
 			}
 			return pars[componentId].GetEllipseRotAngleVSBeam();
+		}
+
+		/**
+		* \brief Set component fit ellipse rot angle vs beam
+		*/
+		int SetComponentFitEllipseRotAngleVSBeam(int componentId, double angle)
+		{
+			if(componentId<0 || componentId>=nComponents){
+				#ifdef LOGGING_ENABLED				
+					WARN_LOG("Component "<<componentId<<" does not exist, returning A=0!");
+				#endif
+				return 0;
+			}
+			pars[componentId].SetEllipseRotAngleVSBeam(angle);
+
+			return 0;
 		}
 
 		/**
@@ -433,6 +499,22 @@ class SourceFitPars : public TObject {
 		}
 
 		/**
+		* \brief Set component fit ellipse pars
+		*/
+		int SetComponentFitEllipseParErrors(int componentId,double x0_err,double y0_err,double bmaj_err,double bmin_err,double pa_err)
+		{
+			if(componentId<0 || componentId>=nComponents){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
+				return -1;
+			}
+			pars[componentId].SetEllipseParErrors(x0_err,y0_err,bmaj_err,bmin_err,pa_err);
+
+			return 0;
+		}
+
+		/**
 		* \brief Get component WCS fit ellipse pars
 		*/
 		int GetComponentFitWCSEllipsePars(int componentId,double& x0_wcs,double& y0_wcs,double& bmaj_wcs,double& bmin_wcs,double& pa_wcs)
@@ -452,6 +534,24 @@ class SourceFitPars : public TObject {
 
 			//Get component fit ellipse pars
 			return pars[componentId].GetWCSEllipsePars(x0_wcs,y0_wcs,bmaj_wcs,bmin_wcs,pa_wcs);
+		}
+
+		/**
+		* \brief Set component WCS fit ellipse pars
+		*/
+		int SetComponentFitWCSEllipsePars(int componentId,double x0_wcs,double y0_wcs,double bmaj_wcs,double bmin_wcs,double pa_wcs)
+		{
+			if(componentId<0 || componentId>=nComponents){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
+				return -1;
+			}
+
+			//Set component fit ellipse pars
+			pars[componentId].SetWCSEllipsePars(x0_wcs,y0_wcs,bmaj_wcs,bmin_wcs,pa_wcs);
+
+			return 0;
 		}
 
 		/**
@@ -476,6 +576,25 @@ class SourceFitPars : public TObject {
 			return pars[componentId].GetWCSEllipseParErrors(x0_wcs_err,y0_wcs_err,bmaj_wcs_err,bmin_wcs_err,pa_wcs_err);
 		}
 
+
+		/**
+		* \brief Set component WCS fit ellipse par errors
+		*/
+		int SetComponentFitWCSEllipseParErrors(int componentId,double x0_wcs_err,double y0_wcs_err,double bmaj_wcs_err,double bmin_wcs_err,double pa_wcs_err)
+		{
+			if(componentId<0 || componentId>=nComponents){	
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
+				return -1;
+			}
+
+			//Set component fit ellipse pars
+			pars[componentId].SetWCSEllipseParErrors(x0_wcs_err,y0_wcs_err,bmaj_wcs_err,bmin_wcs_err,pa_wcs_err);
+
+			return 0;
+		}
+
 		/**
 		* \brief Get component WCS fit ellipse pars
 		*/
@@ -494,6 +613,24 @@ class SourceFitPars : public TObject {
 
 			//Get component fit ellipse pars
 			return pars[componentId].GetWCSDeconvolvedEllipsePars(bmaj_wcs,bmin_wcs,pa_wcs);
+		}
+
+		/**
+		* \brief Set component WCS fit ellipse pars
+		*/
+		int SetComponentFitWCSDeconvolvedEllipsePars(int componentId,double bmaj_wcs,double bmin_wcs,double pa_wcs)
+		{
+			if(componentId<0 || componentId>=nComponents){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
+				return -1;
+			}
+
+			//Set component fit ellipse pars
+			pars[componentId].SetWCSDeconvolvedEllipsePars(bmaj_wcs,bmin_wcs,pa_wcs);
+	
+			return 0;
 		}
 
 		/**
@@ -937,6 +1074,22 @@ class SourceFitPars : public TObject {
 
 		}//close ComputeComponentEllipsePars()
 
+		/**
+		* \brief Compute component ellipse pars per component
+		*/
+		int ComputeComponentEllipsePars(int componentId)
+		{
+			if(componentId<0 || componentId>=nComponents){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
+				return -1;
+			}
+
+			return pars[componentId].ComputeEllipsePars();
+
+		}//close ComputeComponentEllipsePars()
+
 
 		/**
 		* \brief Compute component WCS ellipse pars
@@ -1134,6 +1287,45 @@ class SourceFitPars : public TObject {
 	
 			//Retrieve flag
 			flag= pars[componentId].GetSourcenessId();
+
+			return 0;
+		}
+
+
+		/**
+		* \brief Set component sourceness score
+		*/
+		int SetComponentSourcenessScore(int componentId, double score)
+		{		
+			//Check component id	
+			if(componentId<0 || componentId>=nComponents){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
+				return 0;
+			}
+
+			pars[componentId].SetSourcenessScore(score);
+
+			return 0;
+		}
+	
+		/**
+		* \brief Get component sourceness score
+		*/
+		int GetComponentSourcenessScore(double& score, int componentId)
+		{
+			//Check component id
+			score= -1;
+			if(componentId<0 || componentId>=nComponents){
+				#ifdef LOGGING_ENABLED
+					WARN_LOG("Component "<<componentId<<" does not exist!");
+				#endif
+				return -1;
+			}
+	
+			//Retrieve score
+			score= pars[componentId].GetSourcenessScore();
 
 			return 0;
 		}

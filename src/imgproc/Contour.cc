@@ -135,6 +135,7 @@ void Contour::Copy(TObject &obj) const {
 
 	((Contour&)obj).HuMoments = HuMoments;
 	((Contour&)obj).BoundingBoxVertex = BoundingBoxVertex;
+	((Contour&)obj).BoundingBoxVertex_noRot = BoundingBoxVertex_noRot;
 	((Contour&)obj).Centroid = Centroid;
 	((Contour&)obj).RealFDs = RealFDs;
 	((Contour&)obj).ImagFDs = ImagFDs;
@@ -182,7 +183,9 @@ void Contour::Init(){
 	TiltAngle= -999;
 	//Moments= ...
 	for(int k=0;k<7;k++) HuMoments.push_back(0.);//HuMoments[k]= 0;
-	for(int k=0;k<4;k++) BoundingBoxVertex.push_back(TVector2(0,0));//BoundingBoxVertex[k]= TVector2(0,0);	
+	for(int k=0;k<4;k++) BoundingBoxVertex.push_back(TVector2(0,0));//BoundingBoxVertex[k]= TVector2(0,0);
+	for(int k=0;k<4;k++) BoundingBoxVertex_noRot.push_back(TVector2(0,0));
+
 	BoundingBoxCenter= TVector2(0,0);
 	Centroid= TVector2(0,0);
 	//FDs.clear();
@@ -404,12 +407,23 @@ void Contour::ComputeShapeParams(std::vector<cv::Point2f>const & points)
 	//Compute circularity ratio
 	CircularityRatio= 4*TMath::Pi()*Area/pow(Perymeter,2);
 
-	//Compute Bounding Box
-	cv::RotatedRect MinBoundingRect= cv::minAreaRect(points);//rotated bounding box
+	//Compute rotated Bounding Box
+	cv::RotatedRect MinBoundingRect= cv::minAreaRect(points);
 
-	cv::Point2f bb[4]; 
+	//Compute straight Bounding Box (non-rotated)
+	cv::Rect MinBoundingRect_norota= cv::boundingRect(points);
+
+	cv::Point2f bb[4];
+	cv::Point2f bb_norota[4]; 
 	MinBoundingRect.points(bb);//bounding box vertexes
-	for(int k=0;k<4;k++) BoundingBoxVertex[k]= TVector2(bb[k].x,bb[k].y);
+	
+	for(int k=0;k<4;k++) {
+		BoundingBoxVertex[k]= TVector2(bb[k].x, bb[k].y);
+		BoundingBoxVertex_noRot[0]= TVector2(MinBoundingRect_norota.x, MinBoundingRect_norota.y);
+    BoundingBoxVertex_noRot[1]= TVector2(MinBoundingRect_norota.x + MinBoundingRect_norota.width, MinBoundingRect_norota.y);
+    BoundingBoxVertex_noRot[2]= TVector2(MinBoundingRect_norota.x + MinBoundingRect_norota.width, MinBoundingRect_norota.y + MinBoundingRect_norota.height);
+    BoundingBoxVertex_noRot[3]= TVector2(MinBoundingRect_norota.x, MinBoundingRect_norota.y + MinBoundingRect_norota.height);
+	}
 
 	double MinBoundingRect_height= MinBoundingRect.size.height;
 	double MinBoundingRect_width= MinBoundingRect.size.width;
@@ -1031,9 +1045,26 @@ TVector2* Contour::FindPoint(double x,double y,double tol)
 }//close FindPoint()
 
 
-bool Contour::IsPointInsideContour(double x,double y)
+bool Contour::IsPointInsideContour(double x, double y, bool includeBorders)
 {
-	return MathUtils::IsPointInsidePolygon(x,y,m_Points);
+	bool inside= MathUtils::IsPointInsidePolygon(x,y,m_Points);
+	if(inside) return true;
+
+	if(includeBorders){
+		bool onBorder= MathUtils::IsPointOnPolygonBoundary(x,y,m_Points);
+		if(onBorder) return true;
+	}
+
+	return false;
+
+}//close IsPointInsideContour()
+
+
+bool Contour::IsPointInsideContourV2(double x, double y, bool includeBorders, bool sortCounterClockwise)
+{
+	if(sortCounterClockwise) SortPointsCounterClockWise();
+		
+	return MathUtils::IsPointInsidePolygonV2(x, y, m_Points, includeBorders);
 
 }//close IsPointInsideContour()
 

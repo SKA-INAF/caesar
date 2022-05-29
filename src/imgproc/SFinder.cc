@@ -273,9 +273,9 @@ void SFinder::InitOptions()
 
 	//Beam info
 	m_beamFWHM= 6.5;
-	m_beamFWHMMax= 10;
-	m_beamFWHMMin= 5;
-	m_pixSize= 1;
+	m_beamFWHMMax= 10;//arcsec
+	m_beamFWHMMin= 5;//arcsec
+	m_pixSize= 1;//arcsec
 	m_fluxCorrectionFactor= 1;
 	
 	//Output options
@@ -3880,6 +3880,15 @@ Image* SFinder::ReadImage(FileInfo& info,std::string filename,std::string imgnam
 			ERROR_LOG("Invalid file extension detected (ext="<<info.extension<<")!");
 		#endif
 		return nullptr;
+	}
+
+	//Set user beam information if lacking in original image
+	ImgMetaData* metadata= img->GetMetaData();
+	if(metadata && !metadata->HasBeamInfo()){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Input image has no beam information, setting user-supplied beam ("<<m_beamFWHMMax<<","<<m_beamFWHMMin<<","<<m_beamTheta<<") ...");
+		#endif
+		metadata->SetBeamInfo(m_beamFWHMMax/3600., m_beamFWHMMin/3600., m_beamTheta);//convert bmaj/bmin from arcsec to degree
 	}
 	
 	return img;

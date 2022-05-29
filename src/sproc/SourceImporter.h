@@ -131,6 +131,10 @@ class SourceImporter : public TObject
 		* \brief Read source island from json fields
 		*/
 		static Source* ReadSourceIslandFromJson(Json::Value& json, Image* img=0);
+		/**
+		* \brief Read source fit component from json fields
+		*/
+		//static int ReadSourceFitComponentFromJson(Json::Value& json);
 
 
 private:

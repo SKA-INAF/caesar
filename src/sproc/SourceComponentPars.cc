@@ -107,6 +107,7 @@ SourceComponentPars::SourceComponentPars()
 
 	//Init other vars
 	m_sourcenessId= eCandidate;
+	m_sourcenessScore= -1;//not assessed by default
 	m_morphId= ePointLike;
 	m_selected= true;
 
@@ -181,6 +182,7 @@ void SourceComponentPars::Copy(TObject &obj) const
 	((SourceComponentPars&)obj).m_pa_deconv_wcs = m_pa_deconv_wcs;
 				
 	((SourceComponentPars&)obj).m_sourcenessId = m_sourcenessId;	
+	((SourceComponentPars&)obj).m_sourcenessScore = m_sourcenessScore;
 	((SourceComponentPars&)obj).m_morphId = m_morphId;
 	((SourceComponentPars&)obj).m_selected = m_selected;
 						
@@ -205,6 +207,7 @@ void SourceComponentPars::Init()
 
 	//Init other vars
 	m_sourcenessId= eCandidate;
+	m_sourcenessScore= -1;
 	m_morphId= ePointLike;
 	m_selected= true;
 

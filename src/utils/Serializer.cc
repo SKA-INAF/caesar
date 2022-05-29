@@ -185,6 +185,7 @@ int Serializer::EncodeSourceComponentParsToProtobuf(CaesarPB::SourceComponentPar
 		sourceCompPars_pb->set_m_pa_deconv_wcs(pa_deconv_wcs);
 
 		sourceCompPars_pb->set_m_sourcenessid(sourceCompPars.GetSourcenessId());
+		sourceCompPars_pb->set_m_sourcenessscore(sourceCompPars.GetSourcenessScore());
 		sourceCompPars_pb->set_m_morphid(sourceCompPars.GetMorphId());
 		sourceCompPars_pb->set_m_selected(sourceCompPars.IsSelected());
 	
@@ -511,6 +512,15 @@ int Serializer::EncodeContourToProtobuf(CaesarPB::Contour& contour_pb,Contour* c
 			if(EncodePointToProtobuf(*thisBoundingBoxVertex,(contour->BoundingBoxVertex)[i])<0){
 				std::stringstream errMsg;
 				errMsg<<"BoundingBoxVertex no. "<<i+1<<" encoding to protobuf failed!";
+				throw std::runtime_error(errMsg.str().c_str());
+			}
+		}
+
+		for(unsigned int i=0;i<contour->BoundingBoxVertex_noRot.size();i++){		
+			CaesarPB::Point* thisBoundingBoxVertex_noRot = contour_pb.add_boundingboxvertex_norot();
+			if(EncodePointToProtobuf(*thisBoundingBoxVertex_noRot,(contour->BoundingBoxVertex_noRot)[i])<0){
+				std::stringstream errMsg;
+				errMsg<<"BoundingBoxVertex_noRot no. "<<i+1<<" encoding to protobuf failed!";
 				throw std::runtime_error(errMsg.str().c_str());
 			}
 		}
@@ -1248,6 +1258,7 @@ int Serializer::EncodeProtobufToSourceComponentPars(SourceComponentPars& sourceC
 			sourceComponentPars.SetWCSDeconvolvedEllipsePars(m_bmaj_deconv_wcs,m_bmin_deconv_wcs,m_pa_deconv_wcs);
 			
 			sourceComponentPars.SetSourcenessId(sourceComponentPars_pb.m_sourcenessid());
+			sourceComponentPars.SetSourcenessScore(sourceComponentPars_pb.m_sourcenessscore());
 			sourceComponentPars.SetMorphId(sourceComponentPars_pb.m_morphid());
 			sourceComponentPars.SetSelected(sourceComponentPars_pb.m_selected());
 
@@ -2033,6 +2044,13 @@ int Serializer::EncodeProtobufToContour(Contour& contour,const CaesarPB::Contour
 			const CaesarPB::Point& thisBoundingBoxVertexPB= contour_pb.boundingboxvertex(i);
 			if(EncodeProtobufToPoint((contour.BoundingBoxVertex)[i],thisBoundingBoxVertexPB)<0){
 				throw std::runtime_error("Failed to encode bounding box vertex field");	
+			}
+		}
+
+		for(int i=0;i<contour_pb.boundingboxvertex_norot_size();i++){		
+			const CaesarPB::Point& thisBoundingBoxVertexPB_norot= contour_pb.boundingboxvertex_norot(i);
+			if(EncodeProtobufToPoint((contour.BoundingBoxVertex_noRot)[i],thisBoundingBoxVertexPB_norot)<0){
+				throw std::runtime_error("Failed to encode non-rotated bounding box vertex field");	
 			}
 		}
 
