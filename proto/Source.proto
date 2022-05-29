@@ -154,19 +154,20 @@ message Contour {
 	
 	repeated float HuMoments= 46;
 	repeated Point BoundingBoxVertex= 47;
-	optional Point Centroid= 48;
+	repeated Point BoundingBoxVertex_noRot= 48;
+	optional Point Centroid= 49;
 		
-	repeated float RealFDs= 49;
-	repeated float ImagFDs= 50;
-	repeated float ModFDs= 51;//module of complex Fourier descriptors
-	repeated float BendingEnergies= 52;
-	repeated float CentroidDistanceModFDs= 53;//module of complex Fourier descriptors
+	repeated float RealFDs= 50;
+	repeated float ImagFDs= 51;
+	repeated float ModFDs= 52;//module of complex Fourier descriptors
+	repeated float BendingEnergies= 53;
+	repeated float CentroidDistanceModFDs= 54;//module of complex Fourier descriptors
 
-	repeated Point m_Points= 54;
+	repeated Point m_Points= 55;
 
-	optional bool HasFDPars= 55;	
-	optional bool HasBEPars= 56;
-	optional bool HasCentroidDistanceFDPars= 57;	
+	optional bool HasFDPars= 56;	
+	optional bool HasBEPars= 57;
+	optional bool HasCentroidDistanceFDPars= 58;
 
 }//close Contour schema
 
@@ -326,9 +327,10 @@ message SourceComponentPars {
 	optional float m_pa_deconv_wcs= 37;
 
 	optional int32 m_sourcenessId= 38;
-	optional float m_pixSize= 39;
-	optional int32 m_morphId= 40;
-	optional bool m_selected= 41;
+	optional float m_sourcenessScore= 39;	
+	optional float m_pixSize= 40;
+	optional int32 m_morphId= 41;
+	optional bool m_selected= 42;
 
 }//close SourceComponentPars()
 
