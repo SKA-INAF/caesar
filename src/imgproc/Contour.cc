@@ -1059,7 +1059,7 @@ bool Contour::IsPointInsideContour(double x, double y, bool includeBorders)
 
 }//close IsPointInsideContour()
 
-
+/*
 bool Contour::IsPointInsideContourV2(double x, double y, bool includeBorders, bool sortCounterClockwise)
 {
 	if(sortCounterClockwise) SortPointsCounterClockWise();
@@ -1067,6 +1067,6 @@ bool Contour::IsPointInsideContourV2(double x, double y, bool includeBorders, bo
 	return MathUtils::IsPointInsidePolygonV2(x, y, m_Points, includeBorders);
 
 }//close IsPointInsideContour()
-
+*/
 
 }//close namespace

@@ -188,9 +188,9 @@ class Contour : public TObject {
 		bool IsPointInsideContour(double x, double y, bool includeBorders=false);
 	
 		/**
-		* \brief Check if point is inside contour
+		* \brief Check if point is inside contour (version 2)
 		*/
-		bool IsPointInsideContourV2(double x, double y, bool includeBorders=false, bool sortCounterClockwise=true);
+		//bool IsPointInsideContourV2(double x, double y, bool includeBorders=false, bool sortCounterClockwise=true);
 
 		/**
 		* \brief Apply offset to points and centroid
