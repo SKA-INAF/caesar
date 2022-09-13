@@ -340,8 +340,8 @@ USE_PRESMOOTHING="true"
 SMOOTH_FILTER="2"
 GUIDED_FILTER_RADIUS="12"
 GUIDED_FILTER_EPS="0.04"
-EXT_SFINDER_METHOD="3"
-AC_METHOD="2"
+EXT_SFINDER_METHOD="4"
+AC_METHOD="1"
 
 
 SELECT_SOURCES="false"
@@ -598,29 +598,30 @@ do
     	MAP_PIXSIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
 
+		--tilesplit*)
+    	SPLIT_IN_TILES="true"
+    ;;	
     --tilesize=*)
     	TILE_SIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
-			SPLIT_IN_TILES="true"
     ;;
 		--tilestep=*)
     	TILE_STEP=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			TILE_OVERLAP="true"
     ;;
+		--read-subimg*)
+    	READ_TILE="true"
+    ;;
 		--xmin=*)
     	XMIN=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
-			READ_TILE="true"
     ;;
 		--xmax=*)
     	XMAX=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
-			READ_TILE="true"
     ;;
 		--ymin=*)
     	YMIN=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
-			READ_TILE="true"
     ;;
 		--ymax=*)
     	YMAX=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
-			READ_TILE="true"
     ;;
 		
 		## STATS OPTIONS
