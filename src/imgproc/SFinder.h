@@ -479,9 +479,7 @@ class SFinder : public TObject {
 		//bool m_DilateNestedSources;
 		bool m_removeNestedSources;
 		int m_dilateKernelSize;
-		//int m_DilatedSourceType;		
-		int m_removedSourceType;
-		//int m_DilateSourceModel;
+		int m_removedSourceMorphId;
 		int m_residualModel;
 		//bool m_DilateRandomize;
 		bool m_residualModelRandomize;

@@ -106,6 +106,8 @@ struct ContourPointCounterClockWiseSorter{
 
 };//close struct
 
+
+
 struct ContourPointComparator {
 
 	ContourPointComparator(TVector2& pnt)
@@ -183,7 +185,12 @@ class Contour : public TObject {
 		/**
 		* \brief Check if point is inside contour
 		*/
-		bool IsPointInsideContour(double x,double y);
+		bool IsPointInsideContour(double x, double y, bool includeBorders=false);
+	
+		/**
+		* \brief Check if point is inside contour (version 2)
+		*/
+		//bool IsPointInsideContourV2(double x, double y, bool includeBorders=false, bool sortCounterClockwise=true);
 
 		/**
 		* \brief Apply offset to points and centroid
@@ -417,6 +424,8 @@ class Contour : public TObject {
 		*/
 		Contour* GetShrinkedContour(int npix);
 
+		
+
 	public:	
 		bool HasParameters;
 
@@ -477,6 +486,7 @@ class Contour : public TObject {
 
 		std::vector<double> HuMoments;
 		std::vector<TVector2> BoundingBoxVertex;
+		std::vector<TVector2> BoundingBoxVertex_noRot;
 		TVector2 Centroid;
 		
 		//- Fourier descriptors
@@ -497,7 +507,7 @@ class Contour : public TObject {
 	private:
 		Points m_Points;	
 		
-	ClassDef(Contour,2)
+	ClassDef(Contour,3)
 
 	public:	
 		

@@ -981,7 +981,31 @@ class CodeUtils : public TObject {
 			return true;
 		}
 
-		
+		/** 
+		\brief Return triangular indices for a NxN matrix
+ 		*/
+		static std::vector<std::vector<int>> GetTriuIndices(int N)
+		{
+			std::vector<std::vector<int>> v;
+			for(int i=0;i<N;i++){
+				for(int j=0;j<N;j++){
+					if(i<=j) v.push_back( {i,j} );
+				}
+			}
+
+    	//return [(i,j) for i in range(N) for j in range(N) if i <= j]
+			return v;
+		}
+
+
+		/** 
+		\brief Convert (i,j) 2D index to linear triu index for N by N array
+ 		*/
+		static int GetTriuIndexFrom2DIndex(int i, int j, int N)	
+		{
+			int index= (int)(N*i - (i*(i-1)) / 2 ) + (j - i);
+    	return index;
+		}
 
 	private:
 	

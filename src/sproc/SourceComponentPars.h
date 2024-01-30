@@ -131,24 +131,34 @@ class SourceComponentPars : public TObject {
 		std::map<std::string,double>const& GetFitParErrors() const {return FitParsErr;}		
 
 		/** 
-		\brief Get source component flag
+		\brief Get fit component sourceness id
  		*/	
-		int GetFlag(){return m_flag;}
+		int GetSourcenessId(){return m_sourcenessId;}
 
 		/** 
-		\brief Set source component flag
+		\brief Set fit component sourceness id
  		*/
-		void SetFlag(int flag){m_flag=flag;}
+		void SetSourcenessId(int flag){m_sourcenessId=flag;}
 
 		/** 
-		\brief Get source component type
+		\brief Get fit component sourceness score
  		*/	
-		int GetType(){return m_type;}
+		int GetSourcenessScore(){return m_sourcenessScore;}
 
 		/** 
-		\brief Set source component type
+		\brief Set fit component sourceness score
  		*/
-		void SetType(int type){m_type=type;}
+		void SetSourcenessScore(int flag){m_sourcenessScore=flag;}
+
+		/** 
+		\brief Get source component morph id
+ 		*/	
+		int GetMorphId(){return m_morphId;}
+
+		/** 
+		\brief Set source component morph id
+ 		*/
+		void SetMorphId(int flag){m_morphId=flag;}
 
 		/** 
 		\brief Get source component selected flag
@@ -353,6 +363,7 @@ class SourceComponentPars : public TObject {
 			m_bmaj_deconv_wcs= bmaj_wcs;
 			m_bmin_deconv_wcs= bmin_wcs;
 			m_pa_deconv_wcs= pa_wcs;
+			m_hasWCSDeconvolvedEllipsePars= true;
 		}
 
 		/**
@@ -461,11 +472,12 @@ class SourceComponentPars : public TObject {
 		double m_bmin_deconv_wcs;
 		double m_pa_deconv_wcs;
 
-		//- Source component flag
-		int m_flag;
+		//- Fit component sourceness
+		int m_sourcenessId;
+		double m_sourcenessScore;
 
-		//- Source component type
-		int m_type;
+		//- Source component morph id
+		int m_morphId;
 
 		//- Source component selection flag
 		bool m_selected;

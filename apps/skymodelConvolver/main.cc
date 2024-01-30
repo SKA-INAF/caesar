@@ -433,10 +433,10 @@ int RunConvolver()
 		#endif
 
 		//Get true source info
-		int type= sources[i]->Type;
+		int morphId= sources[i]->MorphId;
 		int simtype= sources[i]->SimType;
 		double simmaxscale= sources[i]->SimMaxScale;
-		int flag= sources[i]->Flag;
+		int sourceness= sources[i]->SourcenessId;
 		bool hasTrueInfo= sources[i]->HasTrueInfo();
 		if(!hasTrueInfo){
 			#ifdef LOGGING_ENABLED
@@ -459,10 +459,10 @@ int RunConvolver()
 		}
 		sourceImg->Reset();
 
-		if(type==eCompact || type==ePointLike){
+		if(morphId==eCompact || morphId==ePointLike){
 			sourceImg->Fill(X0_true, Y0_true, S_true);
 		}
-		else if(type==eExtended || type==eCompactPlusExtended){
+		else if(morphId==eExtended || morphId==eCompactPlusExtended){
 			std::vector<Pixel*> pixels= sources[i]->GetPixels();
 			for(size_t k=0;k<pixels.size();k++){	
 				long int gBin= pixels[k]->id;
@@ -472,7 +472,7 @@ int RunConvolver()
 		}//close else
 		else{
 			#ifdef LOGGING_ENABLED
-				WARN_LOG("Unknown type for source no. "<<i+1<<", skip it...");
+				WARN_LOG("Unknown morph id for source no. "<<i+1<<", skip it...");
 			#endif
 			continue;
 		}
@@ -508,10 +508,10 @@ int RunConvolver()
 		//Find truncation threshold (user-supplied or found from image)
 		double thr= 0;//no threshold
 		if(useUserThreshold){
-			if(type==eCompact || type==ePointLike){
+			if(morphId==eCompact || morphId==ePointLike){
 				thr= fluxThr;
 			}
-			else if(type==eExtended || type==eCompactPlusExtended){
+			else if(morphId==eExtended || morphId==eCompactPlusExtended){
 				thr= fluxThr_ext;
 			}
 			else{
@@ -547,7 +547,7 @@ int RunConvolver()
 		int csourceIndex= 0;
 		if(csources.size()>1){
 			#ifdef LOGGING_ENABLED
-				WARN_LOG("More than 1 source found in convolved image for source no. "<<i+1<<" (name="<<sources[i]->GetName()<<", id="<<sources[i]->Id<<", type="<<sources[i]->Type<<"), this should not occur normally (could be one extended source broke up at image edge), will take the larger one...");
+				WARN_LOG("More than 1 source found in convolved image for source no. "<<i+1<<" (name="<<sources[i]->GetName()<<", id="<<sources[i]->Id<<", morphId="<<sources[i]->MorphId<<"), this should not occur normally (could be one extended source broke up at image edge), will take the larger one...");
 			#endif
 			long int nPix_max= -999;
 			for(size_t k=0;k<csources.size();k++){
@@ -567,10 +567,10 @@ int RunConvolver()
 		TString sourceName= Form("S%d",source_counter);
 		csources[csourceIndex]->SetName(std::string(sourceName));	
 		csources[csourceIndex]->SetId(source_counter);
-		csources[csourceIndex]->Type= type;
+		csources[csourceIndex]->MorphId= morphId;
 		csources[csourceIndex]->SimType= simtype;
 		csources[csourceIndex]->SimMaxScale= simmaxscale;
-		csources[csourceIndex]->Flag= flag;
+		csources[csourceIndex]->SourcenessId= sourceness;
 		csources[csourceIndex]->SetTrueInfo(S_true,X0_true,Y0_true);
 		csources[csourceIndex]->SetBeamFluxIntegral(beamArea);
 		sources_conv.push_back(csources[csourceIndex]);		
@@ -645,9 +645,9 @@ int RunConvolver()
 			//Get source data
 			std::string sourceName= aSource->GetName();
 			long int id= aSource->Id;
-			int type= aSource->Type;
+			int morphId= aSource->MorphId;
 			int simtype= aSource->SimType;
-			int flag= aSource->Flag;
+			int sourceness= aSource->SourcenessId;
 			double simmaxscale= aSource->SimMaxScale;
 			double X0= aSource->X0;
 			double Y0= aSource->Y0;
@@ -665,8 +665,8 @@ int RunConvolver()
 			Source* rec_source= new Source;
 			rec_source->SetName(sourceName);
 			rec_source->Id= id;
-			rec_source->Type= type;	
-			rec_source->Flag= flag;	
+			rec_source->MorphId= morphId;	
+			rec_source->SourcenessId= sourceness;	
 			rec_source->SimType= simtype;	
 			rec_source->SimMaxScale= simmaxscale;
 			//rec_source->SetTrueInfo(S_true_estimated,X0,Y0);
@@ -729,16 +729,16 @@ int MergeSources()
 
 	for(size_t i=0;i<sources_conv.size()-1;i++){
 		Source* source= sources_conv[i];
-		int type= source->Type;
-		bool isCompactSource= (type==eCompact || type==ePointLike);
-		bool isExtendedSource= (type==eExtended || type==eCompactPlusExtended);
+		int morphId= source->MorphId;
+		bool isCompactSource= (morphId==eCompact || morphId==ePointLike);
+		bool isExtendedSource= (morphId==eExtended || morphId==eCompactPlusExtended);
 
 		//Loop neighbors
 		for(size_t j=i+1;j<sources_conv.size();j++){	
 			Source* source_neighbor= sources_conv[j];
-			int type_neighbor= source_neighbor->Type;
-			bool isCompactSource_neighbor= (type_neighbor==eCompact || type_neighbor==ePointLike);
-			bool isExtendedSource_neighbor= (type_neighbor==eExtended || type_neighbor==eCompactPlusExtended);
+			int morphId_neighbor= source_neighbor->MorphId;
+			bool isCompactSource_neighbor= (morphId_neighbor==eCompact || morphId_neighbor==ePointLike);
+			bool isExtendedSource_neighbor= (morphId_neighbor==eExtended || morphId_neighbor==eCompactPlusExtended);
 
 			//Check if both sources are compact and if they are allowed to be merged
 			if(isCompactSource && isCompactSource_neighbor && !enableCompactSourceMerging){	
@@ -783,10 +783,10 @@ int MergeSources()
 	sources_conv_merged.clear();
 
 	for(size_t i=0;i<sources_conv.size();i++){
-		int type= sources_conv[i]->Type;
+		int morphId= sources_conv[i]->MorphId;
 		bool isMergeable= isMergeableSource[i];
-		bool isCompactSource= (type==eCompact || type==ePointLike);
-		bool isExtendedSource= (type==eExtended || type==eCompactPlusExtended);		
+		bool isCompactSource= (morphId==eCompact || morphId==ePointLike);
+		bool isExtendedSource= (morphId==eExtended || morphId==eCompactPlusExtended);		
 		if(isMergeable) {	
 			if(enableCompactSourceMerging && isCompactSource) continue;
 			if(enableExtendedSourceMerging && isExtendedSource) continue;
@@ -1161,15 +1161,15 @@ void SaveDS9RegionFile()
 		if(mergeOverlappingSources) aSource= sources_conv_merged[k];
 		else aSource= sources_conv[k];
 
-		int source_type= aSource->Type;
+		int source_morphId= aSource->MorphId;
 		bool isAtEdge= aSource->IsAtEdge();
 
 		//Set source color
 		std::string colorStr= "white";
-		if(source_type==eExtended) colorStr= "green";
-		else if(source_type==eCompactPlusExtended) colorStr= "orange";
-		else if(source_type==ePointLike) colorStr= "red";
-		else if(source_type==eCompact) colorStr= "blue";
+		if(source_morphId==eExtended) colorStr= "green";
+		else if(source_morphId==eCompactPlusExtended) colorStr= "orange";
+		else if(source_morphId==ePointLike) colorStr= "red";
+		else if(source_morphId==eCompact) colorStr= "blue";
 		else colorStr= "magenta";
 		if(colorStr!=colorStr_last){
 			colorStr_last= colorStr;

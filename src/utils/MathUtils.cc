@@ -998,7 +998,8 @@ bool MathUtils::IsPointInsidePolygon(double x,double y,const std::vector<TVector
     maxY= std::max(q.Y(), maxY);
   }//end loop points in polygon
 
-  if(x<=minX || x>=maxX || y<=minY || y>=maxY) {
+  //if(x<=minX || x>=maxX || y<=minY || y>=maxY) {
+	if(x<minX || x>maxX || y<minY || y>maxY) {
   	return false;
   }
 
@@ -1022,6 +1023,127 @@ bool MathUtils::IsPointInsidePolygon(double x,double y,const std::vector<TVector
 
 }//close IsPointInsidePolygon()
 
+
+bool MathUtils::IsPointInsideSegment(TVector2 point, TVector2 a, TVector2 b, double epsilon)
+{
+	//https://stackoverflow.com/questions/328107/how-can-you-determine-a-point-is-between-two-other-points-on-a-line-segment
+
+	//- Return true if equal to vertex
+	if( fabs(point.X()-a.X())<epsilon && fabs(point.Y()-a.Y())<epsilon ) return true;
+	if( fabs(point.X()-b.X())<epsilon && fabs(point.Y()-b.Y())<epsilon ) return true;
+
+	//- Compute cross-product
+	//  Compare versus epsilon for floating point values, or != 0 if using integers
+	double crossproduct = (point.Y() - a.Y()) * (b.X() - a.X()) - (point.X() - a.X()) * (b.Y() - a.Y());
+
+  if (fabs(crossproduct) > epsilon) {
+  	return false;
+	}
+
+	double dotproduct = (point.X() - a.X()) * (b.X() - a.X()) + (point.Y() - a.Y())*(b.Y() - a.Y());
+	if(dotproduct<0){
+  	return false;
+	}
+
+  double squaredlengthba = (b.X() - a.X())*(b.X() - a.X()) + (b.Y() - a.Y())*(b.Y() - a.Y());
+	if (dotproduct > squaredlengthba){
+		return false;
+	}
+
+  return true;
+
+}//close IsPointInsideSegment()
+
+
+bool MathUtils::IsPointOnPolygonBoundary(const TVector2& point, const std::vector<TVector2>& polygon)
+{
+	int n = static_cast<int>(polygon.size());
+  
+	for(int i=0;i<n;i++)
+	{
+ 		TVector2 p1= polygon[i];
+    TVector2 p2 = polygon[-n+i+1];
+		bool isOnSegment= IsPointInsideSegment(point, p1, p2);
+    if(isOnSegment) return true;
+  }
+
+	return false;
+
+}//close IsPointOnPolygonBoundary()
+
+
+/*
+bool MathUtils::IsPointInsidePolygonV2(double x, double y, const std::vector<TVector2>& polygon, bool include_borders)
+{
+	//NB: Requires that the polygon has points sorted counter-clock wise!
+	TVector2 p(x,y);
+	int flag= query_point_inside_polygon(p, polygon);
+
+	if(flag==1) {
+		#ifdef LOGGING_ENABLED
+ 			INFO_LOG("Point("<<x<<","<<y<<") is inside polygon ...");
+		#endif
+		return true;
+	}
+	if(include_borders && flag==0) {
+		#ifdef LOGGING_ENABLED
+ 			INFO_LOG("Point("<<x<<","<<y<<") is on polygon border ...");
+		#endif
+		return true;
+	}
+
+	return false;
+
+}//close IsPointInsidePolygonV2()
+
+int MathUtils::query_point_inside_polygon(const TVector2& query_point, const std::vector<TVector2>& vertices) 
+{
+	//Taken from: https://github.com/anirudhtopiwala/OpenSource_Problems/blob/master/Point_In_Polygon/src/point_in_polygon.cpp
+	//Explanation at: https://towardsdatascience.com/is-the-point-inside-the-polygon-574b86472119
+	//NB: This implementation is bugged as it does not handle border points correctly, do not use it!
+
+	int wn = 0;  // the  winding number counter
+  const int num_sides_of_polygon = vertices.size();
+
+	for (size_t i = 0; i < num_sides_of_polygon; ++i) 
+	{
+		int index_next= (i + 1) % num_sides_of_polygon;
+		TVector2 P1= vertices[i];	
+		TVector2 P2= vertices[index_next];	
+
+ 		//const auto point_in_line = substitute_point_in_line(vertices[i], vertices[(i + 1) % num_sides_of_polygon], query_point);
+		const auto point_in_line = substitute_point_in_line(P1, P2, query_point);
+
+    // Check if the point lies on the polygon.
+    if (point_in_line == 0) {
+			#ifdef LOGGING_ENABLED
+ 				INFO_LOG("Point("<<query_point.X()<<","<<query_point.Y()<<") is on polygon border (i="<<i<<", index_next="<<index_next<<", P1=("<<P1.X()<<","<<P1.Y()<<"), P2("<<P2.X()<<","<<P2.Y()<<"), n="<<num_sides_of_polygon<<") ...");
+			#endif
+    	return 0;
+    }
+        
+		if (vertices[i].Y() <= query_point.Y()) {
+    	// Upward crossing.
+      if (vertices[(i + 1) % num_sides_of_polygon].Y() > query_point.Y()) {
+      	if (point_in_line > 0) {
+        	++wn;  // query point is left of edge
+        }
+    	}
+    } 
+		else {
+   		// Downward crossing.
+      if (vertices[(i + 1) % num_sides_of_polygon].Y() < query_point.Y()) {
+      	if (point_in_line < 0) {
+      		--wn;  // query point is right of edge
+        }
+      }
+    }
+	}//end loop points
+    
+	return (wn != 0) ? 1 : -1;  // Point is inside polygon only if wn != 0
+
+}//close query_point_inside_polygon()
+*/
 
 void MathUtils::ComputeRotatedCoords(double& xrot,double& yrot,double x,double y,double cx,double cy,double theta)
 {

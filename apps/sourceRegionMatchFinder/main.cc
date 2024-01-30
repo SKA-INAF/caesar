@@ -56,7 +56,7 @@ void Usage(char* exeName){
   cout<<"-h, --help \t Show help message and exit"<<endl;
 	cout<<"-i, --input=[INPUT_FILE] \t Input ROOT file produced by CAESAR containing the source collection to be matched with regions"<<endl;
 	cout<<"-r, --region=[REGION_FILE] \t Input DS9 region file containing the region(s) to be used to find matches"<<endl;
-	cout<<"-s, --stype=[SOURCE_TYPE] \t Source type to be cross-match (-1=all,1=compact,2=point-like,3=extended,4=ext+point) (default=-1)"<<endl;
+	cout<<"-s, --stype=[SOURCE_MORPH_ID] \t Source morph id to be cross-match (-1=all,1=compact,2=point-like,3=extended,4=ext+point) (default=-1)"<<endl;
 	cout<<"-n, --nx=[NX] \t Number of divisions along X (default=4)"<<endl;
 	cout<<"-m, --ny=[NY] \t Number of divisions along Y (default=4)"<<endl;
 	cout<<"-P, --matchByPos \t Match source island and region by position centroid distance (default=false)"<<endl;
@@ -75,7 +75,7 @@ void Usage(char* exeName){
 	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (ROOT format) where to store matched sources (default=sources.root)"<<endl;
 	cout<<"-R, --region-output=[REGION_OUTPUT_FILE] \t Output DS9 region file name where to store selected sources (default=sources.reg)"<<endl;
 	cout<<"-C, --catalog-output=[CATALOG_OUTPUT_FILE] \t Output catalog file name where to store selected sources (default=catalog.dat)"<<endl;
-	cout<<"-f, --no-flagchange \t Do not change source and component flags on the basis of match results (default=change)"<<endl;
+	cout<<"-f, --no-sourcenesschange \t Do not change source and component sourceness flags on the basis of match results (default=change)"<<endl;
 	cout<<"-v, --verbosity=[LEVEL] \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	
 	cout<<"=============================="<<endl;
@@ -105,7 +105,7 @@ static const struct option options_tab[] = {
 	{ "output", required_argument, 0, 'o' },
 	{ "region-output", required_argument, 0, 'R' },
 	{ "catalog-output", required_argument, 0, 'C' },
-	{ "no-flagchange", no_argument, 0, 'f' },
+	{ "no-sourcenesschange", no_argument, 0, 'f' },
 	{ "verbosity", required_argument, 0, 'v'},
   {(char*)0, (int)0, (int*)0, (int)0}
 };
@@ -119,7 +119,7 @@ std::string regionComponentsOutputFileName= "sources_fitcomp.reg";
 std::string catalogOutputFileName= "catalog.dat";
 std::string catalogComponentsOutputFileName= "catalog_fitcomp.dat";
 std::vector<int> stypes;
-bool changeFlag= true;
+bool changeSourceness= true;
 bool matchSourcesByPos= false;
 bool matchSourcesByOverlap= false;
 bool applySourceAreaRatioThr= false;
@@ -592,7 +592,7 @@ int ParseOptions(int argc, char *argv[])
 			}
 			case 'f':	
 			{
-				changeFlag= false;	
+				changeSourceness= false;	
 				break;	
 			}
 			case 'v':	
@@ -859,10 +859,10 @@ int ReadSourceData(std::string filename)
 		#endif
 
 		//Select source by type?
-		int type= aSource->Type;
+		int morphId= aSource->MorphId;
 		bool skipSource= true;
 		for(size_t j=0;j<stypes.size();j++){
-			if( stypes[j]==-1 || type==stypes[j]) {
+			if( stypes[j]==-1 || morphId==stypes[j]) {
 				skipSource= false;
 				break;
 			}
@@ -1824,19 +1824,19 @@ int FindSourceMatchesInTiles()
 			//## Tag source according to match results
 			//## Set to unknown flag if not assigned to any region
 			if(nMatches<=0){
-				if(changeFlag) source->SetFlag(eFake);
+				if(changeSourceness) source->SetSourcenessId(eFake);
 				if(hasFitInfo){
 					SourceFitPars fitPars= source->GetFitPars();
 					for(int l=0;l<nFitComponents;l++) {
 						bool isSelected= fitPars.IsSelectedComponent(l);
 						if(!isSelected) continue;
-						if(changeFlag) fitPars.SetComponentFlag(l,eFake);
+						if(changeSourceness) fitPars.SetComponentSourcenessId(l,eFake);
 					}
 					source->SetFitPars(fitPars);
 				}
 
 				#ifdef LOGGING_ENABLED
-					if(changeFlag) INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") and its component as fake (no match found)");
+					if(changeSourceness) INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") and its component as fake (no match found)");
 					else INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") and its component (no match found)");
 				#endif
 
@@ -1845,19 +1845,19 @@ int FindSourceMatchesInTiles()
 			}
 			else if(nMatches==1){
 				nMatchedSources++;
-				if(changeFlag) source->SetFlag(eReal);
-				source->SetType(ePointLike);
+				if(changeSourceness) source->SetSourcenessId(eReal);
+				source->SetMorphId(ePointLike);
 				#ifdef LOGGING_ENABLED
-					if(changeFlag) INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and point-like (1 match found)");
+					if(changeSourceness) INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and point-like (1 match found)");
 					else INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as point-like (1 match found)");
 				#endif
 			}
 			else if(nMatches>1){
 				nMatchedSources++;
-				if(changeFlag) source->SetFlag(eReal);
-				source->SetType(eCompact);
+				if(changeSourceness) source->SetSourcenessId(eReal);
+				source->SetMorphId(eCompact);
 				#ifdef LOGGING_ENABLED
-					if(changeFlag) INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and compact ("<<nMatches<<" match found)");
+					if(changeSourceness) INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and compact ("<<nMatches<<" match found)");
 					else INFO_LOG("Tagged source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as compact ("<<nMatches<<" match found)");
 				#endif
 			}
@@ -1883,29 +1883,29 @@ int FindSourceMatchesInTiles()
 					//Tag source component
 					SourceFitPars fitPars= source->GetFitPars();
 					if(nComponentMatches<=0){
-						if(changeFlag) fitPars.SetComponentFlag(l,eFake);
-						fitPars.SetComponentType(l,eUnknownType);
+						if(changeSourceness) fitPars.SetComponentSourcenessId(l,eFake);
+						fitPars.SetComponentMorphId(l,eUnknownMorph);
 
 						#ifdef LOGGING_ENABLED
-							if(changeFlag) INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as fake (no match found)");
+							if(changeSourceness) INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as fake (no match found)");
 							else INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") (no match found)");
 						#endif
 					}
 					else if(nComponentMatches==1){
 						nMatchedSourceComponents++;
-						if(changeFlag) fitPars.SetComponentFlag(l,eReal);
-						fitPars.SetComponentType(l,ePointLike);
+						if(changeSourceness) fitPars.SetComponentSourcenessId(l,eReal);
+						fitPars.SetComponentMorphId(l,ePointLike);
 						#ifdef LOGGING_ENABLED
-							if(changeFlag) INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and point-like (1 match found)");
+							if(changeSourceness) INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and point-like (1 match found)");
 							else INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as point-like (1 match found)");
 						#endif
 					}
 					else if(nComponentMatches>1){
 						nMatchedSourceComponents++;
-						if(changeFlag) fitPars.SetComponentFlag(l,eReal);
-						fitPars.SetComponentType(l,eCompact);
+						if(changeSourceness) fitPars.SetComponentSourcenessId(l,eReal);
+						fitPars.SetComponentMorphId(l,eCompact);
 						#ifdef LOGGING_ENABLED
-							if(changeFlag) INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and compact ("<<nComponentMatches<<" match found)");
+							if(changeSourceness) INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as real and compact ("<<nComponentMatches<<" match found)");
 							else INFO_LOG("Tagged component no. "<<l+1<<" of source (index="<<sourceIndex<<", nestedIndex="<<nestedSourceIndex<<", name="<<source->GetName()<<") as compact ("<<nComponentMatches<<" match found)");
 						#endif
 					}

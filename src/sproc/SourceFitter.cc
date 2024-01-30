@@ -1612,17 +1612,21 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 
 	//Set beam ellipse pars (if metadata are available)
 	if(metadata){
-		double beam_bmaj= metadata->Bmaj*3600;//in arcsec
-		double beam_bmin= metadata->Bmin*3600;//in arcsec
-		double beam_pa= metadata->Bpa;//defined from north
+		
+		if(metadata->HasBeamInfo()){
+			double beam_bmaj= metadata->Bmaj*3600;//in arcsec
+			double beam_bmin= metadata->Bmin*3600;//in arcsec
+			double beam_pa= metadata->Bpa;//defined from north	
+			#ifdef LOGGING_ENABLED
+				DEBUG_LOG("Set beam info ("<<beam_bmaj<<","<<beam_bmin<<","<<beam_pa<<") in fit pars...");
+			#endif
+			m_sourceFitPars.SetComponentBeamEllipsePars(beam_bmaj,beam_bmin,beam_pa);
+		}
+		
 		double pixSizeX= metadata->dX*3600;//in arcsec 
 		double pixSizeY= metadata->dY*3600;//in arcsec 
 		double pixSize= std::min(fabs(pixSizeX),fabs(pixSizeY));
-		m_sourceFitPars.SetComponentBeamEllipsePars(beam_bmaj,beam_bmin,beam_pa);
 		m_sourceFitPars.SetComponentImagePixSize(pixSize);
-		#ifdef LOGGING_ENABLED
-			DEBUG_LOG("Set beam info ("<<beam_bmaj<<","<<beam_bmin<<","<<beam_pa<<") in fit pars...");
-		#endif
 	}
 	else{
 		#ifdef LOGGING_ENABLED
@@ -1763,7 +1767,7 @@ int SourceFitter::DoChi2Fit(Source* aSource,SourceFitOptions& fitOptions,std::ve
 				#ifdef LOGGING_ENABLED
 					INFO_LOG("Fit ellipse selection cut for fit component no. "<<k+1<<" of source "<<aSource->GetName()<<" not passed, flagging this component as fake...");
 				#endif
-				m_sourceFitPars.SetComponentFlag(k,eFake);
+				m_sourceFitPars.SetComponentSourcenessId(k,eFake);
 			}
 	
 		}//end loop fit components

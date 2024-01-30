@@ -1199,8 +1199,8 @@ int SetResponseMatrix()
 	);
 	*/
 	
-	//gResponseMatrix= SpectrumUtils::ComputeParametricResponse(
-	gResponseMatrix= SpectrumUtils::BuildResponseMatrix(
+	gResponseMatrix= SpectrumUtils::ComputeParametricResponse(
+	//gResponseMatrix= SpectrumUtils::BuildResponseMatrix(
 		*gSpectrumPars,
 		*biasPars,
 		*resoPars,

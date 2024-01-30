@@ -1118,16 +1118,16 @@ int TagSourceComponents()
 					continue;
 				}
 
-				//Set type?
-				if(regionMetadata.hasSourceType) {
+				//Set morph id?
+				if(regionMetadata.hasSourceMorphId) {
 					sourceTagged= true;
-					fitPars.SetComponentType(componentIndex,regionMetadata.sourceType);
+					fitPars.SetComponentMorphId(componentIndex,regionMetadata.sourceMorphId);
 				}
 					
 				//Set flag?					
-				if(regionMetadata.hasSourceFlag) {
+				if(regionMetadata.hasSourcenessId) {
 					sourceTagged= true;
-					fitPars.SetComponentFlag(componentIndex,regionMetadata.sourceFlag);	
+					fitPars.SetComponentSourcenessId(componentIndex,regionMetadata.sourcenessId);	
 				}
 
 				//Set fit quality flag?
@@ -1253,16 +1253,16 @@ int TagSources()
 					continue;
 				}
 
-				//Set type?
-				if(regionMetadata.hasSourceType) {
+				//Set morph id?
+				if(regionMetadata.hasSourceMorphId) {
 					sourceTagged= true;
-					source->SetType(static_cast<Caesar::SourceType>(regionMetadata.sourceType));
+					source->SetMorphId(static_cast<Caesar::SourceMorphology>(regionMetadata.sourceMorphId));
 				}
 					
-				//Set flag?					
-				if(regionMetadata.hasSourceFlag) {
+				//Set sourceness?					
+				if(regionMetadata.hasSourcenessId) {
 					sourceTagged= true;
-					source->SetFlag(static_cast<Caesar::SourceFlag>(regionMetadata.sourceFlag));
+					source->SetSourcenessId(static_cast<Caesar::Sourceness>(regionMetadata.sourcenessId));
 				}
 
 				if(sourceTagged) nTaggedSources++;

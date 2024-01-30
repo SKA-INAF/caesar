@@ -85,23 +85,23 @@ class DS9RegionMetaData : public TObject
 		void Init(){
 			sourceName= "";
 			sourceFitQuality= eUnknownFitQuality;
-			sourceType= eUnknownType;
-			sourceFlag= eUnknownSourceFlag;
+			sourceMorphId= eUnknownMorph;
+			sourcenessId= eCandidate;
 			hasSourceName= false;
-			hasSourceType= false;
+			hasSourceMorphId= false;
 			hasSourceFitQuality= false;
-			hasSourceFlag= false;
+			hasSourcenessId= false;
 		}
 
 	public:
 		bool hasSourceName;
 		std::string sourceName;
-		bool hasSourceType;
-		int sourceType;
+		bool hasSourceMorphId;
+		int sourceMorphId;
 		bool hasSourceFitQuality;
 		int sourceFitQuality;
-		bool hasSourceFlag;
-		int sourceFlag;
+		bool hasSourcenessId;
+		int sourcenessId;
 		
 
 	ClassDef(DS9RegionMetaData,1)

@@ -126,8 +126,8 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 	ss<<"# beamArea - Number of pixels in beam. Used to convert flux parameters from Jy/beam to Jy/pixel (e.g. Jy/pixel=Jy/beam/beamarea).\n";
 	ss<<"# bkgSum - Background estimator summed over all source pixels (in Jy/beam).\n";
 	ss<<"# rmsSum - Noise (rms) estimator summed over all source pixels (in Jy/beam).\n";
-	ss<<"# sourceType - Source type tag (eUnknownType=0,eCompact=1,ePointLike=2,eExtended=3,eCompactPlusExtended=4)\n";
-	ss<<"# sourceFlag - Source flag (eReal=1,eCandidate=2,eFake=3)\n";
+	ss<<"# morphId - Source morphology tag (eUnknownMorph=0, eCompact=1, ePointLike=2, eExtended=3, eCompactPlusExtended=4, eDiffuse=5)\n";
+	ss<<"# sourcenessId - Sourceness flag (eReal=1, eCandidate=2, eFake=3)\n";
 	ss<<"# isGoodSource - Bool flag indicating if source was tagged as good (true) or bad (false) in the finding process\n";
 	ss<<"# sourceNestedLevel - Source nested level (0=mother source,1=nested source,...)\n";
 
@@ -167,8 +167,8 @@ int SourceExporter::WriteToAscii(std::string filename,const std::vector<Source*>
 	ss_coldescr<<"beamArea"<<delimiter;
 	ss_coldescr<<"bkgSum(Jy/beam)"<<delimiter;
 	ss_coldescr<<"rmsSum(Jy/beam)"<<delimiter;
-	ss_coldescr<<"sourceType"<<delimiter;
-	ss_coldescr<<"sourceFlag"<<delimiter;
+	ss_coldescr<<"morphId"<<delimiter;
+	ss_coldescr<<"sourcenessId"<<delimiter;
 	ss_coldescr<<"isGoodSource"<<delimiter;
 	ss_coldescr<<"sourceNestedLevel"<<delimiter;
 
@@ -404,8 +404,7 @@ const std::vector<std::string> SourceExporter::SourceToAscii(Source* source,bool
 	ss<<source->GetBkgRMSSum()<<delimiter;
 
 	//- Source flags
-	//ss<<source->Type<<"\t"<<source->Flag<<"\t"<<source->IsGoodSource()<<"\t";
-	ss<<source->Type<<delimiter<<source->Flag<<delimiter<<source->IsGoodSource()<<delimiter;
+	ss<<source->MorphId<<delimiter<<source->SourcenessId<<delimiter<<source->IsGoodSource()<<delimiter;
 	ss<<source->GetDepthLevel();
 
 	//## Additional source info
@@ -558,8 +557,9 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 	ss<<"# chi2 - Fit chisquare.\n";
 	ss<<"# ndf - Fit number of degrees of freedom.\n";
 	ss<<"# fitQuality - Fit quality flag (eBadFit=0,eLQFit=1,eMQFit=2,eHQFit=3)\n";
-	ss<<"# fitComponentFlag- Fitted component flag (eReal=1,eCandidate=2,eFake=3)\n";
-	ss<<"# fitComponentType- Fitted component type (eUnknown=0,eCompact=1,ePoint-Like=2,eExtended=3)\n";
+	//ss<<"# fitComponentFlag - Fitted component flag (eReal=1,eCandidate=2,eFake=3)\n";
+	ss<<"# sourcenessId - Fitted component sourceness flag (eReal=1, eCandidate=2, eFake=3)\n";
+	ss<<"# morphId - Fitted component morphology flag (eUnknownMorph=0, eCompact=1, ePoint-Like=2, eExtended=3, eCompactExtended=4, eDiffuse=5)\n";
 
 	ss_coldescr<<"# ";
 	ss_coldescr<<"name"<<delimiter;
@@ -616,8 +616,9 @@ int SourceExporter::WriteComponentsToAscii(std::string filename,const std::vecto
 	ss_coldescr<<"chi2"<<delimiter;
 	ss_coldescr<<"ndf"<<delimiter;
 	ss_coldescr<<"fitQuality"<<delimiter;
-	ss_coldescr<<"fitComponentFlag"<<delimiter;
-	ss_coldescr<<"fitComponentType"<<delimiter;
+	//ss_coldescr<<"fitComponentFlag"<<delimiter;
+	ss_coldescr<<"sourcenessId"<<delimiter;
+	ss_coldescr<<"morphId"<<delimiter;
 
 	if(writeAdditionalSourceInfo)
 	{
@@ -899,18 +900,18 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 
 			
 			//Get component flag
-			int componentFlag= -1;
-			if(fitPars.GetComponentFlag(componentFlag,k)<0){
+			int componentSourcenessId= -1;
+			if(fitPars.GetComponentSourcenessId(componentSourcenessId,k)<0){
 				#ifdef LOGGING_ENABLED
-					WARN_LOG("Failed to retrieve flag for component no. "<<k+1<<"!");
+					WARN_LOG("Failed to retrieve sourceness id for component no. "<<k+1<<"!");
 				#endif
 			}
 
-			//Get component type
-			int componentType= -1;
-			if(fitPars.GetComponentType(componentType,k)<0){
+			//Get component morph id
+			int componentMorphId= -1;
+			if(fitPars.GetComponentMorphId(componentMorphId,k)<0){
 				#ifdef LOGGING_ENABLED
-					WARN_LOG("Failed to retrieve type for component no. "<<k+1<<"!");
+					WARN_LOG("Failed to retrieve morph id for component no. "<<k+1<<"!");
 				#endif
 			}
 	
@@ -975,7 +976,7 @@ const std::vector<std::string> SourceExporter::SourceComponentsToAscii(Source* s
 			ss<<fitPars.GetChi2()<<delimiter<<fitPars.GetNDF()<<delimiter;
 
 			//Source component flags
-			ss<<fitPars.GetFitQuality()<<delimiter<<componentFlag<<delimiter<<componentType;
+			ss<<fitPars.GetFitQuality()<<delimiter<<componentSourcenessId<<delimiter<<componentMorphId;
 
 			//## Additional source info
 			if(writeAdditionalSourceInfo)
@@ -1291,29 +1292,39 @@ int SourceExporter::FillJsonSource(Json::Value& json, Source* source, bool dumpN
 
 	//Get object type
 	int objClassId= source->ObjClassId;
+	int objClassSubId= source->ObjClassSubId;
 	std::string objClassLabel= GetAstroObjectLabel(objClassId);
+	std::string objClassSecondaryLabel= GetAstroObjectLabel(objClassSubId);
+	float objClassScore= source->ObjClassScore;
 
 	//Get sky position	
 	double X0_wcs= 0;
 	double Y0_wcs= 0;
 	if(wcs) source->GetWCSPos(X0_wcs,Y0_wcs,wcs,eJ2000);
 
+	//Get source depth level
+	int nestLevel= source->GetDepthLevel();
+
 	//Fill main json fields
 	Json::Value json_source= Json::Value(Json::ValueType::objectValue);
-	json_source["index"]= index;
+	//json_source["index"]= index;
 	json_source["name"]= name;
+	//json_source["valid_pars"]= 1;//set to true by default
 	json_source["iau_name"]= iauName;
-	json_source["classid"]= objClassId;
-  json_source["label"]= objClassLabel; 
-  json_source["nislands"]= 1; 
+	//json_source["class_id"]= objClassId;
+	json_source["class_label"]= objClassLabel;
+	json_source["class_score"]= objClassScore;
+  json_source["nislands"]= 1;
   json_source["x0"]= source->X0;
   json_source["y0"]= source->Y0;
 	json_source["ra"]= X0_wcs;
   json_source["dec"]= Y0_wcs;
-  json_source["morph_label"]= GetSourceMorphLabel(source->Type);
-	json_source["sourceness_label"]= GetSourcenessLabel(source->Flag);
+  json_source["morph_label"]= GetSourceMorphLabel(source->MorphId);
+	json_source["sourceness_label"]= GetSourcenessLabel(source->SourcenessId);
 	json_source["sourceness_score"]= -1;//not assessed by default
-    
+  json_source["tags"]= Json::arrayValue;//user tags left empty by default
+	json_source["nest_level"]= nestLevel; 
+
 	//Fill island fields	
 	#ifdef LOGGING_ENABLED
 		DEBUG_LOG("Fill island fields...");
@@ -1366,6 +1377,14 @@ int SourceExporter::FillJsonSourceIsland(Json::Value& json, Source* source, WCS*
 	bool useWeightedPos= false;
 	std::string iauName= name;
 	if(wcs) iauName= source->GetIAUName(useWeightedPos,wcs,eJ2000);
+
+	//Get object type
+	int objClassId= source->ObjClassId;
+	int objClassSubId= source->ObjClassSubId;
+	if(objClassSubId==eUNKNOWN_OBJECT) objClassSubId= objClassId;
+	std::string objClassLabel= GetAstroObjectLabel(objClassId);
+	std::string objClassSecondaryLabel= GetAstroObjectLabel(objClassSubId);
+	float objClassScore= source->ObjClassScore;
 
 	//Compute WCS centroid
 	double X0_wcs= 0;
@@ -1445,9 +1464,12 @@ int SourceExporter::FillJsonSourceIsland(Json::Value& json, Source* source, WCS*
 	json["iau_name"]= iauName;
 
 	// - Parent source index
-	json["parent_index"]= parent_index;
-	json["parent_island_index"]= parent_island_index;
+	//json["parent_index"]= parent_index;
+	//json["parent_island_index"]= parent_island_index;
 	
+	// - Set bool flag indicating if source island pars are valid
+	//json["valid_pars"]= 1;//set valid as default
+
 	//- Number of pixels
 	json["npix"]= source->NPix;
 	
@@ -1473,8 +1495,9 @@ int SourceExporter::FillJsonSourceIsland(Json::Value& json, Source* source, WCS*
 	json["dec_max"]= ymax_wcs;
 
 	//- Flux 
-	json["Stot"]= source->GetS();
-	json["Smax"]= source->GetSmax();
+	json["Stot"]= source->GetS()/beamArea;//in Jy
+	json["Smax"]= source->GetSmax();//in Jy/beam
+	/*
 	if(convertBrightnessToFlux){
 		json["S"]= flux;
 		json["S_err"]= fluxErr;
@@ -1483,19 +1506,27 @@ int SourceExporter::FillJsonSourceIsland(Json::Value& json, Source* source, WCS*
 		json["S"]= fluxDensity;
 		json["S_err"]= fluxDensityErr;
 	}
+	*/
 
 	//- Bkg/noise estimators
 	json["bkg"]= bkgLevel;
 	json["rms"]= rms;
 	
 	//- Source flags
-	json["morph_label"]= GetSourceMorphLabel(source->Type);
-	json["sourceness_label"]= GetSourcenessLabel(source->Flag);
+	json["morph_label"]= GetSourceMorphLabel(source->MorphId);
+	json["sourceness_label"]= GetSourcenessLabel(source->SourcenessId);
 	json["sourceness_score"]= -1;//not assessed by default
-	json["border"]= source->IsAtEdge();
+	json["border"]= static_cast<int>(source->IsAtEdge());
+
+	//- Source classification
+	json["class_label"]= objClassSecondaryLabel;
+	json["class_score"]= objClassScore;
+
+	//- User tags (empty list by default)
+	json["tags"]= Json::arrayValue;
 
 	//- Morph parameters
-	json["resolved"]= resolved;
+	json["resolved"]= static_cast<int>(resolved);
 	json["beam_area_ratio_par"]= nBeams;
 	json["circ_ratio_par"]= circRatio;
 	json["elongation_par"]= elongation;
@@ -1538,8 +1569,8 @@ int SourceExporter::FillJsonSourceIsland(Json::Value& json, Source* source, WCS*
 	if(hasSpectralIndexData){
 		Json::Value json_spectralinfo;
 		json_spectralinfo["alpha"]= sid.spectralIndex;
-		json_spectralinfo["alpha_err"]= sid.spectralIndex;
-		json_spectralinfo["fit"]= sid.isSpectralIndexFit;
+		json_spectralinfo["alpha_err"]= sid.spectralIndexErr;
+		json_spectralinfo["fit"]= static_cast<int>(sid.isSpectralIndexFit);
 		json_spectralinfo["chi2"]= sid.spectralFitChi2;
 		json_spectralinfo["ndf"]= sid.spectralFitNDF;
 		
@@ -1563,10 +1594,25 @@ int SourceExporter::FillJsonSourceIsland(Json::Value& json, Source* source, WCS*
 		Json::Value json_fitinfo;
 		json_fitinfo["ncomponents"]= nSelFitComponents;
 		json_fitinfo["model"]= "gaus";
+		json_fitinfo["ndata"]= fitPars.GetNFitPoints();
 		json_fitinfo["npars"]= fitPars.GetNPars();
+		json_fitinfo["npars_free"]= fitPars.GetNFreePars();
 		json_fitinfo["chi2"]= fitPars.GetChi2();
 		json_fitinfo["ndf"]= fitPars.GetNDF();
 		json_fitinfo["fit_quality"]= GetSourceFitQualityStr_V2(fitPars.GetFitQuality());
+		json_fitinfo["flux"]= flux;
+		json_fitinfo["flux_err"]= fluxErr;
+		
+		TMatrixD covMatrix= fitPars.GetCovarianceMatrix();
+		json_fitinfo["cov_matrix"]= Json::arrayValue;//store only upper triangular matrix as C is symmetric
+		for(int i=0;i<covMatrix.GetNrows();i++){
+			for(int j=0;j<covMatrix.GetNcols();j++){
+				if(i<=j){
+					double c_ij= covMatrix(i,j);
+					json_fitinfo["cov_matrix"].append(c_ij);
+				}
+			}
+		}
 
 		//Fill fit components
 		#ifdef LOGGING_ENABLED
@@ -1751,18 +1797,18 @@ int SourceExporter::FillJsonSourceComponents(Json::Value& json, Source* source, 
 		}
 	
 		//Get component flag
-		int componentFlag= -1;
-		if(fitPars.GetComponentFlag(componentFlag,k)<0){
+		int componentSourcenessId= -1;
+		if(fitPars.GetComponentSourcenessId(componentSourcenessId,k)<0){
 			#ifdef LOGGING_ENABLED
-				WARN_LOG("Failed to retrieve flag for component no. "<<k+1<<"!");
+				WARN_LOG("Failed to retrieve sourceness id for component no. "<<k+1<<"!");
 			#endif
 		}
 
-		//Get component type
-		int componentType= -1;
-		if(fitPars.GetComponentType(componentType,k)<0){
+		//Get component morph id
+		int componentMorphId= -1;
+		if(fitPars.GetComponentMorphId(componentMorphId,k)<0){
 			#ifdef LOGGING_ENABLED
-				WARN_LOG("Failed to retrieve type for component no. "<<k+1<<"!");
+				WARN_LOG("Failed to retrieve morph id for component no. "<<k+1<<"!");
 			#endif
 		}
 
@@ -1805,10 +1851,10 @@ int SourceExporter::FillJsonSourceComponents(Json::Value& json, Source* source, 
 		json_component["bmaj_deconv"]= bmaj_deconv_wcs;
 		json_component["bmin_deconv"]= bmin_deconv_wcs;
 		json_component["pa_deconv"]= pa_deconv_wcs;
-		json_component["morph_label"]= GetSourceMorphLabel(componentType);
-		json_component["sourceness_label"]= GetSourcenessLabel(componentFlag);
+		json_component["morph_label"]= GetSourceMorphLabel(componentMorphId);
+		json_component["sourceness_label"]= GetSourcenessLabel(componentSourcenessId);
 		json_component["sourceness_score"]= -1;//set to non-assessed
-		json_component["resolved"]= resolved;
+		json_component["resolved"]= static_cast<int>(resolved);
 		json_component["eccentricity_ratio"]= EccentricityRatio;
 		json_component["area_ratio"]= AreaRatio;
 		json_component["rot_angle_vs_beam"]= RotAngle;
@@ -1823,7 +1869,7 @@ int SourceExporter::FillJsonSourceComponents(Json::Value& json, Source* source, 
 			Json::Value json_spectralinfo;
 			json_spectralinfo["alpha"]= sid_comp[k].spectralIndex;
 			json_spectralinfo["alpha_err"]= sid_comp[k].spectralIndex;
-			json_spectralinfo["fit"]= sid_comp[k].isSpectralIndexFit;
+			json_spectralinfo["fit"]= static_cast<int>(sid_comp[k].isSpectralIndexFit);
 			json_spectralinfo["chi2"]= sid_comp[k].spectralFitChi2;
 			json_spectralinfo["ndf"]= sid_comp[k].spectralFitNDF;
 		
@@ -2036,8 +2082,8 @@ int SourceExporter::SourceToJson(std::vector<Json::Value>& jsonValues,Source* so
 	json["bkgRMSSum"]= source->GetBkgRMSSum();
 	
 	//- Source flags
-	json["type"]= source->Type;
-	json["flag"]= source->Flag;
+	json["morphId"]= source->MorphId;
+	json["sourceness"]= source->SourcenessId;
 	json["isGoodSource"]= source->IsGoodSource();
 	json["depthLevel"]= source->GetDepthLevel();
 	
@@ -2282,7 +2328,7 @@ int SourceExporter::SourceComponentsToJson(std::vector<Json::Value>& jsonValues,
 			double pa_deconv_wcs= 0;
 			if(fitPars.GetComponentFitWCSDeconvolvedEllipsePars(k,bmaj_deconv_wcs,bmin_deconv_wcs,pa_deconv_wcs)<0){
 				#ifdef LOGGING_ENABLED
-					DEBUG_LOG("Failed to retrieve WCS beam-deconvolved ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
+					WARN_LOG("Failed to retrieve WCS beam-deconvolved ellipse pars for component no. "<<k+1<<" (hint: check if they are computed correctly), setting dummy values!");
 				#endif
 			}
 
@@ -2305,18 +2351,18 @@ int SourceExporter::SourceComponentsToJson(std::vector<Json::Value>& jsonValues,
 
 			
 			//Get component flag
-			int componentFlag= -1;
-			if(fitPars.GetComponentFlag(componentFlag,k)<0){
+			int componentSourcenessId= -1;
+			if(fitPars.GetComponentSourcenessId(componentSourcenessId,k)<0){
 				#ifdef LOGGING_ENABLED
-					WARN_LOG("Failed to retrieve flag for component no. "<<k+1<<"!");
+					WARN_LOG("Failed to retrieve sourceness id for component no. "<<k+1<<"!");
 				#endif
 			}
 
-			//Get component type
-			int componentType= -1;
-			if(fitPars.GetComponentType(componentType,k)<0){
+			//Get component morph id
+			int componentMorphId= -1;
+			if(fitPars.GetComponentMorphId(componentMorphId,k)<0){
 				#ifdef LOGGING_ENABLED
-					WARN_LOG("Failed to retrieve type for component no. "<<k+1<<"!");
+					WARN_LOG("Failed to retrieve morph id for component no. "<<k+1<<"!");
 				#endif
 			}
 	
@@ -2399,8 +2445,8 @@ int SourceExporter::SourceComponentsToJson(std::vector<Json::Value>& jsonValues,
 
 			//Source component flags
 			json["fitQuality"]= fitPars.GetFitQuality();
-			json["flag"]= componentFlag;
-			json["type"]= componentType;
+			json["sourceness"]= componentSourcenessId;
+			json["morphId"]= componentMorphId;
 
 			//Add json value to collection
 			jsonValues.push_back(json);
@@ -2477,8 +2523,8 @@ int SourceExporter::WriteToROOT(std::string filename,const std::vector<Source*>&
 	dataTree->Branch("beamArea",&sourceTreeData.beamArea);//beamArea
 	dataTree->Branch("bkgSum",&sourceTreeData.bkgSum);//bkg sum over pixels
 	dataTree->Branch("rmsSum",&sourceTreeData.rmsSum);//noise rms sum over pixels
-	dataTree->Branch("type",&sourceTreeData.type);//source type
-	dataTree->Branch("flag",&sourceTreeData.flag);//source flag
+	dataTree->Branch("morphId",&sourceTreeData.morphId);//source morph id
+	dataTree->Branch("sourcenessId",&sourceTreeData.sourcenessId);//sourceness id
 	dataTree->Branch("good",&sourceTreeData.good);//source isGoodFlag
 	dataTree->Branch("depthLevel",&sourceTreeData.depthLevel);//source depth level
 	dataTree->Branch("chi2",&sourceTreeData.chi2);
@@ -2660,8 +2706,8 @@ int SourceExporter::FillSourceTTree(TTree* dataTree,SourceTreeData& sourceTreeDa
 	sourceTreeData.rmsSum= source->GetBkgRMSSum();
 
 	//Flags	
-	sourceTreeData.type= source->Type;
-	sourceTreeData.flag= source->Flag;
+	sourceTreeData.morphId= source->MorphId;
+	sourceTreeData.sourcenessId= source->SourcenessId;
 	sourceTreeData.good= static_cast<int>(source->IsGoodSource());
 	sourceTreeData.depthLevel= source->GetDepthLevel();
 
@@ -2834,8 +2880,8 @@ int SourceExporter::WriteComponentsToROOT(std::string filename,const std::vector
 	dataTree->Branch("chi2",&sourceTreeData.chi2);
 	dataTree->Branch("ndf",&sourceTreeData.ndf);
 	dataTree->Branch("fitQuality",&sourceTreeData.fitQuality);
-	dataTree->Branch("type",&sourceTreeData.type);
-	dataTree->Branch("flag",&sourceTreeData.flag);
+	dataTree->Branch("morphId",&sourceTreeData.morphId);
+	dataTree->Branch("sourcenessId",&sourceTreeData.sourcenessId);
 
 	if(writeAdditionalSourceInfo)
 	{
@@ -3103,19 +3149,19 @@ int SourceExporter::FillSourceComponentTree(TTree* dataTree,SourceComponentTreeD
 				}
 			}
 
-			//Get component flag
-			sourceData.flag= -1;
-			if(fitPars.GetComponentFlag(sourceData.flag,k)<0){
+			//Get component sourceness
+			sourceData.sourcenessId= -1;
+			if(fitPars.GetComponentSourcenessId(sourceData.sourcenessId,k)<0){
 				#ifdef LOGGING_ENABLED
-					WARN_LOG("Failed to retrieve flag for component no. "<<k+1<<"!");
+					WARN_LOG("Failed to retrieve sourceness id for component no. "<<k+1<<"!");
 				#endif
 			}
 
-			//Get component type
-			sourceData.type= -1;
-			if(fitPars.GetComponentType(sourceData.type,k)<0){
+			//Get component morph id
+			sourceData.morphId= -1;
+			if(fitPars.GetComponentMorphId(sourceData.morphId,k)<0){
 				#ifdef LOGGING_ENABLED
-					WARN_LOG("Failed to retrieve type for component no. "<<k+1<<"!");
+					WARN_LOG("Failed to retrieve morph id for component no. "<<k+1<<"!");
 				#endif
 			}
 			
@@ -3244,7 +3290,7 @@ int SourceExporter::WriteToDS9(std::string filename,const std::vector<Source*>& 
 	#endif
 
 	for(size_t k=0;k<sources.size();k++){
-		int source_type= sources[k]->Type;
+		//int source_type= sources[k]->MorphId;
 		bool isAtEdge= sources[k]->IsAtEdge();
 
 		//If WCS is not computed, compute it
@@ -3344,10 +3390,11 @@ int SourceExporter::WriteComponentsToDS9(std::string filename,const std::vector<
 std::string SourceExporter::GetDS9RegionColor(Source* source)
 {
 	std::string colorStr= "white";
-	if(source->Type==eExtended) colorStr= "green";
-	else if(source->Type==eCompactPlusExtended) colorStr= "magenta";
-	else if(source->Type==ePointLike) colorStr= "red";
-	else if(source->Type==eCompact) colorStr= "blue";
+	if(source->MorphId==eExtended) colorStr= "green";
+	else if(source->MorphId==eCompactPlusExtended) colorStr= "magenta";
+	else if(source->MorphId==ePointLike) colorStr= "red";
+	else if(source->MorphId==eCompact) colorStr= "blue";
+	else if(source->MorphId==eDiffuse) colorStr= "yellow";
 	else colorStr= "white";
 			
 	return colorStr;
@@ -3580,21 +3627,21 @@ const std::string SourceExporter::SourceToDS9FittedEllipseRegion(Source* source,
 			bool isSelected= fitPars.IsSelectedComponent(i);
 			if(!isSelected) continue;
 
-			//Get fit component flag
-			int fitComponentFlag= -1;
-			fitPars.GetComponentFlag(fitComponentFlag,i);
-			std::string fitComponentFlagStr= GetSourceFlagStr(fitComponentFlag);
+			//Get fit component sourceness
+			int fitComponentSourcenessId= -1;
+			fitPars.GetComponentSourcenessId(fitComponentSourcenessId,i);
+			std::string fitComponentSourcenessStr= GetSourcenessLabel(fitComponentSourcenessId);
 
-			//Get fit component type
-			int fitComponentType= -1;
-			fitPars.GetComponentType(fitComponentType,i);
-			std::string fitComponentTypeStr= GetSourceTypeStr(fitComponentType);
+			//Get fit component morph id
+			int fitComponentMorphId= -1;
+			fitPars.GetComponentMorphId(fitComponentMorphId,i);
+			std::string fitComponentMorphStr= GetSourceMorphLabel(fitComponentMorphId);
 
 			//Get encoded string region
 			std::string regionText(Form("%s_fitcomp%d",source->GetName(),(int)(i+1)));
 			std::string regionColor= "red";
 			
-			std::vector<std::string> regionTags {fitComponentTypeStr,"fit-component",fitComponentFlagStr,fitQualityFlagStr};
+			std::vector<std::string> regionTags {fitComponentMorphStr,"FIT-COMPONENT",fitComponentSourcenessStr,fitQualityFlagStr};
 			//std::string region= AstroUtils::EllipseToDS9Region(ellipses[i],regionText,regionColor,regionTags,useImageCoords);
 			std::string region= AstroUtils::EllipseToDS9Region(ellipses[i],regionText,regionColor,regionTags,pixOffset);
 			sstream<<region;

@@ -95,8 +95,8 @@ void Usage(char* exeName){
 	cout<<"-l, --applyComponentAreaRatioThr \t If enabled and if source fit component is fully enclosed inside another (or viceversa) a match requires that the source1/source2 area ratio is higher than the component overlap threshold. If disabled, assume a match whenever a source component is fully enclosed in a source (or viceversa) (default=false)"<<endl;
 	cout<<"-n, --minSourceMatchClusterSize=[MIN_SOURCE_MATCH_CLUSTER_SIZE] \t Minimum number of matched sources to be retained (e.g. skip source match cluster below this threshold) (default=2)"<<endl;
 	
-	cout<<"-f, --filterByType \t Consider only true sources with given type when searching the match (default=no)"<<endl;
-	cout<<"-s, --selectedType=[TYPE] \t True source types to be crossmatched (1=COMPACT, 2=POINT-LIKE, 3=EXTENDED, 4=COMPACT_WITH_EXTENDED) (default=-1)"<<endl;
+	cout<<"-f, --filterByMorphId \t Consider only true sources with given morph id when searching the match (default=no)"<<endl;
+	cout<<"-s, --selectedMorphId=[MORPH_ID] \t True source morph ids to be crossmatched (1=COMPACT, 2=POINT-LIKE, 3=EXTENDED, 4=COMPACT_WITH_EXTENDED, 5=DIFFUSE) (default=-1)"<<endl;
 	cout<<"-F, --filterBySimType \t Consider only true sources with given sim type when searching the match (default=no)"<<endl;
 	cout<<"-S, --selectedSimType=[TYPE] \t True source sim types to be crossmatched (eRingLike=1,eBubbleLike=2,eEllipseLike=3,eDiskLike=4,eBlobLike=5) (default=-1)"<<endl;
 	cout<<"-j, --no-compactSourceCorrelation \t Disable correlation search for compact sources (default=enabled)"<<endl;
@@ -138,9 +138,9 @@ static const struct option options_tab[] = {
 	{ "minSourceMatchClusterSize",required_argument,0,'n'},
 
 	//{ "correctFlux", no_argument, 0, 'c'},
-	{ "filterByType", no_argument, 0, 'f'},
+	{ "filterByMorphId", no_argument, 0, 'f'},
 	{ "filterBySimType", no_argument, 0, 'F'},
-	{ "selectedType", required_argument, 0, 's'},	
+	{ "selectedMorphId", required_argument, 0, 's'},	
 	{ "selectedSimType", required_argument, 0, 'S'},
 	{ "no-compactSourceCorrelation", no_argument, 0, 'j'},
 	{ "no-extendedSourceCorrelation", no_argument, 0, 'J'},	
@@ -168,8 +168,7 @@ float compMatchOverlapLowThr= 0.2;//fraction of overlap above which source fit c
 bool applySourceComponentAreaRatioThr= false;
 int minSourceMatchClusterSize= 2;
 bool correctFlux= false;
-bool selectTrueSourceByType= false;//default=all true sources searched 
-//int selectedTrueSourceType= -1;
+bool selectTrueSourceByMorphId= false;//default=all true sources searched 
 std::vector<int> stypes;
 std::vector<int> ssimtypes;
 bool selectTrueSourceBySimType= false;//default=all true sources searched 
@@ -549,7 +548,7 @@ int ParseOptions(int argc, char *argv[])
 	
 			case 'f':
 			{
-				selectTrueSourceByType= true;
+				selectTrueSourceByMorphId= true;
 				break;
 			}
 			/*
@@ -1689,24 +1688,15 @@ int ReadSourceData(std::string filename,int catalogIndex)
 	#endif
 	for(int i=0;i<sourceTree->GetEntries();i++){
 		sourceTree->GetEntry(i);
-		int type= aSource->Type;
+		int morphId= aSource->MorphId;
 		int simType= aSource->SimType;
 
-		/*
-		//Select source by type?
-		if( selectTrueSourceByType && type!=selectedTrueSourceType && type!=-1) {
-			#ifdef LOGGING_ENABLED
-				INFO_LOG("Skip true source type "<<type<<" (selected type="<<selectedTrueSourceType<<")...");
-			#endif
-			continue;
-		}
-		*/
-
-		//Select source by type?
-		if(selectTrueSourceByType){
+		
+		//Select source by morph id?
+		if(selectTrueSourceByMorphId){
 			bool skipSource= true;
 			for(size_t j=0;j<stypes.size();j++){
-				if( stypes[j]==-1 || type==stypes[j]) {
+				if( stypes[j]==-1 || morphId==stypes[j]) {
 					skipSource= false;
 					break;
 				}
@@ -1715,18 +1705,10 @@ int ReadSourceData(std::string filename,int catalogIndex)
 		}
 
 		//Select source by sim type?
-		/*
-		if( selectTrueSourceBySimType && simType!=selectedTrueSourceSimType && simType!=-1) {
-			#ifdef LOGGING_ENABLED
-				INFO_LOG("Skip true source type "<<simType<<" (selected type="<<selectedTrueSourceSimType<<")...");
-			#endif
-			continue;
-		}
-		*/
 		if(selectTrueSourceBySimType){
 			bool skipSource= true;
 			for(size_t j=0;j<ssimtypes.size();j++){
-				if( ssimtypes[j]==-1 || type==ssimtypes[j]) {
+				if( ssimtypes[j]==-1 || simType==ssimtypes[j]) {
 					skipSource= false;
 					break;
 				}

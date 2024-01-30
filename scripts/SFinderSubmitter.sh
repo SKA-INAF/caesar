@@ -40,8 +40,10 @@ if [ "$NARGS" -lt 1 ]; then
 	echo ""
 
 	echo "=== SFINDER IMG READ OPTIONS ==="
+	echo "--tilesplit - Partition input image in tiles and perform distributed processing (default=no tile split)"
 	echo "--tilesize=[TILE_SIZE] - Size (in pixels) of tile used to partition input image in distributed processing (default=0=no tile split)"		
 	echo "--tilestep=[TILE_STEP] - Tile step size (range 0-1) expressed as tile fraction used in tile overlap (default=1=no overlap)"
+	echo "--read-subimg - Read sub-image of input image in [xmin,xmax] [ymin,ymax] range (default=read full image)"
 	echo "--xmin=[XMIN] - Read sub-image of input image starting from pixel x=xmin (default=0=read full image)"
 	echo "--xmax=[XMAX] - Read sub-image of input image up to pixel x=xmax (default=0=read full image)"
 	echo "--ymin=[YMIN] - Read sub-image of input image starting from pixel y=xmin (default=0=read full image)"
@@ -340,8 +342,8 @@ USE_PRESMOOTHING="true"
 SMOOTH_FILTER="2"
 GUIDED_FILTER_RADIUS="12"
 GUIDED_FILTER_EPS="0.04"
-EXT_SFINDER_METHOD="3"
-AC_METHOD="2"
+EXT_SFINDER_METHOD="4"
+AC_METHOD="1"
 
 
 SELECT_SOURCES="false"
@@ -598,29 +600,30 @@ do
     	MAP_PIXSIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`		
     ;;
 
+		--tilesplit*)
+    	SPLIT_IN_TILES="true"
+    ;;	
     --tilesize=*)
     	TILE_SIZE=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
-			SPLIT_IN_TILES="true"
     ;;
 		--tilestep=*)
     	TILE_STEP=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
 			TILE_OVERLAP="true"
     ;;
+		--read-subimg*)
+    	READ_TILE="true"
+    ;;
 		--xmin=*)
     	XMIN=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
-			READ_TILE="true"
     ;;
 		--xmax=*)
     	XMAX=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
-			READ_TILE="true"
     ;;
 		--ymin=*)
     	YMIN=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
-			READ_TILE="true"
     ;;
 		--ymax=*)
     	YMAX=`echo $item | /bin/sed 's/[-a-zA-Z0-9]*=//'`
-			READ_TILE="true"
     ;;
 		
 		## STATS OPTIONS

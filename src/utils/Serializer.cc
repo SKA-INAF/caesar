@@ -184,8 +184,9 @@ int Serializer::EncodeSourceComponentParsToProtobuf(CaesarPB::SourceComponentPar
 		sourceCompPars_pb->set_m_bmin_deconv_wcs(bmin_deconv_wcs);
 		sourceCompPars_pb->set_m_pa_deconv_wcs(pa_deconv_wcs);
 
-		sourceCompPars_pb->set_m_flag(sourceCompPars.GetFlag());
-		sourceCompPars_pb->set_m_type(sourceCompPars.GetType());
+		sourceCompPars_pb->set_m_sourcenessid(sourceCompPars.GetSourcenessId());
+		sourceCompPars_pb->set_m_sourcenessscore(sourceCompPars.GetSourcenessScore());
+		sourceCompPars_pb->set_m_morphid(sourceCompPars.GetMorphId());
 		sourceCompPars_pb->set_m_selected(sourceCompPars.IsSelected());
 	
 		sourceCompPars_pb->set_m_pixsize(sourceCompPars.GetImagePixSize());
@@ -514,6 +515,15 @@ int Serializer::EncodeContourToProtobuf(CaesarPB::Contour& contour_pb,Contour* c
 				throw std::runtime_error(errMsg.str().c_str());
 			}
 		}
+
+		for(unsigned int i=0;i<contour->BoundingBoxVertex_noRot.size();i++){		
+			CaesarPB::Point* thisBoundingBoxVertex_noRot = contour_pb.add_boundingboxvertex_norot();
+			if(EncodePointToProtobuf(*thisBoundingBoxVertex_noRot,(contour->BoundingBoxVertex_noRot)[i])<0){
+				std::stringstream errMsg;
+				errMsg<<"BoundingBoxVertex_noRot no. "<<i+1<<" encoding to protobuf failed!";
+				throw std::runtime_error(errMsg.str().c_str());
+			}
+		}
 	
 		CaesarPB::Point* Centroid= new CaesarPB::Point;
 		//CaesarPB::Point Centroid;
@@ -765,16 +775,18 @@ int Serializer::EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* sourc
 
 	try {
 		
-		source_pb.set_type(source->Type);
-		source_pb.set_flag(source->Flag);
+		source_pb.set_morphid(source->MorphId);
+		source_pb.set_sourcenessid(source->SourcenessId);
 		source_pb.set_simtype(source->SimType);
 		source_pb.set_simmaxscale(source->SimMaxScale);
+		source_pb.set_sourcenessscore(source->SourcenessScore);
 		
 		//Set private source fields
 		source_pb.set_m_beamfluxintegral(source->GetBeamFluxIntegral());
 		source_pb.set_m_isgoodsource(source->IsGoodSource());
 		source_pb.set_m_depthlevel(source->GetDepthLevel());
 		source_pb.set_m_hasnestedsources(source->HasNestedSources());
+		source_pb.set_m_nestedascompositesourcecomponents(source->AreNestedComponentsOfCompositeSource());
 
 		//Set true info	
 		source_pb.set_m_hastrueinfo(source->HasTrueInfo());
@@ -840,6 +852,12 @@ int Serializer::EncodeSourceToProtobuf(CaesarPB::Source& source_pb,Source* sourc
 		source_pb.set_objclassstrid(source->ObjClassStrId);
 		source_pb.set_objclasssubid(source->ObjClassSubId);
 		source_pb.set_objconfirmed(source->ObjConfirmed);
+		source_pb.set_objclassscore(source->ObjClassScore);
+
+		//Set tags
+		for(size_t i=0;i<(source->GetTags()).size();i++){
+			source_pb.add_tags((source->GetTags())[i]);
+		}
 
 		//Set component object class ids
 		for(size_t i=0;i<(source->componentObjLocationIds).size();i++){
@@ -1239,8 +1257,9 @@ int Serializer::EncodeProtobufToSourceComponentPars(SourceComponentPars& sourceC
 			double m_pa_deconv_wcs= sourceComponentPars_pb.m_pa_deconv_wcs();
 			sourceComponentPars.SetWCSDeconvolvedEllipsePars(m_bmaj_deconv_wcs,m_bmin_deconv_wcs,m_pa_deconv_wcs);
 			
-			sourceComponentPars.SetFlag(sourceComponentPars_pb.m_flag());
-			sourceComponentPars.SetType(sourceComponentPars_pb.m_type());
+			sourceComponentPars.SetSourcenessId(sourceComponentPars_pb.m_sourcenessid());
+			sourceComponentPars.SetSourcenessScore(sourceComponentPars_pb.m_sourcenessscore());
+			sourceComponentPars.SetMorphId(sourceComponentPars_pb.m_morphid());
 			sourceComponentPars.SetSelected(sourceComponentPars_pb.m_selected());
 
 			sourceComponentPars.SetImagePixSize(sourceComponentPars_pb.m_pixsize());
@@ -1485,20 +1504,29 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 
 	try {
 		//Set public fields
-		if(source_pb.has_type()) source.Type= source_pb.type();
-		if(source_pb.has_flag()) source.Flag= source_pb.flag();
+		if(source_pb.has_morphid()) source.MorphId= source_pb.morphid();
+		if(source_pb.has_sourcenessid()) source.SourcenessId= source_pb.sourcenessid();
 		if(source_pb.has_simtype()) source.SimType= source_pb.simtype();
 		if(source_pb.has_simmaxscale()) source.SimMaxScale= source_pb.simmaxscale();
-		
+		if(source_pb.has_sourcenessscore()) source.SourcenessScore= source_pb.sourcenessscore();
+
 		//Set private source fields
 		if(source_pb.has_m_beamfluxintegral()) source.SetBeamFluxIntegral(source_pb.m_beamfluxintegral());
 		if(source_pb.has_m_isgoodsource()) source.SetGoodSourceFlag(source_pb.m_isgoodsource());
 		if(source_pb.has_m_depthlevel()) source.SetDepthLevel(source_pb.m_depthlevel());
 		if(source_pb.has_m_hasnestedsources()) source.SetHasNestedSources(source_pb.m_hasnestedsources());
+		if(source_pb.has_m_nestedascompositesourcecomponents()) source.SetAreNestedComponentsOfCompositeSource(source_pb.m_nestedascompositesourcecomponents());
 
 		if(source_pb.has_m_hastrueinfo()) {
 			source.SetTrueInfo(source_pb.m_s_true(),source_pb.m_x0_true(),source_pb.m_y0_true());
 		}
+
+		std::vector<std::string> tags;
+		for(int i=0;i<source_pb.tags_size();i++){
+			std::string tag = source_pb.tags(i);
+			tags.push_back(tag);
+		}
+		source.SetTags(tags);
 
 		//Set fit pars
 		if(source_pb.has_m_hasfitinfo()){
@@ -1594,6 +1622,7 @@ int Serializer::EncodeProtobufToSource(Source& source,const CaesarPB::Source& so
 		if(source_pb.has_objclassstrid()) source.ObjClassStrId= source_pb.objclassstrid();		
 		if(source_pb.has_objclasssubid()) source.ObjClassSubId= source_pb.objclasssubid();
 		if(source_pb.has_objconfirmed()) source.ObjConfirmed= source_pb.objconfirmed();
+		if(source_pb.has_objclassscore()) source.ObjClassScore= source_pb.objclassscore();
 
 		//Set component object class ids
 		std::vector<int> compObjLocationIds;
@@ -2015,6 +2044,13 @@ int Serializer::EncodeProtobufToContour(Contour& contour,const CaesarPB::Contour
 			const CaesarPB::Point& thisBoundingBoxVertexPB= contour_pb.boundingboxvertex(i);
 			if(EncodeProtobufToPoint((contour.BoundingBoxVertex)[i],thisBoundingBoxVertexPB)<0){
 				throw std::runtime_error("Failed to encode bounding box vertex field");	
+			}
+		}
+
+		for(int i=0;i<contour_pb.boundingboxvertex_norot_size();i++){		
+			const CaesarPB::Point& thisBoundingBoxVertexPB_norot= contour_pb.boundingboxvertex_norot(i);
+			if(EncodeProtobufToPoint((contour.BoundingBoxVertex_noRot)[i],thisBoundingBoxVertexPB_norot)<0){
+				throw std::runtime_error("Failed to encode non-rotated bounding box vertex field");	
 			}
 		}
 

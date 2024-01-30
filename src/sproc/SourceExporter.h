@@ -94,8 +94,8 @@ struct SourceTreeData
 	double beamArea;//beamArea
 	double bkgSum;//bkg sum over pixels
 	double rmsSum;;//noise rms sum over pixels
-	int type;//source type
-	int flag;//source flag
+	int morphId;//source morph id
+	int sourcenessId;//sourceness flag
 	int good;//source isGoodFlag
 	int depthLevel;//source depth level
 
@@ -181,8 +181,8 @@ struct SourceComponentTreeData
 	double chi2;//Fit chisquare
 	double ndf;//Fit number of degrees of freedom
 	int fitQuality;//Fit quality flag (eBadFit=0,eLQFit=1,eMQFit=2,eHQFit=3)
-	int flag;//Fitted component flag (eReal=1,eCandidate=2,eFake=3)
-	int type;//Fitted component type (eUnknown=0,eCompact=1,ePoint-Like=2,eExtended=3)
+	int sourcenessId;//Fitted component flag (eReal=1,eCandidate=2,eFake=3)
+	int morphId;//Fitted component morph id (eUnknown=0,eCompact=1,ePoint-Like=2,eExtended=3)
 	
 	
 	//Spectral index data

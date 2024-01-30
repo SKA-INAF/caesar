@@ -182,7 +182,7 @@ bool ImgMetaData::HasBeamInfo()
 	if(!std::isnormal(Bmaj)) return false;
 	if(!std::isnormal(Bmin)) return false;
 	if(!std::isfinite(Bpa)) return false;
-	if(BUnit=="") return false;
+	//if(BUnit=="") return false;
 
 	return true;
 

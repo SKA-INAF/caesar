@@ -70,8 +70,8 @@ SourceSelector::CutFcnRegistry SourceSelector::m_cutFcnRegistry =
 	{"elongation",ElongationCut},
 	{"ellipseAreaRatio",EllipseAreaRatioCut},
 	{"beamAreaRatio",BeamAreaRatioCut},
-	{"sourceType",SourceTypeCut},
-	{"sourceFlag",SourceFlagCut},
+	{"sourceMorphology",SourceMorphCut},
+	{"sourceness",SourcenessCut},
 	{"sourceSimType",SourceSimTypeCut},
 	{"isExtended",ExtendedSourceCut},
 	{"isCompact",CompactSourceCut},
@@ -91,8 +91,8 @@ SourceSelector::CutFcnRegistry SourceSelector::m_cutFcnRegistry =
 	{"fitComponentPeakSNR",SourceComponentPeakSNRCut},
 	{"fitComponentEccentricityRatio",SourceComponentEccentricityRatioCut},
 	{"fitComponentBeamAreaRatio",SourceComponentBeamAreaRatioCut},
-	{"fitComponentType",SourceComponentTypeCut},
-	{"fitComponentFlag",SourceComponentFlagCut}
+	{"fitComponentMorphology",SourceComponentMorphCut},
+	{"fitComponentSourceness",SourceComponentSourcenessCut}
 };
 
 SourceSelector::SourceSelector()
@@ -1163,9 +1163,9 @@ bool SourceSelector::SourceComponentIntToPeakFluxCut(Source* source,Cut* cut)
 
 
 //==============================================
-//==   SOURCE COMPONENT TYPE CUT
+//==   SOURCE COMPONENT MORPH ID CUT
 //==============================================
-bool SourceSelector::SourceComponentTypeCut(Source* source,Cut* cut)
+bool SourceSelector::SourceComponentMorphCut(Source* source,Cut* cut)
 {
 	if(cut && !cut->isEnabled()) return true;
 	
@@ -1184,9 +1184,9 @@ bool SourceSelector::SourceComponentTypeCut(Source* source,Cut* cut)
 		bool isSelected= fitPars.IsSelectedComponent(k);
 		if(!isSelected) continue;
 
-		int type;
-		fitPars.GetComponentType(type,k);
-		bool passed= cut->isPassed(type);
+		int morphId;
+		fitPars.GetComponentMorphId(morphId,k);
+		bool passed= cut->isPassed(morphId);
 		if(passed){
 			nComponents_sel++;
 		}
@@ -1206,12 +1206,12 @@ bool SourceSelector::SourceComponentTypeCut(Source* source,Cut* cut)
 	
 	return true;
 
-}//close SourceComponentTypeCut()
+}//close SourceComponentMorphCut()
 
 //==============================================
-//==   SOURCE COMPONENT FLAG CUT
+//==   SOURCE COMPONENT SOURCENESS CUT
 //==============================================
-bool SourceSelector::SourceComponentFlagCut(Source* source,Cut* cut)
+bool SourceSelector::SourceComponentSourcenessCut(Source* source,Cut* cut)
 {
 	if(cut && !cut->isEnabled()) return true;
 
@@ -1230,9 +1230,9 @@ bool SourceSelector::SourceComponentFlagCut(Source* source,Cut* cut)
 		bool isSelected= fitPars.IsSelectedComponent(k);
 		if(!isSelected) continue;
 
-		int flag;
-		fitPars.GetComponentFlag(flag,k);
-		bool passed= cut->isPassed(flag);
+		int sourceness;
+		fitPars.GetComponentSourcenessId(sourceness,k);
+		bool passed= cut->isPassed(sourceness);
 		if(passed){
 			nComponents_sel++;
 		}
@@ -1252,7 +1252,7 @@ bool SourceSelector::SourceComponentFlagCut(Source* source,Cut* cut)
 
 	return true;
 
-}//close SourceComponentFlagCut()
+}//close SourceComponentSourcenessCut()
 
 
 bool SourceSelector::SourceComponentEccentricityRatioCut(Source* source,Cut* cut)
@@ -1529,28 +1529,28 @@ bool SourceSelector::BeamAreaRatioCut(Source* source,Cut* cut)
 
 
 //===========================================
-//==    SOURCE TYPE CUT
+//==    SOURCE MORPH ID CUT
 //===========================================
-bool SourceSelector::SourceTypeCut(Source* source,Cut* cut)
+bool SourceSelector::SourceMorphCut(Source* source,Cut* cut)
 {
 	if(cut && !cut->isEnabled()) return true;
-	int type= source->Type;
-	bool passed= cut->isPassed(type);
+	int morphId= source->MorphId;
+	bool passed= cut->isPassed(morphId);
 	return passed;
 
-}//close SourceTypeCut()
+}//close SourceMorphCut()
 
 //===========================================
-//==    SOURCE FLAG CUT
+//==    SOURCENESS CUT
 //===========================================
-bool SourceSelector::SourceFlagCut(Source* source,Cut* cut)
+bool SourceSelector::SourcenessCut(Source* source,Cut* cut)
 {
 	if(cut && !cut->isEnabled()) return true;
-	int flag= source->Flag;
-	bool passed= cut->isPassed(flag);
+	int sourceness= source->SourcenessId;
+	bool passed= cut->isPassed(sourceness);
 	return passed;
 
-}//close SourceFlagCut()
+}//close SourcenessCut()
 
 //===========================================
 //==    SOURCE SIM TYPE CUT
