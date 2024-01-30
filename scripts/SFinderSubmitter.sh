@@ -40,8 +40,10 @@ if [ "$NARGS" -lt 1 ]; then
 	echo ""
 
 	echo "=== SFINDER IMG READ OPTIONS ==="
+	echo "--tilesplit - Partition input image in tiles and perform distributed processing (default=no tile split)"
 	echo "--tilesize=[TILE_SIZE] - Size (in pixels) of tile used to partition input image in distributed processing (default=0=no tile split)"		
 	echo "--tilestep=[TILE_STEP] - Tile step size (range 0-1) expressed as tile fraction used in tile overlap (default=1=no overlap)"
+	echo "--read-subimg - Read sub-image of input image in [xmin,xmax] [ymin,ymax] range (default=read full image)"
 	echo "--xmin=[XMIN] - Read sub-image of input image starting from pixel x=xmin (default=0=read full image)"
 	echo "--xmax=[XMAX] - Read sub-image of input image up to pixel x=xmax (default=0=read full image)"
 	echo "--ymin=[YMIN] - Read sub-image of input image starting from pixel y=xmin (default=0=read full image)"
@@ -1760,6 +1762,13 @@ generate_exec_script(){
       echo 'echo "*************************************************"'
       echo 'echo "****         COPY DATA TO OUTDIR             ****"'
       echo 'echo "*************************************************"'
+      echo 'echo ""'
+      
+      # - Print current runuser & uid/gid info
+      echo 'USER_ID=`id -u`'
+      echo 'USER_GID=`id -g`'
+      echo 'USER=`id -un $USER_ID`'
+      echo 'echo "INFO: Run user information: USER=$USER, UID=$USER_ID, GID=$USER_GID"'
       echo 'echo ""'
 			
 			if [ "$BASEDIR" != "$OUTPUT_DIR" ]; then
