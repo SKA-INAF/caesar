@@ -1760,6 +1760,13 @@ generate_exec_script(){
       echo 'echo "****         COPY DATA TO OUTDIR             ****"'
       echo 'echo "*************************************************"'
       echo 'echo ""'
+      
+      # - Print current runuser & uid/gid info
+      echo 'USER_ID=`id -u`'
+      echo 'USER_GID=`id -g`'
+      echo 'USER=`id -un $USER_ID`'
+      echo 'echo "INFO: Run user information: USER=$USER, UID=$USER_ID, GID=$USER_GID"'
+      echo 'echo ""'
 			
 			if [ "$BASEDIR" != "$OUTPUT_DIR" ]; then
       	echo 'echo "INFO: Copying job outputs in $JOBOUTDIR ..."'
