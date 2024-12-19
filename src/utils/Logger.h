@@ -51,6 +51,7 @@
 #include <log4cxx/net/syslogappender.h>
 #include <log4cxx/helpers/exception.h>
 #include <log4cxx/mdc.h>
+#include <log4cxx/log4cxx.h>
 
 //Boost
 #include <boost/regex.hpp>
@@ -150,8 +151,12 @@ class Logger : public TObject {
 		virtual void Log(const std::string sLevel, const std::string msg, const std::string msg_prefix=""){
 			log4cxx::LevelPtr logLevel= log4cxx::Level::toLevel(sLevel,log4cxx::Level::getOff());
 			if(logger && logger->isEnabledFor(logLevel) ){
-				log4cxx::helpers::MessageBuffer oss_; \
-      	logger->forcedLog(logLevel, oss_.str(oss_ << msg_prefix << msg), log4cxx::spi::LocationInfo(m_tag.c_str(),__LOG4CXX_FUNC__,__LINE__) );
+				log4cxx::helpers::MessageBuffer oss_;
+				#if LOG4CXX_VERSION > 0120
+					logger->forcedLog(logLevel, oss_.str(oss_ << msg_prefix << msg), log4cxx::spi::LocationInfo(m_tag.c_str(), m_tag.c_str(), __LOG4CXX_FUNC__, __LINE__) );
+				#else
+      		logger->forcedLog(logLevel, oss_.str(oss_ << msg_prefix << msg), log4cxx::spi::LocationInfo(m_tag.c_str(), __LOG4CXX_FUNC__, __LINE__) );
+      	#endif
 			}
 		}	
 
@@ -172,7 +177,11 @@ class Logger : public TObject {
 				log4cxx::LevelPtr logLevel= GetMappedLogLevel(level);					
 				if(logger && logger->isEnabledFor(logLevel) ){
 					log4cxx::helpers::MessageBuffer oss_; \
-      		logger->forcedLog(logLevel, oss_.str(oss_ << msg_prefix << msg), log4cxx::spi::LocationInfo(m_tag.c_str(),__LOG4CXX_FUNC__,__LINE__) );
+      		#if LOG4CXX_VERSION > 0120
+						logger->forcedLog(logLevel, oss_.str(oss_ << msg_prefix << msg), log4cxx::spi::LocationInfo(m_tag.c_str(), m_tag.c_str(), __LOG4CXX_FUNC__, __LINE__) );
+      		#else
+      			logger->forcedLog(logLevel, oss_.str(oss_ << msg_prefix << msg), log4cxx::spi::LocationInfo(m_tag.c_str(), __LOG4CXX_FUNC__, __LINE__) );	
+      		#endif
 				}
 			}//close Log()
 		#endif
