@@ -47,6 +47,7 @@
 #include <log4cxx/consoleappender.h>
 #include <log4cxx/fileappender.h>
 #include <log4cxx/rollingfileappender.h>
+#include <log4cxx/rolling/rollingfileappender.h>
 #include <log4cxx/propertyconfigurator.h>
 #include <log4cxx/net/syslogappender.h>
 #include <log4cxx/helpers/exception.h>
@@ -320,10 +321,22 @@ class FileLogger : public Logger {
 			if(!layout) return -1;
 
 			//Create and add appender
-			//appender= log4cxx::AppenderPtr( new log4cxx::FileAppender(layout,m_filename,m_appendFlag) );	
-			appender= log4cxx::AppenderPtr( new log4cxx::RollingFileAppender(layout,m_filename,m_appendFlag) );	
-			//appender->setMaxBackupIndex(m_maxBackupFiles);
-			//appender->setMaxFileSize(m_maxFileSize);
+			#if LOG4CXX_VERSION > 0120
+				log4cxx::rolling::RollingFileAppender* rollingFileAppender = new log4cxx::rolling::RollingFileAppender();
+    		rollingFileAppender->setLayout(layout);
+				rollingFileAppender->setFile(m_filename);
+				rollingFileAppender->setAppend(m_appendFlag);
+    	
+				appender= log4cxx::AppenderPtr(rollingFileAppender);
+				//appender->setMaxBackupIndex(m_maxBackupFiles);
+				//appender->setMaxFileSize(m_maxFileSize);
+			#else
+				//appender= log4cxx::AppenderPtr( new log4cxx::FileAppender(layout,m_filename,m_appendFlag) );	
+				appender= log4cxx::AppenderPtr( new log4cxx::RollingFileAppender(layout,m_filename,m_appendFlag) );
+				//appender->setMaxBackupIndex(m_maxBackupFiles);
+				//appender->setMaxFileSize(m_maxFileSize);
+			#endif
+			
 			std::stringstream maxBackupFiles_stream;
 			maxBackupFiles_stream << m_maxBackupFiles;
 			appender->setOption("MAXBACKUPINDEX",maxBackupFiles_stream.str());//obsolete??
