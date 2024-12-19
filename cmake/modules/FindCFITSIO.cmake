@@ -16,7 +16,7 @@
 # Redistribution and use is allowed according to the terms of the BSD license.
 # For details see the accompanying COPYING-CMAKE-SCRIPTS file.
 
-INCLUDE(FindPkgConfig)
+find_package(FindPkgConfig)
 PKG_CHECK_MODULES(PC_CFITSIO libcfitsio)
 
 find_path(CFITSIO_INCLUDE_DIR fitsio.h
