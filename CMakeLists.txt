@@ -14,9 +14,14 @@ endif()
 # -------------------------------------------
 # CMAKE VERSIONS
 # -------------------------------------------
-#cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
-cmake_minimum_required(VERSION 3.0.2 FATAL_ERROR)
+#cmake_minimum_required(VERSION 3.0.2 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.0.2...3.31 FATAL_ERROR)
+
 cmake_policy(SET CMP0005 NEW)
+if (CMAKE_VERSION VERSION_GREATER "3.30")
+	cmake_policy(SET CMP0167 NEW)  # To fix FindBoost warning (e.g. see https://stackoverflow.com/questions/79146083/finding-boost-without-cmake-find-module-cmp0167)
+endif()
+#cmake_policy(SET CMP0175 OLD) # To enable invalid arguments (PRE_BUILD) in add_custom_command
 
 #---------------------------------------------
 # - Project definition
@@ -313,7 +318,7 @@ SET_SOURCE_FILES_PROPERTIES(${GEN_PROTO_SRCS} ${GEN_PROTO_HEADERS} PROPERTIES GE
 add_custom_command(
   ####OUTPUT proto_generation
 	OUTPUT ${PROTO_GEN_FILES}
-	PRE_BUILD
+	##PRE_BUILD  ## Deprecated and invalid starting from cmake v3.31 (can be used with CMP0175 policy set)
 	COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} --proto_path=${PROTO_DIR} --cpp_out=${CMAKE_BINARY_DIR} ${PROTO_FILES}
 	#####DEPENDS always_rebuild  ### Decomment this to always generate protobuf files
 	DEPENDS ${PROTO_FILES}

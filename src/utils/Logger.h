@@ -47,10 +47,12 @@
 #include <log4cxx/consoleappender.h>
 #include <log4cxx/fileappender.h>
 #include <log4cxx/rollingfileappender.h>
+#include <log4cxx/rolling/rollingfileappender.h>
 #include <log4cxx/propertyconfigurator.h>
 #include <log4cxx/net/syslogappender.h>
 #include <log4cxx/helpers/exception.h>
 #include <log4cxx/mdc.h>
+#include <log4cxx/log4cxx.h>
 
 //Boost
 #include <boost/regex.hpp>
@@ -150,8 +152,12 @@ class Logger : public TObject {
 		virtual void Log(const std::string sLevel, const std::string msg, const std::string msg_prefix=""){
 			log4cxx::LevelPtr logLevel= log4cxx::Level::toLevel(sLevel,log4cxx::Level::getOff());
 			if(logger && logger->isEnabledFor(logLevel) ){
-				log4cxx::helpers::MessageBuffer oss_; \
-      	logger->forcedLog(logLevel, oss_.str(oss_ << msg_prefix << msg), log4cxx::spi::LocationInfo(m_tag.c_str(),__LOG4CXX_FUNC__,__LINE__) );
+				log4cxx::helpers::MessageBuffer oss_;
+				#if LOG4CXX_VERSION > 0120
+					logger->forcedLog(logLevel, oss_.str(oss_ << msg_prefix << msg), log4cxx::spi::LocationInfo(m_tag.c_str(), m_tag.c_str(), __LOG4CXX_FUNC__, __LINE__) );
+				#else
+      		logger->forcedLog(logLevel, oss_.str(oss_ << msg_prefix << msg), log4cxx::spi::LocationInfo(m_tag.c_str(), __LOG4CXX_FUNC__, __LINE__) );
+      	#endif
 			}
 		}	
 
@@ -172,7 +178,11 @@ class Logger : public TObject {
 				log4cxx::LevelPtr logLevel= GetMappedLogLevel(level);					
 				if(logger && logger->isEnabledFor(logLevel) ){
 					log4cxx::helpers::MessageBuffer oss_; \
-      		logger->forcedLog(logLevel, oss_.str(oss_ << msg_prefix << msg), log4cxx::spi::LocationInfo(m_tag.c_str(),__LOG4CXX_FUNC__,__LINE__) );
+      		#if LOG4CXX_VERSION > 0120
+						logger->forcedLog(logLevel, oss_.str(oss_ << msg_prefix << msg), log4cxx::spi::LocationInfo(m_tag.c_str(), m_tag.c_str(), __LOG4CXX_FUNC__, __LINE__) );
+      		#else
+      			logger->forcedLog(logLevel, oss_.str(oss_ << msg_prefix << msg), log4cxx::spi::LocationInfo(m_tag.c_str(), __LOG4CXX_FUNC__, __LINE__) );	
+      		#endif
 				}
 			}//close Log()
 		#endif
@@ -311,10 +321,22 @@ class FileLogger : public Logger {
 			if(!layout) return -1;
 
 			//Create and add appender
-			//appender= log4cxx::AppenderPtr( new log4cxx::FileAppender(layout,m_filename,m_appendFlag) );	
-			appender= log4cxx::AppenderPtr( new log4cxx::RollingFileAppender(layout,m_filename,m_appendFlag) );	
-			//appender->setMaxBackupIndex(m_maxBackupFiles);
-			//appender->setMaxFileSize(m_maxFileSize);
+			#if LOG4CXX_VERSION > 0120
+				log4cxx::rolling::RollingFileAppender* rollingFileAppender = new log4cxx::rolling::RollingFileAppender();
+    		rollingFileAppender->setLayout(layout);
+				rollingFileAppender->setFile(m_filename);
+				rollingFileAppender->setAppend(m_appendFlag);
+    	
+				appender= log4cxx::AppenderPtr(rollingFileAppender);
+				//appender->setMaxBackupIndex(m_maxBackupFiles);
+				//appender->setMaxFileSize(m_maxFileSize);
+			#else
+				//appender= log4cxx::AppenderPtr( new log4cxx::FileAppender(layout,m_filename,m_appendFlag) );	
+				appender= log4cxx::AppenderPtr( new log4cxx::RollingFileAppender(layout,m_filename,m_appendFlag) );
+				//appender->setMaxBackupIndex(m_maxBackupFiles);
+				//appender->setMaxFileSize(m_maxFileSize);
+			#endif
+			
 			std::stringstream maxBackupFiles_stream;
 			maxBackupFiles_stream << m_maxBackupFiles;
 			appender->setOption("MAXBACKUPINDEX",maxBackupFiles_stream.str());//obsolete??

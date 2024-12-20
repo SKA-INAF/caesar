@@ -72,7 +72,7 @@ To build and install the project:
   ```git clone https://github.com/SKA-INAF/caesar.git $SOURCE_DIR```
 * Create the build and install directories: $BUILD_DIR, $INSTALL_DIR  
 * In the build directory:  
-  ```cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DENABLE_TEST=ON -DBUILD_WITH_OPENMP=ON -DENABLE_MPI=ON -DBUILD_APPS=ON $SOURCE_DIR```   
+  ```cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DENABLE_TEST=ON -DENABLE_OPENMP=ON -DENABLE_MPI=ON -DBUILD_APPS=ON $SOURCE_DIR```   
   ```make```  
   ```make install```  
   
