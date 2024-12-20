@@ -46,8 +46,12 @@
 #include <log4cxx/patternlayout.h>
 #include <log4cxx/consoleappender.h>
 #include <log4cxx/fileappender.h>
-#include <log4cxx/rollingfileappender.h>
-#include <log4cxx/rolling/rollingfileappender.h>
+#if LOG4CXX_VERSION > 0120
+	#include <log4cxx/rolling/rollingfileappender.h>
+#else
+	#include <log4cxx/rolling/rollingfileappender.h>
+	#include <log4cxx/rollingfileappender.h>
+#endif
 #include <log4cxx/propertyconfigurator.h>
 #include <log4cxx/net/syslogappender.h>
 #include <log4cxx/helpers/exception.h>
@@ -177,7 +181,7 @@ class Logger : public TObject {
 			virtual void Log(int level, const std::string msg, const std::string msg_prefix=""){
 				log4cxx::LevelPtr logLevel= GetMappedLogLevel(level);					
 				if(logger && logger->isEnabledFor(logLevel) ){
-					log4cxx::helpers::MessageBuffer oss_; \
+					log4cxx::helpers::MessageBuffer oss_;
       		#if LOG4CXX_VERSION > 0120
 						logger->forcedLog(logLevel, oss_.str(oss_ << msg_prefix << msg), log4cxx::spi::LocationInfo(m_tag.c_str(), m_tag.c_str(), __LOG4CXX_FUNC__, __LINE__) );
       		#else
