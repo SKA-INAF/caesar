@@ -14,7 +14,9 @@ endif()
 # -------------------------------------------
 # CMAKE VERSIONS
 # -------------------------------------------
-cmake_minimum_required(VERSION 3.0.2 FATAL_ERROR)
+#cmake_minimum_required(VERSION 3.0.2 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.0.2...3.31 FATAL_ERROR)
+
 cmake_policy(SET CMP0005 NEW)
 if (CMAKE_VERSION VERSION_GREATER "3.30")
 	cmake_policy(SET CMP0167 NEW)  # To fix FindBoost warning (e.g. see https://stackoverflow.com/questions/79146083/finding-boost-without-cmake-find-module-cmp0167)
