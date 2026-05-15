@@ -35,6 +35,8 @@ if [ "$NARGS" -lt 1 ]; then
 	echo "--save-saliencymap - Save saliency map in output ROOT file (default=no)"
 	echo "--save-segmentedmap - Save segmented map in output ROOT file (default=no)"
 	echo "--save-regions - Save DS9 regions (default=no)"
+	echo "--save-catalog-to-json - Save source catalog to json format (default=no)"
+	echo "--save-summaryplot - Save a summary plot (PNG) with input image and extracted sources superimposed (default=no)"	
 	echo "--convertregionstowcs - Save DS9 regions in WCS format (default=no)"
 	echo "--regionwcs=[DS9REGION_WCSTYPE] - DS9 region WCS output format (0=J2000,1=B1950,2=GALACTIC) (default=0)"
 	echo ""
