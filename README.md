@@ -14,9 +14,8 @@ CAESAR is a C++ software tool for automated source finding in astronomical maps.
 ## **Credit**
 If you use CAESAR for your research, please acknowledge it in your papers by citing the following paper:
 
-* `S. Riggi et al., "Automated detection of extended sources in radio maps:
-progress from the SCORPIO survey", MNRAS (2016) doi: 10.1093/mnras/stw982, arXiv:1605.01852`
-* `S. Riggi, F. Vitello et al., "CAESAR source finder: recent developments and testing", submitted to PASA (2019)`
+* `S. Riggi et al., "Automated detection of extended sources in radio maps: progress from the SCORPIO survey", MNRAS 460 (2016) 1486, doi: 10.1093/mnras/stw982`
+* `S. Riggi et al., "CAESAR source finder: recent developments and testing", PASA 36 (2019) E037, doi: 10.1017/pasa.2019.29`
 
 or consider including me (`S. Riggi, INAF - Osservatorio Astrofisico di Catania, Via S. Sofia 78, I-95123, Catania, Italy`)
 as a co-author on your publications.
