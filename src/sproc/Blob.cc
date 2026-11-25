@@ -639,8 +639,13 @@ int Blob::ComputeMorphologyParams()
 		long int rowId= nBoxY-1-y;//TEST (LAST)
 		long int colId= nBoxX-1-x;//TEST (LAST)
 		
-		binarizedImg.at<uchar>(rowId, colId, 0) = 1;
-		rasterImg.at<double>(rowId, colId, 0) = thisS;		
+		//NB: The code below commented crashes in recent OpenCV versions (>=4.11 & 5)
+		//    so drop the redundant channel index (mats are CV_8UC1 / CV_64FC1)
+		//binarizedImg.at<uchar>(rowId, colId, 0) = 1;
+		//rasterImg.at<double>(rowId, colId, 0) = thisS;
+		binarizedImg.at<uchar>(rowId, colId) = 1;
+		rasterImg.at<double>(rowId, colId) = thisS;
+		
 	}//end loop pixels
 
 

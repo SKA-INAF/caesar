@@ -106,7 +106,12 @@ Image* MorphFilter::ComputeWatershedFilter(std::vector<Contour*>& contours,Image
 			double binContent= img->GetPixelValue(i,j);
 			if(binContent==0) continue;
 			double w= morphImg->GetPixelValue(i,j);
-			if(w>1) mark.at<uchar>(rowId, colId, 0) = 1;
+			
+			//NB: The code below commented crashes in recent OpenCV versions (>=4.11 & 5)
+			//    so drop the redundant channel index (mats are CV_8UC1 / CV_64FC1)
+			//if(w>1) mark.at<uchar>(rowId, colId, 0) = 1;
+			if(w>1) mark.at<uchar>(rowId, colId) = 1;
+			
 		}//end loop x
 	}//end loop y
 
