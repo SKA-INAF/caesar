@@ -412,15 +412,20 @@ void ClearData()
 
 int SelectSources()
 {
+
 	#ifdef LOGGING_ENABLED
-		INFO_LOG("Selecting #"<<m_sources.size()<<" sources...");
+		INFO_LOG("Selecting #"<<m_sources.size()<<" sources ...");
 	#endif
 	
 	//Get region WCS type
 	int wcsType= m_regions[0]->csType;
-	
+		
 	//Selection applied to pixel coordinates
 	if(wcsType==eIMG_CS){
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Selecting in image pixel coordinates ...");
+		#endif
+	
 		for(size_t i=0;i<m_sources.size();i++){
 			//Get source centroid
 			Source* source= m_sources[i];
@@ -451,6 +456,9 @@ int SelectSources()
 
 	//Selection applied to WCS coordinates
 	else{
+		#ifdef LOGGING_ENABLED
+			INFO_LOG("Selecting in image wcs coordinates (wcs="<<wcsType<<") ...");
+		#endif
 
 		//Init WCS
 		WCS* wcs= nullptr;
