@@ -60,7 +60,10 @@ void Usage(char* exeName)
 	cout<<"-r, --region=[REGION_FILE] \t Input DS9 region file containing the region(s) to be used to spatially select sources"<<endl;
 	cout<<"-o, --output=[OUTPUT_FILE] \t Output file name (ROOT format) where to store selected sources (default=sources.root)"<<endl;
 	cout<<"-R, --region-output=[REGION_OUTPUT_FILE] \t Output DS9 region file name where to store selected sources (default=sources.reg)"<<endl;
+	cout<<"-r, --region-fitcomp-output=[REGION_COMP_OUTPUT_FILE] \t Output DS9 region file name where to store selected source components (default=sources_fitcomp.reg)"<<endl;
 	cout<<"-C, --catalog-output=[CATALOG_OUTPUT_FILE] \t Output catalog file name where to store selected sources (default=catalog.dat)"<<endl;
+	cout<<"-c, --catalog-fitcomp-output=[CATALOG_COMP_OUTPUT_FILE] \t Output catalog file name where to store selected source components (default=catalog_fitcomp.dat)"<<endl;
+	cout<<"-j, --catalog-json-output=[CATALOG_JSON_OUTPUT_FILE] \t Output catalog file name where to store selected sources in json format (default=catalog.json)"<<endl;
 	cout<<"-v, --verbosity=[LEVEL] \t Log level (<=0=OFF, 1=FATAL, 2=ERROR, 3=WARN, 4=INFO, >=5=DEBUG) (default=INFO)"<<endl;
 	
 	cout<<"=============================="<<endl;
@@ -71,9 +74,12 @@ static const struct option options_tab[] = {
   /* name, has_arg, &flag, val */
   { "help", no_argument, 0, 'h' },
 	{ "input", required_argument, 0, 'i' },
-	{ "region", required_argument, 0, 'r' },
+	{ "region", required_argument, 0, 'b' },
 	{ "region-output", required_argument, 0, 'R' },
+	{ "region-fitcomp-output", required_argument, 0, 'r' },
 	{ "catalog-output", required_argument, 0, 'C' },
+	{ "catalog-fitcomp-output", required_argument, 0, 'c' },
+	{ "catalog-json-output", required_argument, 0, 'j' },
 	{ "verbosity", required_argument, 0, 'v'},
 	{ "output", required_argument, 0, 'o' },
   {(char*)0, (int)0, (int*)0, (int)0}
@@ -88,6 +94,7 @@ std::string regionOutputFileName= "sources.reg";
 std::string regionComponentsOutputFileName= "sources_fitcomp.reg";
 std::string catalogOutputFileName= "catalog.dat";
 std::string catalogComponentsOutputFileName= "catalog_fitcomp.dat";
+std::string catalogJsonOutputFileName= "catalog.json";
 int ds9WCSType= 0;//use original WCS type to save catalog
 int verbosity= 4;//INFO level
 TFile* inputFile= 0;
@@ -217,7 +224,7 @@ int ParseOptions(int argc, char *argv[])
 	int c = 0;
   int option_index = 0;
 
-	while((c = getopt_long(argc, argv, "hi:r:o:R:C:v:",options_tab, &option_index)) != -1) {
+	while((c = getopt_long(argc, argv, "hi:b:o:R:r:C:c:j:v:",options_tab, &option_index)) != -1) {
     
     switch (c) {
 			case 0 : 
@@ -234,7 +241,7 @@ int ParseOptions(int argc, char *argv[])
 				fileName= std::string(optarg);	
 				break;	
 			}
-			case 'r':	
+			case 'b':	
 			{
 				regionFileName= std::string(optarg);	
 				break;	
@@ -249,9 +256,24 @@ int ParseOptions(int argc, char *argv[])
 				regionOutputFileName= std::string(optarg);	
 				break;	
 			}
+			case 'r':	
+			{
+				regionComponentsOutputFileName= std::string(optarg);	
+				break;	
+			}
 			case 'C':	
 			{
 				catalogOutputFileName= std::string(optarg);	
+				break;	
+			}
+			case 'c':	
+			{
+				catalogComponentsOutputFileName= std::string(optarg);	
+				break;	
+			}
+			case 'j':	
+			{
+				catalogJsonOutputFileName= std::string(optarg);	
 				break;	
 			}
 			case 'v':	
@@ -304,6 +326,14 @@ int ParseOptions(int argc, char *argv[])
 		return -1;
 	}
 
+	//Check catalog json output file name
+	if(catalogJsonOutputFileName==""){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty catalog json output file name given!");
+		#endif
+		return -1;
+	}
+
 	//Check region output file name
 	if(regionOutputFileName==""){
 		#ifdef LOGGING_ENABLED
@@ -320,13 +350,29 @@ int ParseOptions(int argc, char *argv[])
 		return -1;
 	}
 
+	//Check region output file name
+	if(regionComponentsOutputFileName==""){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty region fitcomp output file name given!");
+		#endif
+		return -1;
+	}
+
+	//Check catalog output file name
+	if(catalogComponentsOutputFileName==""){
+		#ifdef LOGGING_ENABLED
+			ERROR_LOG("Empty catalog fitcomp output file name given!");
+		#endif
+		return -1;
+	}
+
 	//Set DS9 region component file name
-	regionComponentsOutputFileName= CodeUtils::ExtractFileNameFromPath(regionOutputFileName,true);
-	regionComponentsOutputFileName+= "_fitcomp.reg";
+	//regionComponentsOutputFileName= CodeUtils::ExtractFileNameFromPath(regionOutputFileName,true);
+	//regionComponentsOutputFileName+= "_fitcomp.reg";
 
 	//Set catalog component file name
-	catalogComponentsOutputFileName= CodeUtils::ExtractFileNameFromPath(catalogOutputFileName,true);
-	catalogComponentsOutputFileName+= "_fitcomp.dat";
+	//catalogComponentsOutputFileName= CodeUtils::ExtractFileNameFromPath(catalogOutputFileName,true);
+	//catalogComponentsOutputFileName+= "_fitcomp.dat";
 
 
 	return 0;
@@ -702,6 +748,17 @@ int SaveCatalog()
 	if(status<0){
 		#ifdef LOGGING_ENABLED
 			WARN_LOG("Writing source fitted component catalog to file "<<catalogComponentsOutputFileName<<" failed!");
+		#endif
+	}
+	
+	//Saving selected sources to json catalog
+	#ifdef LOGGING_ENABLED
+		INFO_LOG("Writing source catalog to json file "<<catalogJsonOutputFileName<<" ...");
+	#endif
+	status= SourceExporter::WriteToFullJson(catalogJsonOutputFileName, m_sources_sel);
+	if(status<0){
+		#ifdef LOGGING_ENABLED
+			WARN_LOG("Writing source catalog to json file "<<catalogJsonOutputFileName<<" failed!");
 		#endif
 	}
 
