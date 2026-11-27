@@ -326,16 +326,27 @@ DS9PolygonRegion* DS9RegionParser::ParsePolygonRegion(const std::string& data_st
 		return nullptr;
 	}
 
-	//Check if data are separated by ',' or by whitespaces
-	bool hasCommaDelimiter= CodeUtils::HasPatternInString(parsed_data,",");
-	std::vector<std::string> coords_str;
-
-	if(hasCommaDelimiter){
-		coords_str= CodeUtils::SplitStringOnPattern(parsed_data,',');
+	//Normalise mixed formats: "x1,y1 x2,y2" or "x1 y1 x2 y2" or "x1,y1,x2,y2"
+	//Replace all whitespace with commas, collapse duplicates, then split on comma only.
+	std::string normalised= parsed_data;
+	for(size_t i=0;i<normalised.size();i++){
+		if(normalised[i]==' ' || normalised[i]=='\t') normalised[i]=',';
 	}
-	else{//splitting data on whitespaces
-		coords_str= CodeUtils::SplitStringOnWhitespaces(parsed_data);
+	std::string deduped;
+	bool lastWasComma= false;
+	for(size_t i=0;i<normalised.size();i++){
+		if(normalised[i]==','){
+			if(!lastWasComma) deduped+=',';
+			lastWasComma= true;
+		}
+		else{
+			deduped+= normalised[i];
+			lastWasComma= false;
+		}
 	}
+	if(!deduped.empty() && deduped.front()==',') deduped.erase(deduped.begin());
+	if(!deduped.empty() && deduped.back()==',')  deduped.pop_back();
+	std::vector<std::string> coords_str= CodeUtils::SplitStringOnPattern(deduped,',');
 	
 	//Check coords
 	if(coords_str.empty() || coords_str.size()%2==1){
@@ -712,15 +723,26 @@ int DS9RegionParser::Read(std::vector<std::vector<std::string>>& data,std::vecto
 		}
 
 		//Search for WCS line. If found skip line
-		bool wcsLine= false;
-		for (auto const& it : wcsTypeMap){
-			bool hasPattern= CodeUtils::HasPatternInString(parsedline,it.first);
-			if(hasPattern){
-				wcsType= it.second;
-				foundWCS= true;	
-				wcsLine= true;	
+		//Match WCS keywords only against first token to avoid false
+		//matches inside polygon coordinate data lines.
+		std::string firstToken= "";
+		{
+			istringstream tmp(parsedline);
+			tmp >> firstToken;
+			if(!firstToken.empty() && (firstToken.back()=='(' || firstToken.back()==':')){
+				firstToken.pop_back();
 			}
 		}
+		bool wcsLine= false;
+		for(auto const& it : wcsTypeMap){
+			if(firstToken == it.first){
+				wcsType= it.second;
+				foundWCS= true;
+				wcsLine= true;
+				break;
+			}
+		}
+			
 		if(wcsLine) {
 			#ifdef LOGGING_ENABLED
 				DEBUG_LOG("--> skip line (line="<<parsedline<<")");
