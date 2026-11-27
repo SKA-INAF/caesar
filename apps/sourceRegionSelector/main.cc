@@ -507,6 +507,11 @@ int SelectSources()
 			if(isInside){
 				m_sources_sel.push_back(source);
 			}
+			else{
+				#ifdef LOGGING_ENABLED
+					DEBUG_LOG("Source no. "<<i+1<<" (name="<<source->GetName()<<", Pos("<<source->X0<<","<<source->Y0<<"), PosWCS("<<X0_wcs<<","<<Y0_wcs<<")) is outside region ...");
+				#endif
+			}
 
 		}//end loop sources
 
